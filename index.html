@@ -42,8 +42,9 @@ button { margin:2px; padding:4px 8px; cursor:pointer; }
 </table>
 
 <script>
+
 const SUPABASE_URL = "https://tvqhhjvumgumyetvpgid.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_GftZ3Mw1M2-jb2bStjv80Q_gRDC9FzD"; // rotate later if you want
+const SUPABASE_ANON_KEY = "sb_publishable_GftZ3Mw1M2-jb2bStjv80Q_gRDC9FzD";
 
 const headers = {
   apikey: SUPABASE_ANON_KEY,
@@ -51,114 +52,103 @@ const headers = {
   "Content-Type": "application/json"
 };
 
-// Elements (some optional depending on your HTML)
 const rows = document.getElementById("rows");
 const msg = document.getElementById("msg");
 const capEl = document.getElementById("cap");
 
-const dropInput = document.getElementById("dropId");      // optional
-const dropSelect = document.getElementById("dropSelect");  // optional dropdown
-const loadBtn = document.getElementById("loadBtn");        // optional
-const summaryBtn = document.getElementById("summaryBtn");  // optional
+const dropSelect = document.getElementById("dropSelect");
+const loadBtn = document.getElementById("loadBtn");
+const summaryBtn = document.getElementById("summaryBtn");
 
 let timer = null;
 let lastOrders = [];
 
-function esc(s){return String(s ?? "").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
-function fmt(d){ try { return new Date(d).toLocaleTimeString(); } catch { return d; } }
-
-function getSelectedDropId() {
-  if (dropSelect && dropSelect.value) return dropSelect.value.trim();
-  if (dropInput && dropInput.value) return dropInput.value.trim();
-  return "";
+function esc(s){
+  return String(s ?? "").replace(/[&<>"']/g,
+    m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 }
 
-async function loadLiveDrops() {
-  if (!dropSelect) return; // dropdown not on page yet
+function fmt(d){
+  return new Date(d).toLocaleTimeString();
+}
 
-  const url =
-    `${SUPABASE_URL}/rest/v1/drops` +
-    `?select=id,name,closes_at,status` +
-    `&status=eq.live` +
-    `&order=closes_at.asc.nullslast`;
+async function loadLiveDrops(){
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/drops?select=id,name,closes_at,status&status=eq.live&order=closes_at.asc`,
+    { headers }
+  );
 
-  const res = await fetch(url, { headers });
   const text = await res.text();
-  if (!res.ok) {
+  if(!res.ok){
     msg.textContent = `Could not load drops: ${res.status} ${text}`;
     return;
   }
 
   const drops = JSON.parse(text);
 
+  if(!drops.length){
+    msg.textContent = "No live drops found.";
+    return;
+  }
+
   dropSelect.innerHTML = drops.map(d => {
-    const label = `${d.name || d.id}${d.closes_at ? ` (closes ${new Date(d.closes_at).toLocaleString()})` : ""}`;
+    const label =
+      `${d.name || d.id}` +
+      (d.closes_at ? ` (closes ${new Date(d.closes_at).toLocaleString()})` : "");
     return `<option value="${d.id}">${esc(label)}</option>`;
   }).join("");
 
-  if (drops.length) dropSelect.value = drops[0].id;
+  dropSelect.value = drops[0].id;
 }
 
 async function fetchCap(dropId){
-  // supports either max_orders (your current) or capacity_units_total (if you add later)
   const d = await fetch(
-    `${SUPABASE_URL}/rest/v1/drops?id=eq.${dropId}&select=max_orders,capacity_units_total`,
+    `${SUPABASE_URL}/rest/v1/drops?id=eq.${dropId}&select=max_orders`,
     { headers }
   );
   const drop = (await d.json())[0];
 
   const o = await fetch(
-    `${SUPABASE_URL}/rest/v1/orders?drop_id=eq.${dropId}&select=id,pizzas`,
+    `${SUPABASE_URL}/rest/v1/orders?drop_id=eq.${dropId}&select=id`,
     { headers }
   );
   const orders = await o.json();
 
-  if (!drop) return;
-
-  // If max_orders exists, show orders count / max_orders (what you already had)
-  if (drop.max_orders != null) {
+  if(drop){
     capEl.textContent = `Capacity: ${orders.length}/${drop.max_orders}`;
-    return;
-  }
-
-  // Else fallback to capacity_units_total if you later move to units
-  const used = orders.reduce((sum, r) => sum + (Number(r.pizzas) || 0), 0);
-  if (drop.capacity_units_total != null) {
-    capEl.textContent = `Capacity: ${used}/${drop.capacity_units_total}`;
   }
 }
 
 async function fetchOrders(dropId){
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/orders?drop_id=eq.${dropId}` +
-    `&select=id,created_at,customer_name,customer_phone,pizzas,status` +
-    `&order=created_at.desc`,
+    `${SUPABASE_URL}/rest/v1/orders?drop_id=eq.${dropId}&select=id,created_at,customer_name,customer_phone,pizzas,status&order=created_at.desc`,
     { headers }
   );
+
   const text = await res.text();
-  if(!res.ok){ msg.textContent = `Orders fetch failed: ${res.status} ${text}`; return []; }
+  if(!res.ok){
+    msg.textContent = `Orders fetch failed: ${res.status} ${text}`;
+    return [];
+  }
+
   return JSON.parse(text);
 }
 
 async function updateStatus(id,status){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`,{
+  await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`,{
     method:"PATCH",
     headers:{...headers,"Prefer":"return=representation"},
     body:JSON.stringify({status})
   });
-  if (!res.ok) {
-    msg.textContent = `Status update failed: ${res.status} ${await res.text()}`;
-    return;
-  }
+
   refresh();
 }
 
-// Keep as global so your inline onclick works
 window.updateStatus = updateStatus;
 
 async function refresh(){
-  const dropId = getSelectedDropId();
-  if(!dropId) { msg.textContent = "Select or enter a drop ID first."; return; }
+  const dropId = dropSelect.value;
+  if(!dropId) return;
 
   msg.textContent="";
   await fetchCap(dropId);
@@ -189,10 +179,12 @@ function showSummary(){
   const totalPizzas = lastOrders.reduce((s,o)=> s + (Number(o.pizzas)||0), 0);
 
   const byStatus = {};
-  for (const o of lastOrders) byStatus[o.status] = (byStatus[o.status]||0) + 1;
+  for(const o of lastOrders){
+    byStatus[o.status] = (byStatus[o.status]||0) + 1;
+  }
 
   alert(
-`Aggregated orders (selected drop)
+`Aggregated orders
 
 Total orders: ${totalOrders}
 Total pizzas: ${totalPizzas}
@@ -203,21 +195,19 @@ ${Object.entries(byStatus).map(([k,v])=>`- ${k}: ${v}`).join("\n") || "- none"}`
 }
 
 async function start(){
-  // if dropdown exists, populate it and auto-select closes-soonest live drop
   await loadLiveDrops();
-
   await refresh();
+
   if(timer) clearInterval(timer);
   timer = setInterval(refresh,5000);
 }
 
-// Wire buttons if they exist
-if (loadBtn) loadBtn.addEventListener("click", start);
-if (summaryBtn) summaryBtn.addEventListener("click", showSummary);
+loadBtn.addEventListener("click", start);
+summaryBtn.addEventListener("click", showSummary);
 
-// Auto-start if you want (optional):
+// Auto start on load
 start();
-</script>
 
+</script>
 </body>
 </html>
