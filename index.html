@@ -1,20 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Southbury Farm Pizza — Operator</title>
-  <style>
-    body { font-family: system-ui; padding:20px; background:#fafafa; }
-    table { width:100%; border-collapse:collapse; margin-top:15px; }
-    th, td { border:1px solid #ddd; padding:8px; text-align:left; vertical-align: top; }
-    th { background:#f2f2f2; }
-    button { margin:2px; padding:4px 8px; cursor:pointer; }
-    #cap { margin-left:15px; font-weight:bold; }
-    #msg { color:red; margin-top:10px; white-space: pre-wrap; }
-    .muted { color:#666; font-size: 12px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Southbury Farm Pizza — Operator</title>
+<style>
+  body { font-family: system-ui; padding:20px; background:#fafafa; }
+  table { width:100%; border-collapse:collapse; margin-top:15px; }
+  th, td { border:1px solid #ddd; padding:8px; text-align:left; vertical-align: top; }
+  th { background:#f2f2f2; }
+  button { margin:2px; padding:4px 8px; cursor:pointer; }
+  #cap { margin-left:15px; font-weight:bold; }
+  .muted { color:#666; font-size:12px; }
+</style>
 </head>
 <body>
 
@@ -24,11 +22,15 @@
   <label>Live drop:</label>
   <select id="dropSelect" style="min-width:420px;"></select>
   <button id="loadBtn">Load</button>
-  <button id="summaryBtn">Aggregated orders</button>
+
+  <!-- NEW: split into two buttons -->
+  <button id="summarySelectedBtn">Aggregated (selected drop)</button>
+  <button id="summaryAllBtn">Aggregated (all live drops)</button>
+
   <span id="cap"></span>
 </div>
 
-<div id="msg"></div>
+<div id="msg" style="color:red;margin-top:10px;"></div>
 
 <table>
   <thead>
@@ -50,7 +52,7 @@
  *  CONFIG
  *  ========================= */
 const SUPABASE_URL = "https://tvqhhjvumgumyetvpgid.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_GftZ3Mw1M2-jb2bStjv80Q_gRDC9FzD"; // ok for demo; rotate later
+const SUPABASE_ANON_KEY = "sb_publishable_GftZ3Mw1M2-jb2bStjv80Q_gRDC9FzD";
 
 const headers = {
   apikey: SUPABASE_ANON_KEY,
@@ -59,51 +61,42 @@ const headers = {
 };
 
 /** =========================
- *  ELEMENTS
+ *  ELEMENTS / STATE
  *  ========================= */
-const rows = document.getElementById("rows");
-const msg = document.getElementById("msg");
+const rowsEl = document.getElementById("rows");
+const msgEl = document.getElementById("msg");
 const capEl = document.getElementById("cap");
+
 const dropSelect = document.getElementById("dropSelect");
 const loadBtn = document.getElementById("loadBtn");
-const summaryBtn = document.getElementById("summaryBtn");
+
+const summarySelectedBtn = document.getElementById("summarySelectedBtn");
+const summaryAllBtn = document.getElementById("summaryAllBtn");
 
 let timer = null;
 let lastOrders = [];
+let lastDrops = []; // live drops list
 
 /** =========================
  *  HELPERS
  *  ========================= */
 function esc(s){
-  return String(s ?? "").replace(/[&<>"']/g, m => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-  }[m]));
+  return String(s ?? "").replace(/[&<>"']/g,
+    m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 }
-
 function fmtTime(d){
-  try { return new Date(d).toLocaleTimeString(); } catch { return String(d); }
+  try { return new Date(d).toLocaleTimeString(); } catch { return d; }
 }
-
-function normCat(c){ return String(c ?? "").trim().toLowerCase(); }
-
-function penceToGBP(p){
-  const n = Number(p);
-  if (!Number.isFinite(n)) return null;
+function safeArr(x){ return Array.isArray(x) ? x : []; }
+function moneyFromPence(p){
+  const n = Number(p) || 0;
   return "£" + (n/100).toFixed(2);
-}
-
-function sumMapToLines(mapObj){
-  const entries = Object.entries(mapObj).sort((a,b)=> b[1]-a[1]);
-  if (!entries.length) return "- none";
-  return entries.map(([k,v]) => `- ${k}: ${v}`).join("\n");
 }
 
 /** =========================
  *  DATA FETCH
  *  ========================= */
-
-// Loads live drops, soonest closing first, and auto-selects the first
-async function loadLiveDrops(){
+async function loadLiveDrops() {
   const url =
     `${SUPABASE_URL}/rest/v1/drops` +
     `?select=id,name,closes_at,status` +
@@ -112,16 +105,17 @@ async function loadLiveDrops(){
 
   const res = await fetch(url, { headers });
   const text = await res.text();
-  if(!res.ok){
-    msg.textContent = `Could not load drops:\n${res.status} ${text}`;
-    dropSelect.innerHTML = "";
+  if (!res.ok) {
+    msgEl.textContent = `Could not load drops: ${res.status} ${text}`;
     return;
   }
 
   const drops = JSON.parse(text);
-  if(!drops.length){
-    msg.textContent = "No live drops found (drops.status must be 'live').";
+  lastDrops = drops;
+
+  if (!drops.length) {
     dropSelect.innerHTML = "";
+    msgEl.textContent = "No live drops found.";
     return;
   }
 
@@ -133,130 +127,123 @@ async function loadLiveDrops(){
   }).join("");
 
   dropSelect.value = drops[0].id;
-  msg.textContent = "";
 }
 
-// Pull orders with nested order_items + product details
-async function fetchOrders(dropId){
-  // This uses PostgREST embedding:
-  // orders -> order_items -> products
+async function fetchDropMeta(dropId){
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/drops?id=eq.${dropId}&select=max_orders,capacity_units_total`,
+    { headers }
+  );
+  const text = await res.text();
+  if (!res.ok) return null;
+  return (JSON.parse(text) || [])[0] || null;
+}
+
+async function fetchOrdersForDrop(dropId){
+  // orders + nested order_items + nested products
   const url =
-    `${SUPABASE_URL}/rest/v1/orders` +
-    `?drop_id=eq.${dropId}` +
+    `${SUPABASE_URL}/rest/v1/orders?drop_id=eq.${dropId}` +
     `&select=id,created_at,customer_name,customer_phone,status,` +
-      `order_items(qty,price_pence,product:products(id,name,category,capacity_units))` +
+    `order_items(qty,price_pence,product:products(name,category,capacity_units,price_pence))` +
     `&order=created_at.desc`;
 
   const res = await fetch(url, { headers });
   const text = await res.text();
   if(!res.ok){
-    msg.textContent = `Orders fetch failed:\n${res.status} ${text}`;
-    return [];
+    throw new Error(`Orders fetch failed for drop ${dropId}: ${res.status} ${text}`);
   }
   return JSON.parse(text);
 }
 
-// Capacity: tries drop_capacity first (units), then falls back to drops.max_orders
-async function fetchCapacity(dropId){
-  // 1) Try drop_capacity (recommended once you move beyond “pizzas only”)
-  try{
-    const cRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/drop_capacity?drop_id=eq.${dropId}&select=capacity_units_total`,
-      { headers }
-    );
-    if (cRes.ok){
-      const arr = await cRes.json();
-      if (arr && arr[0] && arr[0].capacity_units_total != null){
-        return { mode:"units", total:Number(arr[0].capacity_units_total) };
-      }
-    }
-  }catch(e){ /* ignore */ }
-
-  // 2) Fall back to drops.max_orders
-  const dRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/drops?id=eq.${dropId}&select=max_orders`,
-    { headers }
-  );
-  if (!dRes.ok) return null;
-  const drop = (await dRes.json())[0];
-  if (drop && drop.max_orders != null){
-    return { mode:"orders", total:Number(drop.max_orders) };
+async function updateStatus(orderId,status){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`,{
+    method:"PATCH",
+    headers:{...headers,"Prefer":"return=representation"},
+    body:JSON.stringify({status})
+  });
+  if(!res.ok){
+    msgEl.textContent = `Status update failed: ${res.status} ${await res.text()}`;
+    return;
   }
-  return null;
+  refresh();
 }
+window.updateStatus = updateStatus;
 
 /** =========================
- *  RENDERING
+ *  ORDER TRANSFORMS
  *  ========================= */
+function splitPizzaVsOtherItems(order){
+  const items = safeArr(order.order_items);
 
-function splitItems(order){
-  const items = Array.isArray(order.order_items) ? order.order_items : [];
   const pizzas = [];
   const others = [];
-  let usedUnits = 0;
-  let revenuePence = 0;
 
   for (const it of items){
     const qty = Number(it.qty) || 0;
     const prod = it.product || {};
-    const name = prod.name || "Unnamed";
-    const cat = normCat(prod.category);
-    const capUnits = Number(prod.capacity_units) || 0;
-
-    usedUnits += qty * capUnits;
-
-    const pricePence = (it.price_pence != null ? Number(it.price_pence) : null);
-    if (Number.isFinite(pricePence)) revenuePence += qty * pricePence;
+    const name = prod.name || "Unknown";
+    const category = String(prod.category || "").toLowerCase();
 
     const label = `${name} x${qty}`;
 
-    if (cat === "pizza" || cat === "pizzas"){
-      pizzas.push({ name, qty, label });
-    } else {
-      others.push({ name, qty, label, category: prod.category || "" });
-    }
+    if (category === "pizza" || category === "pizzas") pizzas.push(label);
+    else others.push(label);
   }
 
-  return { pizzas, others, usedUnits, revenuePence };
+  return { pizzas, others };
 }
 
-async function refresh(){
-  const dropId = (dropSelect.value || "").trim();
-  if(!dropId) return;
-
-  msg.textContent = "";
-
-  const orders = await fetchOrders(dropId);
-  lastOrders = orders;
-
-  // Capacity display
-  const cap = await fetchCapacity(dropId);
-  if (cap){
-    if (cap.mode === "orders"){
-      capEl.textContent = `Capacity: ${orders.length}/${cap.total}`;
-    } else {
-      // units mode
-      const used = orders.reduce((sum,o)=> sum + splitItems(o).usedUnits, 0);
-      capEl.textContent = `Capacity: ${used}/${cap.total} units`;
+function computeCapacityUnitsFromOrders(orders){
+  let units = 0;
+  for (const o of orders){
+    for (const it of safeArr(o.order_items)){
+      const qty = Number(it.qty) || 0;
+      const cu = Number((it.product||{}).capacity_units) || 0;
+      units += qty * cu;
     }
-  } else {
-    capEl.textContent = "";
   }
+  return units;
+}
 
-  // Render table rows
-  rows.innerHTML = orders.map(o => {
-    const { pizzas, others } = splitItems(o);
+function computePizzaQtyFromOrders(orders){
+  let pizzaQty = 0;
+  for (const o of orders){
+    for (const it of safeArr(o.order_items)){
+      const qty = Number(it.qty) || 0;
+      const category = String((it.product||{}).category || "").toLowerCase();
+      if (category === "pizza" || category === "pizzas") pizzaQty += qty;
+    }
+  }
+  return pizzaQty;
+}
 
-    const pizzasText = pizzas.length ? pizzas.map(x=>esc(x.label)).join(", ") : "—";
-    const itemsText  = others.length ? others.map(x=>esc(x.label)).join(", ") : "—";
+function computeRevenueFromOrders(orders){
+  let total = 0;
+  for (const o of orders){
+    for (const it of safeArr(o.order_items)){
+      const qty = Number(it.qty) || 0;
+      const priceEach = (it.price_pence != null ? Number(it.price_pence) : null);
+      const fallback = Number((it.product||{}).price_pence) || 0;
+      total += qty * (priceEach != null ? (priceEach || 0) : fallback);
+    }
+  }
+  return total;
+}
+
+/** =========================
+ *  RENDER
+ *  ========================= */
+function renderOrdersTable(orders){
+  rowsEl.innerHTML = orders.map(o => {
+    const { pizzas, others } = splitPizzaVsOtherItems(o);
 
     return `
       <tr>
-        <td>${esc(fmtTime(o.created_at))}</td>
+        <td>${fmtTime(o.created_at)}</td>
         <td>${esc(o.customer_name)}</td>
         <td>${esc(o.customer_phone)}</td>
-        <td>${pizzasText}</td>
-        <td>${itemsText}</td>
+        <td>${pizzas.length ? esc(pizzas.join(", ")) : "<span class='muted'>—</span>"}</td>
+        <td>${others.length ? esc(others.join(", ")) : "<span class='muted'>—</span>"}</td>
         <td><b>${esc(o.status)}</b></td>
         <td>
           <button onclick="updateStatus('${o.id}','confirmed')">Confirmed</button>
@@ -271,75 +258,189 @@ async function refresh(){
 }
 
 /** =========================
- *  ACTIONS
+ *  MAIN REFRESH
  *  ========================= */
+async function refresh(){
+  const dropId = (dropSelect.value || "").trim();
+  if(!dropId) return;
 
-async function updateStatus(id,status){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`,{
-    method:"PATCH",
-    headers:{...headers,"Prefer":"return=representation"},
-    body:JSON.stringify({status})
-  });
+  msgEl.textContent = "";
 
-  if(!res.ok){
-    msg.textContent = `Status update failed:\n${res.status} ${await res.text()}`;
-    return;
-  }
+  try {
+    const [dropMeta, orders] = await Promise.all([
+      fetchDropMeta(dropId),
+      fetchOrdersForDrop(dropId)
+    ]);
 
-  refresh();
-}
-window.updateStatus = updateStatus;
+    lastOrders = orders;
 
-function showSummary(){
-  const totalOrders = lastOrders.length;
+    const pizzaQty = computePizzaQtyFromOrders(orders);
+    const unitsUsed = computeCapacityUnitsFromOrders(orders);
 
-  const byStatus = {};
-  const pizzaByType = {};
-  const itemByType = {};
-
-  let totalPizzas = 0;
-  let totalUnits = 0;
-  let revenuePence = 0;
-
-  for (const o of lastOrders){
-    byStatus[o.status] = (byStatus[o.status]||0) + 1;
-
-    const { pizzas, others, usedUnits, revenuePence: rev } = splitItems(o);
-    totalUnits += usedUnits;
-    revenuePence += rev;
-
-    for (const p of pizzas){
-      totalPizzas += p.qty;
-      pizzaByType[p.name] = (pizzaByType[p.name] || 0) + p.qty;
+    let capText = "";
+    if (dropMeta && dropMeta.max_orders != null) {
+      capText = `Capacity: ${orders.length}/${dropMeta.max_orders}`;
+    } else {
+      capText = `Capacity: ${orders.length} orders`;
     }
-    for (const it of others){
-      itemByType[it.name] = (itemByType[it.name] || 0) + it.qty;
+
+    if (dropMeta && dropMeta.capacity_units_total != null) {
+      capText += ` | Units: ${unitsUsed}/${dropMeta.capacity_units_total} | Pizzas: ${pizzaQty}`;
+    } else {
+      capText += ` | Units: ${unitsUsed} | Pizzas: ${pizzaQty}`;
     }
+
+    capEl.textContent = capText;
+    renderOrdersTable(orders);
+
+  } catch (e) {
+    msgEl.textContent = String(e.message || e);
   }
-
-  const revenueGBP = penceToGBP(revenuePence);
-
-  alert(
-`Aggregated orders (selected drop)
-
-Total orders: ${totalOrders}
-Total pizzas: ${totalPizzas}
-Total capacity units (if configured): ${totalUnits}${revenueGBP ? `\nEstimated revenue: ${revenueGBP}` : ""}
-
-By status:
-${sumMapToLines(byStatus)}
-
-Pizzas (by type):
-${sumMapToLines(pizzaByType)}
-
-Other items (by type):
-${sumMapToLines(itemByType)}
-`
-  );
 }
 
 /** =========================
- *  STARTUP
+ *  AGGREGATION (GROUP BY CATEGORY + PRODUCT)
+ *  ========================= */
+function buildAggregate(orders){
+  // category -> name -> {qty, units, revenue}
+  const agg = {};
+  for (const o of orders){
+    for (const it of safeArr(o.order_items)){
+      const qty = Number(it.qty) || 0;
+      const prod = it.product || {};
+      const name = prod.name || "Unknown";
+      const category = String(prod.category || "uncategorised").toLowerCase();
+
+      const unitsEach = Number(prod.capacity_units) || 0;
+      const units = qty * unitsEach;
+
+      const priceEach = (it.price_pence != null ? Number(it.price_pence) : null);
+      const fallback = Number(prod.price_pence) || 0;
+      const revenue = qty * (priceEach != null ? (priceEach || 0) : fallback);
+
+      if (!agg[category]) agg[category] = {};
+      if (!agg[category][name]) agg[category][name] = { qty:0, units:0, revenue:0 };
+
+      agg[category][name].qty += qty;
+      agg[category][name].units += units;
+      agg[category][name].revenue += revenue;
+    }
+  }
+  return agg;
+}
+
+function formatAggregateLines(agg){
+  const cats = Object.keys(agg).sort((a,b)=>a.localeCompare(b));
+  if (!cats.length) return "No items found.";
+
+  let out = "";
+  for (const cat of cats){
+    out += `\n${cat.toUpperCase()}\n`;
+    const names = Object.keys(agg[cat]).sort((a,b)=>a.localeCompare(b));
+
+    for (const name of names){
+      const r = agg[cat][name];
+      out += `- ${name}: ${r.qty}  (units ${r.units}, revenue ${moneyFromPence(r.revenue)})\n`;
+    }
+  }
+  return out.trim();
+}
+
+/** =========================
+ *  BUTTON: AGGREGATED (SELECTED DROP)
+ *  ========================= */
+async function showAggregatedSelectedDrop(){
+  const dropId = (dropSelect.value || "").trim();
+  if(!dropId){
+    alert("Select a drop first.");
+    return;
+  }
+
+  try {
+    const orders = await fetchOrdersForDrop(dropId);
+    const agg = buildAggregate(orders);
+
+    const totalOrders = orders.length;
+    const totalPizzas = computePizzaQtyFromOrders(orders);
+    const totalUnits = computeCapacityUnitsFromOrders(orders);
+    const totalRevenue = computeRevenueFromOrders(orders);
+
+    alert(
+`Aggregated orders (SELECTED DROP)
+
+Total orders: ${totalOrders}
+Total pizzas: ${totalPizzas}
+Total capacity units: ${totalUnits}
+Estimated revenue: ${moneyFromPence(totalRevenue)}
+
+Breakdown:
+${formatAggregateLines(agg)}`
+    );
+  } catch (e) {
+    alert("Aggregate failed: " + String(e.message || e));
+  }
+}
+
+/** =========================
+ *  BUTTON: AGGREGATED (ALL LIVE DROPS)
+ *  ========================= */
+async function showAggregatedAllDrops(){
+  if (!lastDrops.length) await loadLiveDrops();
+  if (!lastDrops.length) {
+    alert("No live drops to aggregate.");
+    return;
+  }
+
+  try {
+    const allOrdersByDrop = await Promise.all(
+      lastDrops.map(d => fetchOrdersForDrop(d.id))
+    );
+
+    let totalOrders = 0;
+    let totalPizzas = 0;
+    let totalUnits = 0;
+    let totalRevenue = 0;
+
+    const aggAll = {}; // merged agg
+
+    for (const orders of allOrdersByDrop){
+      totalOrders += orders.length;
+      totalPizzas += computePizzaQtyFromOrders(orders);
+      totalUnits += computeCapacityUnitsFromOrders(orders);
+      totalRevenue += computeRevenueFromOrders(orders);
+
+      const agg = buildAggregate(orders);
+      for (const cat of Object.keys(agg)){
+        if (!aggAll[cat]) aggAll[cat] = {};
+        for (const name of Object.keys(agg[cat])){
+          if (!aggAll[cat][name]) aggAll[cat][name] = {qty:0, units:0, revenue:0};
+          aggAll[cat][name].qty += agg[cat][name].qty;
+          aggAll[cat][name].units += agg[cat][name].units;
+          aggAll[cat][name].revenue += agg[cat][name].revenue;
+        }
+      }
+    }
+
+    alert(
+`Aggregated orders (ALL LIVE DROPS)
+
+Total drops: ${lastDrops.length}
+Total orders: ${totalOrders}
+Total pizzas: ${totalPizzas}
+Total capacity units: ${totalUnits}
+Estimated revenue: ${moneyFromPence(totalRevenue)}
+
+Breakdown:
+${formatAggregateLines(aggAll)}`
+    );
+
+  } catch (e) {
+    alert("Aggregate failed: " + String(e.message || e));
+  }
+}
+
+/** =========================
+ *  START / EVENTS
  *  ========================= */
 async function start(){
   await loadLiveDrops();
@@ -350,9 +451,10 @@ async function start(){
 }
 
 loadBtn.addEventListener("click", start);
-summaryBtn.addEventListener("click", showSummary);
+summarySelectedBtn.addEventListener("click", showAggregatedSelectedDrop);
+summaryAllBtn.addEventListener("click", showAggregatedAllDrops);
 
-// Auto-start on load
+// Auto start
 start();
 </script>
 
