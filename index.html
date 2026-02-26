@@ -4,13 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Southbury Farm Pizza — Operator</title>
+
 <style>
 body { font-family: system-ui; padding:20px; background:#fafafa; }
 table { width:100%; border-collapse:collapse; margin-top:15px; }
-th, td { border:1px solid #ddd; padding:8px; text-align:left; }
+th, td { border:1px solid #ddd; padding:8px; text-align:left; vertical-align:top; }
 th { background:#f2f2f2; }
 button { margin:2px; padding:4px 8px; cursor:pointer; }
 #cap { margin-left:15px; font-weight:bold; }
+.items-col { font-size: 0.9em; color:#444; }
 </style>
 </head>
 <body>
@@ -20,9 +22,9 @@ button { margin:2px; padding:4px 8px; cursor:pointer; }
 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
   <label>Live drop:</label>
   <select id="dropSelect" style="min-width:420px;"></select>
-<button id="loadBtn">Load</button>
-<button id="summaryBtn">Aggregated orders</button>
-<span id="cap"></span>
+  <button id="loadBtn">Load</button>
+  <button id="summaryBtn">Aggregated orders</button>
+  <span id="cap"></span>
 </div>
 
 <div id="msg" style="color:red;margin-top:10px;"></div>
@@ -34,6 +36,7 @@ button { margin:2px; padding:4px 8px; cursor:pointer; }
 <th>Name</th>
 <th>Phone</th>
 <th>Pizzas</th>
+<th>Items</th>
 <th>Status</th>
 <th>Actions</th>
 </tr>
@@ -42,6 +45,7 @@ button { margin:2px; padding:4px 8px; cursor:pointer; }
 </table>
 
 <script>
+
 const SUPABASE_URL = "https://tvqhhjvumgumyetvpgid.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_GftZ3Mw1M2-jb2bStjv80Q_gRDC9FzD";
 
@@ -54,7 +58,6 @@ const headers = {
 const rows = document.getElementById("rows");
 const msg = document.getElementById("msg");
 const capEl = document.getElementById("cap");
-
 const dropSelect = document.getElementById("dropSelect");
 const loadBtn = document.getElementById("loadBtn");
 const summaryBtn = document.getElementById("summaryBtn");
@@ -63,23 +66,20 @@ let timer = null;
 let lastOrders = [];
 
 function esc(s) {
-  return String(s ?? "").replace(/[&<>"']/g, (m) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;",
+  return String(s ?? "").replace(/[&<>"']/g, m => ({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#039;"
   }[m]));
 }
 
-function fmtTime(d) {
-  try { return new Date(d).toLocaleTimeString(); } catch { return String(d ?? ""); }
+function fmtTime(d){
+  try { return new Date(d).toLocaleTimeString(); }
+  catch { return d; }
 }
 
-/**
- * Pull live drops (closest closing first) and populate dropdown
- * Assumes drops has columns: id, name, closes_at, status
- */
 async function loadLiveDrops() {
   const url =
     `${SUPABASE_URL}/rest/v1/drops` +
@@ -91,16 +91,14 @@ async function loadLiveDrops() {
   const text = await res.text();
 
   if (!res.ok) {
-    msg.textContent = `Could not load drops: ${res.status} ${text}`;
-    return [];
+    msg.textContent = `Drop load failed: ${text}`;
+    return;
   }
 
   const drops = JSON.parse(text);
-
   if (!drops.length) {
-    msg.textContent = "No live drops found (status=live).";
-    dropSelect.innerHTML = "";
-    return [];
+    msg.textContent = "No live drops found.";
+    return;
   }
 
   dropSelect.innerHTML = drops.map(d => {
@@ -111,39 +109,27 @@ async function loadLiveDrops() {
   }).join("");
 
   dropSelect.value = drops[0].id;
-  return drops;
 }
 
-/**
- * Orders query: includes order_items + product fields
- * Assumes:
- * - orders has: id, created_at, customer_name, customer_phone, status, drop_id
- * - order_items has: order_id, product_id, qty, price_pence (optional)
- * - products has: id, name, category, capacity_units
- */
-async function fetchOrdersWithItems(dropId) {
+async function fetchOrders(dropId){
   const url =
     `${SUPABASE_URL}/rest/v1/orders?drop_id=eq.${dropId}` +
     `&select=id,created_at,customer_name,customer_phone,status,` +
-    `order_items(qty,product:products(name,category,capacity_units))` +
+    `order_items(qty,product:products(name,category))` +
     `&order=created_at.desc`;
 
   const res = await fetch(url, { headers });
   const text = await res.text();
 
-  if (!res.ok) {
-    msg.textContent = `Orders fetch failed: ${res.status} ${text}`;
+  if(!res.ok){
+    msg.textContent = text;
     return [];
   }
 
   return JSON.parse(text);
 }
 
-/**
- * Capacity: uses drops.max_orders (order count)
- * Later we can extend to capacity units
- */
-async function fetchCap(dropId) {
+async function fetchCap(dropId){
   const d = await fetch(
     `${SUPABASE_URL}/rest/v1/drops?id=eq.${dropId}&select=max_orders`,
     { headers }
@@ -156,144 +142,102 @@ async function fetchCap(dropId) {
   );
   const orders = await o.json();
 
-  if (drop && drop.max_orders != null) {
+  if(drop?.max_orders != null){
     capEl.textContent = `Capacity: ${orders.length}/${drop.max_orders}`;
-  } else {
-    capEl.textContent = `Capacity: ${orders.length}/?`;
   }
 }
 
-/**
- * Status update
- */
-async function updateStatus(id, status) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`, {
-    method: "PATCH",
-    headers: { ...headers, Prefer: "return=representation" },
-    body: JSON.stringify({ status }),
-  });
-
-  if (!res.ok) {
-    msg.textContent = `Status update failed: ${res.status} ${await res.text()}`;
-    return;
-  }
-
-  refresh();
-}
-window.updateStatus = updateStatus;
-
-/**
- * Build a readable summary string for the order items
- * Example: "Margherita x2, Olives x1"
- */
-function itemsLabel(order) {
-  const items = Array.isArray(order.order_items) ? order.order_items : [];
-  if (!items.length) return "";
-
-  const parts = [];
-  for (const it of items) {
-    const qty = Number(it.qty) || 0;
-    const prodName = it.product?.name ?? "Unknown";
-    if (qty > 0) parts.push(`${prodName} x${qty}`);
-  }
-  return parts.join(", ");
-}
-
-/**
- * Count pizzas specifically by looking at product.category === 'pizza'
- * (Adjust category values if yours differ.)
- */
-function pizzaCount(order) {
-  const items = Array.isArray(order.order_items) ? order.order_items : [];
+function pizzaCount(order){
   let total = 0;
-  for (const it of items) {
-    const qty = Number(it.qty) || 0;
-    const cat = (it.product?.category ?? "").toLowerCase();
-    if (cat === "pizza") total += qty;
+  for(const it of order.order_items || []){
+    if((it.product?.category || "").toLowerCase() === "pizza"){
+      total += Number(it.qty) || 0;
+    }
   }
   return total;
 }
 
-async function refresh() {
-  const dropId = dropSelect.value;
-  if (!dropId) return;
+function extraItems(order){
+  const parts = [];
+  for(const it of order.order_items || []){
+    if((it.product?.category || "").toLowerCase() !== "pizza"){
+      const qty = Number(it.qty) || 0;
+      if(qty > 0){
+        parts.push(`${it.product?.name || "Item"} x${qty}`);
+      }
+    }
+  }
+  return parts.join(", ");
+}
 
-  msg.textContent = "";
+async function updateStatus(id,status){
+  await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`,{
+    method:"PATCH",
+    headers:{...headers,"Prefer":"return=representation"},
+    body:JSON.stringify({status})
+  });
+  refresh();
+}
+window.updateStatus = updateStatus;
+
+async function refresh(){
+  const dropId = dropSelect.value;
+  if(!dropId) return;
+
+  msg.textContent="";
   await fetchCap(dropId);
 
-  const orders = await fetchOrdersWithItems(dropId);
+  const orders = await fetchOrders(dropId);
   lastOrders = orders;
 
-  rows.innerHTML = orders.map(o => `
+  rows.innerHTML = orders.map(o=>`
     <tr>
       <td>${fmtTime(o.created_at)}</td>
       <td>${esc(o.customer_name)}</td>
       <td>${esc(o.customer_phone)}</td>
       <td>${pizzaCount(o)}</td>
+      <td class="items-col">${esc(extraItems(o))}</td>
       <td><b>${esc(o.status)}</b></td>
       <td>
-        <div>${esc(itemsLabel(o))}</div>
-        <div style="margin-top:6px;">
-          <button onclick="updateStatus('${o.id}','confirmed')">Confirmed</button>
-          <button onclick="updateStatus('${o.id}','baking')">Baking</button>
-          <button onclick="updateStatus('${o.id}','ready')">Ready</button>
-          <button onclick="updateStatus('${o.id}','collected')">Collected</button>
-          <button onclick="updateStatus('${o.id}','cancelled')">Cancel</button>
-        </div>
+        <button onclick="updateStatus('${o.id}','confirmed')">Confirmed</button>
+        <button onclick="updateStatus('${o.id}','baking')">Baking</button>
+        <button onclick="updateStatus('${o.id}','ready')">Ready</button>
+        <button onclick="updateStatus('${o.id}','collected')">Collected</button>
+        <button onclick="updateStatus('${o.id}','cancelled')">Cancel</button>
       </td>
     </tr>
   `).join("");
 }
 
-function showSummary() {
+function showSummary(){
   const totalOrders = lastOrders.length;
-
-  // totals by category + totals of pizzas
-  const byStatus = {};
-  const byCategory = {};
   let totalPizzas = 0;
 
-  for (const o of lastOrders) {
-    byStatus[o.status] = (byStatus[o.status] || 0) + 1;
-
-    const items = Array.isArray(o.order_items) ? o.order_items : [];
-    for (const it of items) {
-      const qty = Number(it.qty) || 0;
-      const cat = (it.product?.category ?? "uncategorised").toLowerCase();
-      byCategory[cat] = (byCategory[cat] || 0) + qty;
-    }
-
+  for(const o of lastOrders){
     totalPizzas += pizzaCount(o);
   }
 
   alert(
-`Aggregated orders (selected drop)
+`Aggregated orders
 
 Total orders: ${totalOrders}
-Total pizzas: ${totalPizzas}
-
-By status:
-${Object.entries(byStatus).map(([k,v]) => `- ${k}: ${v}`).join("\n") || "- none"}
-
-Items by category (qty):
-${Object.entries(byCategory).map(([k,v]) => `- ${k}: ${v}`).join("\n") || "- none"}`
+Total pizzas: ${totalPizzas}`
   );
 }
 
-async function start() {
+async function start(){
   await loadLiveDrops();
   await refresh();
 
-  if (timer) clearInterval(timer);
-  timer = setInterval(refresh, 5000);
+  if(timer) clearInterval(timer);
+  timer = setInterval(refresh,5000);
 }
 
 loadBtn.addEventListener("click", start);
 summaryBtn.addEventListener("click", showSummary);
 
-// Auto start
 start();
-</script>
 
+</script>
 </body>
 </html>
