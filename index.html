@@ -42,14 +42,13 @@ button { margin:2px; padding:4px 8px; cursor:pointer; }
 </table>
 
 <script>
-
 const SUPABASE_URL = "https://tvqhhjvumgumyetvpgid.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_GftZ3Mw1M2-jb2bStjv80Q_gRDC9FzD";
 
 const headers = {
   apikey: SUPABASE_ANON_KEY,
   Authorization: "Bearer " + SUPABASE_ANON_KEY,
-  "Content-Type": "application/json"
+  "Content-Type": "application/json",
 };
 
 const rows = document.getElementById("rows");
@@ -63,37 +62,45 @@ const summaryBtn = document.getElementById("summaryBtn");
 let timer = null;
 let lastOrders = [];
 
-function esc(s){
-  return String(s ?? "").replace(/[&<>"']/g,
-    m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (m) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  }[m]));
 }
 
-function fmt(d){
-  return new Date(d).toLocaleTimeString();
+function fmtTime(d) {
+  try { return new Date(d).toLocaleTimeString(); } catch { return String(d ?? ""); }
 }
 
-async function fetchOrders(dropId){
+/**
+ * Pull live drops (closest closing first) and populate dropdown
+ * Assumes drops has columns: id, name, closes_at, status
+ */
+async function loadLiveDrops() {
   const url =
-    `${SUPABASE_URL}/rest/v1/orders?drop_id=eq.${dropId}` +
-    `&select=id,created_at,customer_name,customer_phone,status,` +
-    `order_items(qty,product:products(name,category,capacity_units))` +
-    `&order=created_at.desc`;
+    `${SUPABASE_URL}/rest/v1/drops` +
+    `?select=id,name,closes_at,status,max_orders` +
+    `&status=eq.live` +
+    `&order=closes_at.asc.nullslast`;
 
   const res = await fetch(url, { headers });
   const text = await res.text();
-  if(!res.ok){
-    msg.textContent = `Orders fetch failed: ${res.status} ${text}`;
+
+  if (!res.ok) {
+    msg.textContent = `Could not load drops: ${res.status} ${text}`;
     return [];
   }
 
-  return JSON.parse(text);
-}
-
   const drops = JSON.parse(text);
 
-  if(!drops.length){
-    msg.textContent = "No live drops found.";
-    return;
+  if (!drops.length) {
+    msg.textContent = "No live drops found (status=live).";
+    dropSelect.innerHTML = "";
+    return [];
   }
 
   dropSelect.innerHTML = drops.map(d => {
@@ -104,9 +111,39 @@ async function fetchOrders(dropId){
   }).join("");
 
   dropSelect.value = drops[0].id;
+  return drops;
 }
 
-async function fetchCap(dropId){
+/**
+ * Orders query: includes order_items + product fields
+ * Assumes:
+ * - orders has: id, created_at, customer_name, customer_phone, status, drop_id
+ * - order_items has: order_id, product_id, qty, price_pence (optional)
+ * - products has: id, name, category, capacity_units
+ */
+async function fetchOrdersWithItems(dropId) {
+  const url =
+    `${SUPABASE_URL}/rest/v1/orders?drop_id=eq.${dropId}` +
+    `&select=id,created_at,customer_name,customer_phone,status,` +
+    `order_items(qty,product:products(name,category,capacity_units))` +
+    `&order=created_at.desc`;
+
+  const res = await fetch(url, { headers });
+  const text = await res.text();
+
+  if (!res.ok) {
+    msg.textContent = `Orders fetch failed: ${res.status} ${text}`;
+    return [];
+  }
+
+  return JSON.parse(text);
+}
+
+/**
+ * Capacity: uses drops.max_orders (order count)
+ * Later we can extend to capacity units
+ */
+async function fetchCap(dropId) {
   const d = await fetch(
     `${SUPABASE_URL}/rest/v1/drops?id=eq.${dropId}&select=max_orders`,
     { headers }
@@ -119,100 +156,144 @@ async function fetchCap(dropId){
   );
   const orders = await o.json();
 
-  if(drop){
+  if (drop && drop.max_orders != null) {
     capEl.textContent = `Capacity: ${orders.length}/${drop.max_orders}`;
+  } else {
+    capEl.textContent = `Capacity: ${orders.length}/?`;
   }
 }
 
-async function fetchOrders(dropId){
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/orders?drop_id=eq.${dropId}&select=id,created_at,customer_name,customer_phone,pizzas,status&order=created_at.desc`,
-    { headers }
-  );
-
-  const text = await res.text();
-  if(!res.ok){
-    msg.textContent = `Orders fetch failed: ${res.status} ${text}`;
-    return [];
-  }
-
-  return JSON.parse(text);
-}
-
-async function updateStatus(id,status){
-  await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`,{
-    method:"PATCH",
-    headers:{...headers,"Prefer":"return=representation"},
-    body:JSON.stringify({status})
+/**
+ * Status update
+ */
+async function updateStatus(id, status) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`, {
+    method: "PATCH",
+    headers: { ...headers, Prefer: "return=representation" },
+    body: JSON.stringify({ status }),
   });
+
+  if (!res.ok) {
+    msg.textContent = `Status update failed: ${res.status} ${await res.text()}`;
+    return;
+  }
 
   refresh();
 }
-
 window.updateStatus = updateStatus;
 
-async function refresh(){
-  const dropId = dropSelect.value;
-  if(!dropId) return;
+/**
+ * Build a readable summary string for the order items
+ * Example: "Margherita x2, Olives x1"
+ */
+function itemsLabel(order) {
+  const items = Array.isArray(order.order_items) ? order.order_items : [];
+  if (!items.length) return "";
 
-  msg.textContent="";
+  const parts = [];
+  for (const it of items) {
+    const qty = Number(it.qty) || 0;
+    const prodName = it.product?.name ?? "Unknown";
+    if (qty > 0) parts.push(`${prodName} x${qty}`);
+  }
+  return parts.join(", ");
+}
+
+/**
+ * Count pizzas specifically by looking at product.category === 'pizza'
+ * (Adjust category values if yours differ.)
+ */
+function pizzaCount(order) {
+  const items = Array.isArray(order.order_items) ? order.order_items : [];
+  let total = 0;
+  for (const it of items) {
+    const qty = Number(it.qty) || 0;
+    const cat = (it.product?.category ?? "").toLowerCase();
+    if (cat === "pizza") total += qty;
+  }
+  return total;
+}
+
+async function refresh() {
+  const dropId = dropSelect.value;
+  if (!dropId) return;
+
+  msg.textContent = "";
   await fetchCap(dropId);
 
-  const orders = await fetchOrders(dropId);
+  const orders = await fetchOrdersWithItems(dropId);
   lastOrders = orders;
 
-  rows.innerHTML = orders.map(o=>`
+  rows.innerHTML = orders.map(o => `
     <tr>
-      <td>${fmt(o.created_at)}</td>
+      <td>${fmtTime(o.created_at)}</td>
       <td>${esc(o.customer_name)}</td>
       <td>${esc(o.customer_phone)}</td>
-      <td>${Number(o.pizzas) || 0}</td>
+      <td>${pizzaCount(o)}</td>
       <td><b>${esc(o.status)}</b></td>
       <td>
-        <button onclick="updateStatus('${o.id}','confirmed')">Confirmed</button>
-        <button onclick="updateStatus('${o.id}','baking')">Baking</button>
-        <button onclick="updateStatus('${o.id}','ready')">Ready</button>
-        <button onclick="updateStatus('${o.id}','collected')">Collected</button>
-        <button onclick="updateStatus('${o.id}','cancelled')">Cancel</button>
+        <div>${esc(itemsLabel(o))}</div>
+        <div style="margin-top:6px;">
+          <button onclick="updateStatus('${o.id}','confirmed')">Confirmed</button>
+          <button onclick="updateStatus('${o.id}','baking')">Baking</button>
+          <button onclick="updateStatus('${o.id}','ready')">Ready</button>
+          <button onclick="updateStatus('${o.id}','collected')">Collected</button>
+          <button onclick="updateStatus('${o.id}','cancelled')">Cancel</button>
+        </div>
       </td>
     </tr>
   `).join("");
 }
 
-function showSummary(){
+function showSummary() {
   const totalOrders = lastOrders.length;
-  const totalPizzas = lastOrders.reduce((s,o)=> s + (Number(o.pizzas)||0), 0);
 
+  // totals by category + totals of pizzas
   const byStatus = {};
-  for(const o of lastOrders){
-    byStatus[o.status] = (byStatus[o.status]||0) + 1;
+  const byCategory = {};
+  let totalPizzas = 0;
+
+  for (const o of lastOrders) {
+    byStatus[o.status] = (byStatus[o.status] || 0) + 1;
+
+    const items = Array.isArray(o.order_items) ? o.order_items : [];
+    for (const it of items) {
+      const qty = Number(it.qty) || 0;
+      const cat = (it.product?.category ?? "uncategorised").toLowerCase();
+      byCategory[cat] = (byCategory[cat] || 0) + qty;
+    }
+
+    totalPizzas += pizzaCount(o);
   }
 
   alert(
-`Aggregated orders
+`Aggregated orders (selected drop)
 
 Total orders: ${totalOrders}
 Total pizzas: ${totalPizzas}
 
 By status:
-${Object.entries(byStatus).map(([k,v])=>`- ${k}: ${v}`).join("\n") || "- none"}`
+${Object.entries(byStatus).map(([k,v]) => `- ${k}: ${v}`).join("\n") || "- none"}
+
+Items by category (qty):
+${Object.entries(byCategory).map(([k,v]) => `- ${k}: ${v}`).join("\n") || "- none"}`
   );
 }
 
-async function start(){
+async function start() {
   await loadLiveDrops();
   await refresh();
 
-  if(timer) clearInterval(timer);
-  timer = setInterval(refresh,5000);
+  if (timer) clearInterval(timer);
+  timer = setInterval(refresh, 5000);
 }
 
 loadBtn.addEventListener("click", start);
 summaryBtn.addEventListener("click", showSummary);
 
-// Auto start on load
+// Auto start
 start();
-
 </script>
+
 </body>
 </html>
