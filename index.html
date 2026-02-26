@@ -72,17 +72,22 @@ function fmt(d){
   return new Date(d).toLocaleTimeString();
 }
 
-async function loadLiveDrops(){
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/drops?select=id,name,closes_at,status&status=eq.live&order=closes_at.asc`,
-    { headers }
-  );
+async function fetchOrders(dropId){
+  const url =
+    `${SUPABASE_URL}/rest/v1/orders?drop_id=eq.${dropId}` +
+    `&select=id,created_at,customer_name,customer_phone,status,` +
+    `order_items(qty,product:products(name,category,capacity_units))` +
+    `&order=created_at.desc`;
 
+  const res = await fetch(url, { headers });
   const text = await res.text();
   if(!res.ok){
-    msg.textContent = `Could not load drops: ${res.status} ${text}`;
-    return;
+    msg.textContent = `Orders fetch failed: ${res.status} ${text}`;
+    return [];
   }
+
+  return JSON.parse(text);
+}
 
   const drops = JSON.parse(text);
 
