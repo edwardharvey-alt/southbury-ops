@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Southbury Farm Pizza — Drop Manager</title>
+<style>
+  body { font-family: system-ui; padding:20px; background:#fafafa; }
+  h2 { margin: 0 0 10px; }
+  .bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin: 10px 0 16px; }
+  .panel { background:#fff; border:1px solid #ddd; border-radius:8px; padding:12px; margin: 12px 0; }
+  table { width:100%; border-collapse:collapse; margin-top:10px; background:#fff; }
+  th, td { border:1px solid #ddd; padding:8px; text-align:left; vertical-align: top; }
+  th { background:#f2f2f2; }
+  input, select { padding:6px; border:1px solid #bbb; border-radius:6px; }
+  button { padding:6px 10px; border:1px solid #bbb; border-radius:6px; background:#fff; cursor:pointer; }
+  button:hover { background:#f3f3f3; }
+  .muted { color:#666; font-size:12px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; }
+  .row > div { display:flex; flex-direction:column; gap:4px; }
+  .danger { border-color:#d33; color:#d33; }
+  .ok { color: #0a0; }
+  .err { color: #c00; white-space: pre-wrap; }
+  a { color:#111; }
+  a.btnlink { display:inline-block; padding:6px 10px; border:1px solid #bbb; border-radius:6px; text-decoration:none; background:#fff; }
+  a.btnlink:hover { background:#f3f3f3; }
+  .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+  @media (max-width: 900px){ .grid2 { grid-template-columns: 1fr; } }
+  .checkbox { transform: scale(1.1); }
+  .tiny { font-size:11px; color:#666; }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <h2>Southbury Farm Pizza — Drop Manager</h2>
+  <span class="muted">Manage drops + assign menus (products per drop).</span>
+  <span style="margin-left:auto;">
+    <a class="btnlink" href="./index.html">← Back to Operator Dashboard</a>
+  </span>
+</div>
+
+<div id="msg" class="err"></div>
+
+<div class="panel">
+  <h3 style="margin:0 0 10px;">Create new drop</h3>
+  <div class="row">
+    <div style="min-width:260px;">
+      <label class="tiny">Name</label>
+      <input id="new_name" placeholder="e.g., Test Drop — Southbury" />
+    </div>
+    <div>
+      <label class="tiny">Status</label>
+      <select id="new_status">
+        <option value="planned">planned</option>
+        <option value="live">live</option>
+        <option value="closed">closed</option>
+      </select>
+    </div>
+    <div>
+      <label class="tiny">Opens at (optional)</label>
+      <input id="new_opens" type="datetime-local" />
+    </div>
+    <div>
+      <label class="tiny">Closes at</label>
+      <input id="new_closes" type="datetime-local" />
+    </div>
+    <div>
+      <label class="tiny">Max orders</label>
+      <input id="new_max_orders" type="number" value="40" />
+    </div>
+    <div>
+      <label class="tiny">Capacity units total (optional)</label>
+      <input id="new_units_total" type="number" placeholder="e.g. 80" />
+    </div>
+  </div>
+  <div class="bar" style="margin-top:12px;">
+    <button id="createDropBtn">Create drop</button>
+    <span class="muted">After creation, use “Manage menu” in the drop list below.</span>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="bar" style="margin:0;">
+    <h3 style="margin:0;">Drops</h3>
+    <button id="refreshBtn">Refresh</button>
+  </div>
+  <div class="muted">Tip: “View dashboard” opens the Operator page filtered to that drop.</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:180px;">Name</th>
+        <th style="width:90px;">Status</th>
+        <th style="width:170px;">Closes</th>
+        <th style="width:110px;">Max orders</th>
+        <th style="width:140px;">Units total</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="dropRows"></tbody>
+  </table>
+</div>
+
+<div class="panel" id="menuPanel" style="display:none;">
+  <div class="bar" style="margin:0;">
+    <h3 style="margin:0;">Manage menu for drop: <span id="menuDropLabel" class="pill"></span></h3>
+    <button id="closeMenuBtn" class="danger">Close</button>
+  </div>
+
+  <div class="grid2" style="margin-top:12px;">
+    <div class="panel" style="margin:0;">
+      <h4 style="margin:0 0 8px;">Drop details</h4>
+      <div class="row">
+        <div style="min-width:260px;">
+          <label class="tiny">Name</label>
+          <input id="edit_name" />
+        </div>
+        <div>
+          <label class="tiny">Status</label>
+          <select id="edit_status">
+            <option value="planned">planned</option>
+            <option value="live">live</option>
+            <option value="closed">closed</option>
+          </select>
+        </div>
+        <div>
+          <label class="tiny">Opens at</label>
+          <input id="edit_opens" type="datetime-local" />
+        </div>
+        <div>
+          <label class="tiny">Closes at</label>
+          <input id="edit_closes" type="datetime-local" />
+        </div>
+        <div>
+          <label class="tiny">Max orders</label>
+          <input id="edit_max_orders" type="number" />
+        </div>
+        <div>
+          <label class="tiny">Capacity units total</label>
+          <input id="edit_units_total" type="number" />
+        </div>
+      </div>
+      <div class="bar" style="margin-top:10px;">
+        <button id="saveDropBtn">Save drop details</button>
+        <a id="openDashLink" class="btnlink" href="#" target="_blank">View dashboard</a>
+      </div>
+      <div class="muted">This updates the <code>drops</code> row.</div>
+    </div>
+
+    <div class="panel" style="margin:0;">
+      <h4 style="margin:0 0 8px;">Menu rules</h4>
+      <div class="muted">
+        Menu is driven by <code>drop_products</code> rows for the selected drop.<br/>
+        Tick products to include them for this drop; set:
+        <ul>
+          <li><b>is_available</b> (TRUE/FALSE)</li>
+          <li><b>sort_order</b> (lower = earlier)</li>
+          <li><b>price_override_pence</b> (optional)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:12px;">
+    <div class="bar" style="margin:0;">
+      <h4 style="margin:0;">Products for this drop</h4>
+      <button id="reloadMenuBtn">Reload menu</button>
+      <button id="saveMenuBtn">Save menu</button>
+      <span id="saveOk" class="ok"></span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:80px;">Include</th>
+          <th>Name</th>
+          <th style="width:120px;">Category</th>
+          <th style="width:120px;">Base price</th>
+          <th style="width:140px;">Override (pence)</th>
+          <th style="width:120px;">Available</th>
+          <th style="width:120px;">Sort order</th>
+        </tr>
+      </thead>
+      <tbody id="menuRows"></tbody>
+    </table>
+
+    <div class="muted" style="margin-top:10px;">
+      If you don’t tick a product, we will remove it from the drop menu (delete from <code>drop_products</code> for that product + drop).
+    </div>
+  </div>
+</div>
+
+<script>
+/*** CONFIG ***/
+const SUPABASE_URL = "https://tvqhhjvumgumyetvpgid.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_GftZ3Mw1M2-jb2bStjv80Q_gRDC9FzD";
+
+const headers = {
+  apikey: SUPABASE_ANON_KEY,
+  Authorization: "Bearer " + SUPABASE_ANON_KEY,
+  "Content-Type": "application/json"
+};
+
+const msg = document.getElementById("msg");
+const dropRows = document.getElementById("dropRows");
+
+const refreshBtn = document.getElementById("refreshBtn");
+const createDropBtn = document.getElementById("createDropBtn");
+
+const new_name = document.getElementById("new_name");
+const new_status = document.getElementById("new_status");
+const new_opens = document.getElementById("new_opens");
+const new_closes = document.getElementById("new_closes");
+const new_max_orders = document.getElementById("new_max_orders");
+const new_units_total = document.getElementById("new_units_total");
+
+const menuPanel = document.getElementById("menuPanel");
+const menuDropLabel = document.getElementById("menuDropLabel");
+const closeMenuBtn = document.getElementById("closeMenuBtn");
+const reloadMenuBtn = document.getElementById("reloadMenuBtn");
+const saveMenuBtn = document.getElementById("saveMenuBtn");
+const menuRows = document.getElementById("menuRows");
+const saveOk = document.getElementById("saveOk");
+
+const edit_name = document.getElementById("edit_name");
+const edit_status = document.getElementById("edit_status");
+const edit_opens = document.getElementById("edit_opens");
+const edit_closes = document.getElementById("edit_closes");
+const edit_max_orders = document.getElementById("edit_max_orders");
+const edit_units_total = document.getElementById("edit_units_total");
+const saveDropBtn = document.getElementById("saveDropBtn");
+const openDashLink = document.getElementById("openDashLink");
+
+let dropsCache = [];
+let productsCache = [];
+let dropProductsCache = [];
+let activeDropId = null;
+
+/*** HELPERS ***/
+function esc(s){
+  return String(s ?? "").replace(/[&<>"']/g,
+    m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+}
+function toIsoFromLocal(localStr){
+  // datetime-local => ISO string (no timezone in input; browser assumes local)
+  if(!localStr) return null;
+  const d = new Date(localStr);
+  if(String(d) === "Invalid Date") return null;
+  return d.toISOString();
+}
+function toLocalFromIso(iso){
+  if(!iso) return "";
+  const d = new Date(iso);
+  if(String(d) === "Invalid Date") return "";
+  // convert to YYYY-MM-DDTHH:MM for datetime-local
+  const pad = n => String(n).padStart(2,"0");
+  const yyyy = d.getFullYear();
+  const mm = pad(d.getMonth()+1);
+  const dd = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const mi = pad(d.getMinutes());
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+async function fetchJson(url){
+  const res = await fetch(url, { headers });
+  const text = await res.text();
+  if(!res.ok) throw new Error(`${res.status} ${text}`);
+  return JSON.parse(text);
+}
+async function postJson(url, body, method="POST"){
+  const res = await fetch(url, {
+    method,
+    headers: { ...headers, Prefer: "return=representation" },
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  if(!res.ok) throw new Error(`${res.status} ${text}`);
+  return JSON.parse(text);
+}
+function money(pence){
+  if(pence == null || pence === "") return "—";
+  const n = Number(pence);
+  if(!Number.isFinite(n)) return "—";
+  return `£${(n/100).toFixed(2)}`;
+}
+
+/*** LOAD DROPS + PRODUCTS ***/
+async function loadDrops(){
+  msg.textContent = "";
+  const url =
+    `${SUPABASE_URL}/rest/v1/drops` +
+    `?select=id,name,status,opens_at,closes_at,max_orders,capacity_units_total` +
+    `&order=closes_at.desc.nullslast`;
+
+  dropsCache = await fetchJson(url);
+  renderDrops();
+}
+
+async function loadProducts(){
+  const url =
+    `${SUPABASE_URL}/rest/v1/products` +
+    `?select=id,name,category,price_pence,capacity_units,is_active,sort_order` +
+    `&order=sort_order.asc.nullslast&order=name.asc`;
+
+  productsCache = await fetchJson(url);
+}
+
+function renderDrops(){
+  dropRows.innerHTML = dropsCache.map(d=>{
+    const closes = d.closes_at ? new Date(d.closes_at).toLocaleString() : "—";
+    const units = (d.capacity_units_total != null) ? d.capacity_units_total : "—";
+    return `
+      <tr>
+        <td>${esc(d.name || "—")}</td>
+        <td><span class="pill">${esc(d.status || "—")}</span></td>
+        <td>${esc(closes)}</td>
+        <td>${d.max_orders ?? "—"}</td>
+        <td>${esc(String(units))}</td>
+        <td>
+          <button onclick="openMenu('${d.id}')">Manage menu</button>
+          <a class="btnlink" href="./index.html?drop_id=${d.id}" target="_blank">View dashboard</a>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+window.openMenu = openMenu;
+
+/*** CREATE DROP ***/
+async function createDrop(){
+  try{
+    msg.textContent = "";
+    const body = {
+      name: new_name.value.trim() || null,
+      status: new_status.value,
+      opens_at: toIsoFromLocal(new_opens.value),
+      closes_at: toIsoFromLocal(new_closes.value),
+      max_orders: (new_max_orders.value !== "" ? Number(new_max_orders.value) : null),
+      capacity_units_total: (new_units_total.value !== "" ? Number(new_units_total.value) : null)
+    };
+
+    // Basic guard: closes_at is strongly recommended
+    if(!body.closes_at) throw new Error("Please set closes_at for the new drop.");
+
+    await postJson(`${SUPABASE_URL}/rest/v1/drops`, body, "POST");
+
+    // clear inputs (keep status)
+    new_name.value = "";
+    new_opens.value = "";
+    new_closes.value = "";
+    new_units_total.value = "";
+
+    await loadDrops();
+  }catch(e){
+    msg.textContent = `Create drop failed: ${e.message}`;
+  }
+}
+
+/*** MENU MGMT ***/
+async function openMenu(dropId){
+  activeDropId = dropId;
+  saveOk.textContent = "";
+
+  const d = dropsCache.find(x=>x.id===dropId);
+  menuDropLabel.textContent = d?.name || dropId;
+
+  // fill drop edit fields
+  edit_name.value = d?.name || "";
+  edit_status.value = d?.status || "planned";
+  edit_opens.value = toLocalFromIso(d?.opens_at);
+  edit_closes.value = toLocalFromIso(d?.closes_at);
+  edit_max_orders.value = (d?.max_orders != null ? d.max_orders : "");
+  edit_units_total.value = (d?.capacity_units_total != null ? d.capacity_units_total : "");
+
+  openDashLink.href = `./index.html?drop_id=${dropId}`;
+
+  menuPanel.style.display = "block";
+
+  // Ensure products loaded
+  if(!productsCache.length) await loadProducts();
+
+  await loadDropProducts(dropId);
+  renderMenuTable();
+}
+
+async function loadDropProducts(dropId){
+  // fetch drop_products for this drop
+  const url =
+    `${SUPABASE_URL}/rest/v1/drop_products` +
+    `?drop_id=eq.${dropId}` +
+    `&select=drop_id,product_id,price_override_pence,is_available,sort_order`;
+
+  dropProductsCache = await fetchJson(url);
+}
+
+function renderMenuTable(){
+  // map existing drop_products by product_id
+  const map = new Map(dropProductsCache.map(x => [x.product_id, x]));
+
+  menuRows.innerHTML = productsCache.map(p=>{
+    const dp = map.get(p.id);
+    const included = !!dp;
+    const isAvail = (dp?.is_available != null) ? !!dp.is_available : true;
+    const sortOrder = (dp?.sort_order != null) ? dp.sort_order : (p.sort_order ?? "");
+    const override = (dp?.price_override_pence != null) ? dp.price_override_pence : "";
+
+    return `
+      <tr data-product-id="${p.id}">
+        <td>
+          <input class="checkbox" type="checkbox" ${included ? "checked" : ""} />
+        </td>
+        <td>${esc(p.name)}</td>
+        <td>${esc(p.category || "—")}</td>
+        <td>${esc(money(p.price_pence))}</td>
+        <td><input type="number" class="override" placeholder="(optional)" value="${esc(String(override))}" /></td>
+        <td>
+          <select class="avail">
+            <option value="true" ${isAvail ? "selected" : ""}>TRUE</option>
+            <option value="false" ${!isAvail ? "selected" : ""}>FALSE</option>
+          </select>
+        </td>
+        <td><input type="number" class="sort" placeholder="(optional)" value="${esc(String(sortOrder))}" /></td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function saveDropDetails(){
+  try{
+    msg.textContent = "";
+    saveOk.textContent = "";
+
+    if(!activeDropId) return;
+
+    const patch = {
+      name: edit_name.value.trim() || null,
+      status: edit_status.value,
+      opens_at: toIsoFromLocal(edit_opens.value),
+      closes_at: toIsoFromLocal(edit_closes.value),
+      max_orders: (edit_max_orders.value !== "" ? Number(edit_max_orders.value) : null),
+      capacity_units_total: (edit_units_total.value !== "" ? Number(edit_units_total.value) : null)
+    };
+
+    await postJson(`${SUPABASE_URL}/rest/v1/drops?id=eq.${activeDropId}`, patch, "PATCH");
+
+    saveOk.textContent = "Saved drop.";
+    await loadDrops(); // refresh list + cache
+  }catch(e){
+    msg.textContent = `Save drop failed: ${e.message}`;
+  }
+}
+
+async function saveMenu(){
+  try{
+    msg.textContent = "";
+    saveOk.textContent = "";
+    if(!activeDropId) return;
+
+    // Current state from UI
+    const rows = Array.from(menuRows.querySelectorAll("tr[data-product-id]"));
+    const selected = [];
+
+    for(const r of rows){
+      const product_id = r.getAttribute("data-product-id");
+      const checked = r.querySelector("input[type=checkbox]")?.checked;
+      if(!checked) continue;
+
+      const overrideVal = r.querySelector("input.override")?.value;
+      const availVal = r.querySelector("select.avail")?.value;
+      const sortVal = r.querySelector("input.sort")?.value;
+
+      selected.push({
+        drop_id: activeDropId,
+        product_id,
+        is_available: (availVal === "true"),
+        sort_order: (sortVal !== "" ? Number(sortVal) : null),
+        price_override_pence: (overrideVal !== "" ? Number(overrideVal) : null)
+      });
+    }
+
+    // Strategy:
+    // 1) delete all drop_products for this drop
+    // 2) insert selected rows fresh
+    // This is simplest + robust.
+    await fetch(`${SUPABASE_URL}/rest/v1/drop_products?drop_id=eq.${activeDropId}`, {
+      method: "DELETE",
+      headers
+    });
+
+    if(selected.length){
+      await postJson(`${SUPABASE_URL}/rest/v1/drop_products`, selected, "POST");
+    }
+
+    saveOk.textContent = `Saved menu (${selected.length} products).`;
+    await loadDropProducts(activeDropId);
+  }catch(e){
+    msg.textContent = `Save menu failed: ${e.message}`;
+  }
+}
+
+function closeMenu(){
+  activeDropId = null;
+  menuPanel.style.display = "none";
+  saveOk.textContent = "";
+}
+
+/*** WIRING ***/
+refreshBtn.addEventListener("click", loadDrops);
+createDropBtn.addEventListener("click", createDrop);
+
+closeMenuBtn.addEventListener("click", closeMenu);
+reloadMenuBtn.addEventListener("click", async ()=>{
+  if(!activeDropId) return;
+  saveOk.textContent = "";
+  await loadDropProducts(activeDropId);
+  renderMenuTable();
+});
+saveMenuBtn.addEventListener("click", saveMenu);
+saveDropBtn.addEventListener("click", saveDropDetails);
+
+/*** INIT ***/
+(async function init(){
+  try{
+    await loadProducts();
+    await loadDrops();
+  }catch(e){
+    msg.textContent = `Init failed: ${e.message}`;
+  }
+})();
+</script>
+
+</body>
+</html>
