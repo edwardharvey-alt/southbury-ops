@@ -1,134 +1,107 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Southbury Farm Pizza — Operator</title>
-<style>
-  body { font-family: system-ui; padding:20px; background:#fafafa; }
-  table { width:100%; border-collapse:collapse; margin-top:15px; }
-  th, td { border:1px solid #ddd; padding:8px; text-align:left; vertical-align: top; }
-  th { background:#f2f2f2; }
-  button { margin:2px; padding:4px 8px; cursor:pointer; }
-  #cap { margin-left:15px; font-weight:bold; }
-  .topbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-  .small { font-size: 12px; color:#444; }
-  .pill { display:inline-block; padding:2px 6px; border:1px solid #bbb; border-radius:999px; font-size:12px; background:#fff; }
-  .right { margin-left:auto; }
-  a.btnlink { display:inline-block; padding:4px 8px; border:1px solid #bbb; border-radius:4px; text-decoration:none; color:#111; background:#fff; }
-  a.btnlink:hover { background:#f3f3f3; }
-</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hearth — Service Board</title>
+<link rel="stylesheet" href="./assets/hearth.css">
 </head>
 <body>
+<div class="container">
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-  <div>
-    <h1 style="margin:0;">🔥 Hearth</h1>
-    <div style="font-size:14px;color:#666;">Service Board</div>
+  <div class="topbar">
+    <div class="brand">
+      <div class="title">🔥 Hearth</div>
+      <div class="subtitle">Service Board</div>
+    </div>
+    <div class="tabs">
+      <a class="tab active" href="./index.html">Service Board</a>
+      <a class="tab" href="./drop-manager.html">Drop Studio</a>
+      <a class="tab" href="./products.html">Menu Library</a>
+    </div>
   </div>
-  <div style="display:flex;gap:10px;">
-    <a href="./index.html" style="text-decoration:none;">Service Board</a>
-    <a href="./drop-manager.html" style="text-decoration:none;">Drop Studio</a>
-    <a href="./products.html" style="text-decoration:none;">Menu Library</a>
+
+  <div class="panel">
+    <div class="bar">
+      <label class="small">Live drop</label>
+      <select id="dropSelect" style="min-width:360px;"></select>
+      <button id="loadBtn" class="primary">Load</button>
+      <button id="summaryBtn">Aggregated orders</button>
+      <span id="cap" class="badge"></span>
+    </div>
+    <div id="msg" class="msg"></div>
+
+    <div style="margin-top:12px;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:100px;">Time</th>
+            <th style="width:180px;">Name</th>
+            <th style="width:160px;">Phone</th>
+            <th style="width:220px;">Pizzas</th>
+            <th style="width:220px;">Other items</th>
+            <th style="width:110px;">Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
   </div>
+
 </div>
-
-<div class="topbar">
-  <label>Live drop:</label>
-  <select id="dropSelect" style="min-width:420px;"></select>
-
-  <button id="loadBtn">Load</button>
-  <button id="aggDropBtn">Aggregated (selected drop)</button>
-  <button id="aggAllBtn">Aggregated (all live drops)</button>
-
-  <span id="cap"></span>
-
-  <span class="right">
-    <a class="btnlink" href="./drop-manager.html">Drop Manager</a>
-  </span>
-</div>
-
-<div id="msg" style="color:red;margin-top:10px;"></div>
-
-<table>
-  <thead>
-    <tr>
-      <th>Time</th>
-      <th>Name</th>
-      <th>Phone</th>
-      <th>Pizzas</th>
-      <th>Items</th>
-      <th>Status</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody id="rows"></tbody>
-</table>
 
 <script src="./assets/config.js"></script>
+
 <script>
 /*** CONFIG ***/
 const SUPABASE_URL = window.HEARTH_CONFIG.SUPABASE_URL;
 const SUPABASE_ANON_KEY = window.HEARTH_CONFIG.SUPABASE_ANON_KEY;
 
-/*** REST HEADERS ***/
 const headers = {
   apikey: SUPABASE_ANON_KEY,
   Authorization: "Bearer " + SUPABASE_ANON_KEY,
   "Content-Type": "application/json"
 };
 
-/*** ELEMENTS ***/
 const rows = document.getElementById("rows");
 const msg = document.getElementById("msg");
 const capEl = document.getElementById("cap");
 
 const dropSelect = document.getElementById("dropSelect");
 const loadBtn = document.getElementById("loadBtn");
-const aggDropBtn = document.getElementById("aggDropBtn");
-const aggAllBtn = document.getElementById("aggAllBtn");
+const summaryBtn = document.getElementById("summaryBtn");
 
 let timer = null;
 let lastOrders = [];
-let lastDrops = []; // live drops list cached
+let lastDrop = null;
 
-/*** HELPERS ***/
 function esc(s){
   return String(s ?? "").replace(/[&<>"']/g,
     m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 }
-function fmtTime(d){
-  try { return new Date(d).toLocaleTimeString(); } catch { return d; }
-}
-function qparam(name){
-  const u = new URL(window.location.href);
-  return u.searchParams.get(name);
-}
-async function fetchJson(url){
-  const res = await fetch(url, { headers });
+function fmt(d){ try { return new Date(d).toLocaleTimeString(); } catch { return d; } }
+
+async function fetchText(url, opts){
+  const res = await fetch(url, opts);
   const text = await res.text();
-  if(!res.ok) throw new Error(`${res.status} ${text}`);
-  return JSON.parse(text);
+  return {res, text};
 }
 
-/*** DROPS ***/
 async function loadLiveDrops(){
-  // loads live drops, closes soonest first
+  msg.textContent = "";
   const url =
     `${SUPABASE_URL}/rest/v1/drops` +
-    `?select=id,name,closes_at,status,max_orders,capacity_units_total` +
-    `&status=eq.live` +
-    `&order=closes_at.asc.nullslast`;
+    `?select=id,name,closes_at,status,capacity_category,capacity_units_total,max_orders` +
+    `&status=eq.live&order=closes_at.asc.nullslast`;
 
-  const drops = await fetchJson(url);
-  lastDrops = drops;
-
-  if(!drops.length){
-    msg.textContent = "No live drops found.";
-    dropSelect.innerHTML = "";
+  const {res, text} = await fetchText(url, { headers });
+  if(!res.ok){
+    msg.textContent = `Could not load drops: ${res.status}\n${text}`;
     return;
   }
 
+  const drops = JSON.parse(text);
   dropSelect.innerHTML = drops.map(d => {
     const label =
       `${d.name || d.id}` +
@@ -136,316 +109,147 @@ async function loadLiveDrops(){
     return `<option value="${d.id}">${esc(label)}</option>`;
   }).join("");
 
-  // If drop_id is in URL, select it (if present in list)
-  const fromUrl = qparam("drop_id");
-  if(fromUrl && drops.some(x => x.id === fromUrl)){
-    dropSelect.value = fromUrl;
-  } else {
-    dropSelect.value = drops[0].id;
-  }
+  if(drops.length) dropSelect.value = drops[0].id;
+  else msg.textContent = "No live drops found.";
 }
 
-/*** ORDER QUERY (with nested items + products) ***/
+async function fetchDrop(dropId){
+  const url =
+    `${SUPABASE_URL}/rest/v1/drops?id=eq.${dropId}` +
+    `&select=id,name,status,capacity_category,capacity_units_total,max_orders`;
+  const {res, text} = await fetchText(url, { headers });
+  if(!res.ok) throw new Error(`Drop fetch failed: ${res.status}\n${text}`);
+  return (JSON.parse(text)[0] || null);
+}
+
 async function fetchOrders(dropId){
   const url =
     `${SUPABASE_URL}/rest/v1/orders?drop_id=eq.${dropId}` +
     `&select=id,created_at,customer_name,customer_phone,status,` +
-    `order_items(qty,price_pence,product:products(id,name,category,capacity_units,price_pence))` +
-    `&order=created_at.desc`;
+    `order_items(qty,product:products(name,category))` +
+    `&order=created_at.asc`;
 
-  try {
-    const orders = await fetchJson(url);
-    return orders;
-  } catch (e) {
-    msg.textContent = `Orders fetch failed: ${e.message}`;
-    return [];
-  }
+  const {res, text} = await fetchText(url, { headers });
+  if(!res.ok) throw new Error(`Orders fetch failed: ${res.status}\n${text}`);
+  return JSON.parse(text);
 }
 
-function splitItems(order){
-  const items = Array.isArray(order.order_items) ? order.order_items : [];
-  const pizzas = [];
-  const others = [];
+function splitItems(order, capacityCategory){
+  const cap = String(capacityCategory || "pizza").toLowerCase();
+  const pizzas = new Map();
+  const others = new Map();
 
-  for(const it of items){
-    const p = it.product || {};
+  for(const oi of (order.order_items || [])){
+    const p = oi.product || {};
     const name = p.name || "Unknown";
-    const qty = Number(it.qty) || 0;
+    const cat = String(p.category || "").toLowerCase();
+    const qty = Number(oi.qty) || 0;
     if(!qty) continue;
 
-    const cat = (p.category || "").toLowerCase();
-    const line = `${name} x${qty}`;
+    const m = (cat === cap) ? pizzas : others;
+    m.set(name, (m.get(name) || 0) + qty);
+  }
 
-    if(cat === "pizza" || cat === "pizzas"){
-      pizzas.push(line);
-    } else {
-      others.push(line);
+  const toStr = (m) => {
+    const arr = Array.from(m.entries()).map(([n,q])=>`${n} x${q}`);
+    return arr.length ? arr.join(", ") : "—";
+  };
+
+  return { pizzasStr: toStr(pizzas), othersStr: toStr(others) };
+}
+
+function computeCapacity(orders, capacityCategory){
+  const cap = String(capacityCategory || "pizza").toLowerCase();
+  let used = 0;
+  for(const o of orders){
+    for(const oi of (o.order_items || [])){
+      const cat = String(oi.product?.category || "").toLowerCase();
+      if(cat === cap) used += (Number(oi.qty) || 0);
     }
   }
-
-  return {
-    pizzasText: pizzas.length ? pizzas.join(", ") : "–",
-    itemsText: others.length ? others.join(", ") : "–",
-    pizzasCount: sumCategoryQty(items, ["pizza","pizzas"]),
-    unitsUsed: calcUnits(items),
-    revenuePence: calcRevenuePence(items)
-  };
+  return used;
 }
 
-function sumCategoryQty(items, cats){
-  let s = 0;
-  for(const it of items){
-    const p = it.product || {};
-    const cat = (p.category || "").toLowerCase();
-    if(cats.includes(cat)) s += (Number(it.qty) || 0);
-  }
-  return s;
-}
-
-function calcUnits(items){
-  // qty * product.capacity_units (default 1)
-  let units = 0;
-  for(const it of items){
-    const p = it.product || {};
-    const qty = Number(it.qty) || 0;
-    const cu = Number(p.capacity_units);
-    units += qty * (Number.isFinite(cu) ? cu : 1);
-  }
-  return units;
-}
-
-function calcRevenuePence(items){
-  // prefer order_items.price_pence if set, else products.price_pence
-  let pence = 0;
-  for(const it of items){
-    const qty = Number(it.qty) || 0;
-    const linePrice = (it.price_pence != null) ? Number(it.price_pence) : Number((it.product||{}).price_pence);
-    if(qty && Number.isFinite(linePrice)) pence += qty * linePrice;
-  }
-  return pence;
-}
-
-function fmtMoney(pence){
-  if(!Number.isFinite(pence)) return "£0.00";
-  const v = (pence/100).toFixed(2);
-  return `£${v}`;
-}
-
-/*** CAPACITY ***/
-async function fetchCapacity(dropId, orders){
-  // max_orders & capacity_units_total live on drops (if you have them)
-  let drop = null;
-  try {
-    const d = await fetchJson(`${SUPABASE_URL}/rest/v1/drops?id=eq.${dropId}&select=max_orders,capacity_units_total`);
-    drop = d[0] || null;
-  } catch(e) {
-    // ignore
-  }
-
-  const orderCount = orders.length;
-  let usedUnits = 0;
-  let usedPizzas = 0;
-
-  for(const o of orders){
-    const parts = splitItems(o);
-    usedUnits += parts.unitsUsed;
-    usedPizzas += parts.pizzasCount;
-  }
-
-  const maxOrders = drop?.max_orders;
-  const maxUnits = drop?.capacity_units_total;
-
-  const bits = [];
-  if(maxOrders != null) bits.push(`Capacity: ${orderCount}/${maxOrders}`);
-  else bits.push(`Orders: ${orderCount}`);
-
-  if(maxUnits != null) bits.push(`Units: ${usedUnits}/${maxUnits}`);
-  else bits.push(`Units: ${usedUnits}`);
-
-  bits.push(`Pizzas: ${usedPizzas}`);
-
-  capEl.textContent = bits.join(" | ");
-}
-
-/*** STATUS UPDATE ***/
 async function updateStatus(id,status){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`,{
+  const url = `${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`;
+  const {res, text} = await fetchText(url, {
     method:"PATCH",
-    headers:{...headers,"Prefer":"return=representation"},
-    body:JSON.stringify({status})
+    headers:{...headers, Prefer:"return=representation"},
+    body: JSON.stringify({status})
   });
-
   if(!res.ok){
-    msg.textContent = `Status update failed: ${res.status} ${await res.text()}`;
+    msg.textContent = `Status update failed: ${res.status}\n${text}`;
     return;
   }
-
   refresh();
 }
 window.updateStatus = updateStatus;
 
-/*** RENDER ***/
 async function refresh(){
-  const dropId = (dropSelect.value || "").trim();
+  const dropId = dropSelect.value;
   if(!dropId) return;
 
   msg.textContent = "";
 
-  const orders = await fetchOrders(dropId);
-  lastOrders = orders;
+  try{
+    lastDrop = await fetchDrop(dropId);
+    lastOrders = await fetchOrders(dropId);
 
-  await fetchCapacity(dropId, orders);
+    const cat = lastDrop?.capacity_category || "pizza";
+    const used = computeCapacity(lastOrders, cat);
 
-  rows.innerHTML = orders.map(o=>{
-    const parts = splitItems(o);
-    return `
-      <tr>
-        <td>${fmtTime(o.created_at)}</td>
-        <td>${esc(o.customer_name)}</td>
-        <td>${esc(o.customer_phone)}</td>
-        <td>${esc(parts.pizzasText)}</td>
-        <td>${esc(parts.itemsText)}</td>
-        <td><b>${esc(o.status)}</b></td>
-        <td>
-          <button onclick="updateStatus('${o.id}','confirmed')">Confirmed</button>
-          <button onclick="updateStatus('${o.id}','baking')">Baking</button>
-          <button onclick="updateStatus('${o.id}','ready')">Ready</button>
-          <button onclick="updateStatus('${o.id}','collected')">Collected</button>
-          <button onclick="updateStatus('${o.id}','cancelled')">Cancel</button>
-        </td>
-      </tr>
-    `;
-  }).join("");
+    const total = (lastDrop?.capacity_units_total ?? "—");
+    const maxOrders = (lastDrop?.max_orders ?? "—");
+    capEl.textContent = `Orders ${lastOrders.length}/${maxOrders} · ${cat} ${used}/${total}`;
+
+    rows.innerHTML = lastOrders.map(o=>{
+      const {pizzasStr, othersStr} = splitItems(o, cat);
+      return `
+        <tr>
+          <td>${fmt(o.created_at)}</td>
+          <td>${esc(o.customer_name)}</td>
+          <td>${esc(o.customer_phone)}</td>
+          <td>${esc(pizzasStr)}</td>
+          <td>${esc(othersStr)}</td>
+          <td><b>${esc(o.status)}</b></td>
+          <td>
+            <button onclick="updateStatus('${o.id}','confirmed')">Confirmed</button>
+            <button onclick="updateStatus('${o.id}','baking')">Baking</button>
+            <button onclick="updateStatus('${o.id}','ready')">Ready</button>
+            <button onclick="updateStatus('${o.id}','collected')">Collected</button>
+            <button onclick="updateStatus('${o.id}','cancelled')">Cancel</button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+  }catch(e){
+    msg.textContent = e.message || String(e);
+  }
 }
 
-/*** AGGREGATION ***/
-function aggregateOrders(orders){
-  // group by product name + category
-  const map = new Map(); // key => {name, category, qty, units, revenuePence}
-  let totalOrders = 0;
-  let totalUnits = 0;
-  let totalPizzas = 0;
-  let totalRevenue = 0;
-
-  for(const o of orders){
-    totalOrders += 1;
-    const items = Array.isArray(o.order_items) ? o.order_items : [];
-
-    for(const it of items){
-      const p = it.product || {};
-      const name = p.name || "Unknown";
-      const category = (p.category || "other");
-      const qty = Number(it.qty) || 0;
-      if(!qty) continue;
-
-      const cu = Number(p.capacity_units);
-      const units = qty * (Number.isFinite(cu) ? cu : 1);
-
-      const priceEach = (it.price_pence != null) ? Number(it.price_pence) : Number(p.price_pence);
-      const revenue = (Number.isFinite(priceEach) ? priceEach : 0) * qty;
-
-      const key = `${category}||${name}`;
-      if(!map.has(key)){
-        map.set(key, { name, category, qty:0, units:0, revenuePence:0 });
-      }
-      const row = map.get(key);
-      row.qty += qty;
-      row.units += units;
-      row.revenuePence += revenue;
-
-      totalUnits += units;
-      totalRevenue += revenue;
-
-      const cat = (category || "").toLowerCase();
-      if(cat === "pizza" || cat === "pizzas") totalPizzas += qty;
+function showSummary(){
+  const totals = new Map();
+  for(const o of lastOrders){
+    for(const oi of (o.order_items || [])){
+      const name = oi.product?.name || "Unknown";
+      const qty = Number(oi.qty) || 0;
+      totals.set(name, (totals.get(name) || 0) + qty);
     }
   }
-
-  // split to pizzas first
-  const all = Array.from(map.values());
-  const pizzas = all.filter(x => (x.category||"").toLowerCase() === "pizza" || (x.category||"").toLowerCase() === "pizzas")
-                   .sort((a,b)=> b.qty - a.qty);
-  const others = all.filter(x => !((x.category||"").toLowerCase() === "pizza" || (x.category||"").toLowerCase() === "pizzas"))
-                   .sort((a,b)=> b.qty - a.qty);
-
-  return { totalOrders, totalUnits, totalPizzas, totalRevenue, pizzas, others };
+  const lines = Array.from(totals.entries()).sort((a,b)=>b[1]-a[1]).map(([n,q])=>`- ${n}: ${q}`).join("\n") || "(none)";
+  alert(`Prep Summary (selected drop)\n\n${lines}`);
 }
 
-function linesForAgg(list){
-  if(!list.length) return ["- none"];
-  return list.map(x => `- ${x.name}: ${x.qty}  (units ${x.units}, rev ${fmtMoney(x.revenuePence)})`);
-}
-
-function showAggForSelectedDrop(){
-  const dropId = (dropSelect.value || "").trim();
-  const label = dropSelect.options[dropSelect.selectedIndex]?.text || dropId;
-
-  const agg = aggregateOrders(lastOrders);
-
-  alert(
-`Aggregated demand (selected drop)
-${label}
-
-Total orders: ${agg.totalOrders}
-Total pizzas: ${agg.totalPizzas}
-Total units: ${agg.totalUnits}
-Estimated revenue: ${fmtMoney(agg.totalRevenue)}
-
-PIZZAS
-${linesForAgg(agg.pizzas).join("\n")}
-
-OTHER ITEMS
-${linesForAgg(agg.others).join("\n")}
-`
-  );
-}
-
-async function showAggForAllLiveDrops(){
-  if(!lastDrops.length) await loadLiveDrops();
-  const liveDropIds = lastDrops.map(d => d.id);
-
-  // pull orders for each live drop (simple, explicit)
-  const allOrders = [];
-  for(const id of liveDropIds){
-    const orders = await fetchOrders(id);
-    allOrders.push(...orders);
-  }
-
-  const agg = aggregateOrders(allOrders);
-
-  alert(
-`Aggregated demand (all LIVE drops)
-
-Live drops: ${liveDropIds.length}
-Total orders: ${agg.totalOrders}
-Total pizzas: ${agg.totalPizzas}
-Total units: ${agg.totalUnits}
-Estimated revenue: ${fmtMoney(agg.totalRevenue)}
-
-PIZZAS
-${linesForAgg(agg.pizzas).join("\n")}
-
-OTHER ITEMS
-${linesForAgg(agg.others).join("\n")}
-`
-  );
-}
-
-/*** STARTUP ***/
 async function start(){
   await loadLiveDrops();
   await refresh();
-
   if(timer) clearInterval(timer);
   timer = setInterval(refresh, 5000);
 }
 
-/*** WIRES ***/
 loadBtn.addEventListener("click", start);
-aggDropBtn.addEventListener("click", showAggForSelectedDrop);
-aggAllBtn.addEventListener("click", showAggForAllLiveDrops);
-
-// Auto start
+summaryBtn.addEventListener("click", showSummary);
 start();
 </script>
 
