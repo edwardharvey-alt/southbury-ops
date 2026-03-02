@@ -4,59 +4,139 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Hearth — Service Board</title>
-<link rel="stylesheet" href="./assets/hearth.css">
+<style>
+  :root{
+    --bg:#fafafa;
+    --card:#fff;
+    --border:#e2e2e2;
+    --muted:#666;
+    --text:#111;
+  }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; padding:22px; background:var(--bg); color:var(--text); }
+  .topbar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:14px; }
+  .brand { display:flex; flex-direction:column; gap:2px; }
+  .brand .name { font-weight:700; font-size:20px; display:flex; align-items:center; gap:8px; }
+  .brand .sub { font-size:12px; color:var(--muted); margin-left:26px; margin-top:-2px; }
+  .nav { margin-left:auto; display:flex; gap:10px; align-items:center; }
+  .pill {
+    display:inline-block; padding:7px 12px; border:1px solid var(--border);
+    border-radius:999px; background:#fff; text-decoration:none; color:var(--text);
+    font-size:13px;
+  }
+  .pill.active{ border-color:#cfcfcf; box-shadow:0 1px 0 rgba(0,0,0,.03); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; }
+  .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  select { padding:8px; border:1px solid #bbb; border-radius:10px; min-width:420px; background:#fff; }
+  button { padding:8px 10px; border:1px solid #bbb; border-radius:10px; background:#fff; cursor:pointer; }
+  button:hover { background:#f3f3f3; }
+  .err { color:#c00; white-space:pre-wrap; margin-top:10px; }
+  .strip { display:flex; gap:12px; flex-wrap:wrap; align-items:center; color:var(--muted); font-size:13px; }
+  .strip b { color:var(--text); }
+  .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:12px; }
+  @media (max-width: 900px){ .grid2 { grid-template-columns: 1fr; } select{ min-width: 260px; } }
+  h3 { margin:0 0 10px; font-size:14px; }
+  .kpi { display:flex; gap:10px; flex-wrap:wrap; }
+  .kpi .box { border:1px solid var(--border); background:#fff; border-radius:12px; padding:10px 12px; }
+  .kpi .box .label{ font-size:11px; color:var(--muted); }
+  .kpi .box .val{ font-size:18px; font-weight:700; margin-top:3px; }
+
+  table { width:100%; border-collapse:collapse; margin-top:12px; background:#fff; }
+  th, td { border-top:1px solid var(--border); padding:10px 8px; text-align:left; vertical-align:top; font-size:13px; }
+  th { background:#f6f6f6; font-size:12px; color:#333; border-top:none; }
+  td small{ color:var(--muted); }
+  .items { max-width:520px; line-height:1.25; }
+  .items .line{ margin:2px 0; }
+  .status { font-weight:700; }
+  .actions button { padding:6px 8px; border-radius:10px; margin:2px 3px 2px 0; font-size:12px; }
+  .muted { color:var(--muted); }
+  .right { text-align:right; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+</style>
 </head>
+
 <body>
-<div class="container">
 
-  <div class="topbar">
-    <div class="brand">
-      <div class="title">🔥 Hearth</div>
-      <div class="subtitle">Service Board</div>
-    </div>
-    <div class="tabs">
-      <a class="tab active" href="./index.html">Service Board</a>
-      <a class="tab" href="./drop-manager.html">Drop Studio</a>
-      <a class="tab" href="./products.html">Menu Library</a>
-    </div>
+<div class="topbar">
+  <div class="brand">
+    <div class="name">🔥 Hearth</div>
+    <div class="sub">Service Board</div>
   </div>
 
-  <div class="panel">
-    <div class="bar">
-      <label class="small">Live drop</label>
-      <select id="dropSelect" style="min-width:360px;"></select>
-      <button id="loadBtn" class="primary">Load</button>
-      <button id="summaryBtn">Aggregated orders</button>
-      <span id="cap" class="badge"></span>
-    </div>
-    <div id="msg" class="msg"></div>
-
-    <div style="margin-top:12px;">
-      <table>
-        <thead>
-          <tr>
-            <th style="width:100px;">Time</th>
-            <th style="width:180px;">Name</th>
-            <th style="width:160px;">Phone</th>
-            <th style="width:220px;">Pizzas</th>
-            <th style="width:220px;">Other items</th>
-            <th style="width:110px;">Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
-    </div>
+  <div class="nav">
+    <a class="pill active" href="./index.html">Service Board</a>
+    <a class="pill" href="./drop-manager.html">Drop Studio</a>
+    <a class="pill" href="./menu-library.html">Menu Library</a>
   </div>
-
 </div>
 
+<div class="card">
+  <div class="controls">
+    <label class="muted">Live drop</label>
+    <select id="dropSelect"></select>
+    <button id="loadBtn">Load</button>
+    <button id="aggAllBtn" title="Aggregated prep across all live drops">Prep summary (all live drops)</button>
+    <span id="strip" class="strip"></span>
+  </div>
+
+  <div id="msg" class="err"></div>
+
+  <!-- ALWAYS VISIBLE PREP SUMMARY -->
+  <div class="grid2">
+    <div class="card" style="padding:12px;">
+      <h3>Prep summary — selected drop</h3>
+
+      <div class="kpi" style="margin-bottom:10px;">
+        <div class="box">
+          <div class="label">Capacity category</div>
+          <div class="val" id="capCatKpi">—</div>
+        </div>
+        <div class="box">
+          <div class="label">Capacity items</div>
+          <div class="val" id="capItemsKpi">0</div>
+        </div>
+        <div class="box">
+          <div class="label">Capacity units</div>
+          <div class="val" id="capUnitsKpi">0</div>
+        </div>
+      </div>
+
+      <div class="muted" style="font-size:12px;margin-bottom:6px;">
+        Capacity items are products where <span class="mono">products.category</span> matches <span class="mono">drops.capacity_category</span>.
+      </div>
+
+      <div id="prepCapBreakdown" class="items"></div>
+    </div>
+
+    <div class="card" style="padding:12px;">
+      <h3>Other items — selected drop</h3>
+      <div id="prepOtherBreakdown" class="items"></div>
+    </div>
+  </div>
+
+  <!-- ORDER QUEUE -->
+  <table>
+    <thead>
+      <tr>
+        <th style="width:90px;">Time</th>
+        <th style="width:160px;">Customer</th>
+        <th style="width:130px;">Phone</th>
+        <th>Capacity items</th>
+        <th>Other items</th>
+        <th style="width:90px;">Status</th>
+        <th style="width:280px;">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+
+<!-- shared config -->
 <script src="./assets/config.js"></script>
 
 <script>
-/*** CONFIG ***/
-const SUPABASE_URL = window.HEARTH_CONFIG.SUPABASE_URL;
-const SUPABASE_ANON_KEY = window.HEARTH_CONFIG.SUPABASE_ANON_KEY;
+/*** CONFIG (from assets/config.js) ***/
+const SUPABASE_URL = window.HEARTH_CONFIG?.SUPABASE_URL;
+const SUPABASE_ANON_KEY = window.HEARTH_CONFIG?.SUPABASE_ANON_KEY;
 
 const headers = {
   apikey: SUPABASE_ANON_KEY,
@@ -64,192 +144,364 @@ const headers = {
   "Content-Type": "application/json"
 };
 
-const rows = document.getElementById("rows");
-const msg = document.getElementById("msg");
-const capEl = document.getElementById("cap");
-
 const dropSelect = document.getElementById("dropSelect");
 const loadBtn = document.getElementById("loadBtn");
-const summaryBtn = document.getElementById("summaryBtn");
+const aggAllBtn = document.getElementById("aggAllBtn");
+const rowsEl = document.getElementById("rows");
+const msgEl = document.getElementById("msg");
+const stripEl = document.getElementById("strip");
+
+const capCatKpi = document.getElementById("capCatKpi");
+const capItemsKpi = document.getElementById("capItemsKpi");
+const capUnitsKpi = document.getElementById("capUnitsKpi");
+const prepCapBreakdown = document.getElementById("prepCapBreakdown");
+const prepOtherBreakdown = document.getElementById("prepOtherBreakdown");
 
 let timer = null;
 let lastOrders = [];
-let lastDrop = null;
+let dropsCache = [];
 
+/*** HELPERS ***/
 function esc(s){
-  return String(s ?? "").replace(/[&<>"']/g,
-    m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+  return String(s ?? "").replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 }
-function fmt(d){ try { return new Date(d).toLocaleTimeString(); } catch { return d; } }
-
-async function fetchText(url, opts){
-  const res = await fetch(url, opts);
+function fmtTime(d){
+  try { return new Date(d).toLocaleTimeString(); } catch { return "—"; }
+}
+function getQueryParam(name){
+  const u = new URL(window.location.href);
+  return u.searchParams.get(name);
+}
+function setQueryParam(name, value){
+  const u = new URL(window.location.href);
+  if(value) u.searchParams.set(name, value);
+  else u.searchParams.delete(name);
+  history.replaceState({}, "", u.toString());
+}
+async function fetchJson(url){
+  const res = await fetch(url, { headers });
   const text = await res.text();
-  return {res, text};
+  if(!res.ok) throw new Error(`${res.status} ${text}`);
+  return JSON.parse(text);
+}
+function sumQty(items){
+  return (items || []).reduce((s,i)=> s + (Number(i.qty)||0), 0);
+}
+function money(pence){
+  const n = Number(pence);
+  if(!Number.isFinite(n)) return 0;
+  return n/100;
 }
 
-async function loadLiveDrops(){
-  msg.textContent = "";
+/*** DATA LOADERS ***/
+async function loadDrops(){
+  msgEl.textContent = "";
+
+  // We list planned + live (so you can prep), but you can filter to live only if you prefer.
   const url =
     `${SUPABASE_URL}/rest/v1/drops` +
-    `?select=id,name,closes_at,status,capacity_category,capacity_units_total,max_orders` +
-    `&status=eq.live&order=closes_at.asc.nullslast`;
+    `?select=id,name,status,opens_at,closes_at,max_orders,capacity_units_total,capacity_category` +
+    `&order=closes_at.desc.nullslast`;
 
-  const {res, text} = await fetchText(url, { headers });
-  if(!res.ok){
-    msg.textContent = `Could not load drops: ${res.status}\n${text}`;
+  dropsCache = await fetchJson(url);
+
+  if(!dropsCache.length){
+    dropSelect.innerHTML = `<option value="">No drops found</option>`;
     return;
   }
 
-  const drops = JSON.parse(text);
-  dropSelect.innerHTML = drops.map(d => {
-    const label =
-      `${d.name || d.id}` +
-      (d.closes_at ? ` (closes ${new Date(d.closes_at).toLocaleString()})` : "");
+  dropSelect.innerHTML = dropsCache.map(d=>{
+    const closes = d.closes_at ? ` (closes ${new Date(d.closes_at).toLocaleString()})` : "";
+    const label = `${d.name || d.id}${closes}`;
     return `<option value="${d.id}">${esc(label)}</option>`;
   }).join("");
 
-  if(drops.length) dropSelect.value = drops[0].id;
-  else msg.textContent = "No live drops found.";
+  const qp = getQueryParam("drop_id");
+  if(qp && dropsCache.some(d=>d.id===qp)){
+    dropSelect.value = qp;
+  }else{
+    dropSelect.value = dropsCache[0].id;
+  }
 }
 
-async function fetchDrop(dropId){
-  const url =
-    `${SUPABASE_URL}/rest/v1/drops?id=eq.${dropId}` +
-    `&select=id,name,status,capacity_category,capacity_units_total,max_orders`;
-  const {res, text} = await fetchText(url, { headers });
-  if(!res.ok) throw new Error(`Drop fetch failed: ${res.status}\n${text}`);
-  return (JSON.parse(text)[0] || null);
-}
-
-async function fetchOrders(dropId){
+async function fetchOrdersForDrop(dropId){
   const url =
     `${SUPABASE_URL}/rest/v1/orders?drop_id=eq.${dropId}` +
     `&select=id,created_at,customer_name,customer_phone,status,` +
-    `order_items(qty,product:products(name,category))` +
+    `order_items(qty,price_pence,product:products(id,name,category,capacity_units,price_pence))` +
     `&order=created_at.asc`;
 
-  const {res, text} = await fetchText(url, { headers });
-  if(!res.ok) throw new Error(`Orders fetch failed: ${res.status}\n${text}`);
-  return JSON.parse(text);
+  return await fetchJson(url);
 }
 
-function splitItems(order, capacityCategory){
-  const cap = String(capacityCategory || "pizza").toLowerCase();
-  const pizzas = new Map();
-  const others = new Map();
+async function fetchOrdersForAllLiveDrops(){
+  // get live drops first
+  const live = dropsCache.filter(d => (d.status || "").toLowerCase() === "live");
+  if(!live.length) return { drops: [], ordersByDrop: {} };
 
-  for(const oi of (order.order_items || [])){
-    const p = oi.product || {};
-    const name = p.name || "Unknown";
-    const cat = String(p.category || "").toLowerCase();
-    const qty = Number(oi.qty) || 0;
+  const ordersByDrop = {};
+  for(const d of live){
+    ordersByDrop[d.id] = await fetchOrdersForDrop(d.id);
+  }
+  return { drops: live, ordersByDrop };
+}
+
+/*** RENDER / CALCS ***/
+function splitItems(order, capacityCategory){
+  const items = order.order_items || [];
+  const cap = [];
+  const other = [];
+
+  for(const it of items){
+    const p = it.product || {};
+    const qty = Number(it.qty)||0;
     if(!qty) continue;
 
-    const m = (cat === cap) ? pizzas : others;
-    m.set(name, (m.get(name) || 0) + qty);
+    const name = p.name || "Item";
+    const category = (p.category || "").toLowerCase();
+    const isCap = capacityCategory && category === capacityCategory.toLowerCase();
+
+    const entry = { name, category, qty, capacity_units: Number(p.capacity_units)||1, price_pence: it.price_pence ?? p.price_pence ?? 0 };
+    (isCap ? cap : other).push(entry);
   }
-
-  const toStr = (m) => {
-    const arr = Array.from(m.entries()).map(([n,q])=>`${n} x${q}`);
-    return arr.length ? arr.join(", ") : "—";
-  };
-
-  return { pizzasStr: toStr(pizzas), othersStr: toStr(others) };
+  return { cap, other };
 }
 
-function computeCapacity(orders, capacityCategory){
-  const cap = String(capacityCategory || "pizza").toLowerCase();
-  let used = 0;
+function formatList(items){
+  if(!items.length) return `<div class="muted">—</div>`;
+  return items.map(x=> `<div class="line">${esc(x.name)} <small>x${x.qty}</small></div>`).join("");
+}
+
+function aggregateBreakdown(orders, capacityCategory){
+  const capByProduct = new Map();
+  const otherByCategoryThenProduct = new Map();
+
+  let capItemsTotal = 0;
+  let capUnitsTotal = 0;
+  let revenueTotal = 0;
+
   for(const o of orders){
-    for(const oi of (o.order_items || [])){
-      const cat = String(oi.product?.category || "").toLowerCase();
-      if(cat === cap) used += (Number(oi.qty) || 0);
+    const { cap, other } = splitItems(o, capacityCategory);
+
+    // revenue (all items)
+    for(const it of (o.order_items||[])){
+      const qty = Number(it.qty)||0;
+      const pence = Number(it.price_pence ?? it.product?.price_pence ?? 0)||0;
+      revenueTotal += qty * pence;
+    }
+
+    // cap
+    for(const x of cap){
+      capItemsTotal += x.qty;
+      capUnitsTotal += x.qty * (Number(x.capacity_units)||1);
+      capByProduct.set(x.name, (capByProduct.get(x.name)||0) + x.qty);
+    }
+
+    // other (group by category then product)
+    for(const x of other){
+      const cat = (x.category || "other").toLowerCase();
+      if(!otherByCategoryThenProduct.has(cat)) otherByCategoryThenProduct.set(cat, new Map());
+      const m = otherByCategoryThenProduct.get(cat);
+      m.set(x.name, (m.get(x.name)||0) + x.qty);
     }
   }
-  return used;
+
+  return { capByProduct, otherByCategoryThenProduct, capItemsTotal, capUnitsTotal, revenueTotal };
 }
 
-async function updateStatus(id,status){
-  const url = `${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`;
-  const {res, text} = await fetchText(url, {
-    method:"PATCH",
-    headers:{...headers, Prefer:"return=representation"},
-    body: JSON.stringify({status})
-  });
-  if(!res.ok){
-    msg.textContent = `Status update failed: ${res.status}\n${text}`;
-    return;
+function renderPrepSummary(drop, orders){
+  const capCat = (drop?.capacity_category || "pizza").toLowerCase(); // fallback, but you *have* capacity_category now
+  const { capByProduct, otherByCategoryThenProduct, capItemsTotal, capUnitsTotal } =
+    aggregateBreakdown(orders, capCat);
+
+  capCatKpi.textContent = capCat;
+  capItemsKpi.textContent = String(capItemsTotal);
+  capUnitsKpi.textContent = String(capUnitsTotal);
+
+  // capacity breakdown
+  const capLines = Array.from(capByProduct.entries())
+    .sort((a,b)=> b[1]-a[1])
+    .map(([name,qty]) => `<div class="line">${esc(name)} <small>x${qty}</small></div>`)
+    .join("");
+  prepCapBreakdown.innerHTML = capLines || `<div class="muted">No capacity-category items yet.</div>`;
+
+  // other breakdown (category headers)
+  if(otherByCategoryThenProduct.size === 0){
+    prepOtherBreakdown.innerHTML = `<div class="muted">No other items yet.</div>`;
+  }else{
+    const blocks = [];
+    for(const [cat, m] of Array.from(otherByCategoryThenProduct.entries()).sort((a,b)=> a[0].localeCompare(b[0]))){
+      const lines = Array.from(m.entries())
+        .sort((a,b)=> b[1]-a[1])
+        .map(([name,qty]) => `<div class="line">${esc(name)} <small>x${qty}</small></div>`)
+        .join("");
+      blocks.push(`<div style="margin-bottom:10px;"><div class="muted" style="font-weight:700;text-transform:capitalize;">${esc(cat)}</div>${lines}</div>`);
+    }
+    prepOtherBreakdown.innerHTML = blocks.join("") || `<div class="muted">—</div>`;
   }
-  refresh();
+}
+
+function renderOrders(drop, orders){
+  const capCat = (drop?.capacity_category || "pizza").toLowerCase();
+
+  rowsEl.innerHTML = orders.map(o=>{
+    const { cap, other } = splitItems(o, capCat);
+
+    return `
+      <tr>
+        <td>${esc(fmtTime(o.created_at))}</td>
+        <td>${esc(o.customer_name || "—")}</td>
+        <td>${esc(o.customer_phone || "—")}</td>
+        <td class="items">${formatList(cap)}</td>
+        <td class="items">${formatList(other)}</td>
+        <td class="status">${esc(o.status || "—")}</td>
+        <td class="actions">
+          <button onclick="updateStatus('${o.id}','confirmed')">Confirmed</button>
+          <button onclick="updateStatus('${o.id}','baking')">Baking</button>
+          <button onclick="updateStatus('${o.id}','ready')">Ready</button>
+          <button onclick="updateStatus('${o.id}','collected')">Collected</button>
+          <button onclick="updateStatus('${o.id}','cancelled')">Cancel</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderStrip(drop, orders){
+  const maxOrders = drop?.max_orders ?? "—";
+  const ordersCount = orders.length;
+
+  const capTotal = (drop?.capacity_units_total != null) ? Number(drop.capacity_units_total) : null;
+  const capCat = (drop?.capacity_category || "pizza").toLowerCase();
+
+  const { capItemsTotal, capUnitsTotal } = aggregateBreakdown(orders, capCat);
+
+  const parts = [];
+  parts.push(`<span>Orders <b>${ordersCount}/${maxOrders}</b></span>`);
+
+  if(capTotal != null){
+    parts.push(`<span>Units <b>${capUnitsTotal}/${capTotal}</b></span>`);
+  }else{
+    parts.push(`<span>Units <b>${capUnitsTotal}</b></span>`);
+  }
+
+  parts.push(`<span>Capacity items <b>${capItemsTotal}</b></span>`);
+
+  stripEl.innerHTML = parts.join(`<span class="muted">|</span>`);
+}
+
+/*** ACTIONS ***/
+async function updateStatus(id, status){
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`,{
+      method:"PATCH",
+      headers:{...headers,"Prefer":"return=representation"},
+      body:JSON.stringify({status})
+    });
+    await refresh();
+  }catch(e){
+    msgEl.textContent = `Status update failed: ${e.message}`;
+  }
 }
 window.updateStatus = updateStatus;
 
 async function refresh(){
-  const dropId = dropSelect.value;
-  if(!dropId) return;
-
-  msg.textContent = "";
-
   try{
-    lastDrop = await fetchDrop(dropId);
-    lastOrders = await fetchOrders(dropId);
+    msgEl.textContent = "";
 
-    const cat = lastDrop?.capacity_category || "pizza";
-    const used = computeCapacity(lastOrders, cat);
+    const dropId = dropSelect.value;
+    if(!dropId) return;
 
-    const total = (lastDrop?.capacity_units_total ?? "—");
-    const maxOrders = (lastDrop?.max_orders ?? "—");
-    capEl.textContent = `Orders ${lastOrders.length}/${maxOrders} · ${cat} ${used}/${total}`;
+    setQueryParam("drop_id", dropId);
 
-    rows.innerHTML = lastOrders.map(o=>{
-      const {pizzasStr, othersStr} = splitItems(o, cat);
-      return `
-        <tr>
-          <td>${fmt(o.created_at)}</td>
-          <td>${esc(o.customer_name)}</td>
-          <td>${esc(o.customer_phone)}</td>
-          <td>${esc(pizzasStr)}</td>
-          <td>${esc(othersStr)}</td>
-          <td><b>${esc(o.status)}</b></td>
-          <td>
-            <button onclick="updateStatus('${o.id}','confirmed')">Confirmed</button>
-            <button onclick="updateStatus('${o.id}','baking')">Baking</button>
-            <button onclick="updateStatus('${o.id}','ready')">Ready</button>
-            <button onclick="updateStatus('${o.id}','collected')">Collected</button>
-            <button onclick="updateStatus('${o.id}','cancelled')">Cancel</button>
-          </td>
-        </tr>
-      `;
-    }).join("");
+    const drop = dropsCache.find(d=>d.id===dropId);
+    if(!drop){
+      msgEl.textContent = "Selected drop not found in cache.";
+      return;
+    }
+
+    const orders = await fetchOrdersForDrop(dropId);
+    lastOrders = orders;
+
+    renderStrip(drop, orders);
+    renderPrepSummary(drop, orders);
+    renderOrders(drop, orders);
 
   }catch(e){
-    msg.textContent = e.message || String(e);
+    msgEl.textContent = `Refresh failed: ${e.message}`;
   }
 }
 
-function showSummary(){
-  const totals = new Map();
-  for(const o of lastOrders){
-    for(const oi of (o.order_items || [])){
-      const name = oi.product?.name || "Unknown";
-      const qty = Number(oi.qty) || 0;
-      totals.set(name, (totals.get(name) || 0) + qty);
+async function showAllLivePrep(){
+  try{
+    msgEl.textContent = "";
+    const { drops, ordersByDrop } = await fetchOrdersForAllLiveDrops();
+
+    if(!drops.length){
+      alert("No live drops found.");
+      return;
     }
+
+    // aggregate across live drops, respecting each drop's capacity_category
+    const lines = [];
+    lines.push(`Prep summary — all LIVE drops\n`);
+
+    for(const d of drops){
+      const capCat = (d.capacity_category || "pizza").toLowerCase();
+      const orders = ordersByDrop[d.id] || [];
+      const { capByProduct, otherByCategoryThenProduct, capItemsTotal, capUnitsTotal } =
+        aggregateBreakdown(orders, capCat);
+
+      lines.push(`— ${d.name || d.id}`);
+      lines.push(`  Capacity category: ${capCat}`);
+      lines.push(`  Capacity items: ${capItemsTotal}`);
+      lines.push(`  Capacity units: ${capUnitsTotal}${(d.capacity_units_total!=null) ? ` / ${d.capacity_units_total}` : ""}`);
+
+      // cap by product
+      const capList = Array.from(capByProduct.entries()).sort((a,b)=>b[1]-a[1]);
+      if(capList.length){
+        lines.push(`  Capacity breakdown:`);
+        for(const [name,qty] of capList){
+          lines.push(`   - ${name}: ${qty}`);
+        }
+      }
+
+      // other by category
+      if(otherByCategoryThenProduct.size){
+        lines.push(`  Other items:`);
+        for(const [cat,m] of otherByCategoryThenProduct.entries()){
+          const items = Array.from(m.entries()).sort((a,b)=>b[1]-a[1]).slice(0,20);
+          lines.push(`   - ${cat}: ${items.map(([n,q])=>`${n} x${q}`).join(", ")}`);
+        }
+      }
+
+      lines.push(""); // spacer
+    }
+
+    alert(lines.join("\n"));
+  }catch(e){
+    msgEl.textContent = `All-live prep failed: ${e.message}`;
   }
-  const lines = Array.from(totals.entries()).sort((a,b)=>b[1]-a[1]).map(([n,q])=>`- ${n}: ${q}`).join("\n") || "(none)";
-  alert(`Prep Summary (selected drop)\n\n${lines}`);
 }
 
+/*** INIT ***/
 async function start(){
-  await loadLiveDrops();
+  if(!SUPABASE_URL || !SUPABASE_ANON_KEY){
+    msgEl.textContent = "Missing window.HEARTH_CONFIG in assets/config.js";
+    return;
+  }
+  await loadDrops();
   await refresh();
+
   if(timer) clearInterval(timer);
   timer = setInterval(refresh, 5000);
 }
 
 loadBtn.addEventListener("click", start);
-summaryBtn.addEventListener("click", showSummary);
+dropSelect.addEventListener("change", refresh);
+aggAllBtn.addEventListener("click", showAllLivePrep);
+
+// auto start
 start();
 </script>
 
