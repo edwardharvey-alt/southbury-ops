@@ -1,168 +1,301 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Hearth — Service Board</title>
-
-<link rel="stylesheet" href="./assets/hearth.css">
+<style>
+  :root{
+    --bg:#f6f7fb;
+    --panel:#ffffff;
+    --text:#0f172a;
+    --muted:#64748b;
+    --border:#e5e7eb;
+    --brand:#4f46e5;     /* pro platform default */
+    --brand2:#06b6d4;    /* accent */
+    --good:#16a34a;
+    --warn:#f59e0b;
+    --bad:#dc2626;
+    --shadow: 0 10px 30px rgba(2,6,23,.08);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    color:var(--text);
+    background: radial-gradient(1200px 600px at 20% -10%, rgba(79,70,229,.12), transparent 55%),
+                radial-gradient(900px 500px at 90% 0%, rgba(6,182,212,.10), transparent 55%),
+                var(--bg);
+  }
+  a{color:inherit}
+  .wrap{max-width:1180px; margin:0 auto; padding:22px;}
+  .topbar{
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    padding:14px 16px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    box-shadow:var(--shadow);
+  }
+  .logo{
+    display:flex; align-items:center; gap:10px;
+    padding-right:6px;
+  }
+  .mark{
+    width:34px; height:34px; border-radius:10px;
+    background: linear-gradient(135deg, var(--brand), var(--brand2));
+  }
+  .title{
+    display:flex; flex-direction:column; line-height:1.1;
+  }
+  .title b{font-size:14px; letter-spacing:.2px}
+  .title span{font-size:12px; color:var(--muted)}
+  .spacer{flex:1}
+  select, button{
+    font:inherit;
+    border:1px solid var(--border);
+    background:#fff;
+    border-radius:10px;
+    padding:8px 10px;
+  }
+  select{min-width:420px; max-width:100%}
+  button{cursor:pointer}
+  button:hover{background:#f8fafc}
+  .btn-primary{
+    border-color: transparent;
+    background: linear-gradient(135deg, rgba(79,70,229,.95), rgba(6,182,212,.95));
+    color:#fff;
+  }
+  .btn-primary:hover{filter:brightness(.98)}
+  .btn-ghost{background:transparent}
+  .btn-small{padding:6px 8px; border-radius:9px; font-size:12px; white-space:nowrap}
+  .row{display:flex; gap:14px; flex-wrap:wrap; margin-top:14px}
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    box-shadow:var(--shadow);
+    padding:14px;
+  }
+  .kpi-wrap{display:grid; grid-template-columns: repeat(3, 1fr); gap:12px}
+  @media (max-width: 860px){ .kpi-wrap{grid-template-columns:1fr} }
+  .kpi-head{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .kpi-head b{font-size:13px}
+  .kpi-head span{font-size:12px; color:var(--muted)}
+  .kpi-grid{
+    display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;
+  }
+  @media (max-width: 860px){ .kpi-grid{grid-template-columns:1fr} }
+  .card{
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:12px;
+    background: linear-gradient(180deg, #fff, #fbfdff);
+  }
+  .card .label{font-size:12px; color:var(--muted)}
+  .card .val{font-size:20px; font-weight:800; margin-top:4px}
+  .card .sub{font-size:12px; color:var(--muted); margin-top:4px}
+  .pill{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12px;
+    border:1px solid var(--border);
+    background:#fff;
+    padding:6px 10px;
+    border-radius:999px;
+    color:var(--muted);
+  }
+  .pill i{display:inline-block; width:8px; height:8px; border-radius:99px; background:var(--muted)}
+  .pill.good i{background:var(--good)}
+  .pill.warn i{background:var(--warn)}
+  .pill.bad i{background:var(--bad)}
+  .msg{white-space:pre-wrap; color:var(--bad); margin-top:10px}
+  table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    overflow:hidden;
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:#fff;
+  }
+  th, td{
+    padding:10px;
+    border-bottom:1px solid var(--border);
+    font-size:13px;
+    vertical-align:top;
+  }
+  th{
+    background:#f8fafc;
+    color:#334155;
+    font-weight:700;
+    position:sticky;
+    top:0;
+    z-index:1;
+  }
+  tr:last-child td{border-bottom:none}
+  .muted{color:var(--muted)}
+  .actions{display:flex; gap:6px; flex-wrap:wrap}
+  .status{font-weight:800}
+  .status.placed{color:#334155}
+  .status.confirmed{color:var(--brand)}
+  .status.baking{color:var(--warn)}
+  .status.ready{color:var(--good)}
+  .status.collected{color:#0f766e}
+  .status.cancelled{color:var(--bad)}
+  .two-col{display:grid; grid-template-columns: 1.2fr .8fr; gap:14px}
+  @media (max-width: 980px){ .two-col{grid-template-columns:1fr} }
+  .modal{
+    position:fixed; inset:0; background:rgba(2,6,23,.55);
+    display:none; align-items:center; justify-content:center;
+    padding:18px;
+  }
+  .modal .box{
+    width:min(920px, 100%);
+    background:#fff;
+    border-radius:16px;
+    border:1px solid var(--border);
+    box-shadow:var(--shadow);
+    padding:14px;
+  }
+  .modal .box header{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding-bottom:10px; border-bottom:1px solid var(--border);
+  }
+  .modal h3{margin:0; font-size:14px}
+  .grid3{display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin-top:12px}
+  @media (max-width: 860px){ .grid3{grid-template-columns:1fr} }
+  .list{
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:12px;
+    background:#fff;
+  }
+  .list h4{margin:0 0 8px; font-size:13px}
+  .list ul{margin:0; padding-left:18px}
+  .list li{margin:6px 0; font-size:13px}
+  .tiny{font-size:12px; color:var(--muted)}
+</style>
 </head>
-
 <body>
-<div class="container">
+<div class="wrap">
 
   <div class="topbar">
-    <div class="brand">
-      <div class="title">🔥 Hearth</div>
-      <div class="subtitle">Service Board</div>
+    <div class="logo">
+      <div class="mark"></div>
+      <div class="title">
+        <b>Hearth — Service Board</b>
+        <span>Operator view (orders, capacity, prep)</span>
+      </div>
     </div>
-    <div class="tabs">
-      <a class="tab active" href="./index.html">Service Board</a>
-      <a class="tab" href="./drop-manager.html">Drop Studio</a>
-      <a class="tab" href="./menu-library.html">Menu Library</a>
+
+    <div class="spacer"></div>
+
+    <span id="livePill" class="pill"><i></i><span>Loading drops…</span></span>
+
+    <label class="tiny">Drop</label>
+    <select id="dropSelect"></select>
+
+    <button id="refreshBtn" class="btn-primary">Refresh</button>
+    <button id="prepBtn" class="btn-ghost">Prep summary</button>
+    <a class="btn-ghost" style="text-decoration:none; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:#fff;" href="./drop-manager.html">Drop Studio</a>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <div class="row">
+    <div class="panel" style="flex:1;">
+      <div class="kpi-head">
+        <div>
+          <b>Performance snapshot</b>
+          <span class="muted">Prev year / YTD / This week</span>
+        </div>
+        <button id="toggleKPIs" class="btn-small">Show more ▸</button>
+      </div>
+
+      <div class="kpi-wrap" id="kpiWrap"></div>
     </div>
   </div>
 
-  <!-- MANAGEMENT -->
-  <div class="panel" id="mgmtPanel">
-    <div class="row">
-      <div>
-        <div style="font-weight:900;">Management</div>
-        <div class="small">This week-to-date • YTD • Previous calendar year</div>
-      </div>
-      <div class="bar">
-        <span class="badge" id="asOfBadge"><span class="dot"></span> As of —</span>
-        <button id="refreshMgmtBtn">Refresh</button>
-      </div>
-    </div>
-
-    <div id="mgmtMsg" class="msg"></div>
-
-    <div class="kpiGrid">
-      <div class="kpiCard">
-        <h3>
-          <span>This week (WTD)</span>
-          <span class="kpiMeta" id="metaWeek">—</span>
-        </h3>
-        <div class="kpis" id="kpiWeek"></div>
-      </div>
-
-      <div class="kpiCard">
-        <h3>
-          <span>Year to date</span>
-          <span class="kpiMeta" id="metaYtd">—</span>
-        </h3>
-        <div class="kpis" id="kpiYtd"></div>
-      </div>
-
-      <div class="kpiCard">
-        <h3>
-          <span>Previous year</span>
-          <span class="kpiMeta" id="metaPrevYear">—</span>
-        </h3>
-        <div class="kpis" id="kpiPrevYear"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- EXECUTION -->
-  <div class="panel">
-    <div class="row">
-      <div>
-        <div style="font-weight:900;">Execution</div>
-        <div class="small">Select a drop to run service and see prep requirements.</div>
-      </div>
-      <div class="bar">
-        <button class="primary" id="prepBtn">Prep summary</button>
-      </div>
-    </div>
-
-    <div class="bar" style="margin-top:10px;">
-      <div class="small">Drop</div>
-      <select id="dropSelect" style="min-width: 520px;"></select>
-      <button id="reloadBtn">Reload</button>
-      <span id="dropBadge" class="badge">—</span>
-    </div>
-
-    <div id="execMsg" class="msg"></div>
-
-    <div class="execGrid">
-      <div class="summaryBox">
-        <h4>Prep summary — selected drop</h4>
-        <div class="sub">Capacity category drives capacity usage (e.g. pizza). Other items are grouped separately.</div>
-        <div class="lines" id="prepSelected"></div>
-      </div>
-
-      <div class="summaryBox">
-        <h4>Capacity</h4>
-        <div class="sub">Single, simplified metric: used units / total units.</div>
-        <div class="kpis" style="grid-template-columns:1fr 1fr;">
-          <div class="kpi">
-            <div class="label">Capacity category</div>
-            <div class="value" id="capCategory">—</div>
-            <div class="delta" id="capCategoryHint"></div>
+  <div class="row">
+    <div class="panel" style="flex:1;">
+      <div class="two-col">
+        <div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+            <div>
+              <b style="font-size:13px;">Orders for selected drop</b>
+              <div class="tiny muted" id="dropMeta">—</div>
+            </div>
+            <div class="pill" id="capPill"><i></i><span>Capacity —</span></div>
           </div>
-          <div class="kpi">
-            <div class="label">Capacity used</div>
-            <div class="value" id="capUsed">0</div>
-            <div class="delta" id="capUsedHint">—</div>
+
+          <div style="margin-top:10px; max-height:520px; overflow:auto; border-radius:14px;">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:92px;">Time</th>
+                  <th style="width:180px;">Customer</th>
+                  <th style="width:140px;">Phone</th>
+                  <th>Capacity items</th>
+                  <th style="width:260px;">Other items</th>
+                  <th style="width:92px;">Status</th>
+                  <th style="width:340px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
           </div>
         </div>
+
+        <div>
+          <b style="font-size:13px;">Quick controls</b>
+          <div class="tiny muted" style="margin-top:4px;">
+            Actions update <code>orders.status</code> only. Prep summary uses <code>order_items</code> + <code>products</code>.
+          </div>
+
+          <div class="panel" style="margin-top:10px;">
+            <b style="font-size:13px;">Notes</b>
+            <div class="tiny muted" style="margin-top:6px;">
+              If some older orders only have <code>orders.pizzas</code>, we’ll include them as a fallback in capacity/pizza counts.
+            </div>
+          </div>
+
+          <div class="panel" style="margin-top:10px;">
+            <b style="font-size:13px;">Shortcuts</b>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+              <a class="btn-ghost" style="text-decoration:none; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:#fff;" href="./drop-manager.html">🗓 Drop Studio</a>
+              <a class="btn-ghost" style="text-decoration:none; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:#fff;" href="./products.html">📚 Menu Library</a>
+            </div>
+            <div class="tiny muted" style="margin-top:8px;">
+              If you don’t have <code>products.html</code> yet, ignore that link for now.
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th style="width:95px;">Time</th>
-          <th style="width:180px;">Customer</th>
-          <th style="width:150px;">Phone</th>
-          <th>Capacity items</th>
-          <th>Other items</th>
-          <th style="width:120px;">Status</th>
-          <th style="width:460px;">Actions</th>
-        </tr>
-      </thead>
-      <tbody id="rows"></tbody>
-    </table>
   </div>
 
 </div>
 
-<!-- PREP MODAL -->
-<div class="overlay" id="overlay">
-  <div class="modal">
-    <div class="modalHeader">
-      <h3>Prep summary</h3>
-      <div class="bar">
-        <span class="badge" id="prepContextBadge">—</span>
-        <button id="closePrepBtn">Close</button>
-      </div>
-    </div>
-
-    <div class="modalBody">
-      <div class="summaryBox">
-        <h4>Selected drop</h4>
-        <div class="sub" id="modalSelectedMeta">—</div>
-        <div class="lines" id="modalSelected"></div>
-      </div>
-
-      <div class="summaryBox">
-        <h4>All live drops</h4>
-        <div class="sub">Useful for batching when multiple drops are live.</div>
-        <div class="lines" id="modalAllLive"></div>
-      </div>
-    </div>
+<!-- Prep modal -->
+<div id="modal" class="modal" role="dialog" aria-modal="true">
+  <div class="box">
+    <header>
+      <h3 id="modalTitle">Prep summary</h3>
+      <button id="closeModal" class="btn-small">Close</button>
+    </header>
+    <div class="tiny muted" id="modalSub" style="margin-top:8px;"></div>
+    <div class="grid3" id="modalGrid"></div>
   </div>
 </div>
-
-<!-- Config lives here (so no keys in HTML pages) -->
-<script src="./assets/config.js"></script>
 
 <script>
-/*** CONFIG ***/
-const SUPABASE_URL = window.HEARTH_CONFIG?.SUPABASE_URL;
-const SUPABASE_ANON_KEY = window.HEARTH_CONFIG?.SUPABASE_ANON_KEY;
+/*** CONFIG (prototype-friendly) ***/
+const SUPABASE_URL = "https://tvqhhjvumgumyetvpgid.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_GftZ3Mw1M2-jb2bStjv80Q_gRDC9FzD"; // prototype only
 
 const headers = {
   apikey: SUPABASE_ANON_KEY,
@@ -171,676 +304,527 @@ const headers = {
 };
 
 /*** ELEMENTS ***/
-const mgmtMsg = document.getElementById("mgmtMsg");
-const refreshMgmtBtn = document.getElementById("refreshMgmtBtn");
-const asOfBadge = document.getElementById("asOfBadge");
-
-const metaWeek = document.getElementById("metaWeek");
-const metaYtd = document.getElementById("metaYtd");
-const metaPrevYear = document.getElementById("metaPrevYear");
-
-const kpiWeek = document.getElementById("kpiWeek");
-const kpiYtd = document.getElementById("kpiYtd");
-const kpiPrevYear = document.getElementById("kpiPrevYear");
-
+const msg = document.getElementById("msg");
 const dropSelect = document.getElementById("dropSelect");
-const reloadBtn = document.getElementById("reloadBtn");
-const dropBadge = document.getElementById("dropBadge");
-const execMsg = document.getElementById("execMsg");
-
+const refreshBtn = document.getElementById("refreshBtn");
 const prepBtn = document.getElementById("prepBtn");
-const prepSelected = document.getElementById("prepSelected");
-
-const capCategory = document.getElementById("capCategory");
-const capCategoryHint = document.getElementById("capCategoryHint");
-const capUsed = document.getElementById("capUsed");
-const capUsedHint = document.getElementById("capUsedHint");
-
+const toggleKPIsBtn = document.getElementById("toggleKPIs");
+const kpiWrap = document.getElementById("kpiWrap");
 const rowsEl = document.getElementById("rows");
+const capPill = document.getElementById("capPill");
+const livePill = document.getElementById("livePill");
+const dropMeta = document.getElementById("dropMeta");
 
-/*** MODAL ***/
-const overlay = document.getElementById("overlay");
-const closePrepBtn = document.getElementById("closePrepBtn");
-const modalSelected = document.getElementById("modalSelected");
-const modalAllLive = document.getElementById("modalAllLive");
-const modalSelectedMeta = document.getElementById("modalSelectedMeta");
-const prepContextBadge = document.getElementById("prepContextBadge");
+const modal = document.getElementById("modal");
+const closeModal = document.getElementById("closeModal");
+const modalTitle = document.getElementById("modalTitle");
+const modalSub = document.getElementById("modalSub");
+const modalGrid = document.getElementById("modalGrid");
 
-/*** STATE ***/
-let drops = [];
-let dropsById = new Map();
-let lastOrders = [];
-let refreshTimer = null;
+let showMoreKPIs = false;
+let dropsCache = [];
+let activeDrop = null;
+let lastOrdersForSelectedDrop = [];
 
 /*** HELPERS ***/
 function esc(s){
-  return String(s ?? "").replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+  return String(s ?? "").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
 }
-function fmtTime(d){
-  try { return new Date(d).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}); } catch { return "—"; }
+function fmtTime(iso){
+  try { return new Date(iso).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}); }
+  catch { return "—"; }
 }
-function fmtDate(d){
-  try { return new Date(d).toLocaleString(); } catch { return "—"; }
+function fmtDateTime(iso){
+  try { return new Date(iso).toLocaleString(); }
+  catch { return "—"; }
 }
-function moneyPence(pence){
-  const n = Number(pence);
-  if(!Number.isFinite(n)) return "£0.00";
-  return `£${(n/100).toFixed(2)}`;
-}
-function clampPct(n){
-  if(!Number.isFinite(n)) return null;
-  return Math.round(n * 10) / 10;
-}
-function deltaHtml(current, prev){
-  const c = Number(current);
-  const p = Number(prev);
-  if(!Number.isFinite(c) || !Number.isFinite(p) || p === 0) return `<span class="flat">—</span>`;
-  const d = (c - p) / p * 100;
-  const dd = clampPct(d);
-  if(dd == null) return `<span class="flat">—</span>`;
-  if(dd > 0) return `<span class="up">↑ ${dd}%</span>`;
-  if(dd < 0) return `<span class="down">↓ ${Math.abs(dd)}%</span>`;
-  return `<span class="flat">—</span>`;
-}
-function uniqCustomerKey(o){
-  const phone = (o.customer_phone || "").trim();
-  const name = (o.customer_name || "").trim().toLowerCase();
-  return phone ? `p:${phone}` : `n:${name || "unknown"}`;
-}
-async function fetchJson(url){
-  const res = await fetch(url, { headers });
-  const text = await res.text();
-  if(!res.ok) throw new Error(`${res.status} ${text}`);
-  return JSON.parse(text);
-}
-function getQueryParam(name){
-  const u = new URL(window.location.href);
-  return u.searchParams.get(name);
-}
-function setQueryParam(name, value){
-  const u = new URL(window.location.href);
-  if(value) u.searchParams.set(name, value);
-  else u.searchParams.delete(name);
-  history.replaceState({}, "", u.toString());
-}
-
-/*** DATE WINDOWS ***/
-function startOfDay(d){
+function startOfWeekMonday(d){
   const x = new Date(d);
+  const day = x.getDay(); // 0 Sun
+  const diff = (day === 0 ? -6 : 1 - day);
+  x.setDate(x.getDate() + diff);
   x.setHours(0,0,0,0);
   return x;
 }
-function startOfWeekMon(d){
-  const x = startOfDay(d);
-  const day = x.getDay(); // 0=Sun
-  const diff = (day === 0 ? 6 : day - 1); // days since Mon
-  x.setDate(x.getDate() - diff);
-  return x;
+function endOfWeekSunday(d){
+  const s = startOfWeekMonday(d);
+  const e = new Date(s);
+  e.setDate(e.getDate()+6);
+  e.setHours(23,59,59,999);
+  return e;
 }
-function iso(d){ return new Date(d).toISOString(); }
+function toIso(d){ return new Date(d).toISOString(); }
+async function fetchText(url){
+  const res = await fetch(url, { headers });
+  const text = await res.text();
+  if(!res.ok) throw new Error(`${res.status} ${text}`);
+  return text;
+}
+async function fetchJson(url){
+  return JSON.parse(await fetchText(url));
+}
 
-/*** LOAD DROPS ***/
+/*** DATA LOADERS ***/
 async function loadDrops(){
-  execMsg.textContent = "";
+  msg.textContent = "";
+  // We’ll treat "live" as priority; but we still list planned/draft/closed too.
   const url =
     `${SUPABASE_URL}/rest/v1/drops` +
-    `?select=id,name,status,opens_at,closes_at,max_orders,capacity_units_total,capacity_category` +
-    `&order=closes_at.desc.nullslast`;
+    `?select=id,slug,name,status,drop_type,delivery_start,delivery_end,cutoff_time,opens_at,closes_at,` +
+    `capacity_category,capacity_units_total,capacity_pizzas,max_orders` +
+    `&order=cutoff_time.desc.nullslast&order=delivery_start.desc.nullslast&order=created_at.desc`;
 
-  drops = await fetchJson(url);
-  dropsById = new Map(drops.map(d=>[d.id, d]));
+  const drops = await fetchJson(url);
+  dropsCache = drops;
 
-  if(!drops.length){
-    dropSelect.innerHTML = `<option value="">No drops found</option>`;
-    return;
-  }
-
-  dropSelect.innerHTML = drops.map(d=>{
-    const status = (d.status || "planned").toLowerCase();
-    const closes = d.closes_at ? ` • closes ${fmtDate(d.closes_at)}` : "";
-    const label = `${d.name || d.id} • ${status}${closes}`;
+  // Populate dropdown
+  dropSelect.innerHTML = drops.map(d => {
+    const label = `${d.name || d.slug || d.id} • ${d.status || "—"} • cutoff ${fmtDateTime(d.cutoff_time || d.closes_at || d.delivery_start)}`;
     return `<option value="${d.id}">${esc(label)}</option>`;
   }).join("");
 
-  const qp = getQueryParam("drop_id");
-  if(qp && dropsById.has(qp)) dropSelect.value = qp;
-  else dropSelect.value = drops[0].id;
+  // Auto-pick best drop:
+  // 1) live with soonest cutoff
+  // 2) else latest by cutoff
+  const now = new Date();
+  const live = drops.filter(d => (d.status||"").toLowerCase() === "live");
+  live.sort((a,b) => new Date(a.cutoff_time||a.closes_at||a.delivery_start||0) - new Date(b.cutoff_time||b.closes_at||b.delivery_start||0));
+
+  const chosen = live.find(d => new Date(d.cutoff_time||d.closes_at||d.delivery_start||0) >= now) || live[0] || drops[0];
+  if(chosen) dropSelect.value = chosen.id;
+
+  activeDrop = chosen || null;
+  updateLivePill();
 }
 
-/*** ORDERS FETCH ***/
+function updateLivePill(){
+  if(!activeDrop){
+    livePill.className = "pill";
+    livePill.innerHTML = `<i></i><span>No drop selected</span>`;
+    return;
+  }
+  const status = (activeDrop.status||"").toLowerCase();
+  let cls = "pill";
+  if(status === "live") cls += " good";
+  else if(status === "planned" || status === "draft") cls += " warn";
+  else if(status === "closed") cls += "";
+  else cls += "";
+
+  livePill.className = cls;
+
+  const cutoff = activeDrop.cutoff_time || activeDrop.closes_at || activeDrop.delivery_start;
+  livePill.innerHTML = `<i></i><span>${esc(activeDrop.status||"—")} • cutoff ${esc(fmtDateTime(cutoff))}</span>`;
+}
+
+function getSelectedDrop(){
+  const id = dropSelect.value;
+  return dropsCache.find(d => d.id === id) || null;
+}
+
+/*** ORDERS (selected drop) ***/
 async function fetchOrdersForDrop(dropId){
+  // Pull orders with nested items (order_items -> products)
+  // Note: If an order has no order_items yet, it will still return order row (order_items: []).
   const url =
-    `${SUPABASE_URL}/rest/v1/orders?drop_id=eq.${dropId}` +
-    `&select=id,created_at,customer_name,customer_phone,status,` +
-    `order_items(qty,price_pence,product:products(id,name,category,capacity_units,price_pence))` +
-    `&order=created_at.asc`;
+    `${SUPABASE_URL}/rest/v1/orders` +
+    `?drop_id=eq.${dropId}` +
+    `&select=id,drop_id,created_at,status,customer_name,customer_phone,pizzas,` +
+    `order_items(qty,price_pence,product:products(name,category,capacity_units,price_pence))` +
+    `&order=created_at.desc`;
 
   return await fetchJson(url);
 }
 
-/*** MANAGEMENT FETCH ***/
-async function fetchOrdersInWindow(startIso, endIso){
+function computeCapacityUsedFromOrder(order, capacityCategory){
+  // Preferred: sum(qty * capacity_units) for items where product.category matches drop capacity_category.
+  const items = Array.isArray(order.order_items) ? order.order_items : [];
+  let used = 0;
+  for(const it of items){
+    const p = it.product || {};
+    if((p.category||"").toLowerCase() === (capacityCategory||"").toLowerCase()){
+      const u = Number(p.capacity_units ?? 1);
+      used += (Number(it.qty)||0) * (Number.isFinite(u) ? u : 1);
+    }
+  }
+  // Fallback to legacy pizzas column if no items recorded
+  if(used === 0 && Number(order.pizzas) > 0 && (capacityCategory||"").toLowerCase() === "pizza"){
+    used = Number(order.pizzas);
+  }
+  return used;
+}
+
+function splitItems(order, capacityCategory){
+  const cap = [];
+  const other = [];
+  const items = Array.isArray(order.order_items) ? order.order_items : [];
+
+  if(items.length){
+    for(const it of items){
+      const p = it.product || {};
+      const name = p.name || "Item";
+      const qty = Number(it.qty)||0;
+      const cat = (p.category||"").toLowerCase();
+      if(cat === (capacityCategory||"").toLowerCase()){
+        cap.push({name, qty, category: p.category});
+      } else {
+        other.push({name, qty, category: p.category});
+      }
+    }
+  } else {
+    // fallback to legacy pizzas
+    if((capacityCategory||"").toLowerCase() === "pizza" && Number(order.pizzas) > 0){
+      cap.push({name:"Pizza (legacy)", qty:Number(order.pizzas), category:"pizza"});
+    }
+  }
+  return {cap, other};
+}
+
+async function updateOrderStatus(orderId, status){
+  msg.textContent = "";
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`,{
+    method:"PATCH",
+    headers:{...headers, Prefer:"return=representation"},
+    body: JSON.stringify({ status })
+  });
+  if(!res.ok){
+    msg.textContent = `Status update failed: ${res.status} ${await res.text()}`;
+    return;
+  }
+  await refreshSelectedDrop();
+}
+window.updateOrderStatus = updateOrderStatus;
+
+function statusClass(s){
+  const x = (s||"").toLowerCase();
+  return ["placed","confirmed","baking","ready","collected","cancelled"].includes(x) ? x : "placed";
+}
+
+async function refreshSelectedDrop(){
+  activeDrop = getSelectedDrop();
+  updateLivePill();
+  if(!activeDrop){ return; }
+
+  // meta
+  dropMeta.textContent =
+    `${activeDrop.drop_type || "—"} • delivery ${fmtDateTime(activeDrop.delivery_start)} → ${fmtDateTime(activeDrop.delivery_end)} • cutoff ${fmtDateTime(activeDrop.cutoff_time || activeDrop.closes_at)}`;
+
+  const orders = await fetchOrdersForDrop(activeDrop.id);
+  lastOrdersForSelectedDrop = orders;
+
+  // capacity pill
+  const capCategory = activeDrop.capacity_category || "pizza";
+  const capTotal = Number(activeDrop.capacity_units_total ?? activeDrop.capacity_pizzas ?? 0) || 0;
+
+  let used = 0;
+  for(const o of orders) used += computeCapacityUsedFromOrder(o, capCategory);
+
+  const pct = capTotal ? Math.round((used / capTotal) * 100) : 0;
+  let pillCls = "pill";
+  if(pct >= 90) pillCls += " bad";
+  else if(pct >= 70) pillCls += " warn";
+  else pillCls += " good";
+  capPill.className = pillCls;
+  capPill.innerHTML = `<i></i><span>${esc(capCategory)} capacity: ${used}/${capTotal} (${pct}%)</span>`;
+
+  // render table
+  rowsEl.innerHTML = orders.map(o => {
+    const capSplit = splitItems(o, capCategory);
+    const capText = capSplit.cap.length
+      ? capSplit.cap.map(i => `${esc(i.name)} × ${i.qty}`).join("<br>")
+      : `<span class="muted">—</span>`;
+    const otherText = capSplit.other.length
+      ? capSplit.other.map(i => `${esc(i.name)} × ${i.qty}`).join("<br>")
+      : `<span class="muted">—</span>`;
+
+    const st = (o.status || "placed").toLowerCase();
+
+    return `
+      <tr>
+        <td>${esc(fmtTime(o.created_at))}</td>
+        <td><b>${esc(o.customer_name)}</b></td>
+        <td>${esc(o.customer_phone)}</td>
+        <td>${capText}</td>
+        <td>${otherText}</td>
+        <td><span class="status ${statusClass(st)}">${esc(st)}</span></td>
+        <td>
+          <div class="actions">
+            <button class="btn-small" onclick="updateOrderStatus('${o.id}','confirmed')">Confirmed</button>
+            <button class="btn-small" onclick="updateOrderStatus('${o.id}','baking')">Baking</button>
+            <button class="btn-small" onclick="updateOrderStatus('${o.id}','ready')">Ready</button>
+            <button class="btn-small" onclick="updateOrderStatus('${o.id}','collected')">Collected</button>
+            <button class="btn-small danger" onclick="updateOrderStatus('${o.id}','cancelled')">Cancel</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+/*** KPI SNAPSHOT (3 periods) ***/
+function makePeriodRanges(){
+  const now = new Date();
+  const thisYear = now.getFullYear();
+  const prevYear = thisYear - 1;
+
+  const prevYearStart = new Date(prevYear,0,1,0,0,0,0);
+  const prevYearEnd   = new Date(prevYear,11,31,23,59,59,999);
+
+  const ytdStart = new Date(thisYear,0,1,0,0,0,0);
+  const ytdEnd = now;
+
+  const wkStart = startOfWeekMonday(now);
+  const wkEnd = endOfWeekSunday(now);
+
+  return [
+    { key:"prev", label:`${prevYear}`, start: prevYearStart, end: prevYearEnd },
+    { key:"ytd",  label:`${thisYear} YTD`, start: ytdStart, end: ytdEnd },
+    { key:"wk",   label:`This week`, start: wkStart, end: wkEnd }
+  ];
+}
+
+async function fetchOrdersInRange(start, end){
+  // Fetch all orders in date range, with items+products for KPI calc
   const url =
-    `${SUPABASE_URL}/rest/v1/orders?created_at=gte.${encodeURIComponent(startIso)}` +
-    `&created_at=lt.${encodeURIComponent(endIso)}` +
-    `&select=id,drop_id,created_at,customer_name,customer_phone,status,` +
-    `order_items(qty,price_pence,product:products(name,category,capacity_units,price_pence))`;
+    `${SUPABASE_URL}/rest/v1/orders` +
+    `?created_at=gte.${encodeURIComponent(toIso(start))}` +
+    `&created_at=lte.${encodeURIComponent(toIso(end))}` +
+    `&select=id,drop_id,created_at,status,customer_phone,pizzas,` +
+    `order_items(qty,product:products(category,capacity_units))`;
 
   return await fetchJson(url);
 }
 
-/*** METRICS ***/
-function calcMetricsForOrders(orders){
-  const uniqueCustomers = new Set();
-  const ordersCount = orders.length;
+async function fetchDropsForIds(ids){
+  if(!ids.length) return [];
+  // Use "in" filter
+  const list = `(${ids.map(x=>`"${x}"`).join(",")})`;
+  const url =
+    `${SUPABASE_URL}/rest/v1/drops` +
+    `?id=in.${encodeURIComponent(list)}` +
+    `&select=id,capacity_category,capacity_units_total,capacity_pizzas`;
 
-  let cancelled = 0;
-  let revenueTotal = 0;
-  let revenueCap = 0;
-  let revenueOther = 0;
+  return await fetchJson(url);
+}
 
-  let itemsTotal = 0;
-  let capUnitsUsed = 0;
+function buildKPIsForPeriod(orders, dropsById){
+  const totalOrders = orders.length;
+  const uniqueCustomers = new Set(orders.map(o => (o.customer_phone||"").trim()).filter(Boolean)).size;
 
-  const ordersPerCustomer = new Map();
+  const cancelled = orders.filter(o => (o.status||"").toLowerCase() === "cancelled").length;
+  const cancelPct = totalOrders ? Math.round((cancelled/totalOrders)*100) : 0;
+
+  // repeats: customers with >1 order in period
+  const countsByPhone = new Map();
+  for(const o of orders){
+    const p = (o.customer_phone||"").trim();
+    if(!p) continue;
+    countsByPhone.set(p, (countsByPhone.get(p)||0)+1);
+  }
+  const repeatCustomers = Array.from(countsByPhone.values()).filter(v => v>1).length;
+  const repeatPct = uniqueCustomers ? Math.round((repeatCustomers/uniqueCustomers)*100) : 0;
+
+  // capacity used: sum item qty*units for capacity category per drop
+  let capUsed = 0;
+  let otherItemsQty = 0;
+  let allItemsQty = 0;
 
   for(const o of orders){
-    const key = uniqCustomerKey(o);
-    uniqueCustomers.add(key);
-    ordersPerCustomer.set(key, (ordersPerCustomer.get(key)||0)+1);
+    const d = dropsById.get(o.drop_id) || {};
+    const capCat = (d.capacity_category || "pizza").toLowerCase();
 
-    const st = (o.status || "").toLowerCase();
-    if(st === "cancelled") cancelled++;
+    const items = Array.isArray(o.order_items) ? o.order_items : [];
+    if(items.length){
+      for(const it of items){
+        const p = it.product || {};
+        const qty = Number(it.qty)||0;
+        const u = Number(p.capacity_units ?? 1);
+        allItemsQty += qty;
 
-    const drop = dropsById.get(o.drop_id);
-    const capCat = (drop?.capacity_category || "pizza").toLowerCase();
-
-    for(const it of (o.order_items || [])){
-      const qty = Number(it.qty)||0;
-      if(!qty) continue;
-      itemsTotal += qty;
-
-      const p = it.product || {};
-      const price = Number(it.price_pence ?? p.price_pence ?? 0) || 0;
-      const line = qty * price;
-      revenueTotal += line;
-
-      const cat = (p.category || "").toLowerCase();
-      if(cat === capCat){
-        revenueCap += line;
-        const cu = Number(p.capacity_units)||1;
-        capUnitsUsed += qty * cu;
-      }else{
-        revenueOther += line;
+        if((p.category||"").toLowerCase() === capCat){
+          capUsed += qty * (Number.isFinite(u) ? u : 1);
+        } else {
+          otherItemsQty += qty;
+        }
+      }
+    } else {
+      // legacy fallback
+      if(capCat === "pizza" && Number(o.pizzas)>0){
+        capUsed += Number(o.pizzas);
       }
     }
   }
 
-  const repeatCustomers = Array.from(ordersPerCustomer.values()).filter(n=>n>=2).length;
-  const repeatRate = uniqueCustomers.size ? (repeatCustomers / uniqueCustomers.size) : 0;
-
-  const cancelRate = ordersCount ? (cancelled / ordersCount) : 0;
-  const aov = ordersCount ? (revenueTotal / ordersCount) : 0;
-  const itemsPerOrder = ordersCount ? (itemsTotal / ordersCount) : 0;
+  const avgCapPerOrder = totalOrders ? (capUsed/totalOrders) : 0;
 
   return {
-    uniqueCustomers: uniqueCustomers.size,
-    ordersCount,
+    totalOrders,
+    uniqueCustomers,
     cancelled,
-    cancelRate,
-    revenueTotal,
-    revenueCap,
-    revenueOther,
-    aov,
-    itemsPerOrder,
-    repeatRate,
-    capUnitsUsed
+    cancelPct,
+    repeatPct,
+    capUsed,
+    otherItemsQty,
+    allItemsQty,
+    avgCapPerOrder
   };
 }
 
-async function calcCapacityUtilisation(orders){
-  const usedByDrop = new Map();
-  const dropIds = new Set();
-
-  for(const o of orders){
-    if(!o.drop_id) continue;
-    dropIds.add(o.drop_id);
-    const drop = dropsById.get(o.drop_id);
-    const capCat = (drop?.capacity_category || "pizza").toLowerCase();
-
-    let used = 0;
-    for(const it of (o.order_items || [])){
-      const p = it.product || {};
-      const cat = (p.category || "").toLowerCase();
-      if(cat !== capCat) continue;
-      const qty = Number(it.qty)||0;
-      const cu = Number(p.capacity_units)||1;
-      used += qty * cu;
-    }
-    usedByDrop.set(o.drop_id, (usedByDrop.get(o.drop_id)||0) + used);
-  }
-
-  let totalCap = 0;
-  let totalUsed = 0;
-
-  for(const id of dropIds){
-    const d = dropsById.get(id);
-    const capTotal = (d?.capacity_units_total != null) ? Number(d.capacity_units_total) : null;
-    if(capTotal == null || !Number.isFinite(capTotal) || capTotal <= 0) continue;
-
-    totalCap += capTotal;
-    totalUsed += (usedByDrop.get(id)||0);
-  }
-
-  const util = totalCap ? (totalUsed / totalCap) : null;
-  return { util, totalCap, totalUsed };
-}
-
-function renderKpis(targetEl, cur, prev=null){
-  const fmtPct = (x)=> `${Math.round(x*1000)/10}%`;
-  const fmtNum = (x)=> String(x ?? 0);
-  const fmtMoney = (p)=> moneyPence(p);
-
-  const items = [
-    { label:"Unique customers", value: fmtNum(cur.uniqueCustomers), delta: prev ? deltaHtml(cur.uniqueCustomers, prev.uniqueCustomers) : "—" },
-    { label:"Orders", value: fmtNum(cur.ordersCount), delta: prev ? deltaHtml(cur.ordersCount, prev.ordersCount) : "—" },
-
-    { label:"Revenue (total)", value: fmtMoney(cur.revenueTotal), delta: prev ? deltaHtml(cur.revenueTotal, prev.revenueTotal) : "—" },
-    { label:"Revenue (capacity)", value: fmtMoney(cur.revenueCap), delta: prev ? deltaHtml(cur.revenueCap, prev.revenueCap) : "—" },
-
-    { label:"Revenue (other)", value: fmtMoney(cur.revenueOther), delta: prev ? deltaHtml(cur.revenueOther, prev.revenueOther) : "—" },
-    { label:"AOV", value: fmtMoney(cur.aov), delta: prev ? deltaHtml(cur.aov, prev.aov) : "—" },
-
-    { label:"Items / order", value: (Math.round(cur.itemsPerOrder*10)/10).toFixed(1), delta: prev ? deltaHtml(cur.itemsPerOrder, prev.itemsPerOrder) : "—" },
-    { label:"Repeat %", value: fmtPct(cur.repeatRate), delta: prev ? deltaHtml(cur.repeatRate, prev.repeatRate) : "—" },
-
-    { label:"Cancel %", value: fmtPct(cur.cancelRate), delta: prev ? deltaHtml(cur.cancelRate, prev.cancelRate) : "—" },
+function renderKPIBlock(title, periodLabel, kpis){
+  const always = [
+    { label:"Orders", val: kpis.totalOrders },
+    { label:"Capacity used", val: Math.round(kpis.capUsed) },
+    { label:"Unique customers", val: kpis.uniqueCustomers }
   ];
 
-  targetEl.innerHTML = items.map(x=>`
-    <div class="kpi">
-      <div class="label">${esc(x.label)}</div>
-      <div class="value">${esc(x.value)}</div>
-      <div class="delta">${prev ? x.delta : `<span class="flat">—</span>`}</div>
+  const more = [
+    { label:"Cancel %", val: `${kpis.cancelPct}%`, sub:`Cancelled: ${kpis.cancelled}` },
+    { label:"Repeat %", val: `${kpis.repeatPct}%`, sub:"Repeat customers share" },
+    { label:"Avg cap / order", val: kpis.avgCapPerOrder.toFixed(2), sub:"Capacity units per order" },
+    { label:"Other items qty", val: kpis.otherItemsQty, sub:"Non-capacity items" },
+    { label:"All items qty", val: kpis.allItemsQty, sub:"Total items ordered" },
+    { label:"Orders / customer", val: (kpis.uniqueCustomers ? (kpis.totalOrders/kpis.uniqueCustomers).toFixed(2) : "0.00") }
+  ];
+
+  const shown = showMoreKPIs ? always.concat(more) : always;
+
+  return `
+    <div class="panel" style="margin:0;">
+      <div class="kpi-head">
+        <b>${esc(periodLabel)}</b>
+        <span class="muted">${esc(title)}</span>
+      </div>
+      <div class="kpi-grid">
+        ${shown.map(c => `
+          <div class="card">
+            <div class="label">${esc(c.label)}</div>
+            <div class="val">${esc(c.val)}</div>
+            ${c.sub ? `<div class="sub">${esc(c.sub)}</div>` : ``}
+          </div>
+        `).join("")}
+      </div>
     </div>
-  `).join("");
+  `;
 }
 
-function injectCapacityUtil(targetEl, utilObj, prevUtilObj=null){
-  const fmt = (u)=>{
-    if(u.util == null) return "—";
-    return `${Math.round(u.util*1000)/10}%`;
-  };
-  const delta = (prevUtilObj && utilObj.util!=null && prevUtilObj.util!=null)
-    ? deltaHtml(utilObj.util, prevUtilObj.util)
-    : `<span class="flat">—</span>`;
+async function refreshKPIs(){
+  const ranges = makePeriodRanges();
 
-  targetEl.insertAdjacentHTML("beforeend", `
-    <div class="kpi">
-      <div class="label">Capacity utilisation</div>
-      <div class="value">${esc(fmt(utilObj))}</div>
-      <div class="delta">${(prevUtilObj ? delta : `<span class="flat">—</span>`)}</div>
-    </div>
-  `);
-}
+  const blocks = [];
+  for(const r of ranges){
+    const orders = await fetchOrdersInRange(r.start, r.end);
+    const dropIds = Array.from(new Set(orders.map(o => o.drop_id)));
+    const drops = await fetchDropsForIds(dropIds);
+    const dropsById = new Map(drops.map(d => [d.id, d]));
+    const kpis = buildKPIsForPeriod(orders, dropsById);
 
-/*** MANAGEMENT REFRESH ***/
-async function refreshManagement(){
-  try{
-    mgmtMsg.textContent = "";
-    asOfBadge.innerHTML = `<span class="dot"></span> As of ${esc(new Date().toLocaleString())}`;
-
-    const now = new Date();
-
-    // This week-to-date (Mon 00:00 → now)
-    const weekStart = startOfWeekMon(now);
-    const weekEnd = now;
-
-    // Last week WTD comparator
-    const elapsedMs = weekEnd.getTime() - weekStart.getTime();
-    const lastWeekStart = new Date(weekStart.getTime() - 7*24*3600*1000);
-    const lastWeekEnd = new Date(lastWeekStart.getTime() + elapsedMs);
-
-    // YTD: Jan 1 → now
-    const ytdStart = new Date(now.getFullYear(), 0, 1);
-    const ytdEnd = now;
-
-    // LY same period: Jan 1 last year → same date/time last year
-    const lyStart = new Date(now.getFullYear()-1, 0, 1);
-    const lyEnd = new Date(now);
-    lyEnd.setFullYear(now.getFullYear()-1);
-
-    // Previous full calendar year
-    const prevYear = now.getFullYear()-1;
-    const prevYearStart = new Date(prevYear, 0, 1);
-    const prevYearEnd = new Date(prevYear+1, 0, 1);
-
-    metaWeek.textContent = `${weekStart.toLocaleDateString()} → ${now.toLocaleDateString()}`;
-    metaYtd.textContent = `${ytdStart.toLocaleDateString()} → ${now.toLocaleDateString()} (vs LY same period)`;
-    metaPrevYear.textContent = `${prevYearStart.toLocaleDateString()} → ${new Date(prevYearEnd.getTime()-1).toLocaleDateString()}`;
-
-    const [wk, wkPrev, ytd, ytdLy, prevY] = await Promise.all([
-      fetchOrdersInWindow(iso(weekStart), iso(weekEnd)),
-      fetchOrdersInWindow(iso(lastWeekStart), iso(lastWeekEnd)),
-      fetchOrdersInWindow(iso(ytdStart), iso(ytdEnd)),
-      fetchOrdersInWindow(iso(lyStart), iso(lyEnd)),
-      fetchOrdersInWindow(iso(prevYearStart), iso(prevYearEnd)),
-    ]);
-
-    const wkM = calcMetricsForOrders(wk);
-    const wkPrevM = calcMetricsForOrders(wkPrev);
-
-    const ytdM = calcMetricsForOrders(ytd);
-    const ytdLyM = calcMetricsForOrders(ytdLy);
-
-    const prevYM = calcMetricsForOrders(prevY);
-
-    renderKpis(kpiWeek, wkM, wkPrevM);
-    renderKpis(kpiYtd, ytdM, ytdLyM);
-    renderKpis(kpiPrevYear, prevYM, null);
-
-    const [wkUtil, wkPrevUtil, ytdUtil, ytdLyUtil, prevYUtil] = await Promise.all([
-      calcCapacityUtilisation(wk),
-      calcCapacityUtilisation(wkPrev),
-      calcCapacityUtilisation(ytd),
-      calcCapacityUtilisation(ytdLy),
-      calcCapacityUtilisation(prevY),
-    ]);
-
-    injectCapacityUtil(kpiWeek, wkUtil, wkPrevUtil);
-    injectCapacityUtil(kpiYtd, ytdUtil, ytdLyUtil);
-    injectCapacityUtil(kpiPrevYear, prevYUtil, null);
-
-  }catch(e){
-    mgmtMsg.textContent = `Management refresh failed: ${e.message || e}`;
+    blocks.push(renderKPIBlock(`${fmtDateTime(r.start)} → ${fmtDateTime(r.end)}`, r.label, kpis));
   }
+
+  kpiWrap.innerHTML = `<div class="kpi-wrap">${blocks.join("")}</div>`;
 }
 
-/*** EXECUTION ***/
-function statusDot(status){
-  const s = (status || "planned").toLowerCase();
-  if(s === "live") return "dot live";
-  if(s === "closed") return "dot closed";
-  return "dot planned";
-}
+/*** PREP SUMMARY (selected drop) ***/
+function aggregatePrep(orders, capCategory){
+  const capMap = new Map();   // product name -> qty
+  const otherMap = new Map(); // product name -> qty
 
-function listMapToLines(map){
-  const arr = Array.from(map.entries()).sort((a,b)=>b[1]-a[1]);
-  if(!arr.length) return `<div class="muted">—</div>`;
-  return arr.map(([name,qty])=>`<div class="line">${esc(name)} <small>x${qty}</small></div>`).join("");
-}
-
-function aggregateForDrop(drop, orders){
-  const capCat = (drop?.capacity_category || "pizza").toLowerCase();
-
-  const capByProduct = new Map();
-  const otherByCat = new Map();
-
-  let usedUnits = 0;
+  let capUsed = 0;
 
   for(const o of orders){
-    for(const it of (o.order_items || [])){
-      const p = it.product || {};
-      const qty = Number(it.qty)||0;
-      if(!qty) continue;
+    const split = splitItems(o, capCategory);
 
-      const cat = (p.category || "").toLowerCase();
-      const name = p.name || "Item";
-
-      if(cat === capCat){
-        capByProduct.set(name, (capByProduct.get(name)||0) + qty);
-        const cu = Number(p.capacity_units)||1;
-        usedUnits += qty * cu;
-      }else{
-        if(!otherByCat.has(cat)) otherByCat.set(cat, new Map());
-        const m = otherByCat.get(cat);
-        m.set(name, (m.get(name)||0) + qty);
-      }
+    for(const it of split.cap){
+      capMap.set(it.name, (capMap.get(it.name)||0) + (Number(it.qty)||0));
+      capUsed += Number(it.qty)||0; // qty units (capacity units may differ; keep list readable)
+    }
+    for(const it of split.other){
+      otherMap.set(it.name, (otherMap.get(it.name)||0) + (Number(it.qty)||0));
     }
   }
 
-  return { capCat, capByProduct, otherByCat, usedUnits };
+  const toList = (m) => Array.from(m.entries())
+    .sort((a,b)=> b[1]-a[1])
+    .map(([name, qty]) => ({ name, qty }));
+
+  return {
+    cap: toList(capMap),
+    other: toList(otherMap)
+  };
 }
 
-function renderSelectedPrep(drop, orders){
-  const a = aggregateForDrop(drop, orders);
+function openPrepModal(){
+  if(!activeDrop) return;
+  const capCategory = activeDrop.capacity_category || "pizza";
+  const capTotal = Number(activeDrop.capacity_units_total ?? activeDrop.capacity_pizzas ?? 0) || 0;
 
-  const capBlock = `
-    <div style="margin-bottom:10px;">
-      <div class="small" style="font-weight:800; color:var(--text);">Capacity category: <span class="mono">${esc(a.capCat)}</span></div>
-      ${listMapToLines(a.capByProduct)}
+  // Capacity used (true capacity units) using products.capacity_units
+  let usedUnits = 0;
+  for(const o of lastOrdersForSelectedDrop){
+    usedUnits += computeCapacityUsedFromOrder(o, capCategory);
+  }
+  const pct = capTotal ? Math.round((usedUnits/capTotal)*100) : 0;
+
+  const agg = aggregatePrep(lastOrdersForSelectedDrop, capCategory);
+
+  modalTitle.textContent = `Prep summary — ${activeDrop.name || activeDrop.slug || activeDrop.id}`;
+  modalSub.textContent =
+    `Capacity category: ${capCategory} • Capacity used: ${usedUnits}/${capTotal} (${pct}%) • Orders: ${lastOrdersForSelectedDrop.length}`;
+
+  modalGrid.innerHTML = `
+    <div class="list">
+      <h4>Capacity items (${esc(capCategory)})</h4>
+      ${agg.cap.length ? `<ul>${agg.cap.map(x=>`<li><b>${esc(x.name)}</b> — ${x.qty}</li>`).join("")}</ul>` : `<div class="tiny muted">None yet.</div>`}
+    </div>
+    <div class="list">
+      <h4>Other items</h4>
+      ${agg.other.length ? `<ul>${agg.other.map(x=>`<li><b>${esc(x.name)}</b> — ${x.qty}</li>`).join("")}</ul>` : `<div class="tiny muted">None yet.</div>`}
+    </div>
+    <div class="list">
+      <h4>Operational notes</h4>
+      <div class="tiny muted">
+        This summary is built from <code>order_items</code> + <code>products</code>.<br/>
+        If an order has no items (legacy), it appears as <b>Pizza (legacy)</b> under capacity items.
+      </div>
     </div>
   `;
 
-  let otherBlocks = "";
-  const cats = Array.from(a.otherByCat.keys()).sort();
-  for(const cat of cats){
-    const m = a.otherByCat.get(cat);
-    otherBlocks += `
-      <div style="margin-bottom:10px;">
-        <div class="small" style="font-weight:800; text-transform:capitalize; color:var(--text);">${esc(cat || "other")}</div>
-        ${listMapToLines(m)}
-      </div>
-    `;
-  }
-
-  prepSelected.innerHTML = capBlock + (otherBlocks || `<div class="muted">No other items yet.</div>`);
-
-  capCategory.textContent = a.capCat;
-
-  if(drop?.capacity_units_total != null){
-    capCategoryHint.textContent = `Capacity total: ${drop.capacity_units_total}`;
-    capUsed.textContent = `${a.usedUnits}/${drop.capacity_units_total}`;
-    const pct = Number(drop.capacity_units_total) ? (a.usedUnits / Number(drop.capacity_units_total)) : null;
-    capUsedHint.textContent = (pct != null) ? `${Math.round(pct*1000)/10}% utilised` : "—";
-  }else{
-    capCategoryHint.textContent = `No capacity total set`;
-    capUsed.textContent = `${a.usedUnits}`;
-    capUsedHint.textContent = "—";
-  }
+  modal.style.display = "flex";
 }
+function closePrepModal(){ modal.style.display = "none"; }
 
-function splitOrderItems(order, capCat){
-  const cap = new Map();
-  const other = new Map();
-
-  for(const it of (order.order_items || [])){
-    const p = it.product || {};
-    const qty = Number(it.qty)||0;
-    if(!qty) continue;
-    const name = p.name || "Item";
-    const cat = (p.category || "").toLowerCase();
-
-    if(cat === capCat){
-      cap.set(name, (cap.get(name)||0) + qty);
-    }else{
-      const key = (cat ? `${cat}: ${name}` : `other: ${name}`);
-      other.set(key, (other.get(key)||0) + qty);
-    }
-  }
-
-  const fmt = (m)=>{
-    const arr = Array.from(m.entries());
-    if(!arr.length) return `<div class="muted">—</div>`;
-    return arr.map(([k,v])=>`<div class="it">${esc(k)} <small>x${v}</small></div>`).join("");
-  };
-
-  return { capHtml: fmt(cap), otherHtml: fmt(other) };
-}
-
-async function refreshExecution(){
+/*** MAIN REFRESH ***/
+async function refreshAll(){
   try{
-    execMsg.textContent = "";
-
-    const dropId = dropSelect.value;
-    if(!dropId) return;
-
-    setQueryParam("drop_id", dropId);
-
-    const drop = dropsById.get(dropId);
-    if(!drop){
-      execMsg.textContent = "Drop not found.";
-      return;
-    }
-
-    const status = (drop.status || "planned").toLowerCase();
-    dropBadge.innerHTML = `<span class="${statusDot(status)}"></span> ${esc(drop.name || drop.id)} • ${esc(status)}${drop.closes_at ? ` • closes ${esc(fmtDate(drop.closes_at))}` : ""}`;
-
-    const orders = await fetchOrdersForDrop(dropId);
-    lastOrders = orders;
-
-    const capCat = (drop.capacity_category || "pizza").toLowerCase();
-    renderSelectedPrep(drop, orders);
-
-    rowsEl.innerHTML = orders.map(o=>{
-      const { capHtml, otherHtml } = splitOrderItems(o, capCat);
-
-      const live = status === "live";
-      const disabled = live ? "" : "disabled";
-
-      return `
-        <tr>
-          <td>${esc(fmtTime(o.created_at))}</td>
-          <td>${esc(o.customer_name || "—")}</td>
-          <td>${esc(o.customer_phone || "—")}</td>
-          <td class="items">${capHtml}</td>
-          <td class="items">${otherHtml}</td>
-          <td><span class="statusPill"><span class="dot"></span> ${esc((o.status||"—").toLowerCase())}</span></td>
-          <td>
-            <div class="actions">
-              <button class="act" ${disabled} onclick="updateStatus('${o.id}','confirmed')">Confirmed</button>
-              <button class="act" ${disabled} onclick="updateStatus('${o.id}','baking')">Baking</button>
-              <button class="act" ${disabled} onclick="updateStatus('${o.id}','ready')">Ready</button>
-              <button class="act" ${disabled} onclick="updateStatus('${o.id}','collected')">Collected</button>
-              <button class="act" ${disabled} onclick="updateStatus('${o.id}','cancelled')">Cancel</button>
-            </div>
-            ${!live ? `<div class="small" style="margin-top:4px;">Actions disabled (drop is not live).</div>` : ``}
-          </td>
-        </tr>
-      `;
-    }).join("");
-
+    msg.textContent = "";
+    await loadDrops();
+    activeDrop = getSelectedDrop();
+    updateLivePill();
+    await refreshKPIs();
+    await refreshSelectedDrop();
   }catch(e){
-    execMsg.textContent = `Execution refresh failed: ${e.message || e}`;
+    msg.textContent = e.message || String(e);
   }
-}
-
-async function updateStatus(id, status){
-  try{
-    await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`,{
-      method:"PATCH",
-      headers:{...headers, Prefer:"return=representation"},
-      body: JSON.stringify({status})
-    });
-    await refreshExecution();
-  }catch(e){
-    execMsg.textContent = `Status update failed: ${e.message || e}`;
-  }
-}
-window.updateStatus = updateStatus;
-
-/*** PREP MODAL ***/
-function openPrepModal(){
-  const dropId = dropSelect.value;
-  const drop = dropsById.get(dropId);
-
-  prepContextBadge.textContent = drop ? `Drop: ${drop.name || drop.id}` : "—";
-  modalSelectedMeta.textContent = drop ? `Capacity category: ${drop.capacity_category || "pizza"} • closes ${drop.closes_at ? fmtDate(drop.closes_at) : "—"}` : "—";
-
-  if(drop){
-    const a = aggregateForDrop(drop, lastOrders || []);
-    const cap = `<div style="margin-bottom:10px;"><div class="small" style="font-weight:900;">Capacity (${esc(a.capCat)})</div>${listMapToLines(a.capByProduct)}</div>`;
-    let other = "";
-    const cats = Array.from(a.otherByCat.keys()).sort();
-    for(const cat of cats){
-      other += `<div style="margin-bottom:10px;"><div class="small" style="font-weight:900;text-transform:capitalize;">${esc(cat || "other")}</div>${listMapToLines(a.otherByCat.get(cat))}</div>`;
-    }
-    modalSelected.innerHTML = cap + (other || `<div class="muted">No other items.</div>`);
-  }else{
-    modalSelected.innerHTML = `<div class="muted">—</div>`;
-  }
-
-  overlay.style.display = "flex";
-  renderAllLivePrep().catch(()=>{});
-}
-
-function closePrepModal(){
-  overlay.style.display = "none";
-}
-
-async function renderAllLivePrep(){
-  const liveDrops = drops.filter(d => (d.status || "").toLowerCase() === "live");
-  if(!liveDrops.length){
-    modalAllLive.innerHTML = `<div class="muted">No live drops.</div>`;
-    return;
-  }
-
-  const blocks = [];
-  for(const d of liveDrops){
-    const orders = await fetchOrdersForDrop(d.id);
-    const a = aggregateForDrop(d, orders);
-
-    const capLines = listMapToLines(a.capByProduct);
-    let other = "";
-    const cats = Array.from(a.otherByCat.keys()).sort();
-    for(const cat of cats){
-      const m = a.otherByCat.get(cat);
-      other += `<div class="line"><small style="font-weight:800;text-transform:capitalize;">${esc(cat)}:</small> ${
-        Array.from(m.entries()).sort((x,y)=>y[1]-x[1]).slice(0,12).map(([n,q])=>`${esc(n)} x${q}`).join(", ") || "—"
-      }</div>`;
-    }
-
-    const util = (d.capacity_units_total != null && Number(d.capacity_units_total)>0)
-      ? `${Math.round((a.usedUnits/Number(d.capacity_units_total))*1000)/10}% utilised`
-      : "no capacity total";
-
-    blocks.push(`
-      <div style="margin-bottom:14px;">
-        <div style="font-weight:900;">${esc(d.name || d.id)}</div>
-        <div class="small">Capacity: <span class="mono">${esc(a.capCat)}</span> • used ${a.usedUnits}${(d.capacity_units_total!=null)?`/${d.capacity_units_total}`:""} • ${esc(util)}</div>
-        <div style="margin-top:8px;">
-          <div class="small" style="font-weight:900;">Capacity breakdown</div>
-          ${capLines}
-        </div>
-        <div style="margin-top:8px;">
-          <div class="small" style="font-weight:900;">Other items (by category)</div>
-          ${other || `<div class="muted">—</div>`}
-        </div>
-      </div>
-    `);
-  }
-
-  modalAllLive.innerHTML = blocks.join("") || `<div class="muted">—</div>`;
-}
-
-/*** INIT ***/
-async function start(){
-  if(!SUPABASE_URL || !SUPABASE_ANON_KEY){
-    execMsg.textContent = "Missing window.HEARTH_CONFIG in assets/config.js";
-    return;
-  }
-
-  await loadDrops();
-  await refreshManagement();
-  await refreshExecution();
-
-  if(refreshTimer) clearInterval(refreshTimer);
-  refreshTimer = setInterval(refreshExecution, 6000);
 }
 
 /*** EVENTS ***/
-refreshMgmtBtn.addEventListener("click", refreshManagement);
-reloadBtn.addEventListener("click", refreshExecution);
-dropSelect.addEventListener("change", refreshExecution);
-
-prepBtn.addEventListener("click", openPrepModal);
-closePrepBtn.addEventListener("click", closePrepModal);
-overlay.addEventListener("click", (e)=>{ if(e.target === overlay) closePrepModal(); });
-
-start().catch(e=>{
-  execMsg.textContent = e.message || String(e);
+dropSelect.addEventListener("change", async ()=>{
+  activeDrop = getSelectedDrop();
+  updateLivePill();
+  await refreshSelectedDrop();
 });
-</script>
+refreshBtn.addEventListener("click", refreshAll);
+prepBtn.addEventListener("click", openPrepModal);
+closeModal.addEventListener("click", closePrepModal);
+modal.addEventListener("click", (e)=>{ if(e.target === modal) closePrepModal(); });
 
+toggleKPIsBtn.addEventListener("click", async ()=>{
+  showMoreKPIs = !showMoreKPIs;
+  toggleKPIsBtn.textContent = showMoreKPIs ? "Show less ▾" : "Show more ▸";
+  await refreshKPIs();
+});
+
+// Auto start
+refreshAll();
+</script>
 </body>
 </html>
