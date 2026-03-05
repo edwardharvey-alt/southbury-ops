@@ -1,301 +1,170 @@
+2) Full replace: index.html (Service Board)
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Hearth — Service Board</title>
-<style>
-  :root{
-    --bg:#f6f7fb;
-    --panel:#ffffff;
-    --text:#0f172a;
-    --muted:#64748b;
-    --border:#e5e7eb;
-    --brand:#4f46e5;     /* pro platform default */
-    --brand2:#06b6d4;    /* accent */
-    --good:#16a34a;
-    --warn:#f59e0b;
-    --bad:#dc2626;
-    --shadow: 0 10px 30px rgba(2,6,23,.08);
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0;
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-    color:var(--text);
-    background: radial-gradient(1200px 600px at 20% -10%, rgba(79,70,229,.12), transparent 55%),
-                radial-gradient(900px 500px at 90% 0%, rgba(6,182,212,.10), transparent 55%),
-                var(--bg);
-  }
-  a{color:inherit}
-  .wrap{max-width:1180px; margin:0 auto; padding:22px;}
-  .topbar{
-    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
-    padding:14px 16px;
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:14px;
-    box-shadow:var(--shadow);
-  }
-  .logo{
-    display:flex; align-items:center; gap:10px;
-    padding-right:6px;
-  }
-  .mark{
-    width:34px; height:34px; border-radius:10px;
-    background: linear-gradient(135deg, var(--brand), var(--brand2));
-  }
-  .title{
-    display:flex; flex-direction:column; line-height:1.1;
-  }
-  .title b{font-size:14px; letter-spacing:.2px}
-  .title span{font-size:12px; color:var(--muted)}
-  .spacer{flex:1}
-  select, button{
-    font:inherit;
-    border:1px solid var(--border);
-    background:#fff;
-    border-radius:10px;
-    padding:8px 10px;
-  }
-  select{min-width:420px; max-width:100%}
-  button{cursor:pointer}
-  button:hover{background:#f8fafc}
-  .btn-primary{
-    border-color: transparent;
-    background: linear-gradient(135deg, rgba(79,70,229,.95), rgba(6,182,212,.95));
-    color:#fff;
-  }
-  .btn-primary:hover{filter:brightness(.98)}
-  .btn-ghost{background:transparent}
-  .btn-small{padding:6px 8px; border-radius:9px; font-size:12px; white-space:nowrap}
-  .row{display:flex; gap:14px; flex-wrap:wrap; margin-top:14px}
-  .panel{
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:14px;
-    box-shadow:var(--shadow);
-    padding:14px;
-  }
-  .kpi-wrap{display:grid; grid-template-columns: repeat(3, 1fr); gap:12px}
-  @media (max-width: 860px){ .kpi-wrap{grid-template-columns:1fr} }
-  .kpi-head{
-    display:flex; align-items:center; justify-content:space-between;
-    margin-bottom:10px;
-  }
-  .kpi-head b{font-size:13px}
-  .kpi-head span{font-size:12px; color:var(--muted)}
-  .kpi-grid{
-    display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;
-  }
-  @media (max-width: 860px){ .kpi-grid{grid-template-columns:1fr} }
-  .card{
-    border:1px solid var(--border);
-    border-radius:14px;
-    padding:12px;
-    background: linear-gradient(180deg, #fff, #fbfdff);
-  }
-  .card .label{font-size:12px; color:var(--muted)}
-  .card .val{font-size:20px; font-weight:800; margin-top:4px}
-  .card .sub{font-size:12px; color:var(--muted); margin-top:4px}
-  .pill{
-    display:inline-flex; align-items:center; gap:6px;
-    font-size:12px;
-    border:1px solid var(--border);
-    background:#fff;
-    padding:6px 10px;
-    border-radius:999px;
-    color:var(--muted);
-  }
-  .pill i{display:inline-block; width:8px; height:8px; border-radius:99px; background:var(--muted)}
-  .pill.good i{background:var(--good)}
-  .pill.warn i{background:var(--warn)}
-  .pill.bad i{background:var(--bad)}
-  .msg{white-space:pre-wrap; color:var(--bad); margin-top:10px}
-  table{
-    width:100%;
-    border-collapse:separate;
-    border-spacing:0;
-    overflow:hidden;
-    border:1px solid var(--border);
-    border-radius:14px;
-    background:#fff;
-  }
-  th, td{
-    padding:10px;
-    border-bottom:1px solid var(--border);
-    font-size:13px;
-    vertical-align:top;
-  }
-  th{
-    background:#f8fafc;
-    color:#334155;
-    font-weight:700;
-    position:sticky;
-    top:0;
-    z-index:1;
-  }
-  tr:last-child td{border-bottom:none}
-  .muted{color:var(--muted)}
-  .actions{display:flex; gap:6px; flex-wrap:wrap}
-  .status{font-weight:800}
-  .status.placed{color:#334155}
-  .status.confirmed{color:var(--brand)}
-  .status.baking{color:var(--warn)}
-  .status.ready{color:var(--good)}
-  .status.collected{color:#0f766e}
-  .status.cancelled{color:var(--bad)}
-  .two-col{display:grid; grid-template-columns: 1.2fr .8fr; gap:14px}
-  @media (max-width: 980px){ .two-col{grid-template-columns:1fr} }
-  .modal{
-    position:fixed; inset:0; background:rgba(2,6,23,.55);
-    display:none; align-items:center; justify-content:center;
-    padding:18px;
-  }
-  .modal .box{
-    width:min(920px, 100%);
-    background:#fff;
-    border-radius:16px;
-    border:1px solid var(--border);
-    box-shadow:var(--shadow);
-    padding:14px;
-  }
-  .modal .box header{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    padding-bottom:10px; border-bottom:1px solid var(--border);
-  }
-  .modal h3{margin:0; font-size:14px}
-  .grid3{display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin-top:12px}
-  @media (max-width: 860px){ .grid3{grid-template-columns:1fr} }
-  .list{
-    border:1px solid var(--border);
-    border-radius:14px;
-    padding:12px;
-    background:#fff;
-  }
-  .list h4{margin:0 0 8px; font-size:13px}
-  .list ul{margin:0; padding-left:18px}
-  .list li{margin:6px 0; font-size:13px}
-  .tiny{font-size:12px; color:var(--muted)}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hearth — Service Board</title>
+
+  <link rel="stylesheet" href="./assets/hearth.css" />
+  <!-- Config (your Supabase URL + anon key live here) -->
+  <script src="./assets/config.js"></script>
 </head>
 <body>
-<div class="wrap">
+  <div class="container">
 
-  <div class="topbar">
-    <div class="logo">
-      <div class="mark"></div>
-      <div class="title">
-        <b>Hearth — Service Board</b>
-        <span>Operator view (orders, capacity, prep)</span>
+    <div class="topbar">
+      <div class="brand">
+        <div class="brandMark">H</div>
+        <div class="brandTitle">
+          <b>Hearth — Service Board</b>
+          <span>Operator view (orders, capacity, prep)</span>
+        </div>
+      </div>
+
+      <div class="nav">
+        <a class="active" href="./index.html">Service Board</a>
+        <a href="./drop-manager.html">Drop Studio</a>
+        <a href="./drop-menu.html">Menu Library</a>
       </div>
     </div>
 
-    <div class="spacer"></div>
+    <div id="msg" class="msgErr" style="display:none;"></div>
 
-    <span id="livePill" class="pill"><i></i><span>Loading drops…</span></span>
-
-    <label class="tiny">Drop</label>
-    <select id="dropSelect"></select>
-
-    <button id="refreshBtn" class="btn-primary">Refresh</button>
-    <button id="prepBtn" class="btn-ghost">Prep summary</button>
-    <a class="btn-ghost" style="text-decoration:none; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:#fff;" href="./drop-manager.html">Drop Studio</a>
-  </div>
-
-  <div id="msg" class="msg"></div>
-
-  <div class="row">
-    <div class="panel" style="flex:1;">
-      <div class="kpi-head">
+    <!-- Performance snapshot -->
+    <div class="panel">
+      <div class="hrow" style="justify-content:space-between;">
         <div>
-          <b>Performance snapshot</b>
-          <span class="muted">Prev year / YTD / This week</span>
+          <b style="font-size:14px;">Performance snapshot</b>
+          <div class="muted">Previous year • Year-to-date • This week</div>
         </div>
-        <button id="toggleKPIs" class="btn-small">Show more ▸</button>
+        <div class="hrow">
+          <span class="tiny" id="asOf"></span>
+          <button class="btn btnAccent" id="refreshAllBtn">Refresh</button>
+        </div>
       </div>
 
-      <div class="kpi-wrap" id="kpiWrap"></div>
-    </div>
-  </div>
+      <div class="sep"></div>
 
-  <div class="row">
-    <div class="panel" style="flex:1;">
-      <div class="two-col">
-        <div>
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
-            <div>
-              <b style="font-size:13px;">Orders for selected drop</b>
-              <div class="tiny muted" id="dropMeta">—</div>
-            </div>
-            <div class="pill" id="capPill"><i></i><span>Capacity —</span></div>
+      <div class="grid3">
+        <!-- Previous Year -->
+        <div class="panel" style="padding:12px;">
+          <div class="cardTitle">
+            <b id="pyTitle">Previous year</b>
+            <span id="pyRange">—</span>
           </div>
 
-          <div style="margin-top:10px; max-height:520px; overflow:auto; border-radius:14px;">
-            <table>
-              <thead>
-                <tr>
-                  <th style="width:92px;">Time</th>
-                  <th style="width:180px;">Customer</th>
-                  <th style="width:140px;">Phone</th>
-                  <th>Capacity items</th>
-                  <th style="width:260px;">Other items</th>
-                  <th style="width:92px;">Status</th>
-                  <th style="width:340px;">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="rows"></tbody>
-            </table>
+          <div class="kpi3" id="pyTop"></div>
+
+          <div class="hrow" style="justify-content:flex-end; margin-top:10px;">
+            <button class="btn" data-toggle="pyMore">Show more</button>
+          </div>
+          <div class="moreWrap" id="pyMore">
+            <div class="kpiMore" id="pyMoreGrid"></div>
           </div>
         </div>
 
-        <div>
-          <b style="font-size:13px;">Quick controls</b>
-          <div class="tiny muted" style="margin-top:4px;">
-            Actions update <code>orders.status</code> only. Prep summary uses <code>order_items</code> + <code>products</code>.
+        <!-- YTD -->
+        <div class="panel" style="padding:12px;">
+          <div class="cardTitle">
+            <b id="ytdTitle">Year to date</b>
+            <span id="ytdRange">—</span>
           </div>
 
-          <div class="panel" style="margin-top:10px;">
-            <b style="font-size:13px;">Notes</b>
-            <div class="tiny muted" style="margin-top:6px;">
-              If some older orders only have <code>orders.pizzas</code>, we’ll include them as a fallback in capacity/pizza counts.
-            </div>
-          </div>
+          <div class="kpi3" id="ytdTop"></div>
 
-          <div class="panel" style="margin-top:10px;">
-            <b style="font-size:13px;">Shortcuts</b>
-            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-              <a class="btn-ghost" style="text-decoration:none; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:#fff;" href="./drop-manager.html">🗓 Drop Studio</a>
-              <a class="btn-ghost" style="text-decoration:none; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:#fff;" href="./products.html">📚 Menu Library</a>
-            </div>
-            <div class="tiny muted" style="margin-top:8px;">
-              If you don’t have <code>products.html</code> yet, ignore that link for now.
-            </div>
+          <div class="hrow" style="justify-content:flex-end; margin-top:10px;">
+            <button class="btn" data-toggle="ytdMore">Show more</button>
+          </div>
+          <div class="moreWrap" id="ytdMore">
+            <div class="kpiMore" id="ytdMoreGrid"></div>
           </div>
         </div>
 
+        <!-- This Week -->
+        <div class="panel" style="padding:12px;">
+          <div class="cardTitle">
+            <b id="wtdTitle">This week</b>
+            <span id="wtdRange">—</span>
+          </div>
+
+          <div class="kpi3" id="wtdTop"></div>
+
+          <div class="hrow" style="justify-content:flex-end; margin-top:10px;">
+            <button class="btn" data-toggle="wtdMore">Show more</button>
+          </div>
+          <div class="moreWrap" id="wtdMore">
+            <div class="kpiMore" id="wtdMoreGrid"></div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
 
-</div>
+    <!-- Execution -->
+    <div class="panel" style="margin-top:14px;">
+      <div class="hrow" style="justify-content:space-between;">
+        <div>
+          <b style="font-size:14px;">Execution</b>
+          <div class="muted">Select a drop to run service and action orders (live drops only).</div>
+        </div>
+        <button class="btn btnAccent" id="prepBtn">Prep summary</button>
+      </div>
 
-<!-- Prep modal -->
-<div id="modal" class="modal" role="dialog" aria-modal="true">
-  <div class="box">
-    <header>
-      <h3 id="modalTitle">Prep summary</h3>
-      <button id="closeModal" class="btn-small">Close</button>
-    </header>
-    <div class="tiny muted" id="modalSub" style="margin-top:8px;"></div>
-    <div class="grid3" id="modalGrid"></div>
+      <div class="sep"></div>
+
+      <div class="hrow">
+        <div class="tiny" style="min-width:70px;">Drop</div>
+        <select id="dropSelect" style="min-width:360px; max-width:100%;"></select>
+        <button class="btn" id="loadBtn">Load</button>
+
+        <div id="dropPills" class="hrow" style="margin-left:auto;">
+          <!-- status + capacity pill renders here -->
+        </div>
+      </div>
+
+      <div id="prepArea" style="display:none; margin-top:12px;">
+        <div class="panel" style="padding:12px;">
+          <b style="font-size:13px;">Prep summary — selected drop</b>
+          <div class="muted" id="prepMeta" style="margin-top:4px;"></div>
+          <div class="sep"></div>
+          <div class="hrow" style="align-items:flex-start;">
+            <div style="flex:1; min-width:260px;">
+              <div class="tiny" style="margin-bottom:6px;">Capacity category</div>
+              <div id="prepCapacityList"></div>
+            </div>
+            <div style="flex:1; min-width:260px;">
+              <div class="tiny" style="margin-bottom:6px;">Other items</div>
+              <div id="prepOtherList"></div>
+            </div>
+            <div style="min-width:220px;">
+              <div class="tiny" style="margin-bottom:6px;">Capacity</div>
+              <div id="prepCapacityBox"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <table class="table" id="ordersTable" style="margin-top:12px;">
+        <thead>
+          <tr>
+            <th class="nowrap" style="width:78px;">Time</th>
+            <th style="width:150px;">Customer</th>
+            <th class="nowrap" style="width:130px;">Phone</th>
+            <th style="width:190px;">Capacity items</th>
+            <th>Other items</th>
+            <th class="nowrap" style="width:92px;">Status</th>
+            <th class="nowrap" style="width:260px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="orderRows"></tbody>
+      </table>
+    </div>
   </div>
-</div>
 
 <script>
-/*** CONFIG (prototype-friendly) ***/
-const SUPABASE_URL = "https://tvqhhjvumgumyetvpgid.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_GftZ3Mw1M2-jb2bStjv80Q_gRDC9FzD"; // prototype only
+/*** CONFIG (from assets/config.js) ***/
+const SUPABASE_URL = window.HEARTH_CONFIG?.SUPABASE_URL;
+const SUPABASE_ANON_KEY = window.HEARTH_CONFIG?.SUPABASE_ANON_KEY;
 
 const headers = {
   apikey: SUPABASE_ANON_KEY,
@@ -303,528 +172,611 @@ const headers = {
   "Content-Type": "application/json"
 };
 
-/*** ELEMENTS ***/
-const msg = document.getElementById("msg");
+const elMsg = document.getElementById("msg");
+const asOf = document.getElementById("asOf");
+
 const dropSelect = document.getElementById("dropSelect");
-const refreshBtn = document.getElementById("refreshBtn");
+const loadBtn = document.getElementById("loadBtn");
+const refreshAllBtn = document.getElementById("refreshAllBtn");
+
+const orderRows = document.getElementById("orderRows");
+const dropPills = document.getElementById("dropPills");
+
 const prepBtn = document.getElementById("prepBtn");
-const toggleKPIsBtn = document.getElementById("toggleKPIs");
-const kpiWrap = document.getElementById("kpiWrap");
-const rowsEl = document.getElementById("rows");
-const capPill = document.getElementById("capPill");
-const livePill = document.getElementById("livePill");
-const dropMeta = document.getElementById("dropMeta");
+const prepArea = document.getElementById("prepArea");
+const prepMeta = document.getElementById("prepMeta");
+const prepCapacityList = document.getElementById("prepCapacityList");
+const prepOtherList = document.getElementById("prepOtherList");
+const prepCapacityBox = document.getElementById("prepCapacityBox");
 
-const modal = document.getElementById("modal");
-const closeModal = document.getElementById("closeModal");
-const modalTitle = document.getElementById("modalTitle");
-const modalSub = document.getElementById("modalSub");
-const modalGrid = document.getElementById("modalGrid");
+// KPI slots
+const pyTop = document.getElementById("pyTop");
+const ytdTop = document.getElementById("ytdTop");
+const wtdTop = document.getElementById("wtdTop");
 
-let showMoreKPIs = false;
-let dropsCache = [];
+const pyMoreGrid = document.getElementById("pyMoreGrid");
+const ytdMoreGrid = document.getElementById("ytdMoreGrid");
+const wtdMoreGrid = document.getElementById("wtdMoreGrid");
+
+/*** State ***/
+let drops = [];
+let products = [];
 let activeDrop = null;
-let lastOrdersForSelectedDrop = [];
 
-/*** HELPERS ***/
+/*** Helpers ***/
+function showErr(msg){
+  elMsg.style.display = msg ? "block" : "none";
+  elMsg.textContent = msg || "";
+}
 function esc(s){
-  return String(s ?? "").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
+  return String(s ?? "").replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 }
-function fmtTime(iso){
-  try { return new Date(iso).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}); }
-  catch { return "—"; }
+function money(pence){
+  if(pence == null || !Number.isFinite(Number(pence))) return "—";
+  return `£${(Number(pence)/100).toFixed(2)}`;
 }
-function fmtDateTime(iso){
-  try { return new Date(iso).toLocaleString(); }
-  catch { return "—"; }
+function toLocalTimeHM(iso){
+  if(!iso) return "—";
+  const d = new Date(iso);
+  if(String(d)==="Invalid Date") return "—";
+  const pad = n => String(n).padStart(2,"0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 function startOfWeekMonday(d){
   const x = new Date(d);
-  const day = x.getDay(); // 0 Sun
-  const diff = (day === 0 ? -6 : 1 - day);
-  x.setDate(x.getDate() + diff);
+  const day = (x.getDay() + 6) % 7; // Monday=0
   x.setHours(0,0,0,0);
+  x.setDate(x.getDate() - day);
   return x;
 }
 function endOfWeekSunday(d){
   const s = startOfWeekMonday(d);
   const e = new Date(s);
-  e.setDate(e.getDate()+6);
+  e.setDate(e.getDate() + 6);
   e.setHours(23,59,59,999);
   return e;
 }
-function toIso(d){ return new Date(d).toISOString(); }
-async function fetchText(url){
+function ymd(d){
+  const pad = n => String(n).padStart(2,"0");
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+}
+async function fetchJson(url){
   const res = await fetch(url, { headers });
   const text = await res.text();
   if(!res.ok) throw new Error(`${res.status} ${text}`);
-  return text;
+  return JSON.parse(text);
 }
-async function fetchJson(url){
-  return JSON.parse(await fetchText(url));
+async function patchJson(url, body){
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: { ...headers, Prefer: "return=representation" },
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  if(!res.ok) throw new Error(`${res.status} ${text}`);
+  return JSON.parse(text);
 }
 
-/*** DATA LOADERS ***/
+/*** Data loads ***/
 async function loadDrops(){
-  msg.textContent = "";
-  // We’ll treat "live" as priority; but we still list planned/draft/closed too.
   const url =
     `${SUPABASE_URL}/rest/v1/drops` +
-    `?select=id,slug,name,status,drop_type,delivery_start,delivery_end,cutoff_time,opens_at,closes_at,` +
-    `capacity_category,capacity_units_total,capacity_pizzas,max_orders` +
-    `&order=cutoff_time.desc.nullslast&order=delivery_start.desc.nullslast&order=created_at.desc`;
+    `?select=id,name,status,delivery_start,delivery_end,cutoff_time,closes_at,capacity_units_total,capacity_category` +
+    `&order=cutoff_time.desc.nullslast&order=delivery_start.desc.nullslast`;
 
-  const drops = await fetchJson(url);
-  dropsCache = drops;
+  drops = await fetchJson(url);
 
-  // Populate dropdown
-  dropSelect.innerHTML = drops.map(d => {
-    const label = `${d.name || d.slug || d.id} • ${d.status || "—"} • cutoff ${fmtDateTime(d.cutoff_time || d.closes_at || d.delivery_start)}`;
+  // Build dropdown options (show live first)
+  const sorted = [...drops].sort((a,b)=>{
+    const score = s => (s==="live"?0:(s==="planned"?1:(s==="draft"?2:3)));
+    return score(a.status) - score(b.status);
+  });
+
+  dropSelect.innerHTML = sorted.map(d=>{
+    const label = `${d.name} • ${d.status}${d.cutoff_time ? ` • cutoff ${ymd(new Date(d.cutoff_time))}` : ""}`;
     return `<option value="${d.id}">${esc(label)}</option>`;
   }).join("");
 
-  // Auto-pick best drop:
-  // 1) live with soonest cutoff
-  // 2) else latest by cutoff
-  const now = new Date();
-  const live = drops.filter(d => (d.status||"").toLowerCase() === "live");
-  live.sort((a,b) => new Date(a.cutoff_time||a.closes_at||a.delivery_start||0) - new Date(b.cutoff_time||b.closes_at||b.delivery_start||0));
-
-  const chosen = live.find(d => new Date(d.cutoff_time||d.closes_at||d.delivery_start||0) >= now) || live[0] || drops[0];
-  if(chosen) dropSelect.value = chosen.id;
-
-  activeDrop = chosen || null;
-  updateLivePill();
+  // default pick first live if exists
+  const live = sorted.find(d=>d.status==="live");
+  if(live) dropSelect.value = live.id;
+  activeDrop = sorted.find(d=>d.id===dropSelect.value) || sorted[0] || null;
 }
 
-function updateLivePill(){
-  if(!activeDrop){
-    livePill.className = "pill";
-    livePill.innerHTML = `<i></i><span>No drop selected</span>`;
-    return;
-  }
-  const status = (activeDrop.status||"").toLowerCase();
-  let cls = "pill";
-  if(status === "live") cls += " good";
-  else if(status === "planned" || status === "draft") cls += " warn";
-  else if(status === "closed") cls += "";
-  else cls += "";
-
-  livePill.className = cls;
-
-  const cutoff = activeDrop.cutoff_time || activeDrop.closes_at || activeDrop.delivery_start;
-  livePill.innerHTML = `<i></i><span>${esc(activeDrop.status||"—")} • cutoff ${esc(fmtDateTime(cutoff))}</span>`;
-}
-
-function getSelectedDrop(){
-  const id = dropSelect.value;
-  return dropsCache.find(d => d.id === id) || null;
-}
-
-/*** ORDERS (selected drop) ***/
-async function fetchOrdersForDrop(dropId){
-  // Pull orders with nested items (order_items -> products)
-  // Note: If an order has no order_items yet, it will still return order row (order_items: []).
+async function loadProducts(){
   const url =
+    `${SUPABASE_URL}/rest/v1/products` +
+    `?select=id,name,category,price_pence,is_active,sort_order,capacity_units` +
+    `&order=sort_order.asc.nullslast&order=name.asc`;
+
+  products = await fetchJson(url);
+}
+
+async function loadOrdersForDrop(dropId){
+  // Pull orders
+  const oUrl =
     `${SUPABASE_URL}/rest/v1/orders` +
     `?drop_id=eq.${dropId}` +
-    `&select=id,drop_id,created_at,status,customer_name,customer_phone,pizzas,` +
-    `order_items(qty,price_pence,product:products(name,category,capacity_units,price_pence))` +
-    `&order=created_at.desc`;
+    `&select=id,customer_name,customer_phone,status,created_at,pizzas` +
+    `&order=created_at.asc`;
 
-  return await fetchJson(url);
+  const orders = await fetchJson(oUrl);
+  const orderIds = orders.map(o=>o.id);
+
+  // Pull items (if you have legacy orders without items, this may return empty)
+  let items = [];
+  if(orderIds.length){
+    const ids = orderIds.join(",");
+    const iUrl =
+      `${SUPABASE_URL}/rest/v1/order_items` +
+      `?order_id=in.(${ids})` +
+      `&select=order_id,product_id,qty,price_pence`;
+    items = await fetchJson(iUrl);
+  }
+
+  return { orders, items };
 }
 
-function computeCapacityUsedFromOrder(order, capacityCategory){
-  // Preferred: sum(qty * capacity_units) for items where product.category matches drop capacity_category.
-  const items = Array.isArray(order.order_items) ? order.order_items : [];
-  let used = 0;
+/*** Rendering ***/
+function renderDropPills(drop){
+  dropPills.innerHTML = "";
+  if(!drop) return;
+
+  const statusDot = drop.status==="live" ? "ok" : (drop.status==="closed" ? "bad" : "warn");
+  const cap = (drop.capacity_category || "—").toString();
+  const total = (drop.capacity_units_total ?? "—");
+
+  dropPills.innerHTML = `
+    <span class="pill"><span class="dot ${statusDot}"></span>${esc(drop.status || "—")}</span>
+    <span class="pill">Capacity: ${esc(cap)} • ${esc(String(total))} units</span>
+  `;
+}
+
+function mapItemsByOrder(items){
+  const by = new Map();
   for(const it of items){
-    const p = it.product || {};
-    if((p.category||"").toLowerCase() === (capacityCategory||"").toLowerCase()){
-      const u = Number(p.capacity_units ?? 1);
-      used += (Number(it.qty)||0) * (Number.isFinite(u) ? u : 1);
-    }
+    const arr = by.get(it.order_id) || [];
+    arr.push(it);
+    by.set(it.order_id, arr);
   }
-  // Fallback to legacy pizzas column if no items recorded
-  if(used === 0 && Number(order.pizzas) > 0 && (capacityCategory||"").toLowerCase() === "pizza"){
-    used = Number(order.pizzas);
-  }
-  return used;
+  return by;
 }
 
-function splitItems(order, capacityCategory){
-  const cap = [];
-  const other = [];
-  const items = Array.isArray(order.order_items) ? order.order_items : [];
+function productById(){
+  const m = new Map();
+  for(const p of products) m.set(p.id, p);
+  return m;
+}
 
-  if(items.length){
-    for(const it of items){
-      const p = it.product || {};
-      const name = p.name || "Item";
-      const qty = Number(it.qty)||0;
-      const cat = (p.category||"").toLowerCase();
-      if(cat === (capacityCategory||"").toLowerCase()){
-        cap.push({name, qty, category: p.category});
-      } else {
-        other.push({name, qty, category: p.category});
+function summariseLine(items, filterFn){
+  // returns array of "Name xQ"
+  const agg = new Map();
+  for(const it of items){
+    const p = filterFn(it);
+    if(!p) continue;
+    const key = p.name;
+    agg.set(key, (agg.get(key)||0) + (it.qty ?? 1));
+  }
+  const out = [...agg.entries()].map(([n,q]) => `${n} x${q}`);
+  return out;
+}
+
+function renderOrders(drop, orders, items){
+  orderRows.innerHTML = "";
+  if(!drop) return;
+
+  const byOrder = mapItemsByOrder(items);
+  const pMap = productById();
+  const capCat = (drop.capacity_category || "").toLowerCase();
+
+  for(const o of orders){
+    const its = byOrder.get(o.id) || [];
+
+    // Capacity items: items where product.category matches drop.capacity_category
+    const capLines = summariseLine(its, (it)=>{
+      const p = pMap.get(it.product_id);
+      if(!p) return null;
+      if(String(p.category||"").toLowerCase() !== capCat) return null;
+      return p;
+    });
+
+    // Other items = everything else
+    const otherLines = summariseLine(its, (it)=>{
+      const p = pMap.get(it.product_id);
+      if(!p) return null;
+      if(String(p.category||"").toLowerCase() === capCat) return null;
+      return p;
+    });
+
+    // Legacy fallback: if no items but orders.pizzas exists
+    let capDisplay = capLines.join(", ");
+    if(!capDisplay && o.pizzas != null && Number(o.pizzas) > 0){
+      capDisplay = `${esc(drop.capacity_category || "Capacity")} (legacy) x${o.pizzas}`;
+    }
+    if(!capDisplay) capDisplay = "—";
+
+    const otherDisplay = otherLines.join(", ") || "—";
+    const created = toLocalTimeHM(o.created_at);
+
+    const isLive = drop.status === "live";
+    const btns = `
+      <div class="actions">
+        <button class="abtn primary" ${!isLive ? "disabled" : ""} title="Confirmed" onclick="setStatus('${o.id}','confirmed')">Conf</button>
+        <button class="abtn" ${!isLive ? "disabled" : ""} title="Baking" onclick="setStatus('${o.id}','baking')">Bake</button>
+        <button class="abtn" ${!isLive ? "disabled" : ""} title="Ready" onclick="setStatus('${o.id}','ready')">Ready</button>
+        <button class="abtn" ${!isLive ? "disabled" : ""} title="Collected" onclick="setStatus('${o.id}','collected')">Coll</button>
+        <button class="abtn" ${!isLive ? "disabled" : ""} title="Cancel" onclick="setStatus('${o.id}','cancelled')">Canc</button>
+      </div>
+    `;
+
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td class="nowrap">${esc(created)}</td>
+      <td class="ellipsis" title="${esc(o.customer_name)}">${esc(o.customer_name)}</td>
+      <td class="nowrap">${esc(o.customer_phone)}</td>
+      <td class="ellipsis" title="${esc(capDisplay)}">${esc(capDisplay)}</td>
+      <td class="ellipsis" title="${esc(otherDisplay)}">${esc(otherDisplay)}</td>
+      <td class="nowrap"><span class="pill">${esc(o.status)}</span></td>
+      <td class="nowrap">${btns}</td>
+    `;
+    orderRows.appendChild(row);
+  }
+
+  if(!orders.length){
+    const row = document.createElement("tr");
+    row.innerHTML = `<td colspan="7" class="muted" style="padding:14px 8px;">No orders for this drop yet.</td>`;
+    orderRows.appendChild(row);
+  }
+}
+
+async function setStatus(orderId, status){
+  try{
+    showErr("");
+    await patchJson(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`, { status });
+    await loadAndRenderActiveDrop();
+  }catch(e){
+    showErr(`Status update failed: ${e.message}`);
+  }
+}
+window.setStatus = setStatus;
+
+/*** KPIs ***/
+function calcKPIsForPeriod(periodOrders, periodItems, drop){
+  const capCat = String(drop?.capacity_category||"").toLowerCase();
+  const pMap = productById();
+
+  const ordersCount = periodOrders.length;
+  const uniqueCustomers = new Set(periodOrders.map(o=>o.customer_phone)).size;
+
+  // Revenue: sum item price_pence (fallback to products.price_pence if order_items.price_pence null)
+  let revenueTotal = 0;
+  let revenueCapacity = 0;
+  let revenueOther = 0;
+
+  // Capacity used: sum capacity category qty (plus legacy orders.pizzas)
+  let capacityUsed = 0;
+
+  // Items per order
+  let itemCount = 0;
+
+  // Cancel rate
+  const cancels = periodOrders.filter(o=>o.status==="cancelled").length;
+
+  // Repeat %
+  const phoneCounts = new Map();
+  for(const o of periodOrders){
+    phoneCounts.set(o.customer_phone, (phoneCounts.get(o.customer_phone)||0)+1);
+  }
+  const repeatCustomers = [...phoneCounts.values()].filter(v=>v>1).length;
+  const repeatPct = uniqueCustomers ? (repeatCustomers/uniqueCustomers) : 0;
+
+  // Items + revenue
+  const byOrder = mapItemsByOrder(periodItems);
+  for(const o of periodOrders){
+    const its = byOrder.get(o.id) || [];
+    if(!its.length && o.pizzas != null) capacityUsed += Number(o.pizzas)||0;
+
+    for(const it of its){
+      const qty = Number(it.qty ?? 1) || 0;
+      itemCount += qty;
+
+      const p = pMap.get(it.product_id);
+      const unit = Number(it.price_pence ?? p?.price_pence ?? 0) || 0;
+      const line = unit * qty;
+      revenueTotal += line;
+
+      if(String(p?.category||"").toLowerCase() === capCat){
+        revenueCapacity += line;
+        capacityUsed += qty;
+      }else{
+        revenueOther += line;
       }
     }
-  } else {
-    // fallback to legacy pizzas
-    if((capacityCategory||"").toLowerCase() === "pizza" && Number(order.pizzas) > 0){
-      cap.push({name:"Pizza (legacy)", qty:Number(order.pizzas), category:"pizza"});
+  }
+
+  const aov = ordersCount ? (revenueTotal/100)/ordersCount : 0;
+  const itemsPerOrder = ordersCount ? (itemCount/ordersCount) : 0;
+  const cancelPct = ordersCount ? (cancels/ordersCount) : 0;
+
+  const capTotal = Number(drop?.capacity_units_total ?? 0) || 0;
+  const capUtil = capTotal ? (capacityUsed/capTotal) : null;
+
+  return {
+    ordersCount,
+    uniqueCustomers,
+    revenueTotal,
+    revenueCapacity,
+    revenueOther,
+    aov,
+    itemsPerOrder,
+    repeatPct,
+    cancelPct,
+    capacityUsed,
+    capUtil
+  };
+}
+
+function kpiBox(label, value, sub){
+  return `
+    <div class="kpi">
+      <label>${esc(label)}</label>
+      <div class="val">${esc(value)}</div>
+      <div class="sub">${esc(sub || "")}</div>
+    </div>
+  `;
+}
+
+function renderPeriodCard(targetTopEl, targetMoreEl, titleEl, rangeEl, title, rangeText, k){
+  titleEl.textContent = title;
+  rangeEl.textContent = rangeText;
+
+  // Always-on 3
+  targetTopEl.innerHTML = [
+    kpiBox("Orders", String(k.ordersCount), ""),
+    kpiBox("Unique customers", String(k.uniqueCustomers), ""),
+    kpiBox("Revenue (total)", money(k.revenueTotal), "")
+  ].join("");
+
+  // Expandable remaining 6
+  const capUtilTxt = (k.capUtil == null) ? "—" : `${(k.capUtil*100).toFixed(1)}%`;
+  targetMoreEl.innerHTML = [
+    kpiBox("Revenue (capacity)", money(k.revenueCapacity), ""),
+    kpiBox("Revenue (other)", money(k.revenueOther), ""),
+    kpiBox("AOV", `£${k.aov.toFixed(2)}`, ""),
+    kpiBox("Items / order", k.itemsPerOrder.toFixed(1), ""),
+    kpiBox("Repeat %", `${(k.repeatPct*100).toFixed(0)}%`, ""),
+    kpiBox("Cancel %", `${(k.cancelPct*100).toFixed(0)}%`, ""),
+    kpiBox("Capacity used", String(k.capacityUsed), ""),
+    kpiBox("Capacity utilisation", capUtilTxt, ""),
+    kpiBox("Capacity category", String(activeDrop?.capacity_category || "—"), "")
+  ].join("");
+}
+
+function wireToggles(){
+  document.querySelectorAll("[data-toggle]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.getAttribute("data-toggle");
+      const box = document.getElementById(id);
+      const on = box.classList.toggle("show");
+      btn.textContent = on ? "Show less" : "Show more";
+    });
+  });
+}
+
+/*** Prep summary ***/
+function renderPrep(drop, orders, items){
+  const capCat = String(drop?.capacity_category||"").toLowerCase();
+  const pMap = productById();
+  const byOrder = mapItemsByOrder(items);
+
+  const capAgg = new Map();   // name -> qty
+  const otherAgg = new Map(); // "Category — Name" -> qty
+  let capacityUsed = 0;
+
+  for(const o of orders){
+    const its = byOrder.get(o.id) || [];
+
+    if(!its.length && o.pizzas != null){
+      capacityUsed += Number(o.pizzas)||0;
+      capAgg.set(`${drop.capacity_category} (legacy)`, (capAgg.get(`${drop.capacity_category} (legacy)`)||0) + (Number(o.pizzas)||0));
+      continue;
+    }
+
+    for(const it of its){
+      const p = pMap.get(it.product_id);
+      if(!p) continue;
+      const qty = Number(it.qty ?? 1) || 0;
+
+      if(String(p.category||"").toLowerCase() === capCat){
+        capAgg.set(p.name, (capAgg.get(p.name)||0) + qty);
+        capacityUsed += qty;
+      }else{
+        const key = `${p.category} — ${p.name}`;
+        otherAgg.set(key, (otherAgg.get(key)||0) + qty);
+      }
     }
   }
-  return {cap, other};
+
+  const capTotal = Number(drop.capacity_units_total ?? 0) || 0;
+  const util = capTotal ? `${capacityUsed}/${capTotal} (${((capacityUsed/capTotal)*100).toFixed(1)}%)` : `${capacityUsed}/—`;
+
+  prepMeta.textContent = `Capacity category: ${drop.capacity_category}. Capacity = used units / total units.`;
+
+  prepCapacityList.innerHTML =
+    (capAgg.size ? [...capAgg.entries()].map(([n,q])=>`<div class="pill" style="margin:6px 6px 0 0;">${esc(n)} x${q}</div>`).join("")
+     : `<div class="muted">No capacity items yet.</div>`);
+
+  prepOtherList.innerHTML =
+    (otherAgg.size ? [...otherAgg.entries()].map(([n,q])=>`<div class="pill" style="margin:6px 6px 0 0;">${esc(n)} x${q}</div>`).join("")
+     : `<div class="muted">No other items yet.</div>`);
+
+  prepCapacityBox.innerHTML = `
+    <div class="kpi" style="max-width:220px;">
+      <label>Capacity used</label>
+      <div class="val">${esc(util)}</div>
+      <div class="sub">${esc(drop.capacity_category || "")}</div>
+    </div>
+  `;
 }
 
-async function updateOrderStatus(orderId, status){
-  msg.textContent = "";
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`,{
-    method:"PATCH",
-    headers:{...headers, Prefer:"return=representation"},
-    body: JSON.stringify({ status })
-  });
-  if(!res.ok){
-    msg.textContent = `Status update failed: ${res.status} ${await res.text()}`;
+/*** Main flow ***/
+async function refreshKPIs(){
+  if(!activeDrop){
+    pyTop.innerHTML = ytdTop.innerHTML = wtdTop.innerHTML = "";
     return;
   }
-  await refreshSelectedDrop();
-}
-window.updateOrderStatus = updateOrderStatus;
 
-function statusClass(s){
-  const x = (s||"").toLowerCase();
-  return ["placed","confirmed","baking","ready","collected","cancelled"].includes(x) ? x : "placed";
-}
+  // Pull all orders for all time (for KPI slicing)
+  const oUrl =
+    `${SUPABASE_URL}/rest/v1/orders` +
+    `?select=id,drop_id,customer_phone,status,created_at,pizzas` +
+    `&order=created_at.asc`;
 
-async function refreshSelectedDrop(){
-  activeDrop = getSelectedDrop();
-  updateLivePill();
-  if(!activeDrop){ return; }
+  const allOrders = await fetchJson(oUrl);
+  const orderIds = allOrders.map(o=>o.id);
+  let allItems = [];
+  if(orderIds.length){
+    const ids = orderIds.join(",");
+    const iUrl =
+      `${SUPABASE_URL}/rest/v1/order_items` +
+      `?order_id=in.(${ids})&select=order_id,product_id,qty,price_pence`;
+    allItems = await fetchJson(iUrl);
+  }
 
-  // meta
-  dropMeta.textContent =
-    `${activeDrop.drop_type || "—"} • delivery ${fmtDateTime(activeDrop.delivery_start)} → ${fmtDateTime(activeDrop.delivery_end)} • cutoff ${fmtDateTime(activeDrop.cutoff_time || activeDrop.closes_at)}`;
-
-  const orders = await fetchOrdersForDrop(activeDrop.id);
-  lastOrdersForSelectedDrop = orders;
-
-  // capacity pill
-  const capCategory = activeDrop.capacity_category || "pizza";
-  const capTotal = Number(activeDrop.capacity_units_total ?? activeDrop.capacity_pizzas ?? 0) || 0;
-
-  let used = 0;
-  for(const o of orders) used += computeCapacityUsedFromOrder(o, capCategory);
-
-  const pct = capTotal ? Math.round((used / capTotal) * 100) : 0;
-  let pillCls = "pill";
-  if(pct >= 90) pillCls += " bad";
-  else if(pct >= 70) pillCls += " warn";
-  else pillCls += " good";
-  capPill.className = pillCls;
-  capPill.innerHTML = `<i></i><span>${esc(capCategory)} capacity: ${used}/${capTotal} (${pct}%)</span>`;
-
-  // render table
-  rowsEl.innerHTML = orders.map(o => {
-    const capSplit = splitItems(o, capCategory);
-    const capText = capSplit.cap.length
-      ? capSplit.cap.map(i => `${esc(i.name)} × ${i.qty}`).join("<br>")
-      : `<span class="muted">—</span>`;
-    const otherText = capSplit.other.length
-      ? capSplit.other.map(i => `${esc(i.name)} × ${i.qty}`).join("<br>")
-      : `<span class="muted">—</span>`;
-
-    const st = (o.status || "placed").toLowerCase();
-
-    return `
-      <tr>
-        <td>${esc(fmtTime(o.created_at))}</td>
-        <td><b>${esc(o.customer_name)}</b></td>
-        <td>${esc(o.customer_phone)}</td>
-        <td>${capText}</td>
-        <td>${otherText}</td>
-        <td><span class="status ${statusClass(st)}">${esc(st)}</span></td>
-        <td>
-          <div class="actions">
-            <button class="btn-small" onclick="updateOrderStatus('${o.id}','confirmed')">Confirmed</button>
-            <button class="btn-small" onclick="updateOrderStatus('${o.id}','baking')">Baking</button>
-            <button class="btn-small" onclick="updateOrderStatus('${o.id}','ready')">Ready</button>
-            <button class="btn-small" onclick="updateOrderStatus('${o.id}','collected')">Collected</button>
-            <button class="btn-small danger" onclick="updateOrderStatus('${o.id}','cancelled')">Cancel</button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join("");
-}
-
-/*** KPI SNAPSHOT (3 periods) ***/
-function makePeriodRanges(){
+  // Periods
   const now = new Date();
+  asOf.textContent = `As of ${ymd(now)} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+
   const thisYear = now.getFullYear();
   const prevYear = thisYear - 1;
 
-  const prevYearStart = new Date(prevYear,0,1,0,0,0,0);
-  const prevYearEnd   = new Date(prevYear,11,31,23,59,59,999);
+  const pyStart = new Date(prevYear,0,1,0,0,0,0);
+  const pyEnd   = new Date(prevYear,11,31,23,59,59,999);
 
   const ytdStart = new Date(thisYear,0,1,0,0,0,0);
-  const ytdEnd = now;
+  const ytdEnd   = now;
 
-  const wkStart = startOfWeekMonday(now);
-  const wkEnd = endOfWeekSunday(now);
+  const wtdStart = startOfWeekMonday(now);
+  const wtdEnd   = endOfWeekSunday(now);
 
-  return [
-    { key:"prev", label:`${prevYear}`, start: prevYearStart, end: prevYearEnd },
-    { key:"ytd",  label:`${thisYear} YTD`, start: ytdStart, end: ytdEnd },
-    { key:"wk",   label:`This week`, start: wkStart, end: wkEnd }
-  ];
-}
-
-async function fetchOrdersInRange(start, end){
-  // Fetch all orders in date range, with items+products for KPI calc
-  const url =
-    `${SUPABASE_URL}/rest/v1/orders` +
-    `?created_at=gte.${encodeURIComponent(toIso(start))}` +
-    `&created_at=lte.${encodeURIComponent(toIso(end))}` +
-    `&select=id,drop_id,created_at,status,customer_phone,pizzas,` +
-    `order_items(qty,product:products(category,capacity_units))`;
-
-  return await fetchJson(url);
-}
-
-async function fetchDropsForIds(ids){
-  if(!ids.length) return [];
-  // Use "in" filter
-  const list = `(${ids.map(x=>`"${x}"`).join(",")})`;
-  const url =
-    `${SUPABASE_URL}/rest/v1/drops` +
-    `?id=in.${encodeURIComponent(list)}` +
-    `&select=id,capacity_category,capacity_units_total,capacity_pizzas`;
-
-  return await fetchJson(url);
-}
-
-function buildKPIsForPeriod(orders, dropsById){
-  const totalOrders = orders.length;
-  const uniqueCustomers = new Set(orders.map(o => (o.customer_phone||"").trim()).filter(Boolean)).size;
-
-  const cancelled = orders.filter(o => (o.status||"").toLowerCase() === "cancelled").length;
-  const cancelPct = totalOrders ? Math.round((cancelled/totalOrders)*100) : 0;
-
-  // repeats: customers with >1 order in period
-  const countsByPhone = new Map();
-  for(const o of orders){
-    const p = (o.customer_phone||"").trim();
-    if(!p) continue;
-    countsByPhone.set(p, (countsByPhone.get(p)||0)+1);
-  }
-  const repeatCustomers = Array.from(countsByPhone.values()).filter(v => v>1).length;
-  const repeatPct = uniqueCustomers ? Math.round((repeatCustomers/uniqueCustomers)*100) : 0;
-
-  // capacity used: sum item qty*units for capacity category per drop
-  let capUsed = 0;
-  let otherItemsQty = 0;
-  let allItemsQty = 0;
-
-  for(const o of orders){
-    const d = dropsById.get(o.drop_id) || {};
-    const capCat = (d.capacity_category || "pizza").toLowerCase();
-
-    const items = Array.isArray(o.order_items) ? o.order_items : [];
-    if(items.length){
-      for(const it of items){
-        const p = it.product || {};
-        const qty = Number(it.qty)||0;
-        const u = Number(p.capacity_units ?? 1);
-        allItemsQty += qty;
-
-        if((p.category||"").toLowerCase() === capCat){
-          capUsed += qty * (Number.isFinite(u) ? u : 1);
-        } else {
-          otherItemsQty += qty;
-        }
-      }
-    } else {
-      // legacy fallback
-      if(capCat === "pizza" && Number(o.pizzas)>0){
-        capUsed += Number(o.pizzas);
-      }
-    }
-  }
-
-  const avgCapPerOrder = totalOrders ? (capUsed/totalOrders) : 0;
-
-  return {
-    totalOrders,
-    uniqueCustomers,
-    cancelled,
-    cancelPct,
-    repeatPct,
-    capUsed,
-    otherItemsQty,
-    allItemsQty,
-    avgCapPerOrder
+  // Filter by created_at
+  const inRange = (o, a, b) => {
+    const t = new Date(o.created_at).getTime();
+    return t >= a.getTime() && t <= b.getTime();
   };
-}
 
-function renderKPIBlock(title, periodLabel, kpis){
-  const always = [
-    { label:"Orders", val: kpis.totalOrders },
-    { label:"Capacity used", val: Math.round(kpis.capUsed) },
-    { label:"Unique customers", val: kpis.uniqueCustomers }
-  ];
-
-  const more = [
-    { label:"Cancel %", val: `${kpis.cancelPct}%`, sub:`Cancelled: ${kpis.cancelled}` },
-    { label:"Repeat %", val: `${kpis.repeatPct}%`, sub:"Repeat customers share" },
-    { label:"Avg cap / order", val: kpis.avgCapPerOrder.toFixed(2), sub:"Capacity units per order" },
-    { label:"Other items qty", val: kpis.otherItemsQty, sub:"Non-capacity items" },
-    { label:"All items qty", val: kpis.allItemsQty, sub:"Total items ordered" },
-    { label:"Orders / customer", val: (kpis.uniqueCustomers ? (kpis.totalOrders/kpis.uniqueCustomers).toFixed(2) : "0.00") }
-  ];
-
-  const shown = showMoreKPIs ? always.concat(more) : always;
-
-  return `
-    <div class="panel" style="margin:0;">
-      <div class="kpi-head">
-        <b>${esc(periodLabel)}</b>
-        <span class="muted">${esc(title)}</span>
-      </div>
-      <div class="kpi-grid">
-        ${shown.map(c => `
-          <div class="card">
-            <div class="label">${esc(c.label)}</div>
-            <div class="val">${esc(c.val)}</div>
-            ${c.sub ? `<div class="sub">${esc(c.sub)}</div>` : ``}
-          </div>
-        `).join("")}
-      </div>
-    </div>
-  `;
-}
-
-async function refreshKPIs(){
-  const ranges = makePeriodRanges();
-
-  const blocks = [];
-  for(const r of ranges){
-    const orders = await fetchOrdersInRange(r.start, r.end);
-    const dropIds = Array.from(new Set(orders.map(o => o.drop_id)));
-    const drops = await fetchDropsForIds(dropIds);
-    const dropsById = new Map(drops.map(d => [d.id, d]));
-    const kpis = buildKPIsForPeriod(orders, dropsById);
-
-    blocks.push(renderKPIBlock(`${fmtDateTime(r.start)} → ${fmtDateTime(r.end)}`, r.label, kpis));
-  }
-
-  kpiWrap.innerHTML = `<div class="kpi-wrap">${blocks.join("")}</div>`;
-}
-
-/*** PREP SUMMARY (selected drop) ***/
-function aggregatePrep(orders, capCategory){
-  const capMap = new Map();   // product name -> qty
-  const otherMap = new Map(); // product name -> qty
-
-  let capUsed = 0;
-
-  for(const o of orders){
-    const split = splitItems(o, capCategory);
-
-    for(const it of split.cap){
-      capMap.set(it.name, (capMap.get(it.name)||0) + (Number(it.qty)||0));
-      capUsed += Number(it.qty)||0; // qty units (capacity units may differ; keep list readable)
-    }
-    for(const it of split.other){
-      otherMap.set(it.name, (otherMap.get(it.name)||0) + (Number(it.qty)||0));
-    }
-  }
-
-  const toList = (m) => Array.from(m.entries())
-    .sort((a,b)=> b[1]-a[1])
-    .map(([name, qty]) => ({ name, qty }));
-
-  return {
-    cap: toList(capMap),
-    other: toList(otherMap)
+  const pick = (a,b) => allOrders.filter(o=>inRange(o,a,b));
+  const pickItems = (periodOrders) => {
+    const set = new Set(periodOrders.map(o=>o.id));
+    return allItems.filter(i=>set.has(i.order_id));
   };
+
+  const pyOrders = pick(pyStart, pyEnd);
+  const ytdOrders = pick(ytdStart, ytdEnd);
+  const wtdOrders = pick(wtdStart, wtdEnd);
+
+  const pyItems = pickItems(pyOrders);
+  const ytdItems = pickItems(ytdOrders);
+  const wtdItems = pickItems(wtdOrders);
+
+  const pyK = calcKPIsForPeriod(pyOrders, pyItems, activeDrop);
+  const ytdK = calcKPIsForPeriod(ytdOrders, ytdItems, activeDrop);
+  const wtdK = calcKPIsForPeriod(wtdOrders, wtdItems, activeDrop);
+
+  renderPeriodCard(
+    pyTop, pyMoreGrid,
+    document.getElementById("pyTitle"),
+    document.getElementById("pyRange"),
+    `Previous year`,
+    `${ymd(pyStart)} → ${ymd(pyEnd)}`,
+    pyK
+  );
+  renderPeriodCard(
+    ytdTop, ytdMoreGrid,
+    document.getElementById("ytdTitle"),
+    document.getElementById("ytdRange"),
+    `Year to date`,
+    `${ymd(ytdStart)} → ${ymd(ytdEnd)}`,
+    ytdK
+  );
+  renderPeriodCard(
+    wtdTop, wtdMoreGrid,
+    document.getElementById("wtdTitle"),
+    document.getElementById("wtdRange"),
+    `This week`,
+    `${ymd(wtdStart)} → ${ymd(wtdEnd)}`,
+    wtdK
+  );
 }
 
-function openPrepModal(){
-  if(!activeDrop) return;
-  const capCategory = activeDrop.capacity_category || "pizza";
-  const capTotal = Number(activeDrop.capacity_units_total ?? activeDrop.capacity_pizzas ?? 0) || 0;
+async function loadAndRenderActiveDrop(){
+  showErr("");
+  activeDrop = drops.find(d=>d.id===dropSelect.value) || null;
+  renderDropPills(activeDrop);
 
-  // Capacity used (true capacity units) using products.capacity_units
-  let usedUnits = 0;
-  for(const o of lastOrdersForSelectedDrop){
-    usedUnits += computeCapacityUsedFromOrder(o, capCategory);
+  if(!activeDrop){
+    orderRows.innerHTML = "";
+    return;
   }
-  const pct = capTotal ? Math.round((usedUnits/capTotal)*100) : 0;
 
-  const agg = aggregatePrep(lastOrdersForSelectedDrop, capCategory);
+  const { orders, items } = await loadOrdersForDrop(activeDrop.id);
+  renderOrders(activeDrop, orders, items);
 
-  modalTitle.textContent = `Prep summary — ${activeDrop.name || activeDrop.slug || activeDrop.id}`;
-  modalSub.textContent =
-    `Capacity category: ${capCategory} • Capacity used: ${usedUnits}/${capTotal} (${pct}%) • Orders: ${lastOrdersForSelectedDrop.length}`;
-
-  modalGrid.innerHTML = `
-    <div class="list">
-      <h4>Capacity items (${esc(capCategory)})</h4>
-      ${agg.cap.length ? `<ul>${agg.cap.map(x=>`<li><b>${esc(x.name)}</b> — ${x.qty}</li>`).join("")}</ul>` : `<div class="tiny muted">None yet.</div>`}
-    </div>
-    <div class="list">
-      <h4>Other items</h4>
-      ${agg.other.length ? `<ul>${agg.other.map(x=>`<li><b>${esc(x.name)}</b> — ${x.qty}</li>`).join("")}</ul>` : `<div class="tiny muted">None yet.</div>`}
-    </div>
-    <div class="list">
-      <h4>Operational notes</h4>
-      <div class="tiny muted">
-        This summary is built from <code>order_items</code> + <code>products</code>.<br/>
-        If an order has no items (legacy), it appears as <b>Pizza (legacy)</b> under capacity items.
-      </div>
-    </div>
-  `;
-
-  modal.style.display = "flex";
+  // If prep panel is open, refresh it too
+  if(prepArea.style.display !== "none"){
+    renderPrep(activeDrop, orders, items);
+  }
 }
-function closePrepModal(){ modal.style.display = "none"; }
 
-/*** MAIN REFRESH ***/
-async function refreshAll(){
+function wireEvents(){
+  dropSelect.addEventListener("change", ()=>{
+    activeDrop = drops.find(d=>d.id===dropSelect.value) || null;
+    renderDropPills(activeDrop);
+  });
+
+  loadBtn.addEventListener("click", loadAndRenderActiveDrop);
+
+  refreshAllBtn.addEventListener("click", async ()=>{
+    try{
+      showErr("");
+      await Promise.all([refreshKPIs(), loadAndRenderActiveDrop()]);
+    }catch(e){
+      showErr(`Refresh failed: ${e.message}`);
+    }
+  });
+
+  prepBtn.addEventListener("click", async ()=>{
+    try{
+      prepArea.style.display = (prepArea.style.display === "none" ? "block" : "none");
+      if(prepArea.style.display === "block"){
+        await loadAndRenderActiveDrop(); // ensures it refreshes prep content
+      }
+    }catch(e){
+      showErr(`Prep failed: ${e.message}`);
+    }
+  });
+}
+
+/*** Init ***/
+(async function init(){
   try{
-    msg.textContent = "";
+    if(!SUPABASE_URL || !SUPABASE_ANON_KEY){
+      showErr("Missing HEARTH_CONFIG in assets/config.js (SUPABASE_URL / SUPABASE_ANON_KEY).");
+      return;
+    }
+
+    wireToggles();
+    wireEvents();
+
+    await loadProducts();
     await loadDrops();
-    activeDrop = getSelectedDrop();
-    updateLivePill();
-    await refreshKPIs();
-    await refreshSelectedDrop();
+    renderDropPills(activeDrop);
+
+    await Promise.all([refreshKPIs(), loadAndRenderActiveDrop()]);
   }catch(e){
-    msg.textContent = e.message || String(e);
+    showErr(`Init failed: ${e.message}`);
   }
-}
-
-/*** EVENTS ***/
-dropSelect.addEventListener("change", async ()=>{
-  activeDrop = getSelectedDrop();
-  updateLivePill();
-  await refreshSelectedDrop();
-});
-refreshBtn.addEventListener("click", refreshAll);
-prepBtn.addEventListener("click", openPrepModal);
-closeModal.addEventListener("click", closePrepModal);
-modal.addEventListener("click", (e)=>{ if(e.target === modal) closePrepModal(); });
-
-toggleKPIsBtn.addEventListener("click", async ()=>{
-  showMoreKPIs = !showMoreKPIs;
-  toggleKPIsBtn.textContent = showMoreKPIs ? "Show less ▾" : "Show more ▸";
-  await refreshKPIs();
-});
-
-// Auto start
-refreshAll();
+})();
 </script>
 </body>
 </html>
