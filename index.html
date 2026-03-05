@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -7,776 +6,840 @@
   <title>Hearth — Service Board</title>
 
   <link rel="stylesheet" href="./assets/hearth.css" />
-  <!-- Config (your Supabase URL + anon key live here) -->
   <script src="./assets/config.js"></script>
-</head>
-<body>
-  <div class="container">
 
-    <div class="topbar">
-      <div class="brand">
-        <div class="brandMark">H</div>
-        <div class="brandTitle">
-          <b>Hearth — Service Board</b>
-          <span>Operator view (orders, capacity, prep)</span>
-        </div>
+  <style>
+    /* Small, safe overrides (keeps hearth.css as the source of truth) */
+    .muted { opacity: .75; }
+    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .space { justify-content:space-between; }
+    .pill { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid rgba(0,0,0,.12); background: rgba(0,0,0,.02); }
+    .dot { width:8px; height:8px; border-radius:50%; background:#16a34a; display:inline-block; }
+    .dot.grey { background:#6b7280; }
+    .card { border:1px solid rgba(0,0,0,.12); border-radius:14px; padding:14px; background:#fff; }
+    .grid3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; }
+    @media (max-width: 980px){ .grid3 { grid-template-columns:1fr; } }
+
+    .kpiHead { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+    .kpiTitle { font-weight:700; }
+    .kpiRange { font-size:12px; opacity:.75; white-space:nowrap; }
+
+    .kpiGrid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:10px; }
+    .kpiItem { padding:10px; border-radius:12px; border:1px solid rgba(0,0,0,.10); background: rgba(0,0,0,.02); }
+    .kpiLabel { font-size:12px; opacity:.75; }
+    .kpiValue { font-size:20px; font-weight:800; margin-top:2px; }
+    .kpiTrend { font-size:12px; margin-top:2px; opacity:.9; }
+    .trendUp { color:#15803d; }
+    .trendDown { color:#b91c1c; }
+    .trendFlat { color:#374151; }
+
+    .showMoreBtn { border:none; background:transparent; text-decoration:underline; cursor:pointer; font-size:12px; opacity:.9; padding:4px 0; }
+
+    .sectionTitle { font-size:13px; font-weight:800; letter-spacing:.2px; margin:6px 0 10px; opacity:.9; }
+    .tableWrap { overflow:auto; border-radius:14px; border:1px solid rgba(0,0,0,.12); }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { padding:10px 10px; border-bottom:1px solid rgba(0,0,0,.08); vertical-align:top; }
+    th { text-align:left; font-size:12px; opacity:.75; letter-spacing:.25px; }
+    tr:last-child td { border-bottom:none; }
+
+    .abtn {
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width:42px; height:28px; padding:0 10px;
+      border-radius:10px;
+      border:1px solid rgba(0,0,0,.15);
+      background: rgba(0,0,0,.03);
+      cursor:pointer;
+      font-weight:700;
+      font-size:11px; /* smaller so "Deliv" fits cleanly */
+    }
+    .abtn:hover { background: rgba(0,0,0,.06); }
+    .abtn.primary { background: rgba(0,0,0,.08); }
+    .abtn.disabled { opacity:.45; cursor:not-allowed; }
+
+    .actionsRow { display:flex; gap:6px; flex-wrap:nowrap; white-space:nowrap; }
+
+    .rightActions { display:flex; gap:10px; align-items:center; }
+    .btn {
+      border-radius:12px; padding:8px 12px;
+      border:1px solid rgba(0,0,0,.15);
+      background: rgba(0,0,0,.03);
+      cursor:pointer; font-weight:700;
+    }
+    .btn:hover { background: rgba(0,0,0,.06); }
+
+    .modalBackdrop {
+      position:fixed; inset:0; background: rgba(0,0,0,.35);
+      display:none; align-items:center; justify-content:center;
+      padding:22px; z-index:9999;
+    }
+    .modal {
+      width:min(920px, 96vw);
+      max-height: 86vh;
+      overflow:auto;
+      background:#fff;
+      border-radius:16px;
+      border:1px solid rgba(0,0,0,.15);
+      padding:14px;
+    }
+    .modalTop { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12px; }
+    .twoCol { display:grid; grid-template-columns: 1.3fr .7fr; gap:12px; }
+    @media (max-width: 980px){ .twoCol { grid-template-columns:1fr; } }
+  </style>
+</head>
+
+<body>
+  <div class="container" style="max-width:1200px; margin:0 auto; padding:18px;">
+    <!-- Top bar -->
+    <div class="row space" style="margin-bottom:14px;">
+      <div class="row" style="gap:10px;">
+        <div style="width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,0,0,.12);background:rgba(0,0,0,.02);font-weight:900;">H</div>
+        <div class="brandTitle"><b>Hearth — Service Board</b></div>
       </div>
 
-      <div class="nav">
-        <a class="active" href="./index.html">Service Board</a>
-        <a href="./drop-manager.html">Drop Studio</a>
-        <a href="./drop-menu.html">Menu Library</a>
+      <div class="rightActions">
+        <div class="row" style="gap:16px;">
+          <a href="./index.html" style="font-weight:800; text-decoration:underline;">Service Board</a>
+          <a href="./drop-manager.html" style="font-weight:800; text-decoration:none;">Drop Studio</a>
+          <a href="./drop-menu.html" style="font-weight:800; text-decoration:none;">Menu Library</a>
+          <a href="./order-entry.html" style="font-weight:800; text-decoration:none;">Order Entry</a>
+        </div>
+        <div class="row" style="gap:10px;">
+          <span class="muted" id="asOfText" style="font-size:12px;">—</span>
+          <button class="btn" id="refreshBtn">Refresh</button>
+        </div>
       </div>
     </div>
 
-    <div id="msg" class="msgErr" style="display:none;"></div>
-
-    <!-- Performance snapshot -->
-    <div class="panel">
-      <div class="hrow" style="justify-content:space-between;">
+    <!-- Performance -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="kpiHead">
         <div>
-          <b style="font-size:14px;">Performance snapshot</b>
-          <div class="muted">Previous year • Year-to-date • This week</div>
-        </div>
-        <div class="hrow">
-          <span class="tiny" id="asOf"></span>
-          <button class="btn btnAccent" id="refreshAllBtn">Refresh</button>
+          <div class="kpiTitle">Performance</div>
+          <div class="muted" style="font-size:12px;">Previous year • Year to date • This week</div>
         </div>
       </div>
 
-      <div class="sep"></div>
-
       <div class="grid3">
-        <!-- Previous Year -->
-        <div class="panel" style="padding:12px;">
-          <div class="cardTitle">
-            <b id="pyTitle">Previous year</b>
-            <span id="pyRange">—</span>
+        <div class="card" style="padding:12px;">
+          <div class="kpiHead">
+            <div>
+              <div style="font-weight:800;">Previous year</div>
+              <div class="kpiRange" id="rangePrevYear">—</div>
+            </div>
+            <button class="showMoreBtn" id="morePrevYear">Show more</button>
           </div>
-
-          <div class="kpi3" id="pyTop"></div>
-
-          <div class="hrow" style="justify-content:flex-end; margin-top:10px;">
-            <button class="btn" data-toggle="pyMore">Show more</button>
-          </div>
-          <div class="moreWrap" id="pyMore">
-            <div class="kpiMore" id="pyMoreGrid"></div>
-          </div>
+          <div class="kpiGrid" id="kpisPrevYear"></div>
+          <div class="kpiGrid" id="kpisPrevYearMore" style="display:none; margin-top:10px;"></div>
         </div>
 
-        <!-- YTD -->
-        <div class="panel" style="padding:12px;">
-          <div class="cardTitle">
-            <b id="ytdTitle">Year to date</b>
-            <span id="ytdRange">—</span>
+        <div class="card" style="padding:12px;">
+          <div class="kpiHead">
+            <div>
+              <div style="font-weight:800;">Year to date</div>
+              <div class="kpiRange" id="rangeYtd">—</div>
+            </div>
+            <button class="showMoreBtn" id="moreYtd">Show more</button>
           </div>
-
-          <div class="kpi3" id="ytdTop"></div>
-
-          <div class="hrow" style="justify-content:flex-end; margin-top:10px;">
-            <button class="btn" data-toggle="ytdMore">Show more</button>
-          </div>
-          <div class="moreWrap" id="ytdMore">
-            <div class="kpiMore" id="ytdMoreGrid"></div>
-          </div>
+          <div class="kpiGrid" id="kpisYtd"></div>
+          <div class="kpiGrid" id="kpisYtdMore" style="display:none; margin-top:10px;"></div>
+          <div class="muted" style="font-size:12px; margin-top:10px;" id="trendYtdNote">—</div>
         </div>
 
-        <!-- This Week -->
-        <div class="panel" style="padding:12px;">
-          <div class="cardTitle">
-            <b id="wtdTitle">This week</b>
-            <span id="wtdRange">—</span>
+        <div class="card" style="padding:12px;">
+          <div class="kpiHead">
+            <div>
+              <div style="font-weight:800;">This week</div>
+              <div class="kpiRange" id="rangeWeek">—</div>
+            </div>
+            <button class="showMoreBtn" id="moreWeek">Show more</button>
           </div>
-
-          <div class="kpi3" id="wtdTop"></div>
-
-          <div class="hrow" style="justify-content:flex-end; margin-top:10px;">
-            <button class="btn" data-toggle="wtdMore">Show more</button>
-          </div>
-          <div class="moreWrap" id="wtdMore">
-            <div class="kpiMore" id="wtdMoreGrid"></div>
-          </div>
+          <div class="kpiGrid" id="kpisWeek"></div>
+          <div class="kpiGrid" id="kpisWeekMore" style="display:none; margin-top:10px;"></div>
+          <div class="muted" style="font-size:12px; margin-top:10px;" id="trendWeekNote">—</div>
         </div>
       </div>
     </div>
 
     <!-- Execution -->
-    <div class="panel" style="margin-top:14px;">
-      <div class="hrow" style="justify-content:space-between;">
+    <div class="card">
+      <div class="row space" style="margin-bottom:10px;">
         <div>
-          <b style="font-size:14px;">Execution</b>
-          <div class="muted">Select a drop to run service and action orders (live drops only).</div>
+          <div class="sectionTitle">Execution</div>
+          <div class="muted" style="font-size:12px;">Select a drop to view orders and (for live drops) move them through statuses.</div>
         </div>
-        <button class="btn btnAccent" id="prepBtn">Prep summary</button>
+        <button class="btn" id="prepBtn">Prep summary</button>
       </div>
 
-      <div class="sep"></div>
-
-      <div class="hrow">
-        <div class="tiny" style="min-width:70px;">Drop</div>
-        <select id="dropSelect" style="min-width:360px; max-width:100%;"></select>
+      <div class="row" style="margin-bottom:10px;">
+        <label class="muted" style="font-size:12px; font-weight:700;">Drop</label>
+        <select id="dropSelect" style="min-width:420px; max-width:100%; padding:8px 10px; border-radius:12px; border:1px solid rgba(0,0,0,.15); background:#fff;"></select>
         <button class="btn" id="loadBtn">Load</button>
 
-        <div id="dropPills" class="hrow" style="margin-left:auto;">
-          <!-- status + capacity pill renders here -->
+        <div class="pill" id="dropPill" style="margin-left:auto;">
+          <span class="dot grey" id="dropDot"></span>
+          <span id="dropStatusText" style="font-weight:800;">—</span>
+          <span class="muted" id="dropCapText">—</span>
         </div>
       </div>
 
-      <div id="prepArea" style="display:none; margin-top:12px;">
-        <div class="panel" style="padding:12px;">
-          <b style="font-size:13px;">Prep summary — selected drop</b>
-          <div class="muted" id="prepMeta" style="margin-top:4px;"></div>
-          <div class="sep"></div>
-          <div class="hrow" style="align-items:flex-start;">
-            <div style="flex:1; min-width:260px;">
-              <div class="tiny" style="margin-bottom:6px;">Capacity category</div>
-              <div id="prepCapacityList"></div>
-            </div>
-            <div style="flex:1; min-width:260px;">
-              <div class="tiny" style="margin-bottom:6px;">Other items</div>
-              <div id="prepOtherList"></div>
-            </div>
-            <div style="min-width:220px;">
-              <div class="tiny" style="margin-bottom:6px;">Capacity</div>
-              <div id="prepCapacityBox"></div>
-            </div>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:70px;">Time</th>
+              <th style="width:180px;">Customer</th>
+              <th style="width:140px;">Phone</th>
+              <th>Capacity items</th>
+              <th>Other items</th>
+              <th style="width:90px;">Status</th>
+              <th style="width:290px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="orderRows">
+            <tr><td colspan="7" class="muted">Load a drop to see orders.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="muted" style="margin-top:10px; font-size:12px;">
+        Notes: “legacy” capacity counts come from older orders without item breakdown; newer orders use order_items + product categories.
+      </div>
+    </div>
+  </div>
+
+  <!-- Prep modal -->
+  <div class="modalBackdrop" id="modalBackdrop">
+    <div class="modal">
+      <div class="modalTop">
+        <div style="font-weight:900;">Prep summary</div>
+        <button class="btn" id="closeModalBtn">Close</button>
+      </div>
+
+      <div class="twoCol">
+        <div class="card" style="padding:12px;">
+          <div style="font-weight:800; margin-bottom:6px;">Capacity category</div>
+          <div class="muted" style="font-size:12px; margin-bottom:10px;">
+            Capacity is driven by items whose product category matches the drop’s <span class="mono">capacity_category</span>.
           </div>
+          <div id="prepCapacityBlock"></div>
+        </div>
+
+        <div class="card" style="padding:12px;">
+          <div style="font-weight:800; margin-bottom:6px;">Other items (grouped)</div>
+          <div id="prepOtherBlock"></div>
         </div>
       </div>
 
-      <table class="table" id="ordersTable" style="margin-top:12px;">
-        <thead>
-          <tr>
-            <th class="nowrap" style="width:78px;">Time</th>
-            <th style="width:150px;">Customer</th>
-            <th class="nowrap" style="width:130px;">Phone</th>
-            <th style="width:190px;">Capacity items</th>
-            <th>Other items</th>
-            <th class="nowrap" style="width:92px;">Status</th>
-            <th class="nowrap" style="width:260px;">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="orderRows"></tbody>
-      </table>
+      <div class="card" style="padding:12px; margin-top:12px;">
+        <div style="font-weight:800; margin-bottom:6px;">All items (flat list)</div>
+        <div id="prepAllBlock"></div>
+      </div>
     </div>
   </div>
 
 <script>
-/*** CONFIG (from assets/config.js) ***/
-const SUPABASE_URL = window.HEARTH_CONFIG?.SUPABASE_URL;
-const SUPABASE_ANON_KEY = window.HEARTH_CONFIG?.SUPABASE_ANON_KEY;
+  // --- Config ---
+  const SUPABASE_URL = window.HEARTH_CONFIG?.SUPABASE_URL;
+  const SUPABASE_ANON_KEY = window.HEARTH_CONFIG?.SUPABASE_ANON_KEY;
 
-const headers = {
-  apikey: SUPABASE_ANON_KEY,
-  Authorization: "Bearer " + SUPABASE_ANON_KEY,
-  "Content-Type": "application/json"
-};
-
-const elMsg = document.getElementById("msg");
-const asOf = document.getElementById("asOf");
-
-const dropSelect = document.getElementById("dropSelect");
-const loadBtn = document.getElementById("loadBtn");
-const refreshAllBtn = document.getElementById("refreshAllBtn");
-
-const orderRows = document.getElementById("orderRows");
-const dropPills = document.getElementById("dropPills");
-
-const prepBtn = document.getElementById("prepBtn");
-const prepArea = document.getElementById("prepArea");
-const prepMeta = document.getElementById("prepMeta");
-const prepCapacityList = document.getElementById("prepCapacityList");
-const prepOtherList = document.getElementById("prepOtherList");
-const prepCapacityBox = document.getElementById("prepCapacityBox");
-
-// KPI slots
-const pyTop = document.getElementById("pyTop");
-const ytdTop = document.getElementById("ytdTop");
-const wtdTop = document.getElementById("wtdTop");
-
-const pyMoreGrid = document.getElementById("pyMoreGrid");
-const ytdMoreGrid = document.getElementById("ytdMoreGrid");
-const wtdMoreGrid = document.getElementById("wtdMoreGrid");
-
-/*** State ***/
-let drops = [];
-let products = [];
-let activeDrop = null;
-
-/*** Helpers ***/
-function showErr(msg){
-  elMsg.style.display = msg ? "block" : "none";
-  elMsg.textContent = msg || "";
-}
-function esc(s){
-  return String(s ?? "").replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
-}
-function money(pence){
-  if(pence == null || !Number.isFinite(Number(pence))) return "—";
-  return `£${(Number(pence)/100).toFixed(2)}`;
-}
-function toLocalTimeHM(iso){
-  if(!iso) return "—";
-  const d = new Date(iso);
-  if(String(d)==="Invalid Date") return "—";
-  const pad = n => String(n).padStart(2,"0");
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-function startOfWeekMonday(d){
-  const x = new Date(d);
-  const day = (x.getDay() + 6) % 7; // Monday=0
-  x.setHours(0,0,0,0);
-  x.setDate(x.getDate() - day);
-  return x;
-}
-function endOfWeekSunday(d){
-  const s = startOfWeekMonday(d);
-  const e = new Date(s);
-  e.setDate(e.getDate() + 6);
-  e.setHours(23,59,59,999);
-  return e;
-}
-function ymd(d){
-  const pad = n => String(n).padStart(2,"0");
-  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
-}
-async function fetchJson(url){
-  const res = await fetch(url, { headers });
-  const text = await res.text();
-  if(!res.ok) throw new Error(`${res.status} ${text}`);
-  return JSON.parse(text);
-}
-async function patchJson(url, body){
-  const res = await fetch(url, {
-    method: "PATCH",
-    headers: { ...headers, Prefer: "return=representation" },
-    body: JSON.stringify(body)
-  });
-  const text = await res.text();
-  if(!res.ok) throw new Error(`${res.status} ${text}`);
-  return JSON.parse(text);
-}
-
-/*** Data loads ***/
-async function loadDrops(){
-  const url =
-    `${SUPABASE_URL}/rest/v1/drops` +
-    `?select=id,name,status,delivery_start,delivery_end,cutoff_time,closes_at,capacity_units_total,capacity_category` +
-    `&order=cutoff_time.desc.nullslast&order=delivery_start.desc.nullslast`;
-
-  drops = await fetchJson(url);
-
-  // Build dropdown options (show live first)
-  const sorted = [...drops].sort((a,b)=>{
-    const score = s => (s==="live"?0:(s==="planned"?1:(s==="draft"?2:3)));
-    return score(a.status) - score(b.status);
-  });
-
-  dropSelect.innerHTML = sorted.map(d=>{
-    const label = `${d.name} • ${d.status}${d.cutoff_time ? ` • cutoff ${ymd(new Date(d.cutoff_time))}` : ""}`;
-    return `<option value="${d.id}">${esc(label)}</option>`;
-  }).join("");
-
-  // default pick first live if exists
-  const live = sorted.find(d=>d.status==="live");
-  if(live) dropSelect.value = live.id;
-  activeDrop = sorted.find(d=>d.id===dropSelect.value) || sorted[0] || null;
-}
-
-async function loadProducts(){
-  const url =
-    `${SUPABASE_URL}/rest/v1/products` +
-    `?select=id,name,category,price_pence,is_active,sort_order,capacity_units` +
-    `&order=sort_order.asc.nullslast&order=name.asc`;
-
-  products = await fetchJson(url);
-}
-
-async function loadOrdersForDrop(dropId){
-  // Pull orders
-  const oUrl =
-    `${SUPABASE_URL}/rest/v1/orders` +
-    `?drop_id=eq.${dropId}` +
-    `&select=id,customer_name,customer_phone,status,created_at,pizzas` +
-    `&order=created_at.asc`;
-
-  const orders = await fetchJson(oUrl);
-  const orderIds = orders.map(o=>o.id);
-
-  // Pull items (if you have legacy orders without items, this may return empty)
-  let items = [];
-  if(orderIds.length){
-    const ids = orderIds.join(",");
-    const iUrl =
-      `${SUPABASE_URL}/rest/v1/order_items` +
-      `?order_id=in.(${ids})` +
-      `&select=order_id,product_id,qty,price_pence`;
-    items = await fetchJson(iUrl);
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    alert("Missing SUPABASE config. Check assets/config.js (window.HEARTH_CONFIG).");
   }
 
-  return { orders, items };
-}
+  const headers = {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: "Bearer " + SUPABASE_ANON_KEY,
+    "Content-Type": "application/json"
+  };
 
-/*** Rendering ***/
-function renderDropPills(drop){
-  dropPills.innerHTML = "";
-  if(!drop) return;
-
-  const statusDot = drop.status==="live" ? "ok" : (drop.status==="closed" ? "bad" : "warn");
-  const cap = (drop.capacity_category || "—").toString();
-  const total = (drop.capacity_units_total ?? "—");
-
-  dropPills.innerHTML = `
-    <span class="pill"><span class="dot ${statusDot}"></span>${esc(drop.status || "—")}</span>
-    <span class="pill">Capacity: ${esc(cap)} • ${esc(String(total))} units</span>
-  `;
-}
-
-function mapItemsByOrder(items){
-  const by = new Map();
-  for(const it of items){
-    const arr = by.get(it.order_id) || [];
-    arr.push(it);
-    by.set(it.order_id, arr);
+  async function sbGet(path) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
-  return by;
-}
 
-function productById(){
-  const m = new Map();
-  for(const p of products) m.set(p.id, p);
-  return m;
-}
-
-function summariseLine(items, filterFn){
-  // returns array of "Name xQ"
-  const agg = new Map();
-  for(const it of items){
-    const p = filterFn(it);
-    if(!p) continue;
-    const key = p.name;
-    agg.set(key, (agg.get(key)||0) + (it.qty ?? 1));
-  }
-  const out = [...agg.entries()].map(([n,q]) => `${n} x${q}`);
-  return out;
-}
-
-function renderOrders(drop, orders, items){
-  orderRows.innerHTML = "";
-  if(!drop) return;
-
-  const byOrder = mapItemsByOrder(items);
-  const pMap = productById();
-  const capCat = (drop.capacity_category || "").toLowerCase();
-
-  for(const o of orders){
-    const its = byOrder.get(o.id) || [];
-
-    // Capacity items: items where product.category matches drop.capacity_category
-    const capLines = summariseLine(its, (it)=>{
-      const p = pMap.get(it.product_id);
-      if(!p) return null;
-      if(String(p.category||"").toLowerCase() !== capCat) return null;
-      return p;
+  async function sbPost(path, body) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      method: "POST",
+      headers: { ...headers, Prefer: "return=representation" },
+      body: JSON.stringify(body)
     });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
 
-    // Other items = everything else
-    const otherLines = summariseLine(its, (it)=>{
-      const p = pMap.get(it.product_id);
-      if(!p) return null;
-      if(String(p.category||"").toLowerCase() === capCat) return null;
-      return p;
+  async function sbPatch(path, body) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify(body)
     });
+    if (!res.ok) throw new Error(await res.text());
+    return true;
+  }
 
-    // Legacy fallback: if no items but orders.pizzas exists
-    let capDisplay = capLines.join(", ");
-    if(!capDisplay && o.pizzas != null && Number(o.pizzas) > 0){
-      capDisplay = `${esc(drop.capacity_category || "Capacity")} (legacy) x${o.pizzas}`;
+  // --- Date helpers (UTC-ish, but stable) ---
+  function iso(dt) { return dt.toISOString(); }
+  function startOfYearUTC(y) { return new Date(Date.UTC(y, 0, 1, 0, 0, 0)); }
+  function endOfYearUTC(y) { return new Date(Date.UTC(y, 11, 31, 23, 59, 59)); }
+  function startOfWeekUTC(d) {
+    const dt = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0,0,0));
+    const day = dt.getUTCDay(); // Sun=0
+    const diff = (day === 0 ? -6 : 1 - day); // Monday start
+    dt.setUTCDate(dt.getUTCDate() + diff);
+    return dt;
+  }
+  function endOfWeekUTC(d) {
+    const s = startOfWeekUTC(d);
+    const e = new Date(s);
+    e.setUTCDate(e.getUTCDate() + 6);
+    e.setUTCHours(23,59,59,999);
+    return e;
+  }
+  function fmtDate(d) {
+    const dd = String(d.getUTCDate()).padStart(2,"0");
+    const mm = String(d.getUTCMonth()+1).padStart(2,"0");
+    const yy = d.getUTCFullYear();
+    return `${dd}/${mm}/${yy}`;
+  }
+
+  function money(pence) {
+    const v = (pence || 0) / 100;
+    return v.toLocaleString("en-GB", { style:"currency", currency:"GBP" });
+  }
+
+  function pct(v) {
+    if (v === null || v === undefined || Number.isNaN(v)) return "—";
+    return `${(v*100).toFixed(1)}%`;
+  }
+
+  function trendText(curr, prev) {
+    if (!prev || prev === 0) return { text:"—", cls:"trendFlat" };
+    const chg = (curr - prev) / prev;
+    const cls = chg > 0.001 ? "trendUp" : (chg < -0.001 ? "trendDown" : "trendFlat");
+    const arrow = chg > 0.001 ? "▲" : (chg < -0.001 ? "▼" : "•");
+    return { text:`${arrow} ${(chg*100).toFixed(1)}%`, cls };
+  }
+
+  // --- Data model ---
+  // We compute KPIs from orders + order_items + products
+  // Fallback for legacy: orders.pizzas counts as capacity qty (units=1)
+
+  async function loadDrops() {
+    const drops = await sbGet(`drops?select=id,name,status,cutoff_time,capacity_category,capacity_units_total&order=cutoff_time.desc`);
+    const sel = document.getElementById("dropSelect");
+    sel.innerHTML = "";
+    for (const d of drops) {
+      const label = `${d.name} · ${d.status} · cutoff ${fmtDate(new Date(d.cutoff_time))}`;
+      const opt = document.createElement("option");
+      opt.value = d.id;
+      opt.textContent = label;
+      sel.appendChild(opt);
     }
-    if(!capDisplay) capDisplay = "—";
+    return drops;
+  }
 
-    const otherDisplay = otherLines.join(", ") || "—";
-    const created = toLocalTimeHM(o.created_at);
+  async function fetchOrdersForDrop(dropId) {
+    // bring order items + product details for richer rendering
+    const orders = await sbGet(`orders?select=id,drop_id,customer_name,customer_phone,customer_postcode,status,created_at,pizzas&drop_id=eq.${dropId}&order=created_at.asc`);
+    const orderIds = orders.map(o => o.id);
+    let items = [];
+    if (orderIds.length) {
+      const inList = orderIds.map(id => `"${id}"`).join(",");
+      items = await sbGet(`order_items?select=order_id,product_id,qty,price_pence,created_at,products(name,category,price_pence,capacity_units)&order_id=in.(${inList})`);
+    }
+    return { orders, items };
+  }
 
-    const isLive = drop.status === "live";
-    const btns = `
-      <div class="actions">
-        <button class="abtn primary" ${!isLive ? "disabled" : ""} title="Confirmed" onclick="setStatus('${o.id}','confirmed')">Conf</button>
-        <button class="abtn" ${!isLive ? "disabled" : ""} title="Baking" onclick="setStatus('${o.id}','baking')">Bake</button>
-        <button class="abtn" ${!isLive ? "disabled" : ""} title="Ready" onclick="setStatus('${o.id}','ready')">Ready</button>
-        <button class="abtn" ${!isLive ? "disabled" : ""} title="Collected" onclick="setStatus('${o.id}','collected')">Coll</button>
-        <button class="abtn" ${!isLive ? "disabled" : ""} title="Cancel" onclick="setStatus('${o.id}','cancelled')">Canc</button>
+  function groupItemsByOrder(items) {
+    const m = new Map();
+    for (const it of items) {
+      if (!m.has(it.order_id)) m.set(it.order_id, []);
+      m.get(it.order_id).push(it);
+    }
+    return m;
+  }
+
+  function stringifyItemList(items) {
+    // items: [{name, qty}]
+    if (!items || !items.length) return "—";
+    return items.map(x => `${x.name} x${x.qty}`).join(", ");
+  }
+
+  function splitCapacityAndOther(order, orderItems, drop) {
+    const capCat = (drop.capacity_category || "").toLowerCase();
+    const cap = [];
+    const oth = [];
+    if (orderItems && orderItems.length) {
+      for (const it of orderItems) {
+        const p = it.products || {};
+        const name = p.name || "Item";
+        const cat = (p.category || "").toLowerCase();
+        const qty = it.qty || 1;
+        if (cat === capCat) cap.push({ name, qty });
+        else oth.push({ name, qty, cat: p.category || "Other" });
+      }
+      return { cap, oth, legacyCapQty: 0 };
+    }
+    // Legacy fallback:
+    const legacyQty = Number(order.pizzas || 0);
+    if (legacyQty > 0) cap.push({ name: drop.capacity_category, qty: legacyQty });
+    return { cap, oth: [], legacyCapQty: legacyQty };
+  }
+
+  async function setStatus(orderId, status) {
+    await sbPatch(`orders?id=eq.${orderId}`, { status });
+  }
+
+  function isLive(drop) {
+    return (drop.status || "").toLowerCase() === "live";
+  }
+
+  function statusPill(drop) {
+    const st = (drop.status || "").toLowerCase();
+    const dot = document.getElementById("dropDot");
+    if (st === "live") dot.className = "dot";
+    else dot.className = "dot grey";
+  }
+
+  // --- Prep summary ---
+  function renderPrep(drop, orders, itemsByOrder) {
+    const capCat = (drop.capacity_category || "").toLowerCase();
+
+    // Aggregate
+    const capAgg = new Map(); // name -> qty
+    const otherAgg = new Map(); // cat -> Map(name->qty)
+    const allAgg = new Map(); // name -> qty
+
+    let capUnitsUsed = 0;
+    let capUnitsTotal = Number(drop.capacity_units_total || 0);
+
+    for (const o of orders) {
+      const its = itemsByOrder.get(o.id) || [];
+      if (its.length) {
+        for (const it of its) {
+          const p = it.products || {};
+          const name = p.name || "Item";
+          const qty = Number(it.qty || 1);
+          const cat = (p.category || "Other");
+          const catLc = (cat || "").toLowerCase();
+
+          allAgg.set(name, (allAgg.get(name) || 0) + qty);
+
+          if (catLc === capCat) {
+            capAgg.set(name, (capAgg.get(name) || 0) + qty);
+            const units = Number(p.capacity_units || 1);
+            capUnitsUsed += units * qty;
+          } else {
+            if (!otherAgg.has(cat)) otherAgg.set(cat, new Map());
+            const m = otherAgg.get(cat);
+            m.set(name, (m.get(name) || 0) + qty);
+          }
+        }
+      } else {
+        // legacy fallback
+        const legacyQty = Number(o.pizzas || 0);
+        if (legacyQty > 0) {
+          const name = drop.capacity_category;
+          capAgg.set(name, (capAgg.get(name) || 0) + legacyQty);
+          allAgg.set(name, (allAgg.get(name) || 0) + legacyQty);
+          capUnitsUsed += legacyQty; // assume 1 unit each for legacy
+        }
+      }
+    }
+
+    const capPct = capUnitsTotal > 0 ? (capUnitsUsed / capUnitsTotal) : null;
+
+    const capBlock = document.getElementById("prepCapacityBlock");
+    capBlock.innerHTML = `
+      <div class="row" style="gap:12px; margin-bottom:10px;">
+        <div class="pill"><b>Category:</b> ${drop.capacity_category || "—"}</div>
+        <div class="pill"><b>Used:</b> ${capUnitsUsed}/${capUnitsTotal || "—"} (${capPct===null?"—":(capPct*100).toFixed(1)}%)</div>
+      </div>
+      <div>${renderAggList(capAgg)}</div>
+    `;
+
+    const otherBlock = document.getElementById("prepOtherBlock");
+    if (otherAgg.size === 0) {
+      otherBlock.innerHTML = `<div class="muted">No non-capacity items in this drop.</div>`;
+    } else {
+      let html = "";
+      for (const [cat, m] of otherAgg.entries()) {
+        html += `<div style="margin-bottom:10px;"><b>${cat}</b><div style="margin-top:6px;">${renderAggList(m)}</div></div>`;
+      }
+      otherBlock.innerHTML = html;
+    }
+
+    const allBlock = document.getElementById("prepAllBlock");
+    allBlock.innerHTML = renderAggList(allAgg);
+  }
+
+  function renderAggList(map) {
+    const entries = [...map.entries()].sort((a,b)=> b[1]-a[1]);
+    if (!entries.length) return `<div class="muted">No items.</div>`;
+    return `<div style="display:grid; grid-template-columns: 1fr; gap:6px;">
+      ${entries.map(([name, qty]) => `
+        <div class="row space" style="border:1px solid rgba(0,0,0,.10); background:rgba(0,0,0,.02); border-radius:12px; padding:8px 10px;">
+          <div style="font-weight:800;">${escapeHtml(name)}</div>
+          <div class="pill"><b>x</b> ${qty}</div>
+        </div>`).join("")}
+    </div>`;
+  }
+
+  function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+  // --- Performance calculations ---
+  async function fetchRangeOrdersItems(fromDt, toDt) {
+    // pull orders in window, plus items
+    const orders = await sbGet(
+      `orders?select=id,drop_id,customer_phone,status,created_at,pizzas&created_at=gte.${encodeURIComponent(iso(fromDt))}&created_at=lte.${encodeURIComponent(iso(toDt))}`
+    );
+
+    const orderIds = orders.map(o => o.id);
+    let items = [];
+    if (orderIds.length) {
+      const inList = orderIds.map(id => `"${id}"`).join(",");
+      items = await sbGet(`order_items?select=order_id,qty,price_pence,products(name,category,price_pence,capacity_units)&order_id=in.(${inList})`);
+    }
+    return { orders, items };
+  }
+
+  async function fetchDropsMap() {
+    const drops = await sbGet(`drops?select=id,capacity_category,capacity_units_total`);
+    const m = new Map();
+    for (const d of drops) m.set(d.id, d);
+    return m;
+  }
+
+  function calcKpisForWindow(windowData, dropsMap) {
+    const { orders, items } = windowData;
+    const itemsByOrder = new Map();
+    for (const it of items) {
+      if (!itemsByOrder.has(it.order_id)) itemsByOrder.set(it.order_id, []);
+      itemsByOrder.get(it.order_id).push(it);
+    }
+
+    const uniquePhones = new Set();
+    let revenueTotal = 0;
+    let revenueCap = 0;
+    let revenueOther = 0;
+    let itemsCount = 0;
+    let cancelCount = 0;
+
+    // Capacity utilisation is only meaningful per-drop; we approximate as:
+    // total capacity units used across orders / total capacity units_total across relevant drops
+    let capUnitsUsed = 0;
+    let capUnitsTotal = 0;
+
+    // Repeat % = (orders from phones with >1 order) / total orders
+    const phoneCounts = new Map();
+
+    for (const o of orders) {
+      const phone = (o.customer_phone || "").trim();
+      if (phone) uniquePhones.add(phone);
+      phoneCounts.set(phone, (phoneCounts.get(phone) || 0) + 1);
+
+      if ((o.status || "").toLowerCase() === "cancelled") cancelCount++;
+
+      const drop = dropsMap.get(o.drop_id);
+      const capCat = (drop?.capacity_category || "").toLowerCase();
+      const its = itemsByOrder.get(o.id) || [];
+
+      // Sum revenue from order_items if present, else 0 (legacy doesn’t have prices)
+      if (its.length) {
+        for (const it of its) {
+          const qty = Number(it.qty || 1);
+          const p = it.products || {};
+          const pPence = (it.price_pence !== null && it.price_pence !== undefined) ? Number(it.price_pence) : Number(p.price_pence || 0);
+          const line = qty * pPence;
+          revenueTotal += line;
+          itemsCount += qty;
+
+          const cat = (p.category || "").toLowerCase();
+          if (cat && capCat && cat === capCat) {
+            revenueCap += line;
+            const units = Number(p.capacity_units || 1);
+            capUnitsUsed += units * qty;
+          } else {
+            revenueOther += line;
+          }
+        }
+      } else {
+        // legacy capacity usage only
+        const legacyQty = Number(o.pizzas || 0);
+        if (legacyQty > 0) capUnitsUsed += legacyQty;
+      }
+
+      // capacity total: count each drop once (avoid multiplying by number of orders)
+      if (drop && !drop.__counted) {
+        drop.__counted = true;
+        const tot = Number(drop.capacity_units_total || 0);
+        if (tot > 0) capUnitsTotal += tot;
+      }
+    }
+
+    // clean temp flags
+    for (const d of dropsMap.values()) delete d.__counted;
+
+    const ordersTotal = orders.length;
+    const uniqueCustomers = uniquePhones.size;
+    const aov = ordersTotal > 0 ? revenueTotal / ordersTotal : 0;
+    const itemsPerOrder = ordersTotal > 0 ? itemsCount / ordersTotal : 0;
+    const cancelPct = ordersTotal > 0 ? cancelCount / ordersTotal : 0;
+
+    let repeatOrders = 0;
+    for (const o of orders) {
+      const phone = (o.customer_phone || "").trim();
+      if (phone && (phoneCounts.get(phone) || 0) > 1) repeatOrders++;
+    }
+    const repeatPct = ordersTotal > 0 ? repeatOrders / ordersTotal : 0;
+
+    const capUtil = (capUnitsTotal > 0) ? (capUnitsUsed / capUnitsTotal) : null;
+
+    return {
+      ordersTotal,
+      uniqueCustomers,
+      revenueTotal,
+      revenueCap,
+      revenueOther,
+      aov,
+      itemsPerOrder,
+      repeatPct,
+      cancelPct,
+      capUnitsUsed,
+      capUtil
+    };
+  }
+
+  function kpiBox(label, value, trend=null) {
+    const t = trend ? `<div class="kpiTrend ${trend.cls}">${trend.text}</div>` : `<div class="kpiTrend muted">—</div>`;
+    return `
+      <div class="kpiItem">
+        <div class="kpiLabel">${label}</div>
+        <div class="kpiValue">${value}</div>
+        ${t}
       </div>
     `;
-
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td class="nowrap">${esc(created)}</td>
-      <td class="ellipsis" title="${esc(o.customer_name)}">${esc(o.customer_name)}</td>
-      <td class="nowrap">${esc(o.customer_phone)}</td>
-      <td class="ellipsis" title="${esc(capDisplay)}">${esc(capDisplay)}</td>
-      <td class="ellipsis" title="${esc(otherDisplay)}">${esc(otherDisplay)}</td>
-      <td class="nowrap"><span class="pill">${esc(o.status)}</span></td>
-      <td class="nowrap">${btns}</td>
-    `;
-    orderRows.appendChild(row);
   }
 
-  if(!orders.length){
-    const row = document.createElement("tr");
-    row.innerHTML = `<td colspan="7" class="muted" style="padding:14px 8px;">No orders for this drop yet.</td>`;
-    orderRows.appendChild(row);
-  }
-}
+  function renderKpis(elIdTop, elIdMore, kpis, trends=null) {
+    // top 3 always-on:
+    // Unique customers, Orders, Revenue total
+    const t = trends || {};
+    document.getElementById(elIdTop).innerHTML = [
+      kpiBox("Unique customers", String(kpis.uniqueCustomers), t.uniqueCustomers || null),
+      kpiBox("Orders", String(kpis.ordersTotal), t.ordersTotal || null),
+      kpiBox("Revenue (total)", money(kpis.revenueTotal), t.revenueTotal || null),
+    ].join("");
 
-async function setStatus(orderId, status){
-  try{
-    showErr("");
-    await patchJson(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`, { status });
-    await loadAndRenderActiveDrop();
-  }catch(e){
-    showErr(`Status update failed: ${e.message}`);
-  }
-}
-window.setStatus = setStatus;
-
-/*** KPIs ***/
-function calcKPIsForPeriod(periodOrders, periodItems, drop){
-  const capCat = String(drop?.capacity_category||"").toLowerCase();
-  const pMap = productById();
-
-  const ordersCount = periodOrders.length;
-  const uniqueCustomers = new Set(periodOrders.map(o=>o.customer_phone)).size;
-
-  // Revenue: sum item price_pence (fallback to products.price_pence if order_items.price_pence null)
-  let revenueTotal = 0;
-  let revenueCapacity = 0;
-  let revenueOther = 0;
-
-  // Capacity used: sum capacity category qty (plus legacy orders.pizzas)
-  let capacityUsed = 0;
-
-  // Items per order
-  let itemCount = 0;
-
-  // Cancel rate
-  const cancels = periodOrders.filter(o=>o.status==="cancelled").length;
-
-  // Repeat %
-  const phoneCounts = new Map();
-  for(const o of periodOrders){
-    phoneCounts.set(o.customer_phone, (phoneCounts.get(o.customer_phone)||0)+1);
-  }
-  const repeatCustomers = [...phoneCounts.values()].filter(v=>v>1).length;
-  const repeatPct = uniqueCustomers ? (repeatCustomers/uniqueCustomers) : 0;
-
-  // Items + revenue
-  const byOrder = mapItemsByOrder(periodItems);
-  for(const o of periodOrders){
-    const its = byOrder.get(o.id) || [];
-    if(!its.length && o.pizzas != null) capacityUsed += Number(o.pizzas)||0;
-
-    for(const it of its){
-      const qty = Number(it.qty ?? 1) || 0;
-      itemCount += qty;
-
-      const p = pMap.get(it.product_id);
-      const unit = Number(it.price_pence ?? p?.price_pence ?? 0) || 0;
-      const line = unit * qty;
-      revenueTotal += line;
-
-      if(String(p?.category||"").toLowerCase() === capCat){
-        revenueCapacity += line;
-        capacityUsed += qty;
-      }else{
-        revenueOther += line;
-      }
-    }
+    // additional 6:
+    document.getElementById(elIdMore).innerHTML = [
+      kpiBox("Revenue (capacity)", money(kpis.revenueCap)),
+      kpiBox("Revenue (other)", money(kpis.revenueOther)),
+      kpiBox("AOV", money(kpis.aov)),
+      kpiBox("Items / order", kpis.itemsPerOrder.toFixed(1)),
+      kpiBox("Repeat %", pct(kpis.repeatPct)),
+      kpiBox("Cancel %", pct(kpis.cancelPct)),
+    ].join("");
   }
 
-  const aov = ordersCount ? (revenueTotal/100)/ordersCount : 0;
-  const itemsPerOrder = ordersCount ? (itemCount/ordersCount) : 0;
-  const cancelPct = ordersCount ? (cancels/ordersCount) : 0;
-
-  const capTotal = Number(drop?.capacity_units_total ?? 0) || 0;
-  const capUtil = capTotal ? (capacityUsed/capTotal) : null;
-
-  return {
-    ordersCount,
-    uniqueCustomers,
-    revenueTotal,
-    revenueCapacity,
-    revenueOther,
-    aov,
-    itemsPerOrder,
-    repeatPct,
-    cancelPct,
-    capacityUsed,
-    capUtil
-  };
-}
-
-function kpiBox(label, value, sub){
-  return `
-    <div class="kpi">
-      <label>${esc(label)}</label>
-      <div class="val">${esc(value)}</div>
-      <div class="sub">${esc(sub || "")}</div>
-    </div>
-  `;
-}
-
-function renderPeriodCard(targetTopEl, targetMoreEl, titleEl, rangeEl, title, rangeText, k){
-  titleEl.textContent = title;
-  rangeEl.textContent = rangeText;
-
-  // Always-on 3
-  targetTopEl.innerHTML = [
-    kpiBox("Orders", String(k.ordersCount), ""),
-    kpiBox("Unique customers", String(k.uniqueCustomers), ""),
-    kpiBox("Revenue (total)", money(k.revenueTotal), "")
-  ].join("");
-
-  // Expandable remaining 6
-  const capUtilTxt = (k.capUtil == null) ? "—" : `${(k.capUtil*100).toFixed(1)}%`;
-  targetMoreEl.innerHTML = [
-    kpiBox("Revenue (capacity)", money(k.revenueCapacity), ""),
-    kpiBox("Revenue (other)", money(k.revenueOther), ""),
-    kpiBox("AOV", `£${k.aov.toFixed(2)}`, ""),
-    kpiBox("Items / order", k.itemsPerOrder.toFixed(1), ""),
-    kpiBox("Repeat %", `${(k.repeatPct*100).toFixed(0)}%`, ""),
-    kpiBox("Cancel %", `${(k.cancelPct*100).toFixed(0)}%`, ""),
-    kpiBox("Capacity used", String(k.capacityUsed), ""),
-    kpiBox("Capacity utilisation", capUtilTxt, ""),
-    kpiBox("Capacity category", String(activeDrop?.capacity_category || "—"), "")
-  ].join("");
-}
-
-function wireToggles(){
-  document.querySelectorAll("[data-toggle]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      const id = btn.getAttribute("data-toggle");
-      const box = document.getElementById(id);
-      const on = box.classList.toggle("show");
-      btn.textContent = on ? "Show less" : "Show more";
+  function toggleMore(btnId, moreId) {
+    const btn = document.getElementById(btnId);
+    const more = document.getElementById(moreId);
+    btn.addEventListener("click", () => {
+      const open = more.style.display !== "none";
+      more.style.display = open ? "none" : "grid";
+      btn.textContent = open ? "Show more" : "Show less";
     });
-  });
-}
-
-/*** Prep summary ***/
-function renderPrep(drop, orders, items){
-  const capCat = String(drop?.capacity_category||"").toLowerCase();
-  const pMap = productById();
-  const byOrder = mapItemsByOrder(items);
-
-  const capAgg = new Map();   // name -> qty
-  const otherAgg = new Map(); // "Category — Name" -> qty
-  let capacityUsed = 0;
-
-  for(const o of orders){
-    const its = byOrder.get(o.id) || [];
-
-    if(!its.length && o.pizzas != null){
-      capacityUsed += Number(o.pizzas)||0;
-      capAgg.set(`${drop.capacity_category} (legacy)`, (capAgg.get(`${drop.capacity_category} (legacy)`)||0) + (Number(o.pizzas)||0));
-      continue;
-    }
-
-    for(const it of its){
-      const p = pMap.get(it.product_id);
-      if(!p) continue;
-      const qty = Number(it.qty ?? 1) || 0;
-
-      if(String(p.category||"").toLowerCase() === capCat){
-        capAgg.set(p.name, (capAgg.get(p.name)||0) + qty);
-        capacityUsed += qty;
-      }else{
-        const key = `${p.category} — ${p.name}`;
-        otherAgg.set(key, (otherAgg.get(key)||0) + qty);
-      }
-    }
   }
 
-  const capTotal = Number(drop.capacity_units_total ?? 0) || 0;
-  const util = capTotal ? `${capacityUsed}/${capTotal} (${((capacityUsed/capTotal)*100).toFixed(1)}%)` : `${capacityUsed}/—`;
+  // --- Main render ---
+  let dropsCache = [];
+  let dropsMap = new Map();
+  let currentDrop = null;
 
-  prepMeta.textContent = `Capacity category: ${drop.capacity_category}. Capacity = used units / total units.`;
+  async function refreshAll() {
+    document.getElementById("asOfText").textContent = `As of ${fmtDate(new Date())}`;
 
-  prepCapacityList.innerHTML =
-    (capAgg.size ? [...capAgg.entries()].map(([n,q])=>`<div class="pill" style="margin:6px 6px 0 0;">${esc(n)} x${q}</div>`).join("")
-     : `<div class="muted">No capacity items yet.</div>`);
+    dropsCache = await loadDrops();
+    dropsMap = await fetchDropsMap();
 
-  prepOtherList.innerHTML =
-    (otherAgg.size ? [...otherAgg.entries()].map(([n,q])=>`<div class="pill" style="margin:6px 6px 0 0;">${esc(n)} x${q}</div>`).join("")
-     : `<div class="muted">No other items yet.</div>`);
+    await renderPerformance();
 
-  prepCapacityBox.innerHTML = `
-    <div class="kpi" style="max-width:220px;">
-      <label>Capacity used</label>
-      <div class="val">${esc(util)}</div>
-      <div class="sub">${esc(drop.capacity_category || "")}</div>
-    </div>
-  `;
-}
-
-/*** Main flow ***/
-async function refreshKPIs(){
-  if(!activeDrop){
-    pyTop.innerHTML = ytdTop.innerHTML = wtdTop.innerHTML = "";
-    return;
+    // auto load selected drop
+    await loadSelectedDrop();
   }
 
-  // Pull all orders for all time (for KPI slicing)
-  const oUrl =
-    `${SUPABASE_URL}/rest/v1/orders` +
-    `?select=id,drop_id,customer_phone,status,created_at,pizzas` +
-    `&order=created_at.asc`;
+  async function renderPerformance() {
+    const now = new Date();
+    const thisYear = now.getUTCFullYear();
+    const lastYear = thisYear - 1;
 
-  const allOrders = await fetchJson(oUrl);
-  const orderIds = allOrders.map(o=>o.id);
-  let allItems = [];
-  if(orderIds.length){
-    const ids = orderIds.join(",");
-    const iUrl =
-      `${SUPABASE_URL}/rest/v1/order_items` +
-      `?order_id=in.(${ids})&select=order_id,product_id,qty,price_pence`;
-    allItems = await fetchJson(iUrl);
+    // Previous calendar year
+    const prevFrom = startOfYearUTC(lastYear);
+    const prevTo = endOfYearUTC(lastYear);
+
+    // YTD
+    const ytdFrom = startOfYearUTC(thisYear);
+    const ytdTo = now;
+
+    // LY same period for YTD
+    const lyFrom = startOfYearUTC(lastYear);
+    const lyTo = new Date(Date.UTC(lastYear, now.getUTCMonth(), now.getUTCDate(), 23,59,59));
+
+    // This week / last week
+    const wkFrom = startOfWeekUTC(now);
+    const wkTo = endOfWeekUTC(now);
+
+    const lastWkTo = new Date(wkFrom);
+    lastWkTo.setUTCSeconds(-1); // one second before this week starts
+    const lastWkFrom = startOfWeekUTC(lastWkTo);
+    const lastWkEnd = endOfWeekUTC(lastWkTo);
+
+    document.getElementById("rangePrevYear").textContent = `${fmtDate(prevFrom)} → ${fmtDate(prevTo)}`;
+    document.getElementById("rangeYtd").textContent = `${fmtDate(ytdFrom)} → ${fmtDate(ytdTo)}`;
+    document.getElementById("rangeWeek").textContent = `${fmtDate(wkFrom)} → ${fmtDate(wkTo)}`;
+
+    const [dPrev, dYtd, dLySame, dWk, dLastWk] = await Promise.all([
+      fetchRangeOrdersItems(prevFrom, prevTo),
+      fetchRangeOrdersItems(ytdFrom, ytdTo),
+      fetchRangeOrdersItems(lyFrom, lyTo),
+      fetchRangeOrdersItems(wkFrom, wkTo),
+      fetchRangeOrdersItems(lastWkFrom, lastWkEnd)
+    ]);
+
+    const kPrev = calcKpisForWindow(dPrev, dropsMap);
+    const kYtd = calcKpisForWindow(dYtd, dropsMap);
+    const kLy = calcKpisForWindow(dLySame, dropsMap);
+    const kWk = calcKpisForWindow(dWk, dropsMap);
+    const kLW = calcKpisForWindow(dLastWk, dropsMap);
+
+    // Trends
+    const ytdTr = {
+      ordersTotal: trendText(kYtd.ordersTotal, kLy.ordersTotal),
+      uniqueCustomers: trendText(kYtd.uniqueCustomers, kLy.uniqueCustomers),
+      revenueTotal: trendText(kYtd.revenueTotal, kLy.revenueTotal)
+    };
+
+    const wkTr = {
+      ordersTotal: trendText(kWk.ordersTotal, kLW.ordersTotal),
+      uniqueCustomers: trendText(kWk.uniqueCustomers, kLW.uniqueCustomers),
+      revenueTotal: trendText(kWk.revenueTotal, kLW.revenueTotal)
+    };
+
+    renderKpis("kpisPrevYear", "kpisPrevYearMore", kPrev, null);
+    renderKpis("kpisYtd", "kpisYtdMore", kYtd, ytdTr);
+    renderKpis("kpisWeek", "kpisWeekMore", kWk, wkTr);
+
+    document.getElementById("trendYtdNote").textContent =
+      `Trend: YTD vs same period last year (${fmtDate(lyFrom)} → ${fmtDate(lyTo)})`;
+
+    document.getElementById("trendWeekNote").textContent =
+      `Trend: This week vs last week (${fmtDate(lastWkFrom)} → ${fmtDate(lastWkEnd)})`;
+
+    toggleMore("morePrevYear", "kpisPrevYearMore");
+    toggleMore("moreYtd", "kpisYtdMore");
+    toggleMore("moreWeek", "kpisWeekMore");
   }
 
-  // Periods
-  const now = new Date();
-  asOf.textContent = `As of ${ymd(now)} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+  async function loadSelectedDrop() {
+    const dropId = document.getElementById("dropSelect").value;
+    if (!dropId) return;
+    const drop = dropsCache.find(d => d.id === dropId) || null;
+    currentDrop = drop;
 
-  const thisYear = now.getFullYear();
-  const prevYear = thisYear - 1;
+    // status pill
+    document.getElementById("dropStatusText").textContent = drop ? drop.status : "—";
+    document.getElementById("dropCapText").textContent = drop ? `Capacity: ${drop.capacity_category} • ${drop.capacity_units_total ?? "—"} units` : "—";
+    statusPill(drop || {status:""});
 
-  const pyStart = new Date(prevYear,0,1,0,0,0,0);
-  const pyEnd   = new Date(prevYear,11,31,23,59,59,999);
+    // Orders
+    const { orders, items } = await fetchOrdersForDrop(dropId);
+    const itemsByOrder = groupItemsByOrder(items);
 
-  const ytdStart = new Date(thisYear,0,1,0,0,0,0);
-  const ytdEnd   = now;
+    renderOrders(drop, orders, itemsByOrder);
 
-  const wtdStart = startOfWeekMonday(now);
-  const wtdEnd   = endOfWeekSunday(now);
-
-  // Filter by created_at
-  const inRange = (o, a, b) => {
-    const t = new Date(o.created_at).getTime();
-    return t >= a.getTime() && t <= b.getTime();
-  };
-
-  const pick = (a,b) => allOrders.filter(o=>inRange(o,a,b));
-  const pickItems = (periodOrders) => {
-    const set = new Set(periodOrders.map(o=>o.id));
-    return allItems.filter(i=>set.has(i.order_id));
-  };
-
-  const pyOrders = pick(pyStart, pyEnd);
-  const ytdOrders = pick(ytdStart, ytdEnd);
-  const wtdOrders = pick(wtdStart, wtdEnd);
-
-  const pyItems = pickItems(pyOrders);
-  const ytdItems = pickItems(ytdOrders);
-  const wtdItems = pickItems(wtdOrders);
-
-  const pyK = calcKPIsForPeriod(pyOrders, pyItems, activeDrop);
-  const ytdK = calcKPIsForPeriod(ytdOrders, ytdItems, activeDrop);
-  const wtdK = calcKPIsForPeriod(wtdOrders, wtdItems, activeDrop);
-
-  renderPeriodCard(
-    pyTop, pyMoreGrid,
-    document.getElementById("pyTitle"),
-    document.getElementById("pyRange"),
-    `Previous year`,
-    `${ymd(pyStart)} → ${ymd(pyEnd)}`,
-    pyK
-  );
-  renderPeriodCard(
-    ytdTop, ytdMoreGrid,
-    document.getElementById("ytdTitle"),
-    document.getElementById("ytdRange"),
-    `Year to date`,
-    `${ymd(ytdStart)} → ${ymd(ytdEnd)}`,
-    ytdK
-  );
-  renderPeriodCard(
-    wtdTop, wtdMoreGrid,
-    document.getElementById("wtdTitle"),
-    document.getElementById("wtdRange"),
-    `This week`,
-    `${ymd(wtdStart)} → ${ymd(wtdEnd)}`,
-    wtdK
-  );
-}
-
-async function loadAndRenderActiveDrop(){
-  showErr("");
-  activeDrop = drops.find(d=>d.id===dropSelect.value) || null;
-  renderDropPills(activeDrop);
-
-  if(!activeDrop){
-    orderRows.innerHTML = "";
-    return;
+    // Prep modal uses same data
+    window.__lastLoaded = { drop, orders, itemsByOrder };
   }
 
-  const { orders, items } = await loadOrdersForDrop(activeDrop.id);
-  renderOrders(activeDrop, orders, items);
-
-  // If prep panel is open, refresh it too
-  if(prepArea.style.display !== "none"){
-    renderPrep(activeDrop, orders, items);
-  }
-}
-
-function wireEvents(){
-  dropSelect.addEventListener("change", ()=>{
-    activeDrop = drops.find(d=>d.id===dropSelect.value) || null;
-    renderDropPills(activeDrop);
-  });
-
-  loadBtn.addEventListener("click", loadAndRenderActiveDrop);
-
-  refreshAllBtn.addEventListener("click", async ()=>{
-    try{
-      showErr("");
-      await Promise.all([refreshKPIs(), loadAndRenderActiveDrop()]);
-    }catch(e){
-      showErr(`Refresh failed: ${e.message}`);
-    }
-  });
-
-  prepBtn.addEventListener("click", async ()=>{
-    try{
-      prepArea.style.display = (prepArea.style.display === "none" ? "block" : "none");
-      if(prepArea.style.display === "block"){
-        await loadAndRenderActiveDrop(); // ensures it refreshes prep content
-      }
-    }catch(e){
-      showErr(`Prep failed: ${e.message}`);
-    }
-  });
-}
-
-/*** Init ***/
-(async function init(){
-  try{
-    if(!SUPABASE_URL || !SUPABASE_ANON_KEY){
-      showErr("Missing HEARTH_CONFIG in assets/config.js (SUPABASE_URL / SUPABASE_ANON_KEY).");
+  function renderOrders(drop, orders, itemsByOrder) {
+    const tbody = document.getElementById("orderRows");
+    if (!orders.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="muted">No orders for this drop.</td></tr>`;
       return;
     }
 
-    wireToggles();
-    wireEvents();
+    const live = drop && isLive(drop);
 
-    await loadProducts();
-    await loadDrops();
-    renderDropPills(activeDrop);
+    tbody.innerHTML = orders.map(o => {
+      const time = new Date(o.created_at);
+      const hh = String(time.getHours()).padStart(2,"0");
+      const mm = String(time.getMinutes()).padStart(2,"0");
 
-    await Promise.all([refreshKPIs(), loadAndRenderActiveDrop()]);
-  }catch(e){
-    showErr(`Init failed: ${e.message}`);
+      const { cap, oth } = splitCapacityAndOther(o, itemsByOrder.get(o.id) || [], drop);
+
+      // Group other items by category is handled in prep; here we keep flat.
+      const capText = stringifyItemList(cap);
+      const othText = stringifyItemList(oth.map(x => ({name: x.name, qty: x.qty})));
+
+      const st = (o.status || "placed").toLowerCase();
+      const disabled = !live ? "disabled" : "";
+
+      return `
+        <tr>
+          <td>${hh}:${mm}</td>
+          <td><b>${escapeHtml(o.customer_name)}</b></td>
+          <td>${escapeHtml(o.customer_phone)}</td>
+          <td>${escapeHtml(capText)}</td>
+          <td>${escapeHtml(othText)}</td>
+          <td style="font-weight:800;">${escapeHtml(st)}</td>
+          <td>
+            <div class="actionsRow">
+              <button class="abtn ${st==='confirmed'?'primary':''} ${disabled}" ${disabled} onclick="onSetStatus('${o.id}','confirmed')">Conf</button>
+              <button class="abtn ${st==='baking'?'primary':''} ${disabled}" ${disabled} onclick="onSetStatus('${o.id}','baking')">Bake</button>
+              <button class="abtn ${st==='ready'?'primary':''} ${disabled}" ${disabled} onclick="onSetStatus('${o.id}','ready')">Ready</button>
+              <button class="abtn ${st==='collected'?'primary':''} ${disabled}" ${disabled} onclick="onSetStatus('${o.id}','collected')">Deliv</button>
+              <button class="abtn ${st==='cancelled'?'primary':''} ${disabled}" ${disabled} onclick="onSetStatus('${o.id}','cancelled')">Canc</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
   }
-})();
+
+  window.onSetStatus = async function(orderId, status) {
+    try {
+      await setStatus(orderId, status);
+      await loadSelectedDrop();
+    } catch (e) {
+      alert("Failed to update status: " + e.message);
+    }
+  };
+
+  // --- Modal ---
+  function openModal() {
+    const b = document.getElementById("modalBackdrop");
+    b.style.display = "flex";
+    const data = window.__lastLoaded;
+    if (data?.drop) renderPrep(data.drop, data.orders, data.itemsByOrder);
+  }
+  function closeModal() {
+    document.getElementById("modalBackdrop").style.display = "none";
+  }
+
+  // --- Events ---
+  document.getElementById("refreshBtn").addEventListener("click", refreshAll);
+  document.getElementById("loadBtn").addEventListener("click", loadSelectedDrop);
+  document.getElementById("dropSelect").addEventListener("change", loadSelectedDrop);
+
+  document.getElementById("prepBtn").addEventListener("click", openModal);
+  document.getElementById("closeModalBtn").addEventListener("click", closeModal);
+  document.getElementById("modalBackdrop").addEventListener("click", (e)=>{ if(e.target.id==="modalBackdrop") closeModal(); });
+
+  // init
+  refreshAll().catch(err => alert("Init error: " + err.message));
 </script>
 </body>
 </html>
