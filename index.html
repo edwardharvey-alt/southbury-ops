@@ -1,820 +1,1434 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Service Board</title>
+  <style>
+    :root{
+      --bg:#f7f7fb;
+      --surface:#ffffff;
+      --surface-2:#f8fafc;
+      --border:rgba(15,23,42,.10);
+      --text:#0f172a;
+      --muted:#64748b;
 
-  <!-- Theme -->
-  <link rel="stylesheet" href="./assets/hearth.css?v=20260306-1" />
+      --accent:#f97316;
+      --accent-2:#fb923c;
+      --accent-ink:#7c2d12;
 
-  <!-- Config (your Supabase URL + anon key live here) -->
-  <script src="./assets/config.js"></script>
+      --placed-bg:#f1f5f9;
+      --placed-ink:#475569;
+
+      --confirmed-bg:#dbeafe;
+      --confirmed-ink:#1d4ed8;
+
+      --baking-bg:#ffedd5;
+      --baking-ink:#c2410c;
+
+      --ready-bg:#dcfce7;
+      --ready-ink:#166534;
+
+      --delivered-bg:#334155;
+      --delivered-ink:#ffffff;
+
+      --shadow:0 10px 30px rgba(15,23,42,.06);
+      --radius:18px;
+      --radius-sm:12px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif}
+    button,input,select{font:inherit}
+
+    .app{
+      max-width:1600px;
+      margin:0 auto;
+      padding:24px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:20px;
+      margin-bottom:20px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    .brand-mark{
+      width:42px;
+      height:42px;
+      border-radius:14px;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      display:grid;
+      place-items:center;
+      color:white;
+      font-weight:800;
+      box-shadow:var(--shadow);
+    }
+
+    .brand h1{
+      margin:0;
+      font-size:1.15rem;
+      line-height:1.1;
+    }
+
+    .brand p{
+      margin:2px 0 0;
+      color:var(--muted);
+      font-size:.92rem;
+    }
+
+    .actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .btn, .select{
+      background:var(--surface);
+      border:1px solid var(--border);
+      color:var(--text);
+      border-radius:12px;
+      padding:10px 14px;
+      min-height:42px;
+    }
+
+    .btn{
+      cursor:pointer;
+      font-weight:600;
+      transition:.18s ease;
+    }
+
+    .btn:hover{transform:translateY(-1px); box-shadow:var(--shadow)}
+    .btn-primary{
+      background:var(--accent);
+      border-color:var(--accent);
+      color:#fff;
+    }
+
+    .panel{
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
+
+    .drop-header{
+      padding:20px;
+      margin-bottom:18px;
+    }
+
+    .drop-header-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:20px;
+      flex-wrap:wrap;
+      margin-bottom:16px;
+    }
+
+    .drop-title h2{
+      margin:0;
+      font-size:1.45rem;
+      line-height:1.1;
+    }
+
+    .drop-title p{
+      margin:8px 0 0;
+      color:var(--muted);
+      font-size:.95rem;
+    }
+
+    .live-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      border-radius:999px;
+      font-weight:700;
+      font-size:.88rem;
+      background:#fff7ed;
+      color:var(--accent-ink);
+      border:1px solid #fed7aa;
+      white-space:nowrap;
+    }
+
+    .live-dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:var(--accent);
+      box-shadow:0 0 0 6px rgba(249,115,22,.12);
+    }
+
+    .kpis{
+      display:grid;
+      grid-template-columns:repeat(6,minmax(120px,1fr));
+      gap:12px;
+      margin-bottom:14px;
+    }
+
+    .kpi{
+      background:var(--surface-2);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px;
+      min-height:84px;
+    }
+
+    .kpi-label{
+      color:var(--muted);
+      font-size:.8rem;
+      margin-bottom:8px;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      font-weight:700;
+    }
+
+    .kpi-value{
+      font-size:1.4rem;
+      font-weight:800;
+      line-height:1;
+    }
+
+    .capacity-wrap{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:12px;
+      align-items:center;
+    }
+
+    .capacity-text{
+      color:var(--muted);
+      font-size:.92rem;
+      font-weight:600;
+    }
+
+    .capacity-bar{
+      grid-column:1 / -1;
+      height:16px;
+      border-radius:999px;
+      background:#e2e8f0;
+      overflow:hidden;
+      border:1px solid var(--border);
+    }
+
+    .capacity-fill{
+      height:100%;
+      width:0%;
+      background:linear-gradient(90deg,var(--accent),var(--accent-2));
+      transition:width .25s ease;
+    }
+
+    .middle-grid{
+      display:grid;
+      grid-template-columns:1.1fr .9fr;
+      gap:18px;
+      margin-bottom:18px;
+    }
+
+    .queue-panel,
+    .status-panel{
+      padding:18px;
+    }
+
+    .section-title{
+      margin:0 0 14px;
+      font-size:1rem;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .section-title small{
+      color:var(--muted);
+      font-weight:600;
+      font-size:.85rem;
+    }
+
+    .queue-list{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+    }
+
+    .queue-item{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:12px 14px;
+      border-radius:14px;
+      background:var(--surface-2);
+      border:1px solid var(--border);
+      font-weight:700;
+    }
+
+    .queue-item .name{
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
+    .queue-item .qty{
+      background:#fff7ed;
+      color:var(--accent-ink);
+      border:1px solid #fed7aa;
+      padding:4px 8px;
+      border-radius:999px;
+      min-width:40px;
+      text-align:center;
+    }
+
+    .empty-state{
+      color:var(--muted);
+      background:var(--surface-2);
+      border:1px dashed var(--border);
+      border-radius:14px;
+      padding:18px;
+      text-align:center;
+      font-weight:600;
+    }
+
+    .status-grid{
+      display:grid;
+      grid-template-columns:repeat(5,minmax(0,1fr));
+      gap:10px;
+    }
+
+    .status-chip{
+      border-radius:14px;
+      padding:12px;
+      border:1px solid var(--border);
+      text-align:center;
+      font-weight:800;
+    }
+
+    .status-chip .label{
+      display:block;
+      font-size:.78rem;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      margin-bottom:8px;
+    }
+
+    .status-chip .count{
+      font-size:1.3rem;
+      line-height:1;
+    }
+
+    .chip-placed{background:var(--placed-bg); color:var(--placed-ink)}
+    .chip-confirmed{background:var(--confirmed-bg); color:var(--confirmed-ink)}
+    .chip-baking{background:var(--baking-bg); color:var(--baking-ink)}
+    .chip-ready{background:var(--ready-bg); color:var(--ready-ink)}
+    .chip-delivered{background:var(--delivered-bg); color:var(--delivered-ink)}
+
+    .board{
+      display:grid;
+      grid-template-columns:repeat(5,minmax(0,1fr));
+      gap:16px;
+      align-items:start;
+    }
+
+    .column{
+      min-height:420px;
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    .column-header{
+      padding:14px 16px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      font-weight:800;
+      position:sticky;
+      top:0;
+      background:var(--surface);
+      z-index:2;
+    }
+
+    .column-body{
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      max-height:70vh;
+      overflow:auto;
+    }
+
+    .column.placed .column-header{background:var(--placed-bg); color:var(--placed-ink)}
+    .column.confirmed .column-header{background:var(--confirmed-bg); color:var(--confirmed-ink)}
+    .column.baking .column-header{background:var(--baking-bg); color:var(--baking-ink)}
+    .column.ready .column-header{background:var(--ready-bg); color:var(--ready-ink)}
+    .column.delivered .column-header{background:var(--delivered-bg); color:var(--delivered-ink)}
+
+    .badge{
+      min-width:28px;
+      height:28px;
+      padding:0 8px;
+      display:inline-grid;
+      place-items:center;
+      border-radius:999px;
+      background:rgba(255,255,255,.75);
+      color:inherit;
+      font-size:.86rem;
+      border:1px solid rgba(15,23,42,.08);
+    }
+
+    .order-card{
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:#fff;
+      overflow:hidden;
+    }
+
+    .order-card-inner{
+      padding:14px;
+    }
+
+    .order-top{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+
+    .order-id{
+      font-size:.78rem;
+      color:var(--muted);
+      font-weight:800;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+    }
+
+    .order-name{
+      font-size:1rem;
+      font-weight:800;
+      line-height:1.2;
+      margin-top:4px;
+    }
+
+    .time-pill{
+      white-space:nowrap;
+      font-size:.78rem;
+      font-weight:700;
+      color:var(--muted);
+      background:var(--surface-2);
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:5px 8px;
+    }
+
+    .item-block{
+      padding:10px 12px;
+      border-radius:12px;
+      background:var(--surface-2);
+      margin-bottom:10px;
+      border:1px solid var(--border);
+    }
+
+    .item-line{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-weight:700;
+      margin-bottom:6px;
+    }
+
+    .item-line:last-child{margin-bottom:0}
+
+    .extras{
+      margin-top:6px;
+      color:var(--muted);
+      font-size:.9rem;
+    }
+
+    .extras ul{
+      margin:6px 0 0 16px;
+      padding:0;
+    }
+
+    .extras li{margin:2px 0}
+
+    .order-meta{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin:10px 0 12px;
+    }
+
+    .mini-pill{
+      font-size:.75rem;
+      font-weight:700;
+      color:var(--muted);
+      background:var(--surface-2);
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:5px 8px;
+    }
+
+    .order-actions{
+      display:flex;
+      gap:8px;
+    }
+
+    .order-actions .btn{
+      flex:1;
+      justify-content:center;
+      display:inline-flex;
+      align-items:center;
+      min-height:40px;
+      padding:10px 12px;
+      font-size:.92rem;
+    }
+
+    .btn-next{
+      background:var(--accent);
+      color:#fff;
+      border-color:var(--accent);
+    }
+
+    .btn-subtle{
+      background:#fff;
+      color:var(--muted);
+    }
+
+    .footer-note{
+      margin-top:16px;
+      color:var(--muted);
+      font-size:.88rem;
+      text-align:right;
+    }
+
+    dialog{
+      width:min(760px,calc(100vw - 24px));
+      border:none;
+      padding:0;
+      border-radius:20px;
+      box-shadow:0 30px 60px rgba(0,0,0,.2);
+    }
+
+    dialog::backdrop{
+      background:rgba(15,23,42,.45);
+    }
+
+    .modal{
+      background:var(--surface);
+    }
+
+    .modal-header{
+      padding:18px 20px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+    }
+
+    .modal-header h3{
+      margin:0;
+      font-size:1.05rem;
+    }
+
+    .modal-body{
+      padding:20px;
+    }
+
+    .prep-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+    }
+
+    .prep-card{
+      padding:14px;
+      background:var(--surface-2);
+      border:1px solid var(--border);
+      border-radius:14px;
+    }
+
+    .prep-card h4{
+      margin:0 0 10px;
+      font-size:.96rem;
+    }
+
+    .prep-card ul{
+      margin:0 0 0 18px;
+      padding:0;
+    }
+
+    .prep-card li{
+      margin:4px 0;
+      color:var(--text);
+    }
+
+    @media (max-width: 1200px){
+      .kpis{grid-template-columns:repeat(3,1fr)}
+      .middle-grid{grid-template-columns:1fr}
+      .board{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+
+    @media (max-width: 760px){
+      .app{padding:14px}
+      .topbar,.drop-header-top{flex-direction:column; align-items:stretch}
+      .kpis{grid-template-columns:repeat(2,1fr)}
+      .status-grid{grid-template-columns:repeat(2,1fr)}
+      .queue-list{grid-template-columns:1fr}
+      .board{grid-template-columns:1fr}
+      .prep-grid{grid-template-columns:1fr}
+    }
+  </style>
 </head>
-
 <body>
-  <div class="container">
-
-    <!-- HEADER -->
-    <div class="card headerBar">
+  <div class="app">
+    <div class="topbar">
       <div class="brand">
-        <div class="brandMark">H</div>
+        <div class="brand-mark">H</div>
         <div>
-          <div class="brandTitle">Hearth — Service Board</div>
-          <!-- optional subtitle: keep or remove -->
-          <div class="brandSubtitle" id="subtitleText">Operational view (orders, capacity, prep)</div>
+          <h1>Hearth — Service Board</h1>
+          <p>Live order execution for calm, capacity-bound drops.</p>
         </div>
       </div>
 
-      <div class="nav">
-        <a class="active" href="index.html">Service Board</a>
-        <a href="drop-manager.html">Drop Studio</a>
-        <a href="drop-menu.html">Menu Library</a>
-        <a href="order-entry.html">Order Entry</a>
-        <button class="btnSmall" id="refreshBtn">Refresh</button>
+      <div class="actions">
+        <select id="dropSelect" class="select"></select>
+        <button class="btn" id="refreshBtn">Refresh</button>
+        <button class="btn btn-primary" id="prepBtn">Prep Summary</button>
       </div>
     </div>
 
-    <!-- PERFORMANCE -->
-    <div class="card pad" style="margin-top:16px;">
-      <div class="row space">
-        <div>
-          <div class="sectionTitle">Performance</div>
-          <p class="sectionSub">Previous year • Year-to-date • This week</p>
+    <section class="panel drop-header">
+      <div class="drop-header-top">
+        <div class="drop-title">
+          <h2 id="dropName">Loading…</h2>
+          <p id="dropMeta">Select a drop to view live order flow.</p>
         </div>
-        <div class="small muted mono" id="asOfText"></div>
+        <div class="live-pill">
+          <span class="live-dot"></span>
+          <span id="dropStatusPill">Live</span>
+        </div>
       </div>
 
-      <div class="perfGrid">
-
-        <!-- PREVIOUS YEAR -->
-        <div class="perfCard">
-          <div class="perfHeader">
-            <div class="perfTitle">Previous year</div>
-            <div class="perfRange" id="rangePrevYear">—</div>
-          </div>
-
-          <div class="kpiGrid3" id="kpisPrevYear"></div>
-
-          <div class="kpiMore" id="morePrevYear">
-            <div class="kpiGrid3x2" id="kpisPrevYearMore"></div>
-          </div>
-
-          <div class="perfFooter">
-            <button class="showMoreBtn" id="togglePrevYear">Show more ▸</button>
-            <div class="small muted" id="trendPrevYear"></div>
-          </div>
+      <div class="kpis">
+        <div class="kpi">
+          <div class="kpi-label">Orders</div>
+          <div class="kpi-value" id="kpiOrders">0</div>
         </div>
-
-        <!-- YTD -->
-        <div class="perfCard">
-          <div class="perfHeader">
-            <div class="perfTitle">Year to date</div>
-            <div class="perfRange" id="rangeYtd">—</div>
-          </div>
-
-          <div class="kpiGrid3" id="kpisYtd"></div>
-
-          <div class="kpiMore" id="moreYtd">
-            <div class="kpiGrid3x2" id="kpisYtdMore"></div>
-          </div>
-
-          <div class="perfFooter">
-            <button class="showMoreBtn" id="toggleYtd">Show more ▸</button>
-            <div class="small muted" id="trendYtd"></div>
-          </div>
+        <div class="kpi">
+          <div class="kpi-label">Pizzas</div>
+          <div class="kpi-value" id="kpiPizzas">0</div>
         </div>
-
-        <!-- THIS WEEK -->
-        <div class="perfCard">
-          <div class="perfHeader">
-            <div class="perfTitle">This week</div>
-            <div class="perfRange" id="rangeWeek">—</div>
-          </div>
-
-          <div class="kpiGrid3" id="kpisWeek"></div>
-
-          <div class="kpiMore" id="moreWeek">
-            <div class="kpiGrid3x2" id="kpisWeekMore"></div>
-          </div>
-
-          <div class="perfFooter">
-            <button class="showMoreBtn" id="toggleWeek">Show more ▸</button>
-            <div class="small muted" id="trendWeek"></div>
-          </div>
+        <div class="kpi">
+          <div class="kpi-label">Capacity</div>
+          <div class="kpi-value" id="kpiCapacity">0</div>
         </div>
-
+        <div class="kpi">
+          <div class="kpi-label">Capacity Used</div>
+          <div class="kpi-value" id="kpiCapacityUsed">0%</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Revenue</div>
+          <div class="kpi-value" id="kpiRevenue">£0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Avg Order</div>
+          <div class="kpi-value" id="kpiAvgOrder">£0</div>
+        </div>
       </div>
+
+      <div class="capacity-wrap">
+        <div class="capacity-text" id="capacityText">0 / 0 pizzas</div>
+        <div class="capacity-text" id="capacityRightText">0% full</div>
+        <div class="capacity-bar">
+          <div class="capacity-fill" id="capacityFill"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="middle-grid">
+      <section class="panel queue-panel">
+        <h3 class="section-title">
+          <span>Next pizzas to bake</span>
+          <small>Confirmed orders only</small>
+        </h3>
+        <div id="queueList" class="queue-list"></div>
+      </section>
+
+      <section class="panel status-panel">
+        <h3 class="section-title">
+          <span>Live workflow counts</span>
+          <small>Current selected drop</small>
+        </h3>
+        <div class="status-grid">
+          <div class="status-chip chip-placed">
+            <span class="label">Placed</span>
+            <span class="count" id="countPlaced">0</span>
+          </div>
+          <div class="status-chip chip-confirmed">
+            <span class="label">Confirmed</span>
+            <span class="count" id="countConfirmed">0</span>
+          </div>
+          <div class="status-chip chip-baking">
+            <span class="label">Baking</span>
+            <span class="count" id="countBaking">0</span>
+          </div>
+          <div class="status-chip chip-ready">
+            <span class="label">Ready</span>
+            <span class="count" id="countReady">0</span>
+          </div>
+          <div class="status-chip chip-delivered">
+            <span class="label">Delivered</span>
+            <span class="count" id="countDelivered">0</span>
+          </div>
+        </div>
+      </section>
     </div>
 
-    <!-- EXECUTION -->
-    <div class="card pad" style="margin-top:16px;">
-      <div class="row space">
-        <div>
-          <div class="sectionTitle">Execution</div>
-          <p class="sectionSub">Select a drop to view orders and (for live drops) move them through statuses.</p>
+    <section class="board" id="board">
+      <div class="column placed">
+        <div class="column-header">
+          <span>Placed</span>
+          <span class="badge" id="badgePlaced">0</span>
         </div>
-
-        <button class="btnAccent" id="prepBtn">Prep summary</button>
+        <div class="column-body" id="colPlaced"></div>
       </div>
 
-      <div class="execBar">
-        <div class="execLeft">
-          <div>
-            <label>Drop</label>
-            <select id="dropSelect"></select>
-          </div>
-          <button class="btnSmall" id="loadBtn">Load</button>
+      <div class="column confirmed">
+        <div class="column-header">
+          <span>Confirmed</span>
+          <span class="badge" id="badgeConfirmed">0</span>
         </div>
-
-        <div class="execRight">
-          <span class="pill">
-            <span class="dot" id="dotStatus"></span>
-            <span id="dropStatusText">—</span>
-          </span>
-
-          <span class="pill">
-            <span class="muted">Capacity:</span>
-            <span id="capacityText">—</span>
-          </span>
-        </div>
+        <div class="column-body" id="colConfirmed"></div>
       </div>
 
-      <div class="tableWrap">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:70px;">Time</th>
-              <th style="width:170px;">Customer</th>
-              <th style="width:140px;">Phone</th>
-              <th>Capacity items</th>
-              <th>Other items</th>
-              <th style="width:110px;">Status</th>
-              <th style="width:290px;">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="orderRows"></tbody>
-        </table>
+      <div class="column baking">
+        <div class="column-header">
+          <span>Baking</span>
+          <span class="badge" id="badgeBaking">0</span>
+        </div>
+        <div class="column-body" id="colBaking"></div>
       </div>
+
+      <div class="column ready">
+        <div class="column-header">
+          <span>Ready</span>
+          <span class="badge" id="badgeReady">0</span>
+        </div>
+        <div class="column-body" id="colReady"></div>
+      </div>
+
+      <div class="column delivered">
+        <div class="column-header">
+          <span>Delivered</span>
+          <span class="badge" id="badgeDelivered">0</span>
+        </div>
+        <div class="column-body" id="colDelivered"></div>
+      </div>
+    </section>
+
+    <div class="footer-note">
+      Built for Southbury-style fixed-capacity drops and Hearth-style calm execution.
     </div>
-
   </div>
 
-  <!-- PREP SUMMARY MODAL -->
-  <div class="modalOverlay" id="modal">
+  <dialog id="prepDialog">
     <div class="modal">
-      <div class="modalHead">
-        <div class="modalTitle">Prep summary — selected drop</div>
-        <button class="btnSmall" id="closeModalBtn">Close</button>
+      <div class="modal-header">
+        <h3>Prep Summary</h3>
+        <button class="btn" id="closePrepBtn">Close</button>
       </div>
-      <div class="modalBody">
-        <div class="grid2">
-          <div class="box">
-            <div class="boxTitle">Capacity category</div>
-            <div class="small" id="prepCapacityMeta">—</div>
-            <div class="hr"></div>
-            <ul class="list" id="prepCapacityList"></ul>
+      <div class="modal-body">
+        <div class="prep-grid">
+          <div class="prep-card">
+            <h4>Confirmed pizzas</h4>
+            <ul id="prepConfirmed"></ul>
           </div>
-          <div class="box">
-            <div class="boxTitle">Other items</div>
-            <div class="small">Grouped by category</div>
-            <div class="hr"></div>
-            <div id="prepOtherGroups"></div>
+          <div class="prep-card">
+            <h4>Baking pizzas</h4>
+            <ul id="prepBaking"></ul>
+          </div>
+          <div class="prep-card">
+            <h4>Ready orders</h4>
+            <ul id="prepReady"></ul>
+          </div>
+          <div class="prep-card">
+            <h4>Extras</h4>
+            <ul id="prepExtras"></ul>
           </div>
         </div>
       </div>
     </div>
-  </div>
+  </dialog>
 
-<script>
-/* =========================
-   Service Board — Hearth
-   Uses Supabase REST via config.js:
-   window.HEARTH_CONFIG = { SUPABASE_URL, SUPABASE_ANON_KEY }
-   ========================= */
+  <script>
+    const STATUS_ORDER = ["placed","confirmed","baking","ready","delivered"];
+    const STATUS_LABEL = {
+      placed:"Placed",
+      confirmed:"Confirmed",
+      baking:"Baking",
+      ready:"Ready",
+      delivered:"Delivered"
+    };
 
-const SUPABASE_URL = window.HEARTH_CONFIG?.SUPABASE_URL;
-const SUPABASE_ANON_KEY = window.HEARTH_CONFIG?.SUPABASE_ANON_KEY;
+    let appState = {
+      drops: [],
+      orders: [],
+      selectedDropId: null
+    };
 
-if(!SUPABASE_URL || !SUPABASE_ANON_KEY){
-  alert("Missing SUPABASE config. Check assets/config.js (window.HEARTH_CONFIG).");
-}
-
-const headers = {
-  apikey: SUPABASE_ANON_KEY,
-  Authorization: "Bearer " + SUPABASE_ANON_KEY,
-  "Content-Type": "application/json"
-};
-
-const $ = (id) => document.getElementById(id);
-
-function fmtMoneyPence(p){
-  const v = (Number(p||0)/100);
-  return v.toLocaleString("en-GB",{style:"currency",currency:"GBP"});
-}
-function fmtInt(n){ return (Number(n||0)).toLocaleString("en-GB"); }
-function fmtPct(x){
-  if(x === null || x === undefined || Number.isNaN(x)) return "—";
-  const v = Number(x);
-  return (v).toFixed(1) + "%";
-}
-function toISO(d){ return d.toISOString(); }
-function startOfWeekMon(d){
-  const x = new Date(d);
-  const day = x.getDay(); // 0 Sun ... 1 Mon
-  const diff = (day === 0 ? -6 : 1 - day);
-  x.setDate(x.getDate() + diff);
-  x.setHours(0,0,0,0);
-  return x;
-}
-function endOfWeekMon(d){
-  const s = startOfWeekMon(d);
-  const e = new Date(s);
-  e.setDate(e.getDate()+7);
-  e.setHours(0,0,0,0);
-  return e;
-}
-function yearRange(y){
-  const s = new Date(Date.UTC(y,0,1,0,0,0));
-  const e = new Date(Date.UTC(y+1,0,1,0,0,0));
-  return {start:s, end:e};
-}
-function ytdRange(now){
-  const y = now.getFullYear();
-  const s = new Date(Date.UTC(y,0,1,0,0,0));
-  const e = new Date(now);
-  return {start:s, end:e};
-}
-
-async function sbGet(path){
-  const url = `${SUPABASE_URL}/rest/v1/${path}`;
-  const res = await fetch(url, { headers });
-  if(!res.ok){
-    const t = await res.text();
-    throw new Error(`GET ${path} failed: ${res.status} ${t}`);
-  }
-  return res.json();
-}
-
-async function sbPatch(path, body){
-  const url = `${SUPABASE_URL}/rest/v1/${path}`;
-  const res = await fetch(url, { method:"PATCH", headers, body: JSON.stringify(body) });
-  if(!res.ok){
-    const t = await res.text();
-    throw new Error(`PATCH ${path} failed: ${res.status} ${t}`);
-  }
-  return true;
-}
-
-function statusDotClass(dropStatus){
-  const s = (dropStatus||"").toLowerCase();
-  if(s.includes("live")) return "live";
-  if(s.includes("draft")) return "draft";
-  if(s.includes("closed")) return "closed";
-  return "draft";
-}
-
-function renderKpiTile({label, value, deltaText=null, deltaClass=null}){
-  const div = document.createElement("div");
-  div.className = "kpiTile";
-  div.innerHTML = `
-    <div class="kpiLabel">${label}</div>
-    <div>
-      <div class="kpiValue">${value}</div>
-      <div class="kpiDelta ${deltaClass||""}">${deltaText ? deltaText : "—"}</div>
-    </div>
-  `;
-  return div;
-}
-
-function clear(el){ el.innerHTML = ""; }
-
-function toggleMore(section){
-  const more = $(section.moreId);
-  const btn = $(section.btnId);
-  const isOpen = more.classList.contains("open");
-  if(isOpen){
-    more.classList.remove("open");
-    btn.textContent = "Show more ▸";
-  }else{
-    more.classList.add("open");
-    btn.textContent = "Show less ▾";
-  }
-}
-
-async function loadDropsIntoSelect(){
-  const drops = await sbGet(`drops?select=id,name,status,cutoff_time,opens_at,closes_at,capacity_category,capacity_units_total&order=cutoff_time.desc`);
-  const sel = $("dropSelect");
-  sel.innerHTML = "";
-  for(const d of drops){
-    const opt = document.createElement("option");
-    const cut = d.cutoff_time ? new Date(d.cutoff_time).toLocaleString("en-GB") : "—";
-    opt.value = d.id;
-    opt.textContent = `${d.name} • ${d.status} • cutoff ${cut}`;
-    sel.appendChild(opt);
-  }
-  if(drops.length){
-    sel.value = drops[0].id;
-  }
-  return drops;
-}
-
-async function fetchOrdersForDrop(dropId){
-  // include embed of drops for capacity_category if needed later
-  const orders = await sbGet(`orders?drop_id=eq.${dropId}&select=id,status,created_at,customer_name,customer_phone,customer_postcode,pizzas&order=created_at.asc`);
-
-  const orderIds = orders.map(o => o.id);
-  let items = [];
-  if(orderIds.length){
-    // embed products for name/category/capacity_units
-    const inList = orderIds.join(",");
-    items = await sbGet(`order_items?order_id=in.(${inList})&select=order_id,qty,price_pence,product:products(name,category,capacity_units)&order=created_at.asc`);
-  }
-  return { orders, items };
-}
-
-function buildOrderItemMaps(items){
-  const byOrder = new Map();
-  for(const it of items){
-    const key = it.order_id;
-    if(!byOrder.has(key)) byOrder.set(key, []);
-    byOrder.get(key).push(it);
-  }
-  return byOrder;
-}
-
-function groupItemsForDrop(drop, orderItems){
-  const capCat = (drop.capacity_category || "pizza").toLowerCase();
-
-  const capList = [];
-  const otherGroups = new Map(); // category -> (name -> qty)
-
-  let usedUnits = 0;
-
-  for(const it of orderItems){
-    const p = it.product || {};
-    const cat = (p.category || "other").toLowerCase();
-    const name = p.name || "Item";
-    const qty = Number(it.qty || 0);
-    const capUnits = Number(p.capacity_units || 1);
-
-    if(cat === capCat){
-      capList.push({name, qty});
-      usedUnits += qty * capUnits;
-    }else{
-      if(!otherGroups.has(cat)) otherGroups.set(cat, new Map());
-      const m = otherGroups.get(cat);
-      m.set(name, (m.get(name)||0) + qty);
+    function currency(n){
+      return new Intl.NumberFormat("en-GB", {
+        style: "currency",
+        currency: "GBP",
+        maximumFractionDigits: 0
+      }).format(Number(n || 0));
     }
-  }
 
-  // consolidate capacity list
-  const capMap = new Map();
-  for(const x of capList){
-    capMap.set(x.name, (capMap.get(x.name)||0) + x.qty);
-  }
-  const capOut = Array.from(capMap.entries()).map(([name,qty])=>({name,qty})).sort((a,b)=>a.name.localeCompare(b.name));
-
-  const otherOut = Array.from(otherGroups.entries()).map(([cat, m]) => {
-    const items = Array.from(m.entries()).map(([name,qty])=>({name,qty})).sort((a,b)=>a.name.localeCompare(b.name));
-    return {cat, items};
-  }).sort((a,b)=>a.cat.localeCompare(b.cat));
-
-  return { capCat, usedUnits, capOut, otherOut };
-}
-
-function summarizeOrderLine(drop, order, orderItems){
-  const capCat = (drop.capacity_category || "pizza").toLowerCase();
-
-  // capacity items text
-  const capParts = [];
-  const otherParts = [];
-
-  let sawAnyItems = false;
-
-  for(const it of orderItems){
-    const p = it.product || {};
-    const cat = (p.category || "other").toLowerCase();
-    const name = p.name || "Item";
-    const qty = Number(it.qty||0);
-    if(!qty) continue;
-    sawAnyItems = true;
-
-    if(cat === capCat){
-      capParts.push(`${name} x${qty}`);
-    }else{
-      otherParts.push(`${name} x${qty}`);
+    function compactCurrency(n){
+      return new Intl.NumberFormat("en-GB", {
+        style: "currency",
+        currency: "GBP",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }).format(Number(n || 0));
     }
-  }
 
-  // legacy fallback (orders.pizzas) if no order_items exist
-  if(!sawAnyItems && Number(order.pizzas)){
-    capParts.push(`${capCat} x${Number(order.pizzas)} (legacy)`);
-  }
+    function titleCase(str){
+      return String(str || "")
+        .replace(/[-_]/g, " ")
+        .replace(/\b\w/g, s => s.toUpperCase());
+    }
 
-  return {
-    capText: capParts.length ? capParts.join(", ") : "—",
-    otherText: otherParts.length ? otherParts.join(", ") : "—"
-  };
-}
+    function slugify(text){
+      return String(text || "").toLowerCase().trim().replace(/\s+/g, "-");
+    }
 
-function renderOrdersTable(drop, orders, items){
-  const byOrder = buildOrderItemMaps(items);
-  const tbody = $("orderRows");
-  tbody.innerHTML = "";
+    function safeParse(value){
+      try { return JSON.parse(value); } catch { return null; }
+    }
 
-  for(const o of orders){
-    const its = byOrder.get(o.id) || [];
-    const when = o.created_at ? new Date(o.created_at) : null;
-    const timeText = when ? when.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}) : "—";
-
-    const sum = summarizeOrderLine(drop, o, its);
-
-    const tr = document.createElement("tr");
-
-    const statusBadge = `<span class="badgeStatus">${o.status}</span>`;
-
-    tr.innerHTML = `
-      <td class="mono muted">${timeText}</td>
-      <td><strong>${o.customer_name || "—"}</strong></td>
-      <td class="mono">${o.customer_phone || "—"}</td>
-      <td>${sum.capText}</td>
-      <td>${sum.otherText}</td>
-      <td>${statusBadge}</td>
-      <td>
-        <div class="actionsRow">
-          <button class="actionBtn primary" data-id="${o.id}" data-status="confirmed">Conf</button>
-          <button class="actionBtn" data-id="${o.id}" data-status="baking">Bake</button>
-          <button class="actionBtn" data-id="${o.id}" data-status="ready">Ready</button>
-          <!-- Button label Delivered, but DB status stays 'collected' (your constraint set) -->
-          <button class="actionBtn" data-id="${o.id}" data-status="collected">Deliv</button>
-          <button class="actionBtn" data-id="${o.id}" data-status="cancelled">Canc</button>
-        </div>
-      </td>
-    `;
-
-    tbody.appendChild(tr);
-  }
-
-  // wire buttons
-  tbody.querySelectorAll("button[data-id]").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const id = btn.getAttribute("data-id");
-      const st = btn.getAttribute("data-status");
-      try{
-        await sbPatch(`orders?id=eq.${id}`, { status: st });
-        await loadSelectedDrop(); // refresh view
-      }catch(e){
-        alert(e.message);
+    function allParsedLocalStorageValues(){
+      const parsed = [];
+      for(let i=0;i<localStorage.length;i++){
+        const key = localStorage.key(i);
+        const value = safeParse(localStorage.getItem(key));
+        parsed.push({ key, value });
       }
-    });
-  });
-}
+      return parsed;
+    }
 
-async function loadSelectedDrop(){
-  const dropId = $("dropSelect").value;
-  if(!dropId) return;
+    function detectDropsAndOrders(){
+      const parsed = allParsedLocalStorageValues();
 
-  const [drop] = await sbGet(`drops?id=eq.${dropId}&select=id,name,status,cutoff_time,capacity_category,capacity_units_total`);
-  if(!drop) return;
+      let bestDrops = null;
+      let bestOrders = null;
 
-  $("dropStatusText").textContent = drop.status || "—";
-  const dot = $("dotStatus");
-  dot.className = "dot " + statusDotClass(drop.status);
+      for(const entry of parsed){
+        const value = entry.value;
 
-  $("capacityText").textContent = `${drop.capacity_category || "pizza"} • ${drop.capacity_units_total || 0} units`;
+        if(Array.isArray(value) && value.length){
+          const first = value[0];
 
-  const {orders, items} = await fetchOrdersForDrop(dropId);
-  renderOrdersTable(drop, orders, items);
+          const looksLikeDrop =
+            typeof first === "object" &&
+            (
+              "capacity" in first ||
+              "cutoff" in first ||
+              "windowStart" in first ||
+              "windowEnd" in first ||
+              "menuId" in first ||
+              "dropDate" in first
+            );
 
-  // Prep summary data cache for modal
-  window.__hearthDrop = drop;
-  window.__hearthOrders = orders;
-  window.__hearthItems = items;
-}
+          const looksLikeOrder =
+            typeof first === "object" &&
+            (
+              "customerName" in first ||
+              "customer" in first ||
+              "items" in first ||
+              "dropId" in first ||
+              "status" in first
+            );
 
-function openModal(){ $("modal").classList.add("open"); }
-function closeModal(){ $("modal").classList.remove("open"); }
+          if(looksLikeDrop && (!bestDrops || value.length > bestDrops.length)) bestDrops = value;
+          if(looksLikeOrder && (!bestOrders || value.length > bestOrders.length)) bestOrders = value;
+        }
 
-function renderPrepSummary(){
-  const drop = window.__hearthDrop;
-  const items = window.__hearthItems || [];
-  const orders = window.__hearthOrders || [];
+        if(value && typeof value === "object" && !Array.isArray(value)){
+          for(const k of Object.keys(value)){
+            const nested = value[k];
+            if(Array.isArray(nested) && nested.length){
+              const first = nested[0];
 
-  if(!drop){
-    alert("Load a drop first.");
-    return;
-  }
+              const looksLikeDrop =
+                typeof first === "object" &&
+                (
+                  "capacity" in first ||
+                  "cutoff" in first ||
+                  "windowStart" in first ||
+                  "windowEnd" in first ||
+                  "menuId" in first ||
+                  "dropDate" in first
+                );
 
-  // Use all items; if none, attempt to synthesize from legacy orders.pizzas
-  let effectiveItems = items.slice();
+              const looksLikeOrder =
+                typeof first === "object" &&
+                (
+                  "customerName" in first ||
+                  "customer" in first ||
+                  "items" in first ||
+                  "dropId" in first ||
+                  "status" in first
+                );
 
-  if(effectiveItems.length === 0){
-    // synthesize capacity items from legacy pizzas
-    for(const o of orders){
-      if(Number(o.pizzas)){
-        effectiveItems.push({
-          order_id: o.id,
-          qty: Number(o.pizzas),
-          price_pence: null,
-          product: { name: drop.capacity_category + " (legacy)", category: drop.capacity_category, capacity_units: 1 }
+              if(looksLikeDrop && (!bestDrops || nested.length > bestDrops.length)) bestDrops = nested;
+              if(looksLikeOrder && (!bestOrders || nested.length > bestOrders.length)) bestOrders = nested;
+            }
+          }
+        }
+      }
+
+      return {
+        drops: normalizeDrops(bestDrops || []),
+        orders: normalizeOrders(bestOrders || [])
+      };
+    }
+
+    function normalizeDrops(drops){
+      return drops.map((d, index) => {
+        const id = String(
+          d.id ??
+          d.dropId ??
+          d.slug ??
+          d.code ??
+          `drop-${index + 1}`
+        );
+
+        const name = d.name || d.title || d.dropName || `Drop ${index + 1}`;
+
+        const capacity = Number(
+          d.capacity ??
+          d.pizzaCapacity ??
+          d.maxPizzas ??
+          d.units ??
+          40
+        );
+
+        const status = String(d.status || "live").toLowerCase();
+        const date = d.date || d.dropDate || d.day || "";
+        const windowStart = d.windowStart || d.startTime || d.from || "";
+        const windowEnd = d.windowEnd || d.endTime || d.to || "";
+        const cutoff = d.cutoff || d.cutoffTime || "";
+        const area = d.area || d.location || d.node || d.neighbourhood || "";
+
+        return { id, name, capacity, status, date, windowStart, windowEnd, cutoff, area };
+      });
+    }
+
+    function normalizeOrders(orders){
+      return orders.map((o, index) => {
+        const id = String(o.id ?? o.orderId ?? `order-${index + 1}`);
+        const dropId = String(o.dropId ?? o.drop ?? o.drop_id ?? "");
+        const customerName = o.customerName || o.customer || o.name || "Customer";
+        const status = normalizeStatus(o.status);
+        const createdAt = o.createdAt || o.created || o.timestamp || o.time || "";
+        const notes = o.notes || "";
+
+        const items = normalizeItems(o.items || o.products || o.lines || []);
+        const extras = normalizeExtras(o.extras || o.addOns || o.addons || []);
+        const total = Number(
+          o.total ??
+          o.totalPrice ??
+          estimateTotal(items, extras)
+        );
+
+        return { id, dropId, customerName, status, createdAt, notes, items, extras, total };
+      });
+    }
+
+    function normalizeStatus(status){
+      const s = String(status || "placed").toLowerCase();
+      if(["placed","new","pending"].includes(s)) return "placed";
+      if(["confirmed","accepted"].includes(s)) return "confirmed";
+      if(["bake","baking","oven"].includes(s)) return "baking";
+      if(["ready","packed"].includes(s)) return "ready";
+      if(["delivered","complete","completed","done"].includes(s)) return "delivered";
+      return "placed";
+    }
+
+    function normalizeItems(items){
+      if(!Array.isArray(items)) return [];
+      return items.map((item, index) => {
+        if(typeof item === "string"){
+          return { name: item, qty: 1, price: 0, type: "pizza" };
+        }
+
+        const name = item.name || item.title || item.productName || `Item ${index + 1}`;
+        const qty = Number(item.qty ?? item.quantity ?? 1);
+        const price = Number(item.price ?? item.unitPrice ?? 0);
+        const type = String(item.type || inferItemType(name)).toLowerCase();
+
+        return { name, qty, price, type };
+      });
+    }
+
+    function normalizeExtras(extras){
+      if(!Array.isArray(extras)) return [];
+      return extras.map((extra, index) => {
+        if(typeof extra === "string"){
+          return { name: extra, qty: 1, price: 0 };
+        }
+
+        const name = extra.name || extra.title || extra.productName || `Extra ${index + 1}`;
+        const qty = Number(extra.qty ?? extra.quantity ?? 1);
+        const price = Number(extra.price ?? extra.unitPrice ?? 0);
+
+        return { name, qty, price };
+      });
+    }
+
+    function inferItemType(name){
+      const n = String(name || "").toLowerCase();
+      if(n.includes("dip") || n.includes("sauce") || n.includes("olive") || n.includes("drink")) return "extra";
+      return "pizza";
+    }
+
+    function estimateTotal(items, extras){
+      const sum = arr => arr.reduce((acc, item) => acc + (Number(item.price || 0) * Number(item.qty || 1)), 0);
+      return sum(items) + sum(extras);
+    }
+
+    function demoData(){
+      return {
+        drops: [
+          {
+            id: "drop-ruscombe-friday",
+            name: "Friday Ruscombe Drop",
+            capacity: 40,
+            status: "live",
+            date: "Friday",
+            windowStart: "18:30",
+            windowEnd: "20:30",
+            cutoff: "17:30",
+            area: "Ruscombe"
+          }
+        ],
+        orders: [
+          {
+            id: "m34u6o",
+            dropId: "drop-ruscombe-friday",
+            customerName: "Ed Test",
+            status: "placed",
+            createdAt: "19:02",
+            items: [{ name:"Margherita", qty:1, price:11, type:"pizza" }],
+            extras: [{ name:"Olives", qty:2, price:1.5 }, { name:"Garlic Dip", qty:4, price:2 }],
+            total: 22
+          },
+          {
+            id: "a102",
+            dropId: "drop-ruscombe-friday",
+            customerName: "Jemma",
+            status: "confirmed",
+            createdAt: "18:48",
+            items: [{ name:"Berkshire Pork & Honey", qty:1, price:15, type:"pizza" }, { name:"Margherita", qty:1, price:11, type:"pizza" }],
+            extras: [{ name:"Garlic Dip", qty:1, price:2 }],
+            total: 28
+          },
+          {
+            id: "a103",
+            dropId: "drop-ruscombe-friday",
+            customerName: "Tom",
+            status: "baking",
+            createdAt: "18:46",
+            items: [{ name:"Meatball", qty:2, price:14, type:"pizza" }],
+            extras: [],
+            total: 28
+          },
+          {
+            id: "a104",
+            dropId: "drop-ruscombe-friday",
+            customerName: "Ruth",
+            status: "ready",
+            createdAt: "18:42",
+            items: [{ name:"Courgette & Ricotta", qty:1, price:13, type:"pizza" }],
+            extras: [{ name:"Smoked Pepper Dip", qty:1, price:2 }],
+            total: 15
+          },
+          {
+            id: "a105",
+            dropId: "drop-ruscombe-friday",
+            customerName: "James",
+            status: "delivered",
+            createdAt: "18:31",
+            items: [{ name:"Marinara", qty:2, price:10, type:"pizza" }],
+            extras: [],
+            total: 20
+          }
+        ]
+      };
+    }
+
+    function loadData(){
+      const detected = detectDropsAndOrders();
+
+      if(detected.drops.length){
+        appState.drops = detected.drops;
+        appState.orders = detected.orders;
+      } else {
+        const demo = demoData();
+        appState.drops = demo.drops;
+        appState.orders = demo.orders;
+      }
+
+      const savedSelected = localStorage.getItem("hearth:selectedDropId");
+      appState.selectedDropId =
+        savedSelected && appState.drops.some(d => d.id === savedSelected)
+          ? savedSelected
+          : (appState.drops[0]?.id || null);
+    }
+
+    function saveOrdersBack(){
+      localStorage.setItem("hearth:serviceBoardOrders", JSON.stringify(appState.orders));
+    }
+
+    function getSelectedDrop(){
+      return appState.drops.find(d => d.id === appState.selectedDropId) || null;
+    }
+
+    function getOrdersForSelectedDrop(){
+      return appState.orders
+        .filter(o => !appState.selectedDropId || o.dropId === appState.selectedDropId)
+        .sort((a,b) => {
+          const aStatus = STATUS_ORDER.indexOf(a.status);
+          const bStatus = STATUS_ORDER.indexOf(b.status);
+          if(aStatus !== bStatus) return aStatus - bStatus;
+          return String(a.createdAt).localeCompare(String(b.createdAt));
         });
+    }
+
+    function getPizzaCount(order){
+      return order.items
+        .filter(i => (i.type || "pizza") !== "extra")
+        .reduce((acc, item) => acc + Number(item.qty || 0), 0);
+    }
+
+    function renderDropSelect(){
+      const select = document.getElementById("dropSelect");
+      select.innerHTML = "";
+
+      appState.drops.forEach(drop => {
+        const opt = document.createElement("option");
+        opt.value = drop.id;
+        opt.textContent = drop.name;
+        if(drop.id === appState.selectedDropId) opt.selected = true;
+        select.appendChild(opt);
+      });
+
+      select.addEventListener("change", e => {
+        appState.selectedDropId = e.target.value;
+        localStorage.setItem("hearth:selectedDropId", appState.selectedDropId);
+        render();
+      });
+    }
+
+    function renderHeader(drop, orders){
+      const orderCount = orders.length;
+      const pizzaCount = orders.reduce((acc, o) => acc + getPizzaCount(o), 0);
+      const capacity = Number(drop?.capacity || 40);
+      const capacityUsed = capacity ? Math.round((pizzaCount / capacity) * 100) : 0;
+      const revenue = orders.reduce((acc, o) => acc + Number(o.total || 0), 0);
+      const avgOrder = orderCount ? revenue / orderCount : 0;
+
+      document.getElementById("dropName").textContent = drop?.name || "No drop selected";
+      document.getElementById("dropMeta").textContent =
+        [
+          drop?.area || "",
+          drop?.date || "",
+          drop?.windowStart && drop?.windowEnd ? `${drop.windowStart}–${drop.windowEnd}` : "",
+          drop?.cutoff ? `Cutoff ${drop.cutoff}` : ""
+        ].filter(Boolean).join(" • ");
+
+      document.getElementById("dropStatusPill").textContent = titleCase(drop?.status || "live");
+
+      document.getElementById("kpiOrders").textContent = orderCount;
+      document.getElementById("kpiPizzas").textContent = pizzaCount;
+      document.getElementById("kpiCapacity").textContent = capacity;
+      document.getElementById("kpiCapacityUsed").textContent = `${capacityUsed}%`;
+      document.getElementById("kpiRevenue").textContent = currency(revenue);
+      document.getElementById("kpiAvgOrder").textContent = compactCurrency(avgOrder);
+
+      document.getElementById("capacityText").textContent = `${pizzaCount} / ${capacity} pizzas`;
+      document.getElementById("capacityRightText").textContent = `${capacityUsed}% full`;
+      document.getElementById("capacityFill").style.width = `${Math.min(capacityUsed, 100)}%`;
+    }
+
+    function renderQueue(orders){
+      const queueEl = document.getElementById("queueList");
+      queueEl.innerHTML = "";
+
+      const confirmedOrders = orders.filter(o => o.status === "confirmed");
+      const counts = new Map();
+
+      confirmedOrders.forEach(order => {
+        order.items
+          .filter(i => (i.type || "pizza") !== "extra")
+          .forEach(item => {
+            const key = item.name;
+            counts.set(key, (counts.get(key) || 0) + Number(item.qty || 0));
+          });
+      });
+
+      const entries = [...counts.entries()].sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+      if(!entries.length){
+        queueEl.innerHTML = `<div class="empty-state">No confirmed pizzas waiting to bake.</div>`;
+        return;
       }
+
+      entries.forEach(([name, qty]) => {
+        const div = document.createElement("div");
+        div.className = "queue-item";
+        div.innerHTML = `
+          <span class="name">${name}</span>
+          <span class="qty">×${qty}</span>
+        `;
+        queueEl.appendChild(div);
+      });
     }
-  }
 
-  const grouped = groupItemsForDrop(drop, effectiveItems);
-  const totalUnits = Number(drop.capacity_units_total || 0);
-  const used = grouped.usedUnits;
-  const pct = totalUnits ? (used/totalUnits*100) : null;
+    function renderStatusCounts(orders){
+      const counts = {
+        placed: 0,
+        confirmed: 0,
+        baking: 0,
+        ready: 0,
+        delivered: 0
+      };
 
-  $("prepCapacityMeta").innerHTML =
-    `<strong>Category:</strong> ${grouped.capCat}<br/>
-     <strong>Capacity:</strong> ${used}/${totalUnits} used (${pct === null ? "—" : pct.toFixed(1) + "%"})`;
+      orders.forEach(o => counts[o.status] = (counts[o.status] || 0) + 1);
 
-  // capacity list
-  const capUl = $("prepCapacityList");
-  capUl.innerHTML = "";
-  if(grouped.capOut.length === 0){
-    const li = document.createElement("li");
-    li.textContent = "—";
-    capUl.appendChild(li);
-  }else{
-    for(const it of grouped.capOut){
-      const li = document.createElement("li");
-      li.textContent = `${it.name} x${it.qty}`;
-      capUl.appendChild(li);
+      document.getElementById("countPlaced").textContent = counts.placed;
+      document.getElementById("countConfirmed").textContent = counts.confirmed;
+      document.getElementById("countBaking").textContent = counts.baking;
+      document.getElementById("countReady").textContent = counts.ready;
+      document.getElementById("countDelivered").textContent = counts.delivered;
+
+      document.getElementById("badgePlaced").textContent = counts.placed;
+      document.getElementById("badgeConfirmed").textContent = counts.confirmed;
+      document.getElementById("badgeBaking").textContent = counts.baking;
+      document.getElementById("badgeReady").textContent = counts.ready;
+      document.getElementById("badgeDelivered").textContent = counts.delivered;
     }
-  }
 
-  // other groups
-  const otherDiv = $("prepOtherGroups");
-  otherDiv.innerHTML = "";
+    function renderBoard(orders){
+      const cols = {
+        placed: document.getElementById("colPlaced"),
+        confirmed: document.getElementById("colConfirmed"),
+        baking: document.getElementById("colBaking"),
+        ready: document.getElementById("colReady"),
+        delivered: document.getElementById("colDelivered")
+      };
 
-  if(grouped.otherOut.length === 0){
-    otherDiv.innerHTML = `<div class="small muted">—</div>`;
-  }else{
-    for(const g of grouped.otherOut){
-      const box = document.createElement("div");
-      box.style.marginBottom = "10px";
-      box.innerHTML = `
-        <div class="boxTitle" style="font-size:13px; margin-bottom:6px; text-transform:capitalize;">${g.cat}</div>
-        <ul class="list">${g.items.map(x=>`<li>${x.name} x${x.qty}</li>`).join("")}</ul>
+      Object.values(cols).forEach(col => col.innerHTML = "");
+
+      STATUS_ORDER.forEach(status => {
+        const list = orders.filter(order => order.status === status);
+
+        if(!list.length){
+          cols[status].innerHTML = `<div class="empty-state">No ${STATUS_LABEL[status].toLowerCase()} orders.</div>`;
+          return;
+        }
+
+        list.forEach(order => cols[status].appendChild(renderOrderCard(order)));
+      });
+    }
+
+    function renderOrderCard(order){
+      const nextStatus = getNextStatus(order.status);
+      const card = document.createElement("div");
+      card.className = "order-card";
+
+      const pizzas = order.items.filter(i => (i.type || "pizza") !== "extra");
+      const extras = [...order.extras, ...order.items.filter(i => i.type === "extra")];
+
+      card.innerHTML = `
+        <div class="order-card-inner">
+          <div class="order-top">
+            <div>
+              <div class="order-id">Order #${order.id}</div>
+              <div class="order-name">${order.customerName}</div>
+            </div>
+            <div class="time-pill">${order.createdAt || "—"}</div>
+          </div>
+
+          <div>
+            ${pizzas.map(item => `
+              <div class="item-block">
+                <div class="item-line">
+                  <span>${item.name}</span>
+                  <span>×${item.qty}</span>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+
+          ${extras.length ? `
+            <div class="extras">
+              <strong>Extras</strong>
+              <ul>
+                ${extras.map(extra => `<li>${extra.name} ×${extra.qty}</li>`).join("")}
+              </ul>
+            </div>
+          ` : ""}
+
+          <div class="order-meta">
+            <span class="mini-pill">${getPizzaCount(order)} pizza${getPizzaCount(order) === 1 ? "" : "s"}</span>
+            <span class="mini-pill">${compactCurrency(order.total)}</span>
+            <span class="mini-pill">${STATUS_LABEL[order.status]}</span>
+          </div>
+
+          <div class="order-actions">
+            ${nextStatus ? `<button class="btn btn-next" data-order-id="${order.id}" data-next-status="${nextStatus}">${buttonLabel(nextStatus)}</button>` : ""}
+            ${order.status !== "placed" ? `<button class="btn btn-subtle" data-order-id="${order.id}" data-prev-status="${getPrevStatus(order.status)}">Back</button>` : ""}
+          </div>
+        </div>
       `;
-      otherDiv.appendChild(box);
+
+      return card;
     }
-  }
 
-  openModal();
-}
-
-/* =========================
-   PERFORMANCE CALCS
-   ========================= */
-
-async function fetchOrdersInRange(start, end){
-  // Need drops capacity_category per order
-  const startIso = start.toISOString();
-  const endIso = end.toISOString();
-
-  const orders = await sbGet(
-    `orders?created_at=gte.${encodeURIComponent(startIso)}&created_at=lt.${encodeURIComponent(endIso)}`
-    + `&select=id,drop_id,status,created_at,customer_phone,drop:drops(capacity_category)`
-  );
-
-  const orderIds = orders.map(o=>o.id);
-  let items = [];
-  if(orderIds.length){
-    const inList = orderIds.join(",");
-    items = await sbGet(
-      `order_items?order_id=in.(${inList})&select=order_id,qty,price_pence,product:products(category)`
-    );
-  }
-
-  return {orders, items};
-}
-
-function computePerf({orders, items}){
-  const byOrderItems = new Map();
-  for(const it of items){
-    if(!byOrderItems.has(it.order_id)) byOrderItems.set(it.order_id, []);
-    byOrderItems.get(it.order_id).push(it);
-  }
-
-  const orderCount = orders.length;
-
-  const phoneSet = new Set();
-  for(const o of orders){
-    if(o.customer_phone) phoneSet.add(o.customer_phone.trim());
-  }
-  const uniqueCustomers = phoneSet.size;
-
-  let revenueTotal = 0;
-  let revenueCapacity = 0;
-  let revenueOther = 0;
-
-  let itemsTotal = 0;
-  let cancelled = 0;
-
-  for(const o of orders){
-    if((o.status||"").toLowerCase() === "cancelled") cancelled++;
-
-    const capCat = (o.drop?.capacity_category || "pizza").toLowerCase();
-    const its = byOrderItems.get(o.id) || [];
-    for(const it of its){
-      const qty = Number(it.qty||0);
-      const price = Number(it.price_pence||0);
-      const cat = (it.product?.category || "other").toLowerCase();
-
-      const line = qty * price;
-      revenueTotal += line;
-      itemsTotal += qty;
-
-      if(cat === capCat) revenueCapacity += line;
-      else revenueOther += line;
+    function buttonLabel(nextStatus){
+      if(nextStatus === "confirmed") return "Confirm";
+      if(nextStatus === "baking") return "Bake";
+      if(nextStatus === "ready") return "Ready";
+      if(nextStatus === "delivered") return "Delivered";
+      return "Next";
     }
-  }
 
-  const aov = orderCount ? (revenueTotal / orderCount) : 0;
-  const itemsPerOrder = orderCount ? (itemsTotal / orderCount) : 0;
-  const cancelPct = orderCount ? (cancelled / orderCount * 100) : 0;
+    function getNextStatus(status){
+      const idx = STATUS_ORDER.indexOf(status);
+      if(idx < 0 || idx >= STATUS_ORDER.length - 1) return null;
+      return STATUS_ORDER[idx + 1];
+    }
 
-  // repeat% (same phone appears more than once)
-  let repeatCustomers = 0;
-  const phoneCounts = new Map();
-  for(const o of orders){
-    const p = (o.customer_phone||"").trim();
-    if(!p) continue;
-    phoneCounts.set(p, (phoneCounts.get(p)||0)+1);
-  }
-  for(const [,c] of phoneCounts.entries()){
-    if(c >= 2) repeatCustomers++;
-  }
-  const repeatPct = uniqueCustomers ? (repeatCustomers / uniqueCustomers * 100) : 0;
+    function getPrevStatus(status){
+      const idx = STATUS_ORDER.indexOf(status);
+      if(idx <= 0) return null;
+      return STATUS_ORDER[idx - 1];
+    }
 
-  return {
-    uniqueCustomers,
-    orders: orderCount,
-    revenueTotal,
-    revenueCapacity,
-    revenueOther,
-    aov,
-    itemsPerOrder,
-    repeatPct,
-    cancelPct
-  };
-}
+    function attachBoardEvents(){
+      document.getElementById("board").onclick = (e) => {
+        const nextBtn = e.target.closest("[data-next-status]");
+        const prevBtn = e.target.closest("[data-prev-status]");
 
-function deltaClass(pct){
-  if(pct === null || pct === undefined || Number.isNaN(pct)) return null;
-  if(pct > 0.01) return "good";
-  if(pct < -0.01) return "bad";
-  return null;
-}
+        if(nextBtn){
+          const orderId = nextBtn.getAttribute("data-order-id");
+          const nextStatus = nextBtn.getAttribute("data-next-status");
+          updateOrderStatus(orderId, nextStatus);
+        }
 
-function pctChange(current, previous){
-  const c = Number(current||0);
-  const p = Number(previous||0);
-  if(p === 0 && c === 0) return 0;
-  if(p === 0 && c !== 0) return null; // undefined/infinite; show —
-  return ((c - p) / p) * 100;
-}
+        if(prevBtn){
+          const orderId = prevBtn.getAttribute("data-order-id");
+          const prevStatus = prevBtn.getAttribute("data-prev-status");
+          if(prevStatus) updateOrderStatus(orderId, prevStatus);
+        }
+      };
+    }
 
-function renderPerfBlock(target3Id, targetMoreId, perf, deltas=null){
-  // Always visible 3 KPIs (aligned tiles)
-  const three = [
-    { label: "Unique customers", value: fmtInt(perf.uniqueCustomers), deltaText: deltas?.uniqueCustomers, deltaClass: deltas?.uniqueCustomersClass },
-    { label: "Orders", value: fmtInt(perf.orders), deltaText: deltas?.orders, deltaClass: deltas?.ordersClass },
-    { label: "Revenue (total)", value: fmtMoneyPence(perf.revenueTotal), deltaText: deltas?.revenueTotal, deltaClass: deltas?.revenueTotalClass },
-  ];
+    function updateOrderStatus(orderId, status){
+      const target = appState.orders.find(o => String(o.id) === String(orderId));
+      if(!target) return;
+      target.status = status;
+      saveOrdersBack();
+      render();
+    }
 
-  const nineMinusThree = [
-    { label: "Revenue (capacity)", value: fmtMoneyPence(perf.revenueCapacity), deltaText: deltas?.revenueCapacity, deltaClass: deltas?.revenueCapacityClass },
-    { label: "Revenue (other)", value: fmtMoneyPence(perf.revenueOther), deltaText: deltas?.revenueOther, deltaClass: deltas?.revenueOtherClass },
-    { label: "AOV", value: fmtMoneyPence(perf.aov), deltaText: deltas?.aov, deltaClass: deltas?.aovClass },
-    { label: "Items / order", value: perf.itemsPerOrder.toFixed(1), deltaText: deltas?.itemsPerOrder, deltaClass: deltas?.itemsPerOrderClass },
-    { label: "Repeat %", value: fmtPct(perf.repeatPct), deltaText: deltas?.repeatPct, deltaClass: deltas?.repeatPctClass },
-    { label: "Cancel %", value: fmtPct(perf.cancelPct), deltaText: deltas?.cancelPct, deltaClass: deltas?.cancelPctClass },
-  ];
+    function renderPrepSummary(orders){
+      const confirmed = aggregatePizzaLines(orders.filter(o => o.status === "confirmed"));
+      const baking = aggregatePizzaLines(orders.filter(o => o.status === "baking"));
+      const readyOrders = orders.filter(o => o.status === "ready");
+      const extras = aggregateExtraLines(orders);
 
-  const t3 = $(target3Id);
-  const tm = $(targetMoreId);
-  clear(t3); clear(tm);
+      writeList("prepConfirmed", confirmed.length ? confirmed : ["No confirmed pizzas"]);
+      writeList("prepBaking", baking.length ? baking : ["No pizzas currently baking"]);
+      writeList("prepReady", readyOrders.length ? readyOrders.map(o => `${o.customerName} — ${getPizzaCount(o)} pizza${getPizzaCount(o) === 1 ? "" : "s"}`) : ["No ready orders"]);
+      writeList("prepExtras", extras.length ? extras : ["No extras"]);
+    }
 
-  for(const k of three){
-    t3.appendChild(renderKpiTile(k));
-  }
-  for(const k of nineMinusThree){
-    tm.appendChild(renderKpiTile(k));
-  }
-}
+    function aggregatePizzaLines(orders){
+      const map = new Map();
+      orders.forEach(order => {
+        order.items
+          .filter(i => (i.type || "pizza") !== "extra")
+          .forEach(item => map.set(item.name, (map.get(item.name) || 0) + Number(item.qty || 0)));
+      });
+      return [...map.entries()]
+        .sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([name, qty]) => `${name} ×${qty}`);
+    }
 
-function formatDelta(prefix, pct){
-  if(pct === null) return `${prefix} —`;
-  const arrow = pct > 0 ? "▲" : (pct < 0 ? "▼" : "•");
-  return `${prefix} ${arrow} ${pct.toFixed(1)}%`;
-}
+    function aggregateExtraLines(orders){
+      const map = new Map();
+      orders.forEach(order => {
+        const allExtras = [...order.extras, ...order.items.filter(i => i.type === "extra")];
+        allExtras.forEach(extra => map.set(extra.name, (map.get(extra.name) || 0) + Number(extra.qty || 0)));
+      });
+      return [...map.entries()]
+        .sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([name, qty]) => `${name} ×${qty}`);
+    }
 
-async function loadPerformance(){
-  const now = new Date();
-  $("asOfText").textContent = `As of ${now.toLocaleString("en-GB")}`;
+    function writeList(id, lines){
+      const el = document.getElementById(id);
+      el.innerHTML = lines.map(line => `<li>${line}</li>`).join("");
+    }
 
-  const prevYear = now.getFullYear() - 1;
-  const {start:pyS, end:pyE} = yearRange(prevYear);
-  const ytd = ytdRange(now);
-  const weekS = startOfWeekMon(now);
-  const weekE = endOfWeekMon(now);
+    function render(){
+      const drop = getSelectedDrop();
+      const orders = getOrdersForSelectedDrop();
 
-  $("rangePrevYear").textContent = `${prevYear}`;
-  $("rangeYtd").textContent = `${now.getFullYear()} YTD`;
-  $("rangeWeek").textContent = `Mon–Sun`;
+      renderHeader(drop, orders);
+      renderQueue(orders);
+      renderStatusCounts(orders);
+      renderBoard(orders);
+      renderPrepSummary(orders);
+    }
 
-  const [pyData, ytdData, wkData] = await Promise.all([
-    fetchOrdersInRange(pyS, pyE),
-    fetchOrdersInRange(ytd.start, ytd.end),
-    fetchOrdersInRange(weekS, weekE),
-  ]);
+    document.getElementById("refreshBtn").addEventListener("click", () => {
+      loadData();
+      renderDropSelect();
+      render();
+    });
 
-  const pyPerf = computePerf(pyData);
-  const ytdPerf = computePerf(ytdData);
-  const wkPerf = computePerf(wkData);
+    document.getElementById("prepBtn").addEventListener("click", () => {
+      document.getElementById("prepDialog").showModal();
+    });
 
-  // Trends:
-  // YTD vs same period last year
-  const lastYearSameStart = new Date(Date.UTC(now.getFullYear()-1,0,1,0,0,0));
-  const lastYearSameEnd = new Date(now);
-  lastYearSameEnd.setFullYear(now.getFullYear()-1);
-  const ytdLyData = await fetchOrdersInRange(lastYearSameStart, lastYearSameEnd);
-  const ytdLyPerf = computePerf(ytdLyData);
+    document.getElementById("closePrepBtn").addEventListener("click", () => {
+      document.getElementById("prepDialog").close();
+    });
 
-  // This week vs last week
-  const lastWeekS = new Date(weekS); lastWeekS.setDate(lastWeekS.getDate()-7);
-  const lastWeekE = new Date(weekE); lastWeekE.setDate(lastWeekE.getDate()-7);
-  const wkLyData = await fetchOrdersInRange(lastWeekS, lastWeekE);
-  const wkLyPerf = computePerf(wkLyData);
-
-  // Build deltas for the “3 visible” KPIs
-  const ytdDeltas = {
-    uniqueCustomers: formatDelta("vs LY", pctChange(ytdPerf.uniqueCustomers, ytdLyPerf.uniqueCustomers)),
-    uniqueCustomersClass: deltaClass(pctChange(ytdPerf.uniqueCustomers, ytdLyPerf.uniqueCustomers)),
-    orders: formatDelta("vs LY", pctChange(ytdPerf.orders, ytdLyPerf.orders)),
-    ordersClass: deltaClass(pctChange(ytdPerf.orders, ytdLyPerf.orders)),
-    revenueTotal: formatDelta("vs LY", pctChange(ytdPerf.revenueTotal, ytdLyPerf.revenueTotal)),
-    revenueTotalClass: deltaClass(pctChange(ytdPerf.revenueTotal, ytdLyPerf.revenueTotal)),
-  };
-
-  const wkDeltas = {
-    uniqueCustomers: formatDelta("vs LW", pctChange(wkPerf.uniqueCustomers, wkLyPerf.uniqueCustomers)),
-    uniqueCustomersClass: deltaClass(pctChange(wkPerf.uniqueCustomers, wkLyPerf.uniqueCustomers)),
-    orders: formatDelta("vs LW", pctChange(wkPerf.orders, wkLyPerf.orders)),
-    ordersClass: deltaClass(pctChange(wkPerf.orders, wkLyPerf.orders)),
-    revenueTotal: formatDelta("vs LW", pctChange(wkPerf.revenueTotal, wkLyPerf.revenueTotal)),
-    revenueTotalClass: deltaClass(pctChange(wkPerf.revenueTotal, wkLyPerf.revenueTotal)),
-  };
-
-  renderPerfBlock("kpisPrevYear", "kpisPrevYearMore", pyPerf, null);
-  renderPerfBlock("kpisYtd", "kpisYtdMore", ytdPerf, ytdDeltas);
-  renderPerfBlock("kpisWeek", "kpisWeekMore", wkPerf, wkDeltas);
-
-  $("trendPrevYear").textContent = ""; // no trend for previous year
-  $("trendYtd").textContent = "Trend: YTD vs same period last year";
-  $("trendWeek").textContent = "Trend: This week vs last week";
-}
-
-/* =========================
-   INIT
-   ========================= */
-
-$("togglePrevYear").addEventListener("click", ()=>toggleMore({moreId:"morePrevYear", btnId:"togglePrevYear"}));
-$("toggleYtd").addEventListener("click", ()=>toggleMore({moreId:"moreYtd", btnId:"toggleYtd"}));
-$("toggleWeek").addEventListener("click", ()=>toggleMore({moreId:"moreWeek", btnId:"toggleWeek"}));
-
-$("loadBtn").addEventListener("click", loadSelectedDrop);
-$("refreshBtn").addEventListener("click", async ()=>{
-  try{
-    await loadPerformance();
-    await loadSelectedDrop();
-  }catch(e){
-    alert(e.message);
-  }
-});
-
-$("prepBtn").addEventListener("click", renderPrepSummary);
-$("closeModalBtn").addEventListener("click", closeModal);
-$("modal").addEventListener("click", (e)=>{
-  if(e.target.id === "modal") closeModal();
-});
-
-(async function boot(){
-  try{
-    await loadDropsIntoSelect();
-    await loadPerformance();
-    await loadSelectedDrop();
-  }catch(e){
-    alert(e.message);
-  }
-})();
-</script>
-
+    loadData();
+    renderDropSelect();
+    render();
+    attachBoardEvents();
+  </script>
 </body>
 </html>
