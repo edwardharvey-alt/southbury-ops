@@ -5,181 +5,138 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Service Board</title>
 
-<link rel="stylesheet" href="./assets/hearth.css?v=20260306-99">
+  <!-- Theme -->
+  <link rel="stylesheet" href="./assets/hearth.css?v=20260306-1" />
+
+  <!-- Config (your Supabase URL + anon key live here) -->
   <script src="./assets/config.js"></script>
-
-  <style>
-    /* Small, safe overrides (keeps hearth.css as the source of truth) */
-    .muted { opacity: .75; }
-    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    .space { justify-content:space-between; }
-    .pill { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid rgba(0,0,0,.12); background: rgba(0,0,0,.02); }
-    .dot { width:8px; height:8px; border-radius:50%; background:#16a34a; display:inline-block; }
-    .dot.grey { background:#6b7280; }
-    .card { border:1px solid rgba(0,0,0,.12); border-radius:14px; padding:14px; background:#fff; }
-    .grid3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; }
-    @media (max-width: 980px){ .grid3 { grid-template-columns:1fr; } }
-
-    .kpiHead { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
-    .kpiTitle { font-weight:700; }
-    .kpiRange { font-size:12px; opacity:.75; white-space:nowrap; }
-
-    .kpiGrid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:10px; }
-    .kpiItem { padding:10px; border-radius:12px; border:1px solid rgba(0,0,0,.10); background: rgba(0,0,0,.02); }
-    .kpiLabel { font-size:12px; opacity:.75; }
-    .kpiValue { font-size:20px; font-weight:800; margin-top:2px; }
-    .kpiTrend { font-size:12px; margin-top:2px; opacity:.9; }
-    .trendUp { color:#15803d; }
-    .trendDown { color:#b91c1c; }
-    .trendFlat { color:#374151; }
-
-    .showMoreBtn { border:none; background:transparent; text-decoration:underline; cursor:pointer; font-size:12px; opacity:.9; padding:4px 0; }
-
-    .sectionTitle { font-size:13px; font-weight:800; letter-spacing:.2px; margin:6px 0 10px; opacity:.9; }
-    .tableWrap { overflow:auto; border-radius:14px; border:1px solid rgba(0,0,0,.12); }
-    table { width:100%; border-collapse:collapse; font-size:13px; }
-    th, td { padding:10px 10px; border-bottom:1px solid rgba(0,0,0,.08); vertical-align:top; }
-    th { text-align:left; font-size:12px; opacity:.75; letter-spacing:.25px; }
-    tr:last-child td { border-bottom:none; }
-
-    .abtn {
-      display:inline-flex; align-items:center; justify-content:center;
-      min-width:42px; height:28px; padding:0 10px;
-      border-radius:10px;
-      border:1px solid rgba(0,0,0,.15);
-      background: rgba(0,0,0,.03);
-      cursor:pointer;
-      font-weight:700;
-      font-size:11px; /* smaller so "Deliv" fits cleanly */
-    }
-    .abtn:hover { background: rgba(0,0,0,.06); }
-    .abtn.primary { background: rgba(0,0,0,.08); }
-    .abtn.disabled { opacity:.45; cursor:not-allowed; }
-
-    .actionsRow { display:flex; gap:6px; flex-wrap:nowrap; white-space:nowrap; }
-
-    .rightActions { display:flex; gap:10px; align-items:center; }
-    .btn {
-      border-radius:12px; padding:8px 12px;
-      border:1px solid rgba(0,0,0,.15);
-      background: rgba(0,0,0,.03);
-      cursor:pointer; font-weight:700;
-    }
-    .btn:hover { background: rgba(0,0,0,.06); }
-
-    .modalBackdrop {
-      position:fixed; inset:0; background: rgba(0,0,0,.35);
-      display:none; align-items:center; justify-content:center;
-      padding:22px; z-index:9999;
-    }
-    .modal {
-      width:min(920px, 96vw);
-      max-height: 86vh;
-      overflow:auto;
-      background:#fff;
-      border-radius:16px;
-      border:1px solid rgba(0,0,0,.15);
-      padding:14px;
-    }
-    .modalTop { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12px; }
-    .twoCol { display:grid; grid-template-columns: 1.3fr .7fr; gap:12px; }
-    @media (max-width: 980px){ .twoCol { grid-template-columns:1fr; } }
-  </style>
 </head>
 
 <body>
-  <div class="container" style="max-width:1200px; margin:0 auto; padding:18px;">
-    <!-- Top bar -->
-    <div class="row space" style="margin-bottom:14px;">
-      <div class="row" style="gap:10px;">
-        <div style="width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,0,0,.12);background:rgba(0,0,0,.02);font-weight:900;">H</div>
-        <div class="brandTitle"><b>Hearth — Service Board</b></div>
-      </div>
+  <div class="container">
 
-      <div class="rightActions">
-        <div class="row" style="gap:16px;">
-          <a href="./index.html" style="font-weight:800; text-decoration:underline;">Service Board</a>
-          <a href="./drop-manager.html" style="font-weight:800; text-decoration:none;">Drop Studio</a>
-          <a href="./drop-menu.html" style="font-weight:800; text-decoration:none;">Menu Library</a>
-          <a href="./order-entry.html" style="font-weight:800; text-decoration:none;">Order Entry</a>
-        </div>
-        <div class="row" style="gap:10px;">
-          <span class="muted" id="asOfText" style="font-size:12px;">—</span>
-          <button class="btn" id="refreshBtn">Refresh</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Performance -->
-    <div class="card" style="margin-bottom:14px;">
-      <div class="kpiHead">
+    <!-- HEADER -->
+    <div class="card headerBar">
+      <div class="brand">
+        <div class="brandMark">H</div>
         <div>
-          <div class="kpiTitle">Performance</div>
-          <div class="muted" style="font-size:12px;">Previous year • Year to date • This week</div>
+          <div class="brandTitle">Hearth — Service Board</div>
+          <!-- optional subtitle: keep or remove -->
+          <div class="brandSubtitle" id="subtitleText">Operational view (orders, capacity, prep)</div>
         </div>
       </div>
 
-      <div class="grid3">
-        <div class="card" style="padding:12px;">
-          <div class="kpiHead">
-            <div>
-              <div style="font-weight:800;">Previous year</div>
-              <div class="kpiRange" id="rangePrevYear">—</div>
-            </div>
-            <button class="showMoreBtn" id="morePrevYear">Show more</button>
-          </div>
-          <div class="kpiGrid" id="kpisPrevYear"></div>
-          <div class="kpiGrid" id="kpisPrevYearMore" style="display:none; margin-top:10px;"></div>
-        </div>
-
-        <div class="card" style="padding:12px;">
-          <div class="kpiHead">
-            <div>
-              <div style="font-weight:800;">Year to date</div>
-              <div class="kpiRange" id="rangeYtd">—</div>
-            </div>
-            <button class="showMoreBtn" id="moreYtd">Show more</button>
-          </div>
-          <div class="kpiGrid" id="kpisYtd"></div>
-          <div class="kpiGrid" id="kpisYtdMore" style="display:none; margin-top:10px;"></div>
-          <div class="muted" style="font-size:12px; margin-top:10px;" id="trendYtdNote">—</div>
-        </div>
-
-        <div class="card" style="padding:12px;">
-          <div class="kpiHead">
-            <div>
-              <div style="font-weight:800;">This week</div>
-              <div class="kpiRange" id="rangeWeek">—</div>
-            </div>
-            <button class="showMoreBtn" id="moreWeek">Show more</button>
-          </div>
-          <div class="kpiGrid" id="kpisWeek"></div>
-          <div class="kpiGrid" id="kpisWeekMore" style="display:none; margin-top:10px;"></div>
-          <div class="muted" style="font-size:12px; margin-top:10px;" id="trendWeekNote">—</div>
-        </div>
+      <div class="nav">
+        <a class="active" href="index.html">Service Board</a>
+        <a href="drop-manager.html">Drop Studio</a>
+        <a href="drop-menu.html">Menu Library</a>
+        <a href="order-entry.html">Order Entry</a>
+        <button class="btnSmall" id="refreshBtn">Refresh</button>
       </div>
     </div>
 
-    <!-- Execution -->
-    <div class="card">
-      <div class="row space" style="margin-bottom:10px;">
+    <!-- PERFORMANCE -->
+    <div class="card pad" style="margin-top:16px;">
+      <div class="row space">
+        <div>
+          <div class="sectionTitle">Performance</div>
+          <p class="sectionSub">Previous year • Year-to-date • This week</p>
+        </div>
+        <div class="small muted mono" id="asOfText"></div>
+      </div>
+
+      <div class="perfGrid">
+
+        <!-- PREVIOUS YEAR -->
+        <div class="perfCard">
+          <div class="perfHeader">
+            <div class="perfTitle">Previous year</div>
+            <div class="perfRange" id="rangePrevYear">—</div>
+          </div>
+
+          <div class="kpiGrid3" id="kpisPrevYear"></div>
+
+          <div class="kpiMore" id="morePrevYear">
+            <div class="kpiGrid3x2" id="kpisPrevYearMore"></div>
+          </div>
+
+          <div class="perfFooter">
+            <button class="showMoreBtn" id="togglePrevYear">Show more ▸</button>
+            <div class="small muted" id="trendPrevYear"></div>
+          </div>
+        </div>
+
+        <!-- YTD -->
+        <div class="perfCard">
+          <div class="perfHeader">
+            <div class="perfTitle">Year to date</div>
+            <div class="perfRange" id="rangeYtd">—</div>
+          </div>
+
+          <div class="kpiGrid3" id="kpisYtd"></div>
+
+          <div class="kpiMore" id="moreYtd">
+            <div class="kpiGrid3x2" id="kpisYtdMore"></div>
+          </div>
+
+          <div class="perfFooter">
+            <button class="showMoreBtn" id="toggleYtd">Show more ▸</button>
+            <div class="small muted" id="trendYtd"></div>
+          </div>
+        </div>
+
+        <!-- THIS WEEK -->
+        <div class="perfCard">
+          <div class="perfHeader">
+            <div class="perfTitle">This week</div>
+            <div class="perfRange" id="rangeWeek">—</div>
+          </div>
+
+          <div class="kpiGrid3" id="kpisWeek"></div>
+
+          <div class="kpiMore" id="moreWeek">
+            <div class="kpiGrid3x2" id="kpisWeekMore"></div>
+          </div>
+
+          <div class="perfFooter">
+            <button class="showMoreBtn" id="toggleWeek">Show more ▸</button>
+            <div class="small muted" id="trendWeek"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- EXECUTION -->
+    <div class="card pad" style="margin-top:16px;">
+      <div class="row space">
         <div>
           <div class="sectionTitle">Execution</div>
-          <div class="muted" style="font-size:12px;">Select a drop to view orders and (for live drops) move them through statuses.</div>
+          <p class="sectionSub">Select a drop to view orders and (for live drops) move them through statuses.</p>
         </div>
-        <button class="btn" id="prepBtn">Prep summary</button>
+
+        <button class="btnAccent" id="prepBtn">Prep summary</button>
       </div>
 
-      <div class="row" style="margin-bottom:10px;">
-        <label class="muted" style="font-size:12px; font-weight:700;">Drop</label>
-        <select id="dropSelect" style="min-width:420px; max-width:100%; padding:8px 10px; border-radius:12px; border:1px solid rgba(0,0,0,.15); background:#fff;"></select>
-        <button class="btn" id="loadBtn">Load</button>
+      <div class="execBar">
+        <div class="execLeft">
+          <div>
+            <label>Drop</label>
+            <select id="dropSelect"></select>
+          </div>
+          <button class="btnSmall" id="loadBtn">Load</button>
+        </div>
 
-        <div class="pill" id="dropPill" style="margin-left:auto;">
-          <span class="dot grey" id="dropDot"></span>
-          <span id="dropStatusText" style="font-weight:800;">—</span>
-          <span class="muted" id="dropCapText">—</span>
+        <div class="execRight">
+          <span class="pill">
+            <span class="dot" id="dotStatus"></span>
+            <span id="dropStatusText">—</span>
+          </span>
+
+          <span class="pill">
+            <span class="muted">Capacity:</span>
+            <span id="capacityText">—</span>
+          </span>
         </div>
       </div>
 
@@ -188,658 +145,676 @@
           <thead>
             <tr>
               <th style="width:70px;">Time</th>
-              <th style="width:180px;">Customer</th>
+              <th style="width:170px;">Customer</th>
               <th style="width:140px;">Phone</th>
               <th>Capacity items</th>
               <th>Other items</th>
-              <th style="width:90px;">Status</th>
+              <th style="width:110px;">Status</th>
               <th style="width:290px;">Actions</th>
             </tr>
           </thead>
-          <tbody id="orderRows">
-            <tr><td colspan="7" class="muted">Load a drop to see orders.</td></tr>
-          </tbody>
+          <tbody id="orderRows"></tbody>
         </table>
       </div>
-
-      <div class="muted" style="margin-top:10px; font-size:12px;">
-        Notes: “legacy” capacity counts come from older orders without item breakdown; newer orders use order_items + product categories.
-      </div>
     </div>
+
   </div>
 
-  <!-- Prep modal -->
-  <div class="modalBackdrop" id="modalBackdrop">
+  <!-- PREP SUMMARY MODAL -->
+  <div class="modalOverlay" id="modal">
     <div class="modal">
-      <div class="modalTop">
-        <div style="font-weight:900;">Prep summary</div>
-        <button class="btn" id="closeModalBtn">Close</button>
+      <div class="modalHead">
+        <div class="modalTitle">Prep summary — selected drop</div>
+        <button class="btnSmall" id="closeModalBtn">Close</button>
       </div>
-
-      <div class="twoCol">
-        <div class="card" style="padding:12px;">
-          <div style="font-weight:800; margin-bottom:6px;">Capacity category</div>
-          <div class="muted" style="font-size:12px; margin-bottom:10px;">
-            Capacity is driven by items whose product category matches the drop’s <span class="mono">capacity_category</span>.
+      <div class="modalBody">
+        <div class="grid2">
+          <div class="box">
+            <div class="boxTitle">Capacity category</div>
+            <div class="small" id="prepCapacityMeta">—</div>
+            <div class="hr"></div>
+            <ul class="list" id="prepCapacityList"></ul>
           </div>
-          <div id="prepCapacityBlock"></div>
+          <div class="box">
+            <div class="boxTitle">Other items</div>
+            <div class="small">Grouped by category</div>
+            <div class="hr"></div>
+            <div id="prepOtherGroups"></div>
+          </div>
         </div>
-
-        <div class="card" style="padding:12px;">
-          <div style="font-weight:800; margin-bottom:6px;">Other items (grouped)</div>
-          <div id="prepOtherBlock"></div>
-        </div>
-      </div>
-
-      <div class="card" style="padding:12px; margin-top:12px;">
-        <div style="font-weight:800; margin-bottom:6px;">All items (flat list)</div>
-        <div id="prepAllBlock"></div>
       </div>
     </div>
   </div>
 
 <script>
-  // --- Config ---
-  const SUPABASE_URL = window.HEARTH_CONFIG?.SUPABASE_URL;
-  const SUPABASE_ANON_KEY = window.HEARTH_CONFIG?.SUPABASE_ANON_KEY;
+/* =========================
+   Service Board — Hearth
+   Uses Supabase REST via config.js:
+   window.HEARTH_CONFIG = { SUPABASE_URL, SUPABASE_ANON_KEY }
+   ========================= */
 
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    alert("Missing SUPABASE config. Check assets/config.js (window.HEARTH_CONFIG).");
+const SUPABASE_URL = window.HEARTH_CONFIG?.SUPABASE_URL;
+const SUPABASE_ANON_KEY = window.HEARTH_CONFIG?.SUPABASE_ANON_KEY;
+
+if(!SUPABASE_URL || !SUPABASE_ANON_KEY){
+  alert("Missing SUPABASE config. Check assets/config.js (window.HEARTH_CONFIG).");
+}
+
+const headers = {
+  apikey: SUPABASE_ANON_KEY,
+  Authorization: "Bearer " + SUPABASE_ANON_KEY,
+  "Content-Type": "application/json"
+};
+
+const $ = (id) => document.getElementById(id);
+
+function fmtMoneyPence(p){
+  const v = (Number(p||0)/100);
+  return v.toLocaleString("en-GB",{style:"currency",currency:"GBP"});
+}
+function fmtInt(n){ return (Number(n||0)).toLocaleString("en-GB"); }
+function fmtPct(x){
+  if(x === null || x === undefined || Number.isNaN(x)) return "—";
+  const v = Number(x);
+  return (v).toFixed(1) + "%";
+}
+function toISO(d){ return d.toISOString(); }
+function startOfWeekMon(d){
+  const x = new Date(d);
+  const day = x.getDay(); // 0 Sun ... 1 Mon
+  const diff = (day === 0 ? -6 : 1 - day);
+  x.setDate(x.getDate() + diff);
+  x.setHours(0,0,0,0);
+  return x;
+}
+function endOfWeekMon(d){
+  const s = startOfWeekMon(d);
+  const e = new Date(s);
+  e.setDate(e.getDate()+7);
+  e.setHours(0,0,0,0);
+  return e;
+}
+function yearRange(y){
+  const s = new Date(Date.UTC(y,0,1,0,0,0));
+  const e = new Date(Date.UTC(y+1,0,1,0,0,0));
+  return {start:s, end:e};
+}
+function ytdRange(now){
+  const y = now.getFullYear();
+  const s = new Date(Date.UTC(y,0,1,0,0,0));
+  const e = new Date(now);
+  return {start:s, end:e};
+}
+
+async function sbGet(path){
+  const url = `${SUPABASE_URL}/rest/v1/${path}`;
+  const res = await fetch(url, { headers });
+  if(!res.ok){
+    const t = await res.text();
+    throw new Error(`GET ${path} failed: ${res.status} ${t}`);
+  }
+  return res.json();
+}
+
+async function sbPatch(path, body){
+  const url = `${SUPABASE_URL}/rest/v1/${path}`;
+  const res = await fetch(url, { method:"PATCH", headers, body: JSON.stringify(body) });
+  if(!res.ok){
+    const t = await res.text();
+    throw new Error(`PATCH ${path} failed: ${res.status} ${t}`);
+  }
+  return true;
+}
+
+function statusDotClass(dropStatus){
+  const s = (dropStatus||"").toLowerCase();
+  if(s.includes("live")) return "live";
+  if(s.includes("draft")) return "draft";
+  if(s.includes("closed")) return "closed";
+  return "draft";
+}
+
+function renderKpiTile({label, value, deltaText=null, deltaClass=null}){
+  const div = document.createElement("div");
+  div.className = "kpiTile";
+  div.innerHTML = `
+    <div class="kpiLabel">${label}</div>
+    <div>
+      <div class="kpiValue">${value}</div>
+      <div class="kpiDelta ${deltaClass||""}">${deltaText ? deltaText : "—"}</div>
+    </div>
+  `;
+  return div;
+}
+
+function clear(el){ el.innerHTML = ""; }
+
+function toggleMore(section){
+  const more = $(section.moreId);
+  const btn = $(section.btnId);
+  const isOpen = more.classList.contains("open");
+  if(isOpen){
+    more.classList.remove("open");
+    btn.textContent = "Show more ▸";
+  }else{
+    more.classList.add("open");
+    btn.textContent = "Show less ▾";
+  }
+}
+
+async function loadDropsIntoSelect(){
+  const drops = await sbGet(`drops?select=id,name,status,cutoff_time,opens_at,closes_at,capacity_category,capacity_units_total&order=cutoff_time.desc`);
+  const sel = $("dropSelect");
+  sel.innerHTML = "";
+  for(const d of drops){
+    const opt = document.createElement("option");
+    const cut = d.cutoff_time ? new Date(d.cutoff_time).toLocaleString("en-GB") : "—";
+    opt.value = d.id;
+    opt.textContent = `${d.name} • ${d.status} • cutoff ${cut}`;
+    sel.appendChild(opt);
+  }
+  if(drops.length){
+    sel.value = drops[0].id;
+  }
+  return drops;
+}
+
+async function fetchOrdersForDrop(dropId){
+  // include embed of drops for capacity_category if needed later
+  const orders = await sbGet(`orders?drop_id=eq.${dropId}&select=id,status,created_at,customer_name,customer_phone,customer_postcode,pizzas&order=created_at.asc`);
+
+  const orderIds = orders.map(o => o.id);
+  let items = [];
+  if(orderIds.length){
+    // embed products for name/category/capacity_units
+    const inList = orderIds.join(",");
+    items = await sbGet(`order_items?order_id=in.(${inList})&select=order_id,qty,price_pence,product:products(name,category,capacity_units)&order=created_at.asc`);
+  }
+  return { orders, items };
+}
+
+function buildOrderItemMaps(items){
+  const byOrder = new Map();
+  for(const it of items){
+    const key = it.order_id;
+    if(!byOrder.has(key)) byOrder.set(key, []);
+    byOrder.get(key).push(it);
+  }
+  return byOrder;
+}
+
+function groupItemsForDrop(drop, orderItems){
+  const capCat = (drop.capacity_category || "pizza").toLowerCase();
+
+  const capList = [];
+  const otherGroups = new Map(); // category -> (name -> qty)
+
+  let usedUnits = 0;
+
+  for(const it of orderItems){
+    const p = it.product || {};
+    const cat = (p.category || "other").toLowerCase();
+    const name = p.name || "Item";
+    const qty = Number(it.qty || 0);
+    const capUnits = Number(p.capacity_units || 1);
+
+    if(cat === capCat){
+      capList.push({name, qty});
+      usedUnits += qty * capUnits;
+    }else{
+      if(!otherGroups.has(cat)) otherGroups.set(cat, new Map());
+      const m = otherGroups.get(cat);
+      m.set(name, (m.get(name)||0) + qty);
+    }
   }
 
-  const headers = {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: "Bearer " + SUPABASE_ANON_KEY,
-    "Content-Type": "application/json"
+  // consolidate capacity list
+  const capMap = new Map();
+  for(const x of capList){
+    capMap.set(x.name, (capMap.get(x.name)||0) + x.qty);
+  }
+  const capOut = Array.from(capMap.entries()).map(([name,qty])=>({name,qty})).sort((a,b)=>a.name.localeCompare(b.name));
+
+  const otherOut = Array.from(otherGroups.entries()).map(([cat, m]) => {
+    const items = Array.from(m.entries()).map(([name,qty])=>({name,qty})).sort((a,b)=>a.name.localeCompare(b.name));
+    return {cat, items};
+  }).sort((a,b)=>a.cat.localeCompare(b.cat));
+
+  return { capCat, usedUnits, capOut, otherOut };
+}
+
+function summarizeOrderLine(drop, order, orderItems){
+  const capCat = (drop.capacity_category || "pizza").toLowerCase();
+
+  // capacity items text
+  const capParts = [];
+  const otherParts = [];
+
+  let sawAnyItems = false;
+
+  for(const it of orderItems){
+    const p = it.product || {};
+    const cat = (p.category || "other").toLowerCase();
+    const name = p.name || "Item";
+    const qty = Number(it.qty||0);
+    if(!qty) continue;
+    sawAnyItems = true;
+
+    if(cat === capCat){
+      capParts.push(`${name} x${qty}`);
+    }else{
+      otherParts.push(`${name} x${qty}`);
+    }
+  }
+
+  // legacy fallback (orders.pizzas) if no order_items exist
+  if(!sawAnyItems && Number(order.pizzas)){
+    capParts.push(`${capCat} x${Number(order.pizzas)} (legacy)`);
+  }
+
+  return {
+    capText: capParts.length ? capParts.join(", ") : "—",
+    otherText: otherParts.length ? otherParts.join(", ") : "—"
   };
+}
 
-  async function sbGet(path) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
-  }
+function renderOrdersTable(drop, orders, items){
+  const byOrder = buildOrderItemMaps(items);
+  const tbody = $("orderRows");
+  tbody.innerHTML = "";
 
-  async function sbPost(path, body) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-      method: "POST",
-      headers: { ...headers, Prefer: "return=representation" },
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
-  }
+  for(const o of orders){
+    const its = byOrder.get(o.id) || [];
+    const when = o.created_at ? new Date(o.created_at) : null;
+    const timeText = when ? when.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}) : "—";
 
-  async function sbPatch(path, body) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-      method: "PATCH",
-      headers,
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return true;
-  }
+    const sum = summarizeOrderLine(drop, o, its);
 
-  // --- Date helpers (UTC-ish, but stable) ---
-  function iso(dt) { return dt.toISOString(); }
-  function startOfYearUTC(y) { return new Date(Date.UTC(y, 0, 1, 0, 0, 0)); }
-  function endOfYearUTC(y) { return new Date(Date.UTC(y, 11, 31, 23, 59, 59)); }
-  function startOfWeekUTC(d) {
-    const dt = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0,0,0));
-    const day = dt.getUTCDay(); // Sun=0
-    const diff = (day === 0 ? -6 : 1 - day); // Monday start
-    dt.setUTCDate(dt.getUTCDate() + diff);
-    return dt;
-  }
-  function endOfWeekUTC(d) {
-    const s = startOfWeekUTC(d);
-    const e = new Date(s);
-    e.setUTCDate(e.getUTCDate() + 6);
-    e.setUTCHours(23,59,59,999);
-    return e;
-  }
-  function fmtDate(d) {
-    const dd = String(d.getUTCDate()).padStart(2,"0");
-    const mm = String(d.getUTCMonth()+1).padStart(2,"0");
-    const yy = d.getUTCFullYear();
-    return `${dd}/${mm}/${yy}`;
-  }
+    const tr = document.createElement("tr");
 
-  function money(pence) {
-    const v = (pence || 0) / 100;
-    return v.toLocaleString("en-GB", { style:"currency", currency:"GBP" });
-  }
+    const statusBadge = `<span class="badgeStatus">${o.status}</span>`;
 
-  function pct(v) {
-    if (v === null || v === undefined || Number.isNaN(v)) return "—";
-    return `${(v*100).toFixed(1)}%`;
-  }
-
-  function trendText(curr, prev) {
-    if (!prev || prev === 0) return { text:"—", cls:"trendFlat" };
-    const chg = (curr - prev) / prev;
-    const cls = chg > 0.001 ? "trendUp" : (chg < -0.001 ? "trendDown" : "trendFlat");
-    const arrow = chg > 0.001 ? "▲" : (chg < -0.001 ? "▼" : "•");
-    return { text:`${arrow} ${(chg*100).toFixed(1)}%`, cls };
-  }
-
-  // --- Data model ---
-  // We compute KPIs from orders + order_items + products
-  // Fallback for legacy: orders.pizzas counts as capacity qty (units=1)
-
-  async function loadDrops() {
-    const drops = await sbGet(`drops?select=id,name,status,cutoff_time,capacity_category,capacity_units_total&order=cutoff_time.desc`);
-    const sel = document.getElementById("dropSelect");
-    sel.innerHTML = "";
-    for (const d of drops) {
-      const label = `${d.name} · ${d.status} · cutoff ${fmtDate(new Date(d.cutoff_time))}`;
-      const opt = document.createElement("option");
-      opt.value = d.id;
-      opt.textContent = label;
-      sel.appendChild(opt);
-    }
-    return drops;
-  }
-
-  async function fetchOrdersForDrop(dropId) {
-    // bring order items + product details for richer rendering
-    const orders = await sbGet(`orders?select=id,drop_id,customer_name,customer_phone,customer_postcode,status,created_at,pizzas&drop_id=eq.${dropId}&order=created_at.asc`);
-    const orderIds = orders.map(o => o.id);
-    let items = [];
-    if (orderIds.length) {
-      const inList = orderIds.map(id => `"${id}"`).join(",");
-      items = await sbGet(`order_items?select=order_id,product_id,qty,price_pence,created_at,products(name,category,price_pence,capacity_units)&order_id=in.(${inList})`);
-    }
-    return { orders, items };
-  }
-
-  function groupItemsByOrder(items) {
-    const m = new Map();
-    for (const it of items) {
-      if (!m.has(it.order_id)) m.set(it.order_id, []);
-      m.get(it.order_id).push(it);
-    }
-    return m;
-  }
-
-  function stringifyItemList(items) {
-    // items: [{name, qty}]
-    if (!items || !items.length) return "—";
-    return items.map(x => `${x.name} x${x.qty}`).join(", ");
-  }
-
-  function splitCapacityAndOther(order, orderItems, drop) {
-    const capCat = (drop.capacity_category || "").toLowerCase();
-    const cap = [];
-    const oth = [];
-    if (orderItems && orderItems.length) {
-      for (const it of orderItems) {
-        const p = it.products || {};
-        const name = p.name || "Item";
-        const cat = (p.category || "").toLowerCase();
-        const qty = it.qty || 1;
-        if (cat === capCat) cap.push({ name, qty });
-        else oth.push({ name, qty, cat: p.category || "Other" });
-      }
-      return { cap, oth, legacyCapQty: 0 };
-    }
-    // Legacy fallback:
-    const legacyQty = Number(order.pizzas || 0);
-    if (legacyQty > 0) cap.push({ name: drop.capacity_category, qty: legacyQty });
-    return { cap, oth: [], legacyCapQty: legacyQty };
-  }
-
-  async function setStatus(orderId, status) {
-    await sbPatch(`orders?id=eq.${orderId}`, { status });
-  }
-
-  function isLive(drop) {
-    return (drop.status || "").toLowerCase() === "live";
-  }
-
-  function statusPill(drop) {
-    const st = (drop.status || "").toLowerCase();
-    const dot = document.getElementById("dropDot");
-    if (st === "live") dot.className = "dot";
-    else dot.className = "dot grey";
-  }
-
-  // --- Prep summary ---
-  function renderPrep(drop, orders, itemsByOrder) {
-    const capCat = (drop.capacity_category || "").toLowerCase();
-
-    // Aggregate
-    const capAgg = new Map(); // name -> qty
-    const otherAgg = new Map(); // cat -> Map(name->qty)
-    const allAgg = new Map(); // name -> qty
-
-    let capUnitsUsed = 0;
-    let capUnitsTotal = Number(drop.capacity_units_total || 0);
-
-    for (const o of orders) {
-      const its = itemsByOrder.get(o.id) || [];
-      if (its.length) {
-        for (const it of its) {
-          const p = it.products || {};
-          const name = p.name || "Item";
-          const qty = Number(it.qty || 1);
-          const cat = (p.category || "Other");
-          const catLc = (cat || "").toLowerCase();
-
-          allAgg.set(name, (allAgg.get(name) || 0) + qty);
-
-          if (catLc === capCat) {
-            capAgg.set(name, (capAgg.get(name) || 0) + qty);
-            const units = Number(p.capacity_units || 1);
-            capUnitsUsed += units * qty;
-          } else {
-            if (!otherAgg.has(cat)) otherAgg.set(cat, new Map());
-            const m = otherAgg.get(cat);
-            m.set(name, (m.get(name) || 0) + qty);
-          }
-        }
-      } else {
-        // legacy fallback
-        const legacyQty = Number(o.pizzas || 0);
-        if (legacyQty > 0) {
-          const name = drop.capacity_category;
-          capAgg.set(name, (capAgg.get(name) || 0) + legacyQty);
-          allAgg.set(name, (allAgg.get(name) || 0) + legacyQty);
-          capUnitsUsed += legacyQty; // assume 1 unit each for legacy
-        }
-      }
-    }
-
-    const capPct = capUnitsTotal > 0 ? (capUnitsUsed / capUnitsTotal) : null;
-
-    const capBlock = document.getElementById("prepCapacityBlock");
-    capBlock.innerHTML = `
-      <div class="row" style="gap:12px; margin-bottom:10px;">
-        <div class="pill"><b>Category:</b> ${drop.capacity_category || "—"}</div>
-        <div class="pill"><b>Used:</b> ${capUnitsUsed}/${capUnitsTotal || "—"} (${capPct===null?"—":(capPct*100).toFixed(1)}%)</div>
-      </div>
-      <div>${renderAggList(capAgg)}</div>
+    tr.innerHTML = `
+      <td class="mono muted">${timeText}</td>
+      <td><strong>${o.customer_name || "—"}</strong></td>
+      <td class="mono">${o.customer_phone || "—"}</td>
+      <td>${sum.capText}</td>
+      <td>${sum.otherText}</td>
+      <td>${statusBadge}</td>
+      <td>
+        <div class="actionsRow">
+          <button class="actionBtn primary" data-id="${o.id}" data-status="confirmed">Conf</button>
+          <button class="actionBtn" data-id="${o.id}" data-status="baking">Bake</button>
+          <button class="actionBtn" data-id="${o.id}" data-status="ready">Ready</button>
+          <!-- Button label Delivered, but DB status stays 'collected' (your constraint set) -->
+          <button class="actionBtn" data-id="${o.id}" data-status="collected">Deliv</button>
+          <button class="actionBtn" data-id="${o.id}" data-status="cancelled">Canc</button>
+        </div>
+      </td>
     `;
 
-    const otherBlock = document.getElementById("prepOtherBlock");
-    if (otherAgg.size === 0) {
-      otherBlock.innerHTML = `<div class="muted">No non-capacity items in this drop.</div>`;
-    } else {
-      let html = "";
-      for (const [cat, m] of otherAgg.entries()) {
-        html += `<div style="margin-bottom:10px;"><b>${cat}</b><div style="margin-top:6px;">${renderAggList(m)}</div></div>`;
+    tbody.appendChild(tr);
+  }
+
+  // wire buttons
+  tbody.querySelectorAll("button[data-id]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-id");
+      const st = btn.getAttribute("data-status");
+      try{
+        await sbPatch(`orders?id=eq.${id}`, { status: st });
+        await loadSelectedDrop(); // refresh view
+      }catch(e){
+        alert(e.message);
       }
-      otherBlock.innerHTML = html;
-    }
-
-    const allBlock = document.getElementById("prepAllBlock");
-    allBlock.innerHTML = renderAggList(allAgg);
-  }
-
-  function renderAggList(map) {
-    const entries = [...map.entries()].sort((a,b)=> b[1]-a[1]);
-    if (!entries.length) return `<div class="muted">No items.</div>`;
-    return `<div style="display:grid; grid-template-columns: 1fr; gap:6px;">
-      ${entries.map(([name, qty]) => `
-        <div class="row space" style="border:1px solid rgba(0,0,0,.10); background:rgba(0,0,0,.02); border-radius:12px; padding:8px 10px;">
-          <div style="font-weight:800;">${escapeHtml(name)}</div>
-          <div class="pill"><b>x</b> ${qty}</div>
-        </div>`).join("")}
-    </div>`;
-  }
-
-  function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-
-  // --- Performance calculations ---
-  async function fetchRangeOrdersItems(fromDt, toDt) {
-    // pull orders in window, plus items
-    const orders = await sbGet(
-      `orders?select=id,drop_id,customer_phone,status,created_at,pizzas&created_at=gte.${encodeURIComponent(iso(fromDt))}&created_at=lte.${encodeURIComponent(iso(toDt))}`
-    );
-
-    const orderIds = orders.map(o => o.id);
-    let items = [];
-    if (orderIds.length) {
-      const inList = orderIds.map(id => `"${id}"`).join(",");
-      items = await sbGet(`order_items?select=order_id,qty,price_pence,products(name,category,price_pence,capacity_units)&order_id=in.(${inList})`);
-    }
-    return { orders, items };
-  }
-
-  async function fetchDropsMap() {
-    const drops = await sbGet(`drops?select=id,capacity_category,capacity_units_total`);
-    const m = new Map();
-    for (const d of drops) m.set(d.id, d);
-    return m;
-  }
-
-  function calcKpisForWindow(windowData, dropsMap) {
-    const { orders, items } = windowData;
-    const itemsByOrder = new Map();
-    for (const it of items) {
-      if (!itemsByOrder.has(it.order_id)) itemsByOrder.set(it.order_id, []);
-      itemsByOrder.get(it.order_id).push(it);
-    }
-
-    const uniquePhones = new Set();
-    let revenueTotal = 0;
-    let revenueCap = 0;
-    let revenueOther = 0;
-    let itemsCount = 0;
-    let cancelCount = 0;
-
-    // Capacity utilisation is only meaningful per-drop; we approximate as:
-    // total capacity units used across orders / total capacity units_total across relevant drops
-    let capUnitsUsed = 0;
-    let capUnitsTotal = 0;
-
-    // Repeat % = (orders from phones with >1 order) / total orders
-    const phoneCounts = new Map();
-
-    for (const o of orders) {
-      const phone = (o.customer_phone || "").trim();
-      if (phone) uniquePhones.add(phone);
-      phoneCounts.set(phone, (phoneCounts.get(phone) || 0) + 1);
-
-      if ((o.status || "").toLowerCase() === "cancelled") cancelCount++;
-
-      const drop = dropsMap.get(o.drop_id);
-      const capCat = (drop?.capacity_category || "").toLowerCase();
-      const its = itemsByOrder.get(o.id) || [];
-
-      // Sum revenue from order_items if present, else 0 (legacy doesn’t have prices)
-      if (its.length) {
-        for (const it of its) {
-          const qty = Number(it.qty || 1);
-          const p = it.products || {};
-          const pPence = (it.price_pence !== null && it.price_pence !== undefined) ? Number(it.price_pence) : Number(p.price_pence || 0);
-          const line = qty * pPence;
-          revenueTotal += line;
-          itemsCount += qty;
-
-          const cat = (p.category || "").toLowerCase();
-          if (cat && capCat && cat === capCat) {
-            revenueCap += line;
-            const units = Number(p.capacity_units || 1);
-            capUnitsUsed += units * qty;
-          } else {
-            revenueOther += line;
-          }
-        }
-      } else {
-        // legacy capacity usage only
-        const legacyQty = Number(o.pizzas || 0);
-        if (legacyQty > 0) capUnitsUsed += legacyQty;
-      }
-
-      // capacity total: count each drop once (avoid multiplying by number of orders)
-      if (drop && !drop.__counted) {
-        drop.__counted = true;
-        const tot = Number(drop.capacity_units_total || 0);
-        if (tot > 0) capUnitsTotal += tot;
-      }
-    }
-
-    // clean temp flags
-    for (const d of dropsMap.values()) delete d.__counted;
-
-    const ordersTotal = orders.length;
-    const uniqueCustomers = uniquePhones.size;
-    const aov = ordersTotal > 0 ? revenueTotal / ordersTotal : 0;
-    const itemsPerOrder = ordersTotal > 0 ? itemsCount / ordersTotal : 0;
-    const cancelPct = ordersTotal > 0 ? cancelCount / ordersTotal : 0;
-
-    let repeatOrders = 0;
-    for (const o of orders) {
-      const phone = (o.customer_phone || "").trim();
-      if (phone && (phoneCounts.get(phone) || 0) > 1) repeatOrders++;
-    }
-    const repeatPct = ordersTotal > 0 ? repeatOrders / ordersTotal : 0;
-
-    const capUtil = (capUnitsTotal > 0) ? (capUnitsUsed / capUnitsTotal) : null;
-
-    return {
-      ordersTotal,
-      uniqueCustomers,
-      revenueTotal,
-      revenueCap,
-      revenueOther,
-      aov,
-      itemsPerOrder,
-      repeatPct,
-      cancelPct,
-      capUnitsUsed,
-      capUtil
-    };
-  }
-
-  function kpiBox(label, value, trend=null) {
-    const t = trend ? `<div class="kpiTrend ${trend.cls}">${trend.text}</div>` : `<div class="kpiTrend muted">—</div>`;
-    return `
-      <div class="kpiItem">
-        <div class="kpiLabel">${label}</div>
-        <div class="kpiValue">${value}</div>
-        ${t}
-      </div>
-    `;
-  }
-
-  function renderKpis(elIdTop, elIdMore, kpis, trends=null) {
-    // top 3 always-on:
-    // Unique customers, Orders, Revenue total
-    const t = trends || {};
-    document.getElementById(elIdTop).innerHTML = [
-      kpiBox("Unique customers", String(kpis.uniqueCustomers), t.uniqueCustomers || null),
-      kpiBox("Orders", String(kpis.ordersTotal), t.ordersTotal || null),
-      kpiBox("Revenue (total)", money(kpis.revenueTotal), t.revenueTotal || null),
-    ].join("");
-
-    // additional 6:
-    document.getElementById(elIdMore).innerHTML = [
-      kpiBox("Revenue (capacity)", money(kpis.revenueCap)),
-      kpiBox("Revenue (other)", money(kpis.revenueOther)),
-      kpiBox("AOV", money(kpis.aov)),
-      kpiBox("Items / order", kpis.itemsPerOrder.toFixed(1)),
-      kpiBox("Repeat %", pct(kpis.repeatPct)),
-      kpiBox("Cancel %", pct(kpis.cancelPct)),
-    ].join("");
-  }
-
-  function toggleMore(btnId, moreId) {
-    const btn = document.getElementById(btnId);
-    const more = document.getElementById(moreId);
-    btn.addEventListener("click", () => {
-      const open = more.style.display !== "none";
-      more.style.display = open ? "none" : "grid";
-      btn.textContent = open ? "Show more" : "Show less";
     });
+  });
+}
+
+async function loadSelectedDrop(){
+  const dropId = $("dropSelect").value;
+  if(!dropId) return;
+
+  const [drop] = await sbGet(`drops?id=eq.${dropId}&select=id,name,status,cutoff_time,capacity_category,capacity_units_total`);
+  if(!drop) return;
+
+  $("dropStatusText").textContent = drop.status || "—";
+  const dot = $("dotStatus");
+  dot.className = "dot " + statusDotClass(drop.status);
+
+  $("capacityText").textContent = `${drop.capacity_category || "pizza"} • ${drop.capacity_units_total || 0} units`;
+
+  const {orders, items} = await fetchOrdersForDrop(dropId);
+  renderOrdersTable(drop, orders, items);
+
+  // Prep summary data cache for modal
+  window.__hearthDrop = drop;
+  window.__hearthOrders = orders;
+  window.__hearthItems = items;
+}
+
+function openModal(){ $("modal").classList.add("open"); }
+function closeModal(){ $("modal").classList.remove("open"); }
+
+function renderPrepSummary(){
+  const drop = window.__hearthDrop;
+  const items = window.__hearthItems || [];
+  const orders = window.__hearthOrders || [];
+
+  if(!drop){
+    alert("Load a drop first.");
+    return;
   }
 
-  // --- Main render ---
-  let dropsCache = [];
-  let dropsMap = new Map();
-  let currentDrop = null;
+  // Use all items; if none, attempt to synthesize from legacy orders.pizzas
+  let effectiveItems = items.slice();
 
-  async function refreshAll() {
-    document.getElementById("asOfText").textContent = `As of ${fmtDate(new Date())}`;
-
-    dropsCache = await loadDrops();
-    dropsMap = await fetchDropsMap();
-
-    await renderPerformance();
-
-    // auto load selected drop
-    await loadSelectedDrop();
-  }
-
-  async function renderPerformance() {
-    const now = new Date();
-    const thisYear = now.getUTCFullYear();
-    const lastYear = thisYear - 1;
-
-    // Previous calendar year
-    const prevFrom = startOfYearUTC(lastYear);
-    const prevTo = endOfYearUTC(lastYear);
-
-    // YTD
-    const ytdFrom = startOfYearUTC(thisYear);
-    const ytdTo = now;
-
-    // LY same period for YTD
-    const lyFrom = startOfYearUTC(lastYear);
-    const lyTo = new Date(Date.UTC(lastYear, now.getUTCMonth(), now.getUTCDate(), 23,59,59));
-
-    // This week / last week
-    const wkFrom = startOfWeekUTC(now);
-    const wkTo = endOfWeekUTC(now);
-
-    const lastWkTo = new Date(wkFrom);
-    lastWkTo.setUTCSeconds(-1); // one second before this week starts
-    const lastWkFrom = startOfWeekUTC(lastWkTo);
-    const lastWkEnd = endOfWeekUTC(lastWkTo);
-
-    document.getElementById("rangePrevYear").textContent = `${fmtDate(prevFrom)} → ${fmtDate(prevTo)}`;
-    document.getElementById("rangeYtd").textContent = `${fmtDate(ytdFrom)} → ${fmtDate(ytdTo)}`;
-    document.getElementById("rangeWeek").textContent = `${fmtDate(wkFrom)} → ${fmtDate(wkTo)}`;
-
-    const [dPrev, dYtd, dLySame, dWk, dLastWk] = await Promise.all([
-      fetchRangeOrdersItems(prevFrom, prevTo),
-      fetchRangeOrdersItems(ytdFrom, ytdTo),
-      fetchRangeOrdersItems(lyFrom, lyTo),
-      fetchRangeOrdersItems(wkFrom, wkTo),
-      fetchRangeOrdersItems(lastWkFrom, lastWkEnd)
-    ]);
-
-    const kPrev = calcKpisForWindow(dPrev, dropsMap);
-    const kYtd = calcKpisForWindow(dYtd, dropsMap);
-    const kLy = calcKpisForWindow(dLySame, dropsMap);
-    const kWk = calcKpisForWindow(dWk, dropsMap);
-    const kLW = calcKpisForWindow(dLastWk, dropsMap);
-
-    // Trends
-    const ytdTr = {
-      ordersTotal: trendText(kYtd.ordersTotal, kLy.ordersTotal),
-      uniqueCustomers: trendText(kYtd.uniqueCustomers, kLy.uniqueCustomers),
-      revenueTotal: trendText(kYtd.revenueTotal, kLy.revenueTotal)
-    };
-
-    const wkTr = {
-      ordersTotal: trendText(kWk.ordersTotal, kLW.ordersTotal),
-      uniqueCustomers: trendText(kWk.uniqueCustomers, kLW.uniqueCustomers),
-      revenueTotal: trendText(kWk.revenueTotal, kLW.revenueTotal)
-    };
-
-    renderKpis("kpisPrevYear", "kpisPrevYearMore", kPrev, null);
-    renderKpis("kpisYtd", "kpisYtdMore", kYtd, ytdTr);
-    renderKpis("kpisWeek", "kpisWeekMore", kWk, wkTr);
-
-    document.getElementById("trendYtdNote").textContent =
-      `Trend: YTD vs same period last year (${fmtDate(lyFrom)} → ${fmtDate(lyTo)})`;
-
-    document.getElementById("trendWeekNote").textContent =
-      `Trend: This week vs last week (${fmtDate(lastWkFrom)} → ${fmtDate(lastWkEnd)})`;
-
-    toggleMore("morePrevYear", "kpisPrevYearMore");
-    toggleMore("moreYtd", "kpisYtdMore");
-    toggleMore("moreWeek", "kpisWeekMore");
-  }
-
-  async function loadSelectedDrop() {
-    const dropId = document.getElementById("dropSelect").value;
-    if (!dropId) return;
-    const drop = dropsCache.find(d => d.id === dropId) || null;
-    currentDrop = drop;
-
-    // status pill
-    document.getElementById("dropStatusText").textContent = drop ? drop.status : "—";
-    document.getElementById("dropCapText").textContent = drop ? `Capacity: ${drop.capacity_category} • ${drop.capacity_units_total ?? "—"} units` : "—";
-    statusPill(drop || {status:""});
-
-    // Orders
-    const { orders, items } = await fetchOrdersForDrop(dropId);
-    const itemsByOrder = groupItemsByOrder(items);
-
-    renderOrders(drop, orders, itemsByOrder);
-
-    // Prep modal uses same data
-    window.__lastLoaded = { drop, orders, itemsByOrder };
-  }
-
-  function renderOrders(drop, orders, itemsByOrder) {
-    const tbody = document.getElementById("orderRows");
-    if (!orders.length) {
-      tbody.innerHTML = `<tr><td colspan="7" class="muted">No orders for this drop.</td></tr>`;
-      return;
+  if(effectiveItems.length === 0){
+    // synthesize capacity items from legacy pizzas
+    for(const o of orders){
+      if(Number(o.pizzas)){
+        effectiveItems.push({
+          order_id: o.id,
+          qty: Number(o.pizzas),
+          price_pence: null,
+          product: { name: drop.capacity_category + " (legacy)", category: drop.capacity_category, capacity_units: 1 }
+        });
+      }
     }
+  }
 
-    const live = drop && isLive(drop);
+  const grouped = groupItemsForDrop(drop, effectiveItems);
+  const totalUnits = Number(drop.capacity_units_total || 0);
+  const used = grouped.usedUnits;
+  const pct = totalUnits ? (used/totalUnits*100) : null;
 
-    tbody.innerHTML = orders.map(o => {
-      const time = new Date(o.created_at);
-      const hh = String(time.getHours()).padStart(2,"0");
-      const mm = String(time.getMinutes()).padStart(2,"0");
+  $("prepCapacityMeta").innerHTML =
+    `<strong>Category:</strong> ${grouped.capCat}<br/>
+     <strong>Capacity:</strong> ${used}/${totalUnits} used (${pct === null ? "—" : pct.toFixed(1) + "%"})`;
 
-      const { cap, oth } = splitCapacityAndOther(o, itemsByOrder.get(o.id) || [], drop);
+  // capacity list
+  const capUl = $("prepCapacityList");
+  capUl.innerHTML = "";
+  if(grouped.capOut.length === 0){
+    const li = document.createElement("li");
+    li.textContent = "—";
+    capUl.appendChild(li);
+  }else{
+    for(const it of grouped.capOut){
+      const li = document.createElement("li");
+      li.textContent = `${it.name} x${it.qty}`;
+      capUl.appendChild(li);
+    }
+  }
 
-      // Group other items by category is handled in prep; here we keep flat.
-      const capText = stringifyItemList(cap);
-      const othText = stringifyItemList(oth.map(x => ({name: x.name, qty: x.qty})));
+  // other groups
+  const otherDiv = $("prepOtherGroups");
+  otherDiv.innerHTML = "";
 
-      const st = (o.status || "placed").toLowerCase();
-      const disabled = !live ? "disabled" : "";
-
-      return `
-        <tr>
-          <td>${hh}:${mm}</td>
-          <td><b>${escapeHtml(o.customer_name)}</b></td>
-          <td>${escapeHtml(o.customer_phone)}</td>
-          <td>${escapeHtml(capText)}</td>
-          <td>${escapeHtml(othText)}</td>
-          <td style="font-weight:800;">${escapeHtml(st)}</td>
-          <td>
-            <div class="actionsRow">
-              <button class="abtn ${st==='confirmed'?'primary':''} ${disabled}" ${disabled} onclick="onSetStatus('${o.id}','confirmed')">Conf</button>
-              <button class="abtn ${st==='baking'?'primary':''} ${disabled}" ${disabled} onclick="onSetStatus('${o.id}','baking')">Bake</button>
-              <button class="abtn ${st==='ready'?'primary':''} ${disabled}" ${disabled} onclick="onSetStatus('${o.id}','ready')">Ready</button>
-              <button class="abtn ${st==='collected'?'primary':''} ${disabled}" ${disabled} onclick="onSetStatus('${o.id}','collected')">Deliv</button>
-              <button class="abtn ${st==='cancelled'?'primary':''} ${disabled}" ${disabled} onclick="onSetStatus('${o.id}','cancelled')">Canc</button>
-            </div>
-          </td>
-        </tr>
+  if(grouped.otherOut.length === 0){
+    otherDiv.innerHTML = `<div class="small muted">—</div>`;
+  }else{
+    for(const g of grouped.otherOut){
+      const box = document.createElement("div");
+      box.style.marginBottom = "10px";
+      box.innerHTML = `
+        <div class="boxTitle" style="font-size:13px; margin-bottom:6px; text-transform:capitalize;">${g.cat}</div>
+        <ul class="list">${g.items.map(x=>`<li>${x.name} x${x.qty}</li>`).join("")}</ul>
       `;
-    }).join("");
+      otherDiv.appendChild(box);
+    }
   }
 
-  window.onSetStatus = async function(orderId, status) {
-    try {
-      await setStatus(orderId, status);
-      await loadSelectedDrop();
-    } catch (e) {
-      alert("Failed to update status: " + e.message);
+  openModal();
+}
+
+/* =========================
+   PERFORMANCE CALCS
+   ========================= */
+
+async function fetchOrdersInRange(start, end){
+  // Need drops capacity_category per order
+  const startIso = start.toISOString();
+  const endIso = end.toISOString();
+
+  const orders = await sbGet(
+    `orders?created_at=gte.${encodeURIComponent(startIso)}&created_at=lt.${encodeURIComponent(endIso)}`
+    + `&select=id,drop_id,status,created_at,customer_phone,drop:drops(capacity_category)`
+  );
+
+  const orderIds = orders.map(o=>o.id);
+  let items = [];
+  if(orderIds.length){
+    const inList = orderIds.join(",");
+    items = await sbGet(
+      `order_items?order_id=in.(${inList})&select=order_id,qty,price_pence,product:products(category)`
+    );
+  }
+
+  return {orders, items};
+}
+
+function computePerf({orders, items}){
+  const byOrderItems = new Map();
+  for(const it of items){
+    if(!byOrderItems.has(it.order_id)) byOrderItems.set(it.order_id, []);
+    byOrderItems.get(it.order_id).push(it);
+  }
+
+  const orderCount = orders.length;
+
+  const phoneSet = new Set();
+  for(const o of orders){
+    if(o.customer_phone) phoneSet.add(o.customer_phone.trim());
+  }
+  const uniqueCustomers = phoneSet.size;
+
+  let revenueTotal = 0;
+  let revenueCapacity = 0;
+  let revenueOther = 0;
+
+  let itemsTotal = 0;
+  let cancelled = 0;
+
+  for(const o of orders){
+    if((o.status||"").toLowerCase() === "cancelled") cancelled++;
+
+    const capCat = (o.drop?.capacity_category || "pizza").toLowerCase();
+    const its = byOrderItems.get(o.id) || [];
+    for(const it of its){
+      const qty = Number(it.qty||0);
+      const price = Number(it.price_pence||0);
+      const cat = (it.product?.category || "other").toLowerCase();
+
+      const line = qty * price;
+      revenueTotal += line;
+      itemsTotal += qty;
+
+      if(cat === capCat) revenueCapacity += line;
+      else revenueOther += line;
     }
+  }
+
+  const aov = orderCount ? (revenueTotal / orderCount) : 0;
+  const itemsPerOrder = orderCount ? (itemsTotal / orderCount) : 0;
+  const cancelPct = orderCount ? (cancelled / orderCount * 100) : 0;
+
+  // repeat% (same phone appears more than once)
+  let repeatCustomers = 0;
+  const phoneCounts = new Map();
+  for(const o of orders){
+    const p = (o.customer_phone||"").trim();
+    if(!p) continue;
+    phoneCounts.set(p, (phoneCounts.get(p)||0)+1);
+  }
+  for(const [,c] of phoneCounts.entries()){
+    if(c >= 2) repeatCustomers++;
+  }
+  const repeatPct = uniqueCustomers ? (repeatCustomers / uniqueCustomers * 100) : 0;
+
+  return {
+    uniqueCustomers,
+    orders: orderCount,
+    revenueTotal,
+    revenueCapacity,
+    revenueOther,
+    aov,
+    itemsPerOrder,
+    repeatPct,
+    cancelPct
+  };
+}
+
+function deltaClass(pct){
+  if(pct === null || pct === undefined || Number.isNaN(pct)) return null;
+  if(pct > 0.01) return "good";
+  if(pct < -0.01) return "bad";
+  return null;
+}
+
+function pctChange(current, previous){
+  const c = Number(current||0);
+  const p = Number(previous||0);
+  if(p === 0 && c === 0) return 0;
+  if(p === 0 && c !== 0) return null; // undefined/infinite; show —
+  return ((c - p) / p) * 100;
+}
+
+function renderPerfBlock(target3Id, targetMoreId, perf, deltas=null){
+  // Always visible 3 KPIs (aligned tiles)
+  const three = [
+    { label: "Unique customers", value: fmtInt(perf.uniqueCustomers), deltaText: deltas?.uniqueCustomers, deltaClass: deltas?.uniqueCustomersClass },
+    { label: "Orders", value: fmtInt(perf.orders), deltaText: deltas?.orders, deltaClass: deltas?.ordersClass },
+    { label: "Revenue (total)", value: fmtMoneyPence(perf.revenueTotal), deltaText: deltas?.revenueTotal, deltaClass: deltas?.revenueTotalClass },
+  ];
+
+  const nineMinusThree = [
+    { label: "Revenue (capacity)", value: fmtMoneyPence(perf.revenueCapacity), deltaText: deltas?.revenueCapacity, deltaClass: deltas?.revenueCapacityClass },
+    { label: "Revenue (other)", value: fmtMoneyPence(perf.revenueOther), deltaText: deltas?.revenueOther, deltaClass: deltas?.revenueOtherClass },
+    { label: "AOV", value: fmtMoneyPence(perf.aov), deltaText: deltas?.aov, deltaClass: deltas?.aovClass },
+    { label: "Items / order", value: perf.itemsPerOrder.toFixed(1), deltaText: deltas?.itemsPerOrder, deltaClass: deltas?.itemsPerOrderClass },
+    { label: "Repeat %", value: fmtPct(perf.repeatPct), deltaText: deltas?.repeatPct, deltaClass: deltas?.repeatPctClass },
+    { label: "Cancel %", value: fmtPct(perf.cancelPct), deltaText: deltas?.cancelPct, deltaClass: deltas?.cancelPctClass },
+  ];
+
+  const t3 = $(target3Id);
+  const tm = $(targetMoreId);
+  clear(t3); clear(tm);
+
+  for(const k of three){
+    t3.appendChild(renderKpiTile(k));
+  }
+  for(const k of nineMinusThree){
+    tm.appendChild(renderKpiTile(k));
+  }
+}
+
+function formatDelta(prefix, pct){
+  if(pct === null) return `${prefix} —`;
+  const arrow = pct > 0 ? "▲" : (pct < 0 ? "▼" : "•");
+  return `${prefix} ${arrow} ${pct.toFixed(1)}%`;
+}
+
+async function loadPerformance(){
+  const now = new Date();
+  $("asOfText").textContent = `As of ${now.toLocaleString("en-GB")}`;
+
+  const prevYear = now.getFullYear() - 1;
+  const {start:pyS, end:pyE} = yearRange(prevYear);
+  const ytd = ytdRange(now);
+  const weekS = startOfWeekMon(now);
+  const weekE = endOfWeekMon(now);
+
+  $("rangePrevYear").textContent = `${prevYear}`;
+  $("rangeYtd").textContent = `${now.getFullYear()} YTD`;
+  $("rangeWeek").textContent = `Mon–Sun`;
+
+  const [pyData, ytdData, wkData] = await Promise.all([
+    fetchOrdersInRange(pyS, pyE),
+    fetchOrdersInRange(ytd.start, ytd.end),
+    fetchOrdersInRange(weekS, weekE),
+  ]);
+
+  const pyPerf = computePerf(pyData);
+  const ytdPerf = computePerf(ytdData);
+  const wkPerf = computePerf(wkData);
+
+  // Trends:
+  // YTD vs same period last year
+  const lastYearSameStart = new Date(Date.UTC(now.getFullYear()-1,0,1,0,0,0));
+  const lastYearSameEnd = new Date(now);
+  lastYearSameEnd.setFullYear(now.getFullYear()-1);
+  const ytdLyData = await fetchOrdersInRange(lastYearSameStart, lastYearSameEnd);
+  const ytdLyPerf = computePerf(ytdLyData);
+
+  // This week vs last week
+  const lastWeekS = new Date(weekS); lastWeekS.setDate(lastWeekS.getDate()-7);
+  const lastWeekE = new Date(weekE); lastWeekE.setDate(lastWeekE.getDate()-7);
+  const wkLyData = await fetchOrdersInRange(lastWeekS, lastWeekE);
+  const wkLyPerf = computePerf(wkLyData);
+
+  // Build deltas for the “3 visible” KPIs
+  const ytdDeltas = {
+    uniqueCustomers: formatDelta("vs LY", pctChange(ytdPerf.uniqueCustomers, ytdLyPerf.uniqueCustomers)),
+    uniqueCustomersClass: deltaClass(pctChange(ytdPerf.uniqueCustomers, ytdLyPerf.uniqueCustomers)),
+    orders: formatDelta("vs LY", pctChange(ytdPerf.orders, ytdLyPerf.orders)),
+    ordersClass: deltaClass(pctChange(ytdPerf.orders, ytdLyPerf.orders)),
+    revenueTotal: formatDelta("vs LY", pctChange(ytdPerf.revenueTotal, ytdLyPerf.revenueTotal)),
+    revenueTotalClass: deltaClass(pctChange(ytdPerf.revenueTotal, ytdLyPerf.revenueTotal)),
   };
 
-  // --- Modal ---
-  function openModal() {
-    const b = document.getElementById("modalBackdrop");
-    b.style.display = "flex";
-    const data = window.__lastLoaded;
-    if (data?.drop) renderPrep(data.drop, data.orders, data.itemsByOrder);
+  const wkDeltas = {
+    uniqueCustomers: formatDelta("vs LW", pctChange(wkPerf.uniqueCustomers, wkLyPerf.uniqueCustomers)),
+    uniqueCustomersClass: deltaClass(pctChange(wkPerf.uniqueCustomers, wkLyPerf.uniqueCustomers)),
+    orders: formatDelta("vs LW", pctChange(wkPerf.orders, wkLyPerf.orders)),
+    ordersClass: deltaClass(pctChange(wkPerf.orders, wkLyPerf.orders)),
+    revenueTotal: formatDelta("vs LW", pctChange(wkPerf.revenueTotal, wkLyPerf.revenueTotal)),
+    revenueTotalClass: deltaClass(pctChange(wkPerf.revenueTotal, wkLyPerf.revenueTotal)),
+  };
+
+  renderPerfBlock("kpisPrevYear", "kpisPrevYearMore", pyPerf, null);
+  renderPerfBlock("kpisYtd", "kpisYtdMore", ytdPerf, ytdDeltas);
+  renderPerfBlock("kpisWeek", "kpisWeekMore", wkPerf, wkDeltas);
+
+  $("trendPrevYear").textContent = ""; // no trend for previous year
+  $("trendYtd").textContent = "Trend: YTD vs same period last year";
+  $("trendWeek").textContent = "Trend: This week vs last week";
+}
+
+/* =========================
+   INIT
+   ========================= */
+
+$("togglePrevYear").addEventListener("click", ()=>toggleMore({moreId:"morePrevYear", btnId:"togglePrevYear"}));
+$("toggleYtd").addEventListener("click", ()=>toggleMore({moreId:"moreYtd", btnId:"toggleYtd"}));
+$("toggleWeek").addEventListener("click", ()=>toggleMore({moreId:"moreWeek", btnId:"toggleWeek"}));
+
+$("loadBtn").addEventListener("click", loadSelectedDrop);
+$("refreshBtn").addEventListener("click", async ()=>{
+  try{
+    await loadPerformance();
+    await loadSelectedDrop();
+  }catch(e){
+    alert(e.message);
   }
-  function closeModal() {
-    document.getElementById("modalBackdrop").style.display = "none";
+});
+
+$("prepBtn").addEventListener("click", renderPrepSummary);
+$("closeModalBtn").addEventListener("click", closeModal);
+$("modal").addEventListener("click", (e)=>{
+  if(e.target.id === "modal") closeModal();
+});
+
+(async function boot(){
+  try{
+    await loadDropsIntoSelect();
+    await loadPerformance();
+    await loadSelectedDrop();
+  }catch(e){
+    alert(e.message);
   }
-
-  // --- Events ---
-  document.getElementById("refreshBtn").addEventListener("click", refreshAll);
-  document.getElementById("loadBtn").addEventListener("click", loadSelectedDrop);
-  document.getElementById("dropSelect").addEventListener("change", loadSelectedDrop);
-
-  document.getElementById("prepBtn").addEventListener("click", openModal);
-  document.getElementById("closeModalBtn").addEventListener("click", closeModal);
-  document.getElementById("modalBackdrop").addEventListener("click", (e)=>{ if(e.target.id==="modalBackdrop") closeModal(); });
-
-  // init
-  refreshAll().catch(err => alert("Init error: " + err.message));
+})();
 </script>
+
 </body>
 </html>
