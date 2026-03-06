@@ -5,319 +5,379 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Order Entry</title>
 
-  <link rel="stylesheet" href="./assets/hearth.css" />
+  <link rel="stylesheet" href="./assets/hearth.css?v=20260306-1" />
   <script src="./assets/config.js"></script>
-
-  <style>
-    .muted { opacity:.75; }
-    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    .space { justify-content:space-between; }
-    .card { border:1px solid rgba(0,0,0,.12); border-radius:14px; padding:14px; background:#fff; }
-    .btn {
-      border-radius:12px; padding:8px 12px;
-      border:1px solid rgba(0,0,0,.15);
-      background: rgba(0,0,0,.03);
-      cursor:pointer; font-weight:800;
-    }
-    .btn:hover { background: rgba(0,0,0,.06); }
-    textarea {
-      width:100%;
-      min-height:220px;
-      padding:12px;
-      border-radius:12px;
-      border:1px solid rgba(0,0,0,.15);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size:12px;
-      line-height:1.35;
-    }
-    select, input {
-      padding:8px 10px;
-      border-radius:12px;
-      border:1px solid rgba(0,0,0,.15);
-      background:#fff;
-    }
-    .log {
-      white-space:pre-wrap;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size:12px;
-      padding:10px;
-      border-radius:12px;
-      border:1px solid rgba(0,0,0,.12);
-      background: rgba(0,0,0,.02);
-      max-height: 220px;
-      overflow:auto;
-    }
-    .pill { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid rgba(0,0,0,.12); background: rgba(0,0,0,.02); }
-  </style>
 </head>
 
 <body>
-  <div class="container" style="max-width:1100px; margin:0 auto; padding:18px;">
-    <!-- Top bar -->
-    <div class="row space" style="margin-bottom:14px;">
-      <div class="row" style="gap:10px;">
-        <div style="width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,0,0,.12);background:rgba(0,0,0,.02);font-weight:900;">H</div>
-        <div class="brandTitle"><b>Hearth — Order Entry</b></div>
+  <div class="container">
+
+    <div class="card headerBar">
+      <div class="brand">
+        <div class="brandMark">H</div>
+        <div>
+          <div class="brandTitle">Hearth — Order Entry</div>
+          <div class="brandSubtitle">Quick mock + historic order input (single or bulk)</div>
+        </div>
       </div>
 
-      <div class="row" style="gap:16px;">
-        <a href="./index.html" style="font-weight:800; text-decoration:none;">Service Board</a>
-        <a href="./drop-manager.html" style="font-weight:800; text-decoration:none;">Drop Studio</a>
-        <a href="./drop-menu.html" style="font-weight:800; text-decoration:none;">Menu Library</a>
-        <a href="./order-entry.html" style="font-weight:800; text-decoration:underline;">Order Entry</a>
+      <div class="nav">
+        <a href="index.html">Service Board</a>
+        <a href="drop-manager.html">Drop Studio</a>
+        <a href="drop-menu.html">Menu Library</a>
+        <a class="active" href="order-entry.html">Order Entry</a>
       </div>
     </div>
 
-    <div class="card" style="margin-bottom:14px;">
+    <div class="card pad" style="margin-top:16px;">
       <div class="row space">
         <div>
-          <div style="font-weight:900;">Bulk entry</div>
-          <div class="muted" style="font-size:12px;">
-            Paste multiple orders to create realistic test data quickly. Product names match <span style="font-weight:800;">products.name</span> (case-insensitive).
+          <div class="sectionTitle">Order Entry</div>
+          <p class="sectionSub">Creates rows in <span class="mono">orders</span> + <span class="mono">order_items</span>. Uses drop menu pricing (override if present).</p>
+        </div>
+        <button class="btnSmall" id="reloadBtn">Reload drop/menu</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row" style="gap:10px; flex-wrap:wrap;">
+        <div>
+          <label class="small muted">Drop</label><br/>
+          <select id="dropSelect"></select>
+        </div>
+        <span class="pill">
+          <span class="muted">Capacity category:</span>
+          <strong id="capCatText">—</strong>
+        </span>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="formGrid">
+
+        <!-- SINGLE ORDER -->
+        <div class="box">
+          <div class="boxTitle">Single order</div>
+
+          <div class="fieldRow">
+            <div>
+              <label class="small muted">Customer name</label>
+              <input id="custName" placeholder="e.g. Ed Test" />
+            </div>
+            <div>
+              <label class="small muted">Phone</label>
+              <input id="custPhone" placeholder="e.g. 07123456789" />
+            </div>
+          </div>
+
+          <div style="margin-top:10px;">
+            <label class="small muted">Items (one per line)</label>
+            <textarea id="itemsBox" rows="6" placeholder="Margherita: 2&#10;Olives: 1&#10;Coke: 1"></textarea>
+            <div class="small muted" style="margin-top:6px;">
+              Format: <span class="mono">Product name: qty</span>. Product names must exist in your <span class="mono">products</span> table.
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:12px;">
+            <button class="btnAccent" id="createSingleBtn">Create single order</button>
+            <div class="small muted" id="singleMsg"></div>
           </div>
         </div>
-        <div class="row" style="gap:10px;">
-          <span class="muted" style="font-size:12px;" id="capInfo">—</span>
-          <button class="btn" id="runBtn">Create orders</button>
+
+        <!-- BULK ENTRY -->
+        <div class="box">
+          <div class="boxTitle">Bulk entry</div>
+
+          <div class="small muted">
+            One order per line:
+            <div class="mono" style="margin-top:6px; white-space:pre-wrap;">
+Name | Phone | Item:qty, Item:qty, Item:qty
+            </div>
+            Example:
+            <div class="mono" style="margin-top:6px; white-space:pre-wrap;">
+Ed Test | 07123456789 | Margherita:2, Olives:1, Coke:1
+Test Customer | 07123456780 | Margherita:1, Garlic Dip:2
+            </div>
+          </div>
+
+          <textarea id="bulkBox" rows="12" placeholder="Ed Test | 07123456789 | Margherita:2, Olives:1, Coke:1"></textarea>
+
+          <div class="row" style="margin-top:12px;">
+            <button class="btnAccent" id="createBulkBtn">Create bulk orders</button>
+            <div class="small muted" id="bulkMsg"></div>
+          </div>
+
+          <div class="small muted" style="margin-top:10px;">
+            Notes:
+            <ul style="margin:6px 0 0 18px;">
+              <li>We still populate <span class="mono">orders.pizzas</span> as “capacity quantity” (sum of items in capacity category, minimum 1 due to your check constraint).</li>
+              <li>“Delivered” in Service Board maps to <span class="mono">status='collected'</span> to match your existing constraint list.</li>
+            </ul>
+          </div>
         </div>
-      </div>
 
-      <div class="row" style="margin-top:12px;">
-        <label class="muted" style="font-size:12px; font-weight:800;">Drop</label>
-        <select id="dropSelect" style="min-width:420px; max-width:100%;"></select>
-
-        <span class="pill"><b>Status default:</b> <span id="defaultStatusText">placed</span></span>
-        <select id="defaultStatus">
-          <option value="placed">placed</option>
-          <option value="confirmed">confirmed</option>
-          <option value="baking">baking</option>
-          <option value="ready">ready</option>
-          <option value="collected">collected</option>
-          <option value="cancelled">cancelled</option>
-        </select>
-      </div>
-
-      <div style="margin-top:12px;">
-        <div class="muted" style="font-size:12px; margin-bottom:8px;">
-          Format per line:<br/>
-          <span style="font-weight:800;">name | phone | postcode | status | item list</span><br/>
-          Items: <span style="font-weight:800;">Product Name xQTY; Another Product x1</span>
-        </div>
-
-        <textarea id="bulkBox"></textarea>
-
-        <div class="muted" style="font-size:12px; margin-top:8px;">
-          Example:<br/>
-          Ed Test | 07123456789 | RG10 9XX | placed | Margherita x1; Olives x2; Garlic Dip x4; Coke x1<br/>
-          Test Customer | 07123456789 | | confirmed | Margherita x2
-        </div>
       </div>
     </div>
 
-    <div class="card">
-      <div style="font-weight:900; margin-bottom:8px;">Run log</div>
-      <div class="log" id="logBox">Ready.</div>
-    </div>
   </div>
 
 <script>
-  const SUPABASE_URL = window.HEARTH_CONFIG?.SUPABASE_URL;
-  const SUPABASE_ANON_KEY = window.HEARTH_CONFIG?.SUPABASE_ANON_KEY;
+/* =========================
+   Order Entry — Hearth
+   ========================= */
 
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    alert("Missing SUPABASE config. Check assets/config.js (window.HEARTH_CONFIG).");
+const SUPABASE_URL = window.HEARTH_CONFIG?.SUPABASE_URL;
+const SUPABASE_ANON_KEY = window.HEARTH_CONFIG?.SUPABASE_ANON_KEY;
+
+const headers = {
+  apikey: SUPABASE_ANON_KEY,
+  Authorization: "Bearer " + SUPABASE_ANON_KEY,
+  "Content-Type": "application/json"
+};
+
+const $ = (id)=>document.getElementById(id);
+
+async function sbGet(path){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers });
+  if(!res.ok){
+    const t = await res.text();
+    throw new Error(`GET ${path} failed: ${res.status} ${t}`);
   }
-
-  const headers = {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: "Bearer " + SUPABASE_ANON_KEY,
-    "Content-Type": "application/json"
-  };
-
-  async function sbGet(path) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+  return res.json();
+}
+async function sbPost(path, body){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method:"POST",
+    headers: {...headers, Prefer:"return=representation"},
+    body: JSON.stringify(body)
+  });
+  if(!res.ok){
+    const t = await res.text();
+    throw new Error(`POST ${path} failed: ${res.status} ${t}`);
   }
+  return res.json();
+}
 
-  async function sbPost(path, body) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-      method: "POST",
-      headers: { ...headers, Prefer: "return=representation" },
-      body: JSON.stringify(body)
+function parseItemsLines(text){
+  const lines = text.split("\n").map(s=>s.trim()).filter(Boolean);
+  const out = [];
+  for(const line of lines){
+    const m = line.split(":");
+    if(m.length < 2) continue;
+    const name = m[0].trim();
+    const qty = Number(m.slice(1).join(":").trim());
+    if(!name || !qty || qty <= 0) continue;
+    out.push({name, qty});
+  }
+  return out;
+}
+
+function parseItemsComma(text){
+  // "A:2, B:1"
+  const parts = text.split(",").map(s=>s.trim()).filter(Boolean);
+  const out = [];
+  for(const p of parts){
+    const m = p.split(":");
+    if(m.length < 2) continue;
+    const name = m[0].trim();
+    const qty = Number(m.slice(1).join(":").trim());
+    if(!name || !qty || qty <= 0) continue;
+    out.push({name, qty});
+  }
+  return out;
+}
+
+async function loadDrops(){
+  const drops = await sbGet(`drops?select=id,name,status,cutoff_time,capacity_category&order=cutoff_time.desc`);
+  const sel = $("dropSelect");
+  sel.innerHTML = "";
+  for(const d of drops){
+    const opt = document.createElement("option");
+    const cut = d.cutoff_time ? new Date(d.cutoff_time).toLocaleString("en-GB") : "—";
+    opt.value = d.id;
+    opt.textContent = `${d.name} • ${d.status} • cutoff ${cut}`;
+    sel.appendChild(opt);
+  }
+  if(drops.length) sel.value = drops[0].id;
+  return drops;
+}
+
+async function loadDropMenu(dropId){
+  // pull menu with product embed + override
+  const rows = await sbGet(
+    `drop_products?drop_id=eq.${dropId}&select=product_id,is_available,price_override_pence,product:products(id,name,category,price_pence)&order=sort_order.asc`
+  );
+
+  // build name -> product info
+  const map = new Map();
+  for(const r of rows){
+    const p = r.product || {};
+    if(!p.name) continue;
+    map.set(p.name.toLowerCase(), {
+      id: p.id,
+      name: p.name,
+      category: p.category,
+      price_pence: (r.price_override_pence !== null && r.price_override_pence !== undefined) ? r.price_override_pence : p.price_pence,
+      is_available: !!r.is_available
     });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
   }
+  return map;
+}
 
-  function log(msg) {
-    const el = document.getElementById("logBox");
-    el.textContent = (el.textContent === "Ready." ? "" : el.textContent + "\n") + msg;
-    el.scrollTop = el.scrollHeight;
-  }
+async function loadCapCat(dropId){
+  const [d] = await sbGet(`drops?id=eq.${dropId}&select=capacity_category`);
+  const cat = (d?.capacity_category || "pizza");
+  $("capCatText").textContent = cat;
+  return cat;
+}
 
-  function clean(s){ return (s || "").trim(); }
-
-  function parseLine(line) {
-    // name | phone | postcode | status | items
-    const parts = line.split("|").map(x => x.trim());
-    const name = clean(parts[0]);
-    const phone = clean(parts[1]);
-    const postcode = clean(parts[2] || "");
-    const status = clean(parts[3] || "");
-    const itemsRaw = clean(parts[4] || "");
-
-    if (!name || !phone) return null;
-
-    const items = [];
-    if (itemsRaw) {
-      const chunks = itemsRaw.split(";").map(x => x.trim()).filter(Boolean);
-      for (const c of chunks) {
-        // "Margherita x2" or "Margherita"
-        const m = c.match(/^(.*?)(?:\s*x\s*(\d+))?$/i);
-        if (!m) continue;
-        const prodName = clean(m[1]);
-        const qty = m[2] ? parseInt(m[2], 10) : 1;
-        if (prodName) items.push({ name: prodName, qty: Math.max(1, qty || 1) });
-      }
+function computeLegacyPizzas(capCat, items, menuMap){
+  // orders.pizzas must be >=1 (your constraint). We treat it as total qty of items in capacity category.
+  let capQty = 0;
+  for(const it of items){
+    const m = menuMap.get(it.name.toLowerCase());
+    if(!m) continue;
+    if((m.category||"").toLowerCase() === capCat.toLowerCase()){
+      capQty += Number(it.qty||0);
     }
+  }
+  if(capQty < 1) capQty = 1; // satisfy constraint
+  return capQty;
+}
 
-    return { name, phone, postcode, status, items };
+async function createOrderWithItems(dropId, capCat, menuMap, customer_name, customer_phone, items){
+  // validate items exist in menu
+  for(const it of items){
+    const m = menuMap.get(it.name.toLowerCase());
+    if(!m) throw new Error(`Unknown product: "${it.name}" (not found in drop menu)`);
+    if(!m.is_available) throw new Error(`Product not available on this drop: "${it.name}"`);
   }
 
-  function buildProductIndex(products) {
-    const byName = new Map();
-    for (const p of products) {
-      byName.set((p.name || "").trim().toLowerCase(), p);
-    }
-    return byName;
-  }
+  const pizzas = computeLegacyPizzas(capCat, items, menuMap);
 
-  async function loadDrops() {
-    const drops = await sbGet(`drops?select=id,name,status,cutoff_time,capacity_category,capacity_units_total&order=cutoff_time.desc`);
-    const sel = document.getElementById("dropSelect");
-    sel.innerHTML = "";
-    for (const d of drops) {
-      const label = `${d.name} · ${d.status} · cutoff ${new Date(d.cutoff_time).toLocaleDateString("en-GB")}`;
-      const opt = document.createElement("option");
-      opt.value = d.id;
-      opt.textContent = label;
-      sel.appendChild(opt);
-    }
-    return drops;
-  }
-
-  async function refreshCapInfo() {
-    const dropId = document.getElementById("dropSelect").value;
-    const d = await sbGet(`drops?select=capacity_category,capacity_units_total,status&id=eq.${dropId}`);
-    const drop = d[0];
-    document.getElementById("capInfo").textContent =
-      drop ? `Capacity: ${drop.capacity_category} • ${drop.capacity_units_total ?? "—"} units • ${drop.status}` : "—";
-  }
-
-  async function createOneOrder(drop, byName, entry, defaultStatus) {
-    const status = entry.status || defaultStatus || "placed";
-
-    // Build order_items payload (resolve products by name)
-    const resolved = [];
-    for (const it of entry.items) {
-      const p = byName.get(it.name.toLowerCase());
-      if (!p) throw new Error(`Unknown product: "${it.name}"`);
-      resolved.push({ product: p, qty: it.qty });
-    }
-
-    // pizzas legacy field = sum qty where category matches capacity_category
-    const capCat = (drop.capacity_category || "").toLowerCase();
-    let pizzas = 1;
-    if (resolved.length) {
-      pizzas = resolved
-        .filter(x => (x.product.category || "").toLowerCase() === capCat)
-        .reduce((sum, x) => sum + Number(x.qty || 1), 0);
-      pizzas = Math.max(1, pizzas);
-    }
-
-    const orderRows = await sbPost("orders", [{
-      drop_id: drop.id,
-      pizzas,
-      customer_name: entry.name,
-      customer_phone: entry.phone,
-      customer_postcode: entry.postcode || null,
-      status
-    }]);
-
-    const orderId = orderRows[0].id;
-
-    if (resolved.length) {
-      const itemRows = resolved.map(x => ({
-        order_id: orderId,
-        product_id: x.product.id,
-        qty: x.qty,
-        price_pence: x.product.price_pence
-      }));
-      await sbPost("order_items", itemRows);
-    }
-
-    return orderId;
-  }
-
-  async function runBulk() {
-    const dropId = document.getElementById("dropSelect").value;
-    const defaultStatus = document.getElementById("defaultStatus").value || "placed";
-    const txt = document.getElementById("bulkBox").value || "";
-
-    document.getElementById("logBox").textContent = "";
-    log(`Starting bulk entry…`);
-
-    // load drop + products
-    const dropRows = await sbGet(`drops?select=id,capacity_category,capacity_units_total,status&id=eq.${dropId}`);
-    const drop = dropRows[0];
-    if (!drop) { log("Drop not found."); return; }
-
-    const products = await sbGet(`products?select=id,name,category,price_pence,capacity_units,is_active&is_active=eq.true&order=sort_order.asc`);
-    const byName = buildProductIndex(products);
-
-    // parse lines
-    const lines = txt.split("\n").map(x => x.trim()).filter(Boolean);
-    if (!lines.length) { log("No lines to process."); return; }
-
-    let ok = 0, fail = 0;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const entry = parseLine(line);
-      if (!entry) { fail++; log(`Line ${i+1}: skipped (need at least name + phone).`); continue; }
-
-      try {
-        const orderId = await createOneOrder(drop, byName, entry, defaultStatus);
-        ok++;
-        log(`Line ${i+1}: created order ${orderId} for ${entry.name} (${entry.phone})`);
-      } catch (e) {
-        fail++;
-        log(`Line ${i+1}: ERROR — ${e.message}`);
-      }
-    }
-
-    log(`Done. Success: ${ok} • Failed: ${fail}`);
-    log(`Tip: open Service Board → pick the drop → Load.`);
-  }
-
-  // events
-  document.getElementById("runBtn").addEventListener("click", () => runBulk().catch(e => alert(e.message)));
-  document.getElementById("dropSelect").addEventListener("change", () => refreshCapInfo().catch(()=>{}));
-  document.getElementById("defaultStatus").addEventListener("change", () => {
-    document.getElementById("defaultStatusText").textContent = document.getElementById("defaultStatus").value;
+  const [order] = await sbPost("orders", {
+    drop_id: dropId,
+    pizzas,
+    customer_name,
+    customer_phone,
+    status: "placed"
   });
 
-  // init
-  (async function init(){
-    await loadDrops();
-    await refreshCapInfo();
-    document.getElementById("defaultStatusText").textContent = document.getElementById("defaultStatus").value;
+  // create order_items
+  for(const it of items){
+    const m = menuMap.get(it.name.toLowerCase());
+    await sbPost("order_items", {
+      order_id: order.id,
+      product_id: m.id,
+      qty: Number(it.qty),
+      price_pence: Number(m.price_pence)
+    });
+  }
 
-    // helpful starter text
-    document.getElementById("bulkBox").value =
-`Ed Test | 07123456789 | RG10 9XX | placed | Margherita x1; Olives x2; Garlic Dip x4; Coke x1
-Test Customer | 07123456789 | | confirmed | Margherita x2`;
-  })().catch(e => alert("Init error: " + e.message));
+  return order.id;
+}
+
+$("reloadBtn").addEventListener("click", async ()=>{
+  try{
+    await boot();
+  }catch(e){
+    alert(e.message);
+  }
+});
+
+$("dropSelect").addEventListener("change", async ()=>{
+  try{
+    await boot(false);
+  }catch(e){
+    alert(e.message);
+  }
+});
+
+$("createSingleBtn").addEventListener("click", async ()=>{
+  const msg = $("singleMsg");
+  msg.textContent = "";
+  try{
+    const dropId = $("dropSelect").value;
+    const capCat = await loadCapCat(dropId);
+    const menuMap = await loadDropMenu(dropId);
+
+    const name = $("custName").value.trim();
+    const phone = $("custPhone").value.trim();
+    if(!name || !phone) throw new Error("Name and phone are required.");
+
+    const items = parseItemsLines($("itemsBox").value);
+    if(items.length === 0) throw new Error("Add at least one item line (e.g. Margherita: 2).");
+
+    const orderId = await createOrderWithItems(dropId, capCat, menuMap, name, phone, items);
+    msg.textContent = `Created order ${orderId}`;
+    $("itemsBox").value = "";
+  }catch(e){
+    msg.textContent = e.message;
+  }
+});
+
+$("createBulkBtn").addEventListener("click", async ()=>{
+  const msg = $("bulkMsg");
+  msg.textContent = "";
+  try{
+    const dropId = $("dropSelect").value;
+    const capCat = await loadCapCat(dropId);
+    const menuMap = await loadDropMenu(dropId);
+
+    const lines = $("bulkBox").value.split("\n").map(s=>s.trim()).filter(Boolean);
+    if(lines.length === 0) throw new Error("Paste at least one bulk line.");
+
+    let ok = 0;
+    const errors = [];
+
+    for(const line of lines){
+      // Name | Phone | items
+      const parts = line.split("|").map(s=>s.trim());
+      if(parts.length < 3){
+        errors.push(`Bad line (expected "Name | Phone | Items"): ${line}`);
+        continue;
+      }
+      const name = parts[0];
+      const phone = parts[1];
+      const itemsText = parts.slice(2).join(" | ");
+      const items = parseItemsComma(itemsText);
+
+      if(!name || !phone || items.length === 0){
+        errors.push(`Bad line (missing fields/items): ${line}`);
+        continue;
+      }
+
+      try{
+        await createOrderWithItems(dropId, capCat, menuMap, name, phone, items);
+        ok++;
+      }catch(e){
+        errors.push(`${line} → ${e.message}`);
+      }
+    }
+
+    msg.textContent = `Created ${ok} orders. ${errors.length ? ("Errors: " + errors.length) : ""}`;
+
+    if(errors.length){
+      alert("Some lines failed:\n\n" + errors.slice(0,15).join("\n") + (errors.length>15 ? "\n\n(+ more)" : ""));
+    }
+  }catch(e){
+    msg.textContent = e.message;
+  }
+});
+
+async function boot(loadDropsToo=true){
+  if(loadDropsToo) await loadDrops();
+  const dropId = $("dropSelect").value;
+  await loadCapCat(dropId);
+  // warm menu (also validates drop_products embed works)
+  await loadDropMenu(dropId);
+}
+
+(async function(){
+  try{ await boot(true); }
+  catch(e){ alert(e.message); }
+})();
 </script>
+
 </body>
 </html>
