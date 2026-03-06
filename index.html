@@ -4,1215 +4,535 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Service Board</title>
-  <style>
-    :root{
-      --bg:#f7f7fb;
-      --surface:#ffffff;
-      --surface-2:#f8fafc;
-      --border:rgba(15,23,42,.10);
-      --text:#0f172a;
-      --muted:#64748b;
-
-      --accent:#f97316;
-      --accent-2:#fb923c;
-      --accent-ink:#7c2d12;
-
-      --placed-bg:#f1f5f9;
-      --placed-ink:#475569;
-
-      --confirmed-bg:#dbeafe;
-      --confirmed-ink:#1d4ed8;
-
-      --baking-bg:#ffedd5;
-      --baking-ink:#c2410c;
-
-      --ready-bg:#dcfce7;
-      --ready-ink:#166534;
-
-      --delivered-bg:#334155;
-      --delivered-ink:#ffffff;
-
-      --shadow:0 10px 30px rgba(15,23,42,.06);
-      --radius:18px;
-      --radius-sm:12px;
-    }
-
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif}
-    button,input,select{font:inherit}
-
-    .app{
-      max-width:1600px;
-      margin:0 auto;
-      padding:24px;
-    }
-
-    .topbar{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:20px;
-      margin-bottom:20px;
-    }
-
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:12px;
-    }
-
-    .brand-mark{
-      width:42px;
-      height:42px;
-      border-radius:14px;
-      background:linear-gradient(135deg,var(--accent),var(--accent-2));
-      display:grid;
-      place-items:center;
-      color:white;
-      font-weight:800;
-      box-shadow:var(--shadow);
-    }
-
-    .brand h1{
-      margin:0;
-      font-size:1.15rem;
-      line-height:1.1;
-    }
-
-    .brand p{
-      margin:2px 0 0;
-      color:var(--muted);
-      font-size:.92rem;
-    }
-
-    .actions{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-
-    .btn, .select{
-      background:var(--surface);
-      border:1px solid var(--border);
-      color:var(--text);
-      border-radius:12px;
-      padding:10px 14px;
-      min-height:42px;
-    }
-
-    .btn{
-      cursor:pointer;
-      font-weight:600;
-      transition:.18s ease;
-    }
-
-    .btn:hover{transform:translateY(-1px); box-shadow:var(--shadow)}
-    .btn-primary{
-      background:var(--accent);
-      border-color:var(--accent);
-      color:#fff;
-    }
-
-    .panel{
-      background:var(--surface);
-      border:1px solid var(--border);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-    }
-
-    .drop-header{
-      padding:20px;
-      margin-bottom:18px;
-    }
-
-    .drop-header-top{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:20px;
-      flex-wrap:wrap;
-      margin-bottom:16px;
-    }
-
-    .drop-title h2{
-      margin:0;
-      font-size:1.45rem;
-      line-height:1.1;
-    }
-
-    .drop-title p{
-      margin:8px 0 0;
-      color:var(--muted);
-      font-size:.95rem;
-    }
-
-    .live-pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 12px;
-      border-radius:999px;
-      font-weight:700;
-      font-size:.88rem;
-      background:#fff7ed;
-      color:var(--accent-ink);
-      border:1px solid #fed7aa;
-      white-space:nowrap;
-    }
-
-    .live-dot{
-      width:8px;
-      height:8px;
-      border-radius:50%;
-      background:var(--accent);
-      box-shadow:0 0 0 6px rgba(249,115,22,.12);
-    }
-
-    .kpis{
-      display:grid;
-      grid-template-columns:repeat(6,minmax(120px,1fr));
-      gap:12px;
-      margin-bottom:14px;
-    }
-
-    .kpi{
-      background:var(--surface-2);
-      border:1px solid var(--border);
-      border-radius:14px;
-      padding:14px;
-      min-height:84px;
-    }
-
-    .kpi-label{
-      color:var(--muted);
-      font-size:.8rem;
-      margin-bottom:8px;
-      text-transform:uppercase;
-      letter-spacing:.04em;
-      font-weight:700;
-    }
-
-    .kpi-value{
-      font-size:1.4rem;
-      font-weight:800;
-      line-height:1;
-    }
-
-    .capacity-wrap{
-      display:grid;
-      grid-template-columns:1fr auto;
-      gap:12px;
-      align-items:center;
-    }
-
-    .capacity-text{
-      color:var(--muted);
-      font-size:.92rem;
-      font-weight:600;
-    }
-
-    .capacity-bar{
-      grid-column:1 / -1;
-      height:16px;
-      border-radius:999px;
-      background:#e2e8f0;
-      overflow:hidden;
-      border:1px solid var(--border);
-    }
-
-    .capacity-fill{
-      height:100%;
-      width:0%;
-      background:linear-gradient(90deg,var(--accent),var(--accent-2));
-      transition:width .25s ease;
-    }
-
-    .middle-grid{
-      display:grid;
-      grid-template-columns:1.1fr .9fr;
-      gap:18px;
-      margin-bottom:18px;
-    }
-
-    .queue-panel,
-    .status-panel{
-      padding:18px;
-    }
-
-    .section-title{
-      margin:0 0 14px;
-      font-size:1rem;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-    }
-
-    .section-title small{
-      color:var(--muted);
-      font-weight:600;
-      font-size:.85rem;
-    }
-
-    .queue-list{
-      display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:10px;
-    }
-
-    .queue-item{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      padding:12px 14px;
-      border-radius:14px;
-      background:var(--surface-2);
-      border:1px solid var(--border);
-      font-weight:700;
-    }
-
-    .queue-item .name{
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
-    }
-
-    .queue-item .qty{
-      background:#fff7ed;
-      color:var(--accent-ink);
-      border:1px solid #fed7aa;
-      padding:4px 8px;
-      border-radius:999px;
-      min-width:40px;
-      text-align:center;
-    }
-
-    .empty-state{
-      color:var(--muted);
-      background:var(--surface-2);
-      border:1px dashed var(--border);
-      border-radius:14px;
-      padding:18px;
-      text-align:center;
-      font-weight:600;
-    }
-
-    .status-grid{
-      display:grid;
-      grid-template-columns:repeat(5,minmax(0,1fr));
-      gap:10px;
-    }
-
-    .status-chip{
-      border-radius:14px;
-      padding:12px;
-      border:1px solid var(--border);
-      text-align:center;
-      font-weight:800;
-    }
-
-    .status-chip .label{
-      display:block;
-      font-size:.78rem;
-      text-transform:uppercase;
-      letter-spacing:.04em;
-      margin-bottom:8px;
-    }
-
-    .status-chip .count{
-      font-size:1.3rem;
-      line-height:1;
-    }
-
-    .chip-placed{background:var(--placed-bg); color:var(--placed-ink)}
-    .chip-confirmed{background:var(--confirmed-bg); color:var(--confirmed-ink)}
-    .chip-baking{background:var(--baking-bg); color:var(--baking-ink)}
-    .chip-ready{background:var(--ready-bg); color:var(--ready-ink)}
-    .chip-delivered{background:var(--delivered-bg); color:var(--delivered-ink)}
-
-    .board{
-      display:grid;
-      grid-template-columns:repeat(5,minmax(0,1fr));
-      gap:16px;
-      align-items:start;
-    }
-
-    .column{
-      min-height:420px;
-      background:var(--surface);
-      border:1px solid var(--border);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      overflow:hidden;
-    }
-
-    .column-header{
-      padding:14px 16px;
-      border-bottom:1px solid var(--border);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      font-weight:800;
-      position:sticky;
-      top:0;
-      background:var(--surface);
-      z-index:2;
-    }
-
-    .column-body{
-      padding:14px;
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-      max-height:70vh;
-      overflow:auto;
-    }
-
-    .column.placed .column-header{background:var(--placed-bg); color:var(--placed-ink)}
-    .column.confirmed .column-header{background:var(--confirmed-bg); color:var(--confirmed-ink)}
-    .column.baking .column-header{background:var(--baking-bg); color:var(--baking-ink)}
-    .column.ready .column-header{background:var(--ready-bg); color:var(--ready-ink)}
-    .column.delivered .column-header{background:var(--delivered-bg); color:var(--delivered-ink)}
-
-    .badge{
-      min-width:28px;
-      height:28px;
-      padding:0 8px;
-      display:inline-grid;
-      place-items:center;
-      border-radius:999px;
-      background:rgba(255,255,255,.75);
-      color:inherit;
-      font-size:.86rem;
-      border:1px solid rgba(15,23,42,.08);
-    }
-
-    .order-card{
-      border:1px solid var(--border);
-      border-radius:16px;
-      background:#fff;
-      overflow:hidden;
-    }
-
-    .order-card-inner{
-      padding:14px;
-    }
-
-    .order-top{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom:10px;
-    }
-
-    .order-id{
-      font-size:.78rem;
-      color:var(--muted);
-      font-weight:800;
-      letter-spacing:.04em;
-      text-transform:uppercase;
-    }
-
-    .order-name{
-      font-size:1rem;
-      font-weight:800;
-      line-height:1.2;
-      margin-top:4px;
-    }
-
-    .time-pill{
-      white-space:nowrap;
-      font-size:.78rem;
-      font-weight:700;
-      color:var(--muted);
-      background:var(--surface-2);
-      border:1px solid var(--border);
-      border-radius:999px;
-      padding:5px 8px;
-    }
-
-    .item-block{
-      padding:10px 12px;
-      border-radius:12px;
-      background:var(--surface-2);
-      margin-bottom:10px;
-      border:1px solid var(--border);
-    }
-
-    .item-line{
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      font-weight:700;
-      margin-bottom:6px;
-    }
-
-    .item-line:last-child{margin-bottom:0}
-
-    .extras{
-      margin-top:6px;
-      color:var(--muted);
-      font-size:.9rem;
-    }
-
-    .extras ul{
-      margin:6px 0 0 16px;
-      padding:0;
-    }
-
-    .extras li{margin:2px 0}
-
-    .order-meta{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      margin:10px 0 12px;
-    }
-
-    .mini-pill{
-      font-size:.75rem;
-      font-weight:700;
-      color:var(--muted);
-      background:var(--surface-2);
-      border:1px solid var(--border);
-      border-radius:999px;
-      padding:5px 8px;
-    }
-
-    .order-actions{
-      display:flex;
-      gap:8px;
-    }
-
-    .order-actions .btn{
-      flex:1;
-      justify-content:center;
-      display:inline-flex;
-      align-items:center;
-      min-height:40px;
-      padding:10px 12px;
-      font-size:.92rem;
-    }
-
-    .btn-next{
-      background:var(--accent);
-      color:#fff;
-      border-color:var(--accent);
-    }
-
-    .btn-subtle{
-      background:#fff;
-      color:var(--muted);
-    }
-
-    .footer-note{
-      margin-top:16px;
-      color:var(--muted);
-      font-size:.88rem;
-      text-align:right;
-    }
-
-    dialog{
-      width:min(760px,calc(100vw - 24px));
-      border:none;
-      padding:0;
-      border-radius:20px;
-      box-shadow:0 30px 60px rgba(0,0,0,.2);
-    }
-
-    dialog::backdrop{
-      background:rgba(15,23,42,.45);
-    }
-
-    .modal{
-      background:var(--surface);
-    }
-
-    .modal-header{
-      padding:18px 20px;
-      border-bottom:1px solid var(--border);
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:12px;
-    }
-
-    .modal-header h3{
-      margin:0;
-      font-size:1.05rem;
-    }
-
-    .modal-body{
-      padding:20px;
-    }
-
-    .prep-grid{
-      display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:12px;
-    }
-
-    .prep-card{
-      padding:14px;
-      background:var(--surface-2);
-      border:1px solid var(--border);
-      border-radius:14px;
-    }
-
-    .prep-card h4{
-      margin:0 0 10px;
-      font-size:.96rem;
-    }
-
-    .prep-card ul{
-      margin:0 0 0 18px;
-      padding:0;
-    }
-
-    .prep-card li{
-      margin:4px 0;
-      color:var(--text);
-    }
-
-    @media (max-width: 1200px){
-      .kpis{grid-template-columns:repeat(3,1fr)}
-      .middle-grid{grid-template-columns:1fr}
-      .board{grid-template-columns:repeat(2,minmax(0,1fr))}
-    }
-
-    @media (max-width: 760px){
-      .app{padding:14px}
-      .topbar,.drop-header-top{flex-direction:column; align-items:stretch}
-      .kpis{grid-template-columns:repeat(2,1fr)}
-      .status-grid{grid-template-columns:repeat(2,1fr)}
-      .queue-list{grid-template-columns:1fr}
-      .board{grid-template-columns:1fr}
-      .prep-grid{grid-template-columns:1fr}
-    }
-  </style>
+  <link rel="stylesheet" href="/assets/hearth.css?v=4" />
+  <script src="/assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <div class="app">
-    <div class="topbar">
+  <div class="container">
+    <div class="card headerBar">
       <div class="brand">
-        <div class="brand-mark">H</div>
+        <div class="brandMark">H</div>
         <div>
-          <h1>Hearth — Service Board</h1>
-          <p>Live order execution for calm, capacity-bound drops.</p>
+          <div class="brandTitle">Hearth — Service Board</div>
+          <div class="brandSubtitle">Generic live drop execution for capacity-bound vendors</div>
         </div>
       </div>
 
-      <div class="actions">
-        <select id="dropSelect" class="select"></select>
-        <button class="btn" id="refreshBtn">Refresh</button>
-        <button class="btn btn-primary" id="prepBtn">Prep Summary</button>
+      <div class="nav">
+        <a href="#" class="active">Service Board</a>
+        <a href="#">Drop Studio</a>
+        <a href="#">Menu Library</a>
+        <a href="#">Insights</a>
       </div>
     </div>
 
-    <section class="panel drop-header">
-      <div class="drop-header-top">
-        <div class="drop-title">
-          <h2 id="dropName">Loading…</h2>
-          <p id="dropMeta">Select a drop to view live order flow.</p>
-        </div>
-        <div class="live-pill">
-          <span class="live-dot"></span>
-          <span id="dropStatusPill">Live</span>
-        </div>
-      </div>
-
-      <div class="kpis">
-        <div class="kpi">
-          <div class="kpi-label">Orders</div>
-          <div class="kpi-value" id="kpiOrders">0</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Pizzas</div>
-          <div class="kpi-value" id="kpiPizzas">0</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Capacity</div>
-          <div class="kpi-value" id="kpiCapacity">0</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Capacity Used</div>
-          <div class="kpi-value" id="kpiCapacityUsed">0%</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Revenue</div>
-          <div class="kpi-value" id="kpiRevenue">£0</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Avg Order</div>
-          <div class="kpi-value" id="kpiAvgOrder">£0</div>
-        </div>
-      </div>
-
-      <div class="capacity-wrap">
-        <div class="capacity-text" id="capacityText">0 / 0 pizzas</div>
-        <div class="capacity-text" id="capacityRightText">0% full</div>
-        <div class="capacity-bar">
-          <div class="capacity-fill" id="capacityFill"></div>
-        </div>
-      </div>
-    </section>
-
-    <div class="middle-grid">
-      <section class="panel queue-panel">
-        <h3 class="section-title">
-          <span>Next pizzas to bake</span>
-          <small>Confirmed orders only</small>
-        </h3>
-        <div id="queueList" class="queue-list"></div>
-      </section>
-
-      <section class="panel status-panel">
-        <h3 class="section-title">
-          <span>Live workflow counts</span>
-          <small>Current selected drop</small>
-        </h3>
-        <div class="status-grid">
-          <div class="status-chip chip-placed">
-            <span class="label">Placed</span>
-            <span class="count" id="countPlaced">0</span>
+    <div class="boardShell">
+      <div class="card dropHero">
+        <div class="dropHeroTop">
+          <div>
+            <h1 class="dropName" id="dropName">Loading drops…</h1>
+            <p class="dropMeta" id="dropMeta">Connecting to Supabase</p>
           </div>
-          <div class="status-chip chip-confirmed">
-            <span class="label">Confirmed</span>
-            <span class="count" id="countConfirmed">0</span>
-          </div>
-          <div class="status-chip chip-baking">
-            <span class="label">Baking</span>
-            <span class="count" id="countBaking">0</span>
-          </div>
-          <div class="status-chip chip-ready">
-            <span class="label">Ready</span>
-            <span class="count" id="countReady">0</span>
-          </div>
-          <div class="status-chip chip-delivered">
-            <span class="label">Delivered</span>
-            <span class="count" id="countDelivered">0</span>
+
+          <div class="pill" id="dropStatusPill">
+            <span class="dot" id="dropStatusDot"></span>
+            <span id="dropStatusText">—</span>
           </div>
         </div>
-      </section>
-    </div>
 
-    <section class="board" id="board">
-      <div class="column placed">
-        <div class="column-header">
-          <span>Placed</span>
-          <span class="badge" id="badgePlaced">0</span>
+        <div class="execBar" style="margin-top:0;">
+          <div class="execLeft">
+            <div>
+              <label for="dropSelect">Selected drop</label>
+              <select id="dropSelect"></select>
+            </div>
+          </div>
+
+          <div class="execRight">
+            <button class="btnGhost" id="refreshBtn">Refresh</button>
+          </div>
         </div>
-        <div class="column-body" id="colPlaced"></div>
+
+        <div class="heroGrid">
+          <div class="heroTile">
+            <div class="heroLabel">Orders</div>
+            <div class="heroValue" id="kpiOrders">0</div>
+          </div>
+          <div class="heroTile">
+            <div class="heroLabel">Capacity category</div>
+            <div class="heroValue" id="kpiCategory">—</div>
+          </div>
+          <div class="heroTile">
+            <div class="heroLabel">Capacity total</div>
+            <div class="heroValue" id="kpiCapacityTotal">0</div>
+          </div>
+          <div class="heroTile">
+            <div class="heroLabel">Capacity used</div>
+            <div class="heroValue" id="kpiCapacityUsed">0</div>
+          </div>
+          <div class="heroTile">
+            <div class="heroLabel">Capacity remaining</div>
+            <div class="heroValue" id="kpiCapacityRemaining">0</div>
+          </div>
+          <div class="heroTile">
+            <div class="heroLabel">Revenue</div>
+            <div class="heroValue" id="kpiRevenue">£0</div>
+          </div>
+        </div>
+
+        <div class="capacityRow">
+          <div class="capacityCopy" id="capacityCopyLeft">0 / 0 units</div>
+          <div class="capacityCopy" id="capacityCopyRight">0% full</div>
+          <div class="capacityBar">
+            <div class="capacityFill" id="capacityFill"></div>
+          </div>
+        </div>
+
+        <div class="errorBox" id="errorBox"></div>
       </div>
 
-      <div class="column confirmed">
-        <div class="column-header">
-          <span>Confirmed</span>
-          <span class="badge" id="badgeConfirmed">0</span>
+      <div class="midGrid">
+        <div class="card pad">
+          <div class="row space" style="margin-bottom:12px;">
+            <div>
+              <h3 class="sectionTitle">Next items to make</h3>
+              <p class="sectionSub">Only items in the selected drop’s capacity-driving category</p>
+            </div>
+          </div>
+          <div class="queueGrid" id="queueGrid"></div>
         </div>
-        <div class="column-body" id="colConfirmed"></div>
+
+        <div class="card pad">
+          <div class="row space" style="margin-bottom:12px;">
+            <div>
+              <h3 class="sectionTitle">Live workflow counts</h3>
+              <p class="sectionSub">Current selected drop</p>
+            </div>
+          </div>
+          <div class="statusGrid">
+            <div class="statusTile placed">
+              <span class="label">Placed</span>
+              <span class="value" id="countPlaced">0</span>
+            </div>
+            <div class="statusTile confirmed">
+              <span class="label">Confirmed</span>
+              <span class="value" id="countConfirmed">0</span>
+            </div>
+            <div class="statusTile baking">
+              <span class="label">Baking</span>
+              <span class="value" id="countBaking">0</span>
+            </div>
+            <div class="statusTile ready">
+              <span class="label">Ready</span>
+              <span class="value" id="countReady">0</span>
+            </div>
+            <div class="statusTile delivered">
+              <span class="label">Delivered</span>
+              <span class="value" id="countDelivered">0</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="column baking">
-        <div class="column-header">
-          <span>Baking</span>
-          <span class="badge" id="badgeBaking">0</span>
+      <div class="card pad">
+        <div class="row space">
+          <div>
+            <h3 class="sectionTitle">All orders in this drop</h3>
+            <p class="sectionSub">Compact scan view for every order</p>
+          </div>
         </div>
-        <div class="column-body" id="colBaking"></div>
+
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Customer</th>
+                <th>Capacity units</th>
+                <th>Status</th>
+                <th>Total</th>
+                <th>Items</th>
+              </tr>
+            </thead>
+            <tbody id="allOrdersBody"></tbody>
+          </table>
+        </div>
       </div>
 
-      <div class="column ready">
-        <div class="column-header">
-          <span>Ready</span>
-          <span class="badge" id="badgeReady">0</span>
+      <div class="boardGrid">
+        <div class="boardCol placed">
+          <div class="boardColHead">
+            <span>Placed</span>
+            <span class="colCount" id="badgePlaced">0</span>
+          </div>
+          <div class="boardColBody" id="colPlaced"></div>
         </div>
-        <div class="column-body" id="colReady"></div>
-      </div>
 
-      <div class="column delivered">
-        <div class="column-header">
-          <span>Delivered</span>
-          <span class="badge" id="badgeDelivered">0</span>
+        <div class="boardCol confirmed">
+          <div class="boardColHead">
+            <span>Confirmed</span>
+            <span class="colCount" id="badgeConfirmed">0</span>
+          </div>
+          <div class="boardColBody" id="colConfirmed"></div>
         </div>
-        <div class="column-body" id="colDelivered"></div>
-      </div>
-    </section>
 
-    <div class="footer-note">
-      Built for Southbury-style fixed-capacity drops and Hearth-style calm execution.
+        <div class="boardCol baking">
+          <div class="boardColHead">
+            <span>Baking</span>
+            <span class="colCount" id="badgeBaking">0</span>
+          </div>
+          <div class="boardColBody" id="colBaking"></div>
+        </div>
+
+        <div class="boardCol ready">
+          <div class="boardColHead">
+            <span>Ready</span>
+            <span class="colCount" id="badgeReady">0</span>
+          </div>
+          <div class="boardColBody" id="colReady"></div>
+        </div>
+
+        <div class="boardCol delivered">
+          <div class="boardColHead">
+            <span>Delivered</span>
+            <span class="colCount" id="badgeDelivered">0</span>
+          </div>
+          <div class="boardColBody" id="colDelivered"></div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <dialog id="prepDialog">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Prep Summary</h3>
-        <button class="btn" id="closePrepBtn">Close</button>
-      </div>
-      <div class="modal-body">
-        <div class="prep-grid">
-          <div class="prep-card">
-            <h4>Confirmed pizzas</h4>
-            <ul id="prepConfirmed"></ul>
-          </div>
-          <div class="prep-card">
-            <h4>Baking pizzas</h4>
-            <ul id="prepBaking"></ul>
-          </div>
-          <div class="prep-card">
-            <h4>Ready orders</h4>
-            <ul id="prepReady"></ul>
-          </div>
-          <div class="prep-card">
-            <h4>Extras</h4>
-            <ul id="prepExtras"></ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  </dialog>
-
   <script>
-    const STATUS_ORDER = ["placed","confirmed","baking","ready","delivered"];
-    const STATUS_LABEL = {
-      placed:"Placed",
-      confirmed:"Confirmed",
-      baking:"Baking",
-      ready:"Ready",
-      delivered:"Delivered"
-    };
+    const HEARTH_CONFIG = window.HEARTH_CONFIG || {};
+    const SUPABASE_URL = HEARTH_CONFIG.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = HEARTH_CONFIG.SUPABASE_ANON_KEY;
 
-    let appState = {
-      drops: [],
-      orders: [],
-      selectedDropId: null
-    };
+    let supabase = null;
 
-    function currency(n){
-      return new Intl.NumberFormat("en-GB", {
-        style: "currency",
-        currency: "GBP",
-        maximumFractionDigits: 0
-      }).format(Number(n || 0));
+    if (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
 
-    function compactCurrency(n){
+    const STATUS_ORDER = ["placed", "confirmed", "baking", "ready", "delivered"];
+    const STATUS_LABELS = {
+      placed: "Placed",
+      confirmed: "Confirmed",
+      baking: "Baking",
+      ready: "Ready",
+      delivered: "Delivered"
+    };
+
+    let state = {
+      drops: [],
+      selectedDropId: null,
+      drop: null,
+      capacity: null,
+      ordersSummary: [],
+      itemDetails: []
+    };
+
+    function byId(id) {
+      return document.getElementById(id);
+    }
+
+    function formatMoneyPence(pence) {
       return new Intl.NumberFormat("en-GB", {
         style: "currency",
         currency: "GBP",
         minimumFractionDigits: 0,
         maximumFractionDigits: 2
-      }).format(Number(n || 0));
+      }).format((Number(pence || 0)) / 100);
     }
 
-    function titleCase(str){
-      return String(str || "")
-        .replace(/[-_]/g, " ")
-        .replace(/\b\w/g, s => s.toUpperCase());
+    function formatShortDateTime(value) {
+      if (!value) return "—";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "—";
+      return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
     }
 
-    function slugify(text){
-      return String(text || "").toLowerCase().trim().replace(/\s+/g, "-");
-    }
+    function formatLongMeta(drop) {
+      if (!drop) return "No drop selected";
+      const parts = [];
 
-    function safeParse(value){
-      try { return JSON.parse(value); } catch { return null; }
-    }
-
-    function allParsedLocalStorageValues(){
-      const parsed = [];
-      for(let i=0;i<localStorage.length;i++){
-        const key = localStorage.key(i);
-        const value = safeParse(localStorage.getItem(key));
-        parsed.push({ key, value });
-      }
-      return parsed;
-    }
-
-    function detectDropsAndOrders(){
-      const parsed = allParsedLocalStorageValues();
-
-      let bestDrops = null;
-      let bestOrders = null;
-
-      for(const entry of parsed){
-        const value = entry.value;
-
-        if(Array.isArray(value) && value.length){
-          const first = value[0];
-
-          const looksLikeDrop =
-            typeof first === "object" &&
-            (
-              "capacity" in first ||
-              "cutoff" in first ||
-              "windowStart" in first ||
-              "windowEnd" in first ||
-              "menuId" in first ||
-              "dropDate" in first
-            );
-
-          const looksLikeOrder =
-            typeof first === "object" &&
-            (
-              "customerName" in first ||
-              "customer" in first ||
-              "items" in first ||
-              "dropId" in first ||
-              "status" in first
-            );
-
-          if(looksLikeDrop && (!bestDrops || value.length > bestDrops.length)) bestDrops = value;
-          if(looksLikeOrder && (!bestOrders || value.length > bestOrders.length)) bestOrders = value;
-        }
-
-        if(value && typeof value === "object" && !Array.isArray(value)){
-          for(const k of Object.keys(value)){
-            const nested = value[k];
-            if(Array.isArray(nested) && nested.length){
-              const first = nested[0];
-
-              const looksLikeDrop =
-                typeof first === "object" &&
-                (
-                  "capacity" in first ||
-                  "cutoff" in first ||
-                  "windowStart" in first ||
-                  "windowEnd" in first ||
-                  "menuId" in first ||
-                  "dropDate" in first
-                );
-
-              const looksLikeOrder =
-                typeof first === "object" &&
-                (
-                  "customerName" in first ||
-                  "customer" in first ||
-                  "items" in first ||
-                  "dropId" in first ||
-                  "status" in first
-                );
-
-              if(looksLikeDrop && (!bestDrops || nested.length > bestDrops.length)) bestDrops = nested;
-              if(looksLikeOrder && (!bestOrders || nested.length > bestOrders.length)) bestOrders = nested;
-            }
-          }
-        }
+      if (drop.drop_type) {
+        parts.push(drop.drop_type);
       }
 
-      return {
-        drops: normalizeDrops(bestDrops || []),
-        orders: normalizeOrders(bestOrders || [])
-      };
-    }
-
-    function normalizeDrops(drops){
-      return drops.map((d, index) => {
-        const id = String(
-          d.id ??
-          d.dropId ??
-          d.slug ??
-          d.code ??
-          `drop-${index + 1}`
-        );
-
-        const name = d.name || d.title || d.dropName || `Drop ${index + 1}`;
-
-        const capacity = Number(
-          d.capacity ??
-          d.pizzaCapacity ??
-          d.maxPizzas ??
-          d.units ??
-          40
-        );
-
-        const status = String(d.status || "live").toLowerCase();
-        const date = d.date || d.dropDate || d.day || "";
-        const windowStart = d.windowStart || d.startTime || d.from || "";
-        const windowEnd = d.windowEnd || d.endTime || d.to || "";
-        const cutoff = d.cutoff || d.cutoffTime || "";
-        const area = d.area || d.location || d.node || d.neighbourhood || "";
-
-        return { id, name, capacity, status, date, windowStart, windowEnd, cutoff, area };
-      });
-    }
-
-    function normalizeOrders(orders){
-      return orders.map((o, index) => {
-        const id = String(o.id ?? o.orderId ?? `order-${index + 1}`);
-        const dropId = String(o.dropId ?? o.drop ?? o.drop_id ?? "");
-        const customerName = o.customerName || o.customer || o.name || "Customer";
-        const status = normalizeStatus(o.status);
-        const createdAt = o.createdAt || o.created || o.timestamp || o.time || "";
-        const notes = o.notes || "";
-
-        const items = normalizeItems(o.items || o.products || o.lines || []);
-        const extras = normalizeExtras(o.extras || o.addOns || o.addons || []);
-        const total = Number(
-          o.total ??
-          o.totalPrice ??
-          estimateTotal(items, extras)
-        );
-
-        return { id, dropId, customerName, status, createdAt, notes, items, extras, total };
-      });
-    }
-
-    function normalizeStatus(status){
-      const s = String(status || "placed").toLowerCase();
-      if(["placed","new","pending"].includes(s)) return "placed";
-      if(["confirmed","accepted"].includes(s)) return "confirmed";
-      if(["bake","baking","oven"].includes(s)) return "baking";
-      if(["ready","packed"].includes(s)) return "ready";
-      if(["delivered","complete","completed","done"].includes(s)) return "delivered";
-      return "placed";
-    }
-
-    function normalizeItems(items){
-      if(!Array.isArray(items)) return [];
-      return items.map((item, index) => {
-        if(typeof item === "string"){
-          return { name: item, qty: 1, price: 0, type: "pizza" };
-        }
-
-        const name = item.name || item.title || item.productName || `Item ${index + 1}`;
-        const qty = Number(item.qty ?? item.quantity ?? 1);
-        const price = Number(item.price ?? item.unitPrice ?? 0);
-        const type = String(item.type || inferItemType(name)).toLowerCase();
-
-        return { name, qty, price, type };
-      });
-    }
-
-    function normalizeExtras(extras){
-      if(!Array.isArray(extras)) return [];
-      return extras.map((extra, index) => {
-        if(typeof extra === "string"){
-          return { name: extra, qty: 1, price: 0 };
-        }
-
-        const name = extra.name || extra.title || extra.productName || `Extra ${index + 1}`;
-        const qty = Number(extra.qty ?? extra.quantity ?? 1);
-        const price = Number(extra.price ?? extra.unitPrice ?? 0);
-
-        return { name, qty, price };
-      });
-    }
-
-    function inferItemType(name){
-      const n = String(name || "").toLowerCase();
-      if(n.includes("dip") || n.includes("sauce") || n.includes("olive") || n.includes("drink")) return "extra";
-      return "pizza";
-    }
-
-    function estimateTotal(items, extras){
-      const sum = arr => arr.reduce((acc, item) => acc + (Number(item.price || 0) * Number(item.qty || 1)), 0);
-      return sum(items) + sum(extras);
-    }
-
-    function demoData(){
-      return {
-        drops: [
-          {
-            id: "drop-ruscombe-friday",
-            name: "Friday Ruscombe Drop",
-            capacity: 40,
-            status: "live",
-            date: "Friday",
-            windowStart: "18:30",
-            windowEnd: "20:30",
-            cutoff: "17:30",
-            area: "Ruscombe"
-          }
-        ],
-        orders: [
-          {
-            id: "m34u6o",
-            dropId: "drop-ruscombe-friday",
-            customerName: "Ed Test",
-            status: "placed",
-            createdAt: "19:02",
-            items: [{ name:"Margherita", qty:1, price:11, type:"pizza" }],
-            extras: [{ name:"Olives", qty:2, price:1.5 }, { name:"Garlic Dip", qty:4, price:2 }],
-            total: 22
-          },
-          {
-            id: "a102",
-            dropId: "drop-ruscombe-friday",
-            customerName: "Jemma",
-            status: "confirmed",
-            createdAt: "18:48",
-            items: [{ name:"Berkshire Pork & Honey", qty:1, price:15, type:"pizza" }, { name:"Margherita", qty:1, price:11, type:"pizza" }],
-            extras: [{ name:"Garlic Dip", qty:1, price:2 }],
-            total: 28
-          },
-          {
-            id: "a103",
-            dropId: "drop-ruscombe-friday",
-            customerName: "Tom",
-            status: "baking",
-            createdAt: "18:46",
-            items: [{ name:"Meatball", qty:2, price:14, type:"pizza" }],
-            extras: [],
-            total: 28
-          },
-          {
-            id: "a104",
-            dropId: "drop-ruscombe-friday",
-            customerName: "Ruth",
-            status: "ready",
-            createdAt: "18:42",
-            items: [{ name:"Courgette & Ricotta", qty:1, price:13, type:"pizza" }],
-            extras: [{ name:"Smoked Pepper Dip", qty:1, price:2 }],
-            total: 15
-          },
-          {
-            id: "a105",
-            dropId: "drop-ruscombe-friday",
-            customerName: "James",
-            status: "delivered",
-            createdAt: "18:31",
-            items: [{ name:"Marinara", qty:2, price:10, type:"pizza" }],
-            extras: [],
-            total: 20
-          }
-        ]
-      };
-    }
-
-    function loadData(){
-      const detected = detectDropsAndOrders();
-
-      if(detected.drops.length){
-        appState.drops = detected.drops;
-        appState.orders = detected.orders;
-      } else {
-        const demo = demoData();
-        appState.drops = demo.drops;
-        appState.orders = demo.orders;
-      }
-
-      const savedSelected = localStorage.getItem("hearth:selectedDropId");
-      appState.selectedDropId =
-        savedSelected && appState.drops.some(d => d.id === savedSelected)
-          ? savedSelected
-          : (appState.drops[0]?.id || null);
-    }
-
-    function saveOrdersBack(){
-      localStorage.setItem("hearth:serviceBoardOrders", JSON.stringify(appState.orders));
-    }
-
-    function getSelectedDrop(){
-      return appState.drops.find(d => d.id === appState.selectedDropId) || null;
-    }
-
-    function getOrdersForSelectedDrop(){
-      return appState.orders
-        .filter(o => !appState.selectedDropId || o.dropId === appState.selectedDropId)
-        .sort((a,b) => {
-          const aStatus = STATUS_ORDER.indexOf(a.status);
-          const bStatus = STATUS_ORDER.indexOf(b.status);
-          if(aStatus !== bStatus) return aStatus - bStatus;
-          return String(a.createdAt).localeCompare(String(b.createdAt));
+      if (drop.delivery_start && drop.delivery_end) {
+        const start = new Date(drop.delivery_start).toLocaleString("en-GB", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit"
         });
+        const end = new Date(drop.delivery_end).toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+        parts.push(`${start}–${end}`);
+      }
+
+      if (drop.cutoff_time) {
+        const cutoff = new Date(drop.cutoff_time).toLocaleString("en-GB", {
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+        parts.push(`Cutoff ${cutoff}`);
+      }
+
+      return parts.join(" • ");
     }
 
-    function getPizzaCount(order){
-      return order.items
-        .filter(i => (i.type || "pizza") !== "extra")
-        .reduce((acc, item) => acc + Number(item.qty || 0), 0);
+    function statusDotClass(status) {
+      if (status === "live") return "dot live";
+      if (status === "draft") return "dot draft";
+      return "dot closed";
     }
 
-    function renderDropSelect(){
-      const select = document.getElementById("dropSelect");
-      select.innerHTML = "";
+    function normaliseDropStatus(status) {
+      return String(status || "").toLowerCase();
+    }
 
-      appState.drops.forEach(drop => {
-        const opt = document.createElement("option");
-        opt.value = drop.id;
-        opt.textContent = drop.name;
-        if(drop.id === appState.selectedDropId) opt.selected = true;
-        select.appendChild(opt);
+    function nextStatus(status) {
+      const idx = STATUS_ORDER.indexOf(status);
+      if (idx < 0 || idx >= STATUS_ORDER.length - 1) return null;
+      return STATUS_ORDER[idx + 1];
+    }
+
+    function prevStatus(status) {
+      const idx = STATUS_ORDER.indexOf(status);
+      if (idx <= 0) return null;
+      return STATUS_ORDER[idx - 1];
+    }
+
+    function groupItemDetailsByOrder(items) {
+      const map = new Map();
+
+      for (const row of items) {
+        if (!map.has(row.order_id)) {
+          map.set(row.order_id, []);
+        }
+        map.get(row.order_id).push(row);
+      }
+
+      return map;
+    }
+
+    function buildOrderModels() {
+      const itemsByOrder = groupItemDetailsByOrder(state.itemDetails);
+
+      return state.ordersSummary.map(order => {
+        const lines = itemsByOrder.get(order.order_id) || [];
+        const grouped = {
+          capacity: [],
+          extras: []
+        };
+
+        lines.forEach(line => {
+          if (line.product_category === state.drop.capacity_category) {
+            grouped.capacity.push(line);
+          } else {
+            grouped.extras.push(line);
+          }
+        });
+
+        return {
+          ...order,
+          lines,
+          grouped
+        };
       });
-
-      select.addEventListener("change", e => {
-        appState.selectedDropId = e.target.value;
-        localStorage.setItem("hearth:selectedDropId", appState.selectedDropId);
-        render();
-      });
     }
 
-    function renderHeader(drop, orders){
-      const orderCount = orders.length;
-      const pizzaCount = orders.reduce((acc, o) => acc + getPizzaCount(o), 0);
-      const capacity = Number(drop?.capacity || 40);
-      const capacityUsed = capacity ? Math.round((pizzaCount / capacity) * 100) : 0;
-      const revenue = orders.reduce((acc, o) => acc + Number(o.total || 0), 0);
-      const avgOrder = orderCount ? revenue / orderCount : 0;
+    function updateError(message = "") {
+      const el = byId("errorBox");
 
-      document.getElementById("dropName").textContent = drop?.name || "No drop selected";
-      document.getElementById("dropMeta").textContent =
-        [
-          drop?.area || "",
-          drop?.date || "",
-          drop?.windowStart && drop?.windowEnd ? `${drop.windowStart}–${drop.windowEnd}` : "",
-          drop?.cutoff ? `Cutoff ${drop.cutoff}` : ""
-        ].filter(Boolean).join(" • ");
-
-      document.getElementById("dropStatusPill").textContent = titleCase(drop?.status || "live");
-
-      document.getElementById("kpiOrders").textContent = orderCount;
-      document.getElementById("kpiPizzas").textContent = pizzaCount;
-      document.getElementById("kpiCapacity").textContent = capacity;
-      document.getElementById("kpiCapacityUsed").textContent = `${capacityUsed}%`;
-      document.getElementById("kpiRevenue").textContent = currency(revenue);
-      document.getElementById("kpiAvgOrder").textContent = compactCurrency(avgOrder);
-
-      document.getElementById("capacityText").textContent = `${pizzaCount} / ${capacity} pizzas`;
-      document.getElementById("capacityRightText").textContent = `${capacityUsed}% full`;
-      document.getElementById("capacityFill").style.width = `${Math.min(capacityUsed, 100)}%`;
-    }
-
-    function renderQueue(orders){
-      const queueEl = document.getElementById("queueList");
-      queueEl.innerHTML = "";
-
-      const confirmedOrders = orders.filter(o => o.status === "confirmed");
-      const counts = new Map();
-
-      confirmedOrders.forEach(order => {
-        order.items
-          .filter(i => (i.type || "pizza") !== "extra")
-          .forEach(item => {
-            const key = item.name;
-            counts.set(key, (counts.get(key) || 0) + Number(item.qty || 0));
-          });
-      });
-
-      const entries = [...counts.entries()].sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-
-      if(!entries.length){
-        queueEl.innerHTML = `<div class="empty-state">No confirmed pizzas waiting to bake.</div>`;
+      if (!message) {
+        el.style.display = "none";
+        el.textContent = "";
         return;
       }
 
-      entries.forEach(([name, qty]) => {
-        const div = document.createElement("div");
-        div.className = "queue-item";
-        div.innerHTML = `
-          <span class="name">${name}</span>
-          <span class="qty">×${qty}</span>
-        `;
-        queueEl.appendChild(div);
+      el.style.display = "block";
+      el.textContent = message;
+    }
+
+    async function loadDrops() {
+      const { data, error } = await supabase
+        .from("drops")
+        .select("id, name, slug, drop_type, status, delivery_start, delivery_end, cutoff_time, capacity_category, capacity_units_total")
+        .order("delivery_start", { ascending: false });
+
+      if (error) throw error;
+
+      state.drops = data || [];
+
+      const saved = localStorage.getItem("hearth:selectedDropId");
+      const savedExists = state.drops.some(d => d.id === saved);
+
+      state.selectedDropId = savedExists
+        ? saved
+        : (state.drops.find(d => d.status === "live")?.id || state.drops[0]?.id || null);
+
+      renderDropSelect();
+    }
+
+    function renderDropSelect() {
+      const select = byId("dropSelect");
+      select.innerHTML = "";
+
+      if (!state.drops.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No drops found";
+        select.appendChild(opt);
+        return;
+      }
+
+      state.drops.forEach(drop => {
+        const opt = document.createElement("option");
+        opt.value = drop.id;
+        opt.textContent = drop.name;
+        if (drop.id === state.selectedDropId) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
       });
     }
 
-    function renderStatusCounts(orders){
+    async function loadSelectedDropData() {
+      if (!state.selectedDropId) {
+        state.drop = null;
+        state.capacity = null;
+        state.ordersSummary = [];
+        state.itemDetails = [];
+        return;
+      }
+
+      localStorage.setItem("hearth:selectedDropId", state.selectedDropId);
+
+      const [
+        dropRes,
+        capacityRes,
+        ordersRes,
+        itemsRes
+      ] = await Promise.all([
+        supabase
+          .from("drops")
+          .select("*")
+          .eq("id", state.selectedDropId)
+          .single(),
+
+        supabase
+          .from("v_drop_capacity_usage")
+          .select("*")
+          .eq("drop_id", state.selectedDropId)
+          .single(),
+
+        supabase
+          .from("v_drop_orders_summary")
+          .select("*")
+          .eq("drop_id", state.selectedDropId)
+          .order("created_at", { ascending: true }),
+
+        supabase
+          .from("v_order_item_detail")
+          .select("*")
+          .eq("drop_id", state.selectedDropId)
+          .order("created_at", { ascending: true })
+      ]);
+
+      if (dropRes.error) throw dropRes.error;
+      if (capacityRes.error) throw capacityRes.error;
+      if (ordersRes.error) throw ordersRes.error;
+      if (itemsRes.error) throw itemsRes.error;
+
+      state.drop = dropRes.data;
+      state.capacity = capacityRes.data;
+      state.ordersSummary = ordersRes.data || [];
+      state.itemDetails = itemsRes.data || [];
+    }
+
+    function renderHeader() {
+      const drop = state.drop;
+      const capacity = state.capacity;
+
+      if (!drop || !capacity) {
+        byId("dropName").textContent = "No drop selected";
+        byId("dropMeta").textContent = "Select a drop to view live order flow.";
+        byId("dropStatusText").textContent = "—";
+        byId("dropStatusDot").className = "dot";
+        return;
+      }
+
+      const used = Number(capacity.capacity_units_used || 0);
+      const total = Number(capacity.capacity_units_total || 0);
+      const remaining = Number(capacity.capacity_units_remaining || 0);
+      const percentage = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+      const revenue = state.ordersSummary.reduce((sum, row) => sum + Number(row.total_price_pence || 0), 0);
+
+      byId("dropName").textContent = drop.name;
+      byId("dropMeta").textContent = formatLongMeta(drop);
+      byId("dropStatusText").textContent = normaliseDropStatus(drop.status || "draft");
+      byId("dropStatusDot").className = statusDotClass(normaliseDropStatus(drop.status));
+
+      byId("kpiOrders").textContent = state.ordersSummary.length;
+      byId("kpiCategory").textContent = drop.capacity_category || "—";
+      byId("kpiCapacityTotal").textContent = total;
+      byId("kpiCapacityUsed").textContent = used;
+      byId("kpiCapacityRemaining").textContent = remaining;
+      byId("kpiRevenue").textContent = formatMoneyPence(revenue);
+
+      byId("capacityCopyLeft").textContent = `${used} / ${total} ${drop.capacity_category || "units"}`;
+      byId("capacityCopyRight").textContent = `${percentage}% full`;
+      byId("capacityFill").style.width = `${percentage}%`;
+    }
+
+    function renderQueue() {
+      const queueGrid = byId("queueGrid");
+      queueGrid.innerHTML = "";
+
+      if (!state.drop) {
+        queueGrid.innerHTML = `<div class="emptyState">No drop selected.</div>`;
+        return;
+      }
+
+      const relevant = state.itemDetails.filter(row =>
+        row.status === "confirmed" &&
+        row.product_category === state.drop.capacity_category
+      );
+
+      const counts = new Map();
+
+      relevant.forEach(row => {
+        counts.set(row.product_name, (counts.get(row.product_name) || 0) + Number(row.qty || 0));
+      });
+
+      const ordered = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+      if (!ordered.length) {
+        queueGrid.innerHTML = `<div class="emptyState">No confirmed ${state.drop.capacity_category} items waiting.</div>`;
+        return;
+      }
+
+      ordered.forEach(([name, qty]) => {
+        const div = document.createElement("div");
+        div.className = "queueItem";
+        div.innerHTML = `
+          <span>${name}</span>
+          <span class="queueQty">×${qty}</span>
+        `;
+        queueGrid.appendChild(div);
+      });
+    }
+
+    function renderWorkflowCounts() {
       const counts = {
         placed: 0,
         confirmed: 0,
@@ -1221,102 +541,249 @@
         delivered: 0
       };
 
-      orders.forEach(o => counts[o.status] = (counts[o.status] || 0) + 1);
+      state.ordersSummary.forEach(order => {
+        const key = String(order.status || "").toLowerCase();
+        if (counts[key] !== undefined) {
+          counts[key] += 1;
+        }
+      });
 
-      document.getElementById("countPlaced").textContent = counts.placed;
-      document.getElementById("countConfirmed").textContent = counts.confirmed;
-      document.getElementById("countBaking").textContent = counts.baking;
-      document.getElementById("countReady").textContent = counts.ready;
-      document.getElementById("countDelivered").textContent = counts.delivered;
+      byId("countPlaced").textContent = counts.placed;
+      byId("countConfirmed").textContent = counts.confirmed;
+      byId("countBaking").textContent = counts.baking;
+      byId("countReady").textContent = counts.ready;
+      byId("countDelivered").textContent = counts.delivered;
 
-      document.getElementById("badgePlaced").textContent = counts.placed;
-      document.getElementById("badgeConfirmed").textContent = counts.confirmed;
-      document.getElementById("badgeBaking").textContent = counts.baking;
-      document.getElementById("badgeReady").textContent = counts.ready;
-      document.getElementById("badgeDelivered").textContent = counts.delivered;
+      byId("badgePlaced").textContent = counts.placed;
+      byId("badgeConfirmed").textContent = counts.confirmed;
+      byId("badgeBaking").textContent = counts.baking;
+      byId("badgeReady").textContent = counts.ready;
+      byId("badgeDelivered").textContent = counts.delivered;
     }
 
-    function renderBoard(orders){
-      const cols = {
-        placed: document.getElementById("colPlaced"),
-        confirmed: document.getElementById("colConfirmed"),
-        baking: document.getElementById("colBaking"),
-        ready: document.getElementById("colReady"),
-        delivered: document.getElementById("colDelivered")
-      };
+    function summariseItems(lines) {
+      if (!lines.length) return "—";
+      return lines.map(line => `${line.product_name} ×${line.qty}`).join(", ");
+    }
 
-      Object.values(cols).forEach(col => col.innerHTML = "");
+    function renderAllOrders() {
+      const body = byId("allOrdersBody");
+      body.innerHTML = "";
 
-      STATUS_ORDER.forEach(status => {
-        const list = orders.filter(order => order.status === status);
+      if (!state.ordersSummary.length) {
+        body.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <div class="emptyState">No orders yet for this drop.</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
 
-        if(!list.length){
-          cols[status].innerHTML = `<div class="empty-state">No ${STATUS_LABEL[status].toLowerCase()} orders.</div>`;
-          return;
-        }
+      const models = buildOrderModels();
 
-        list.forEach(order => cols[status].appendChild(renderOrderCard(order)));
+      models.forEach(order => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="mono">${formatShortDateTime(order.created_at)}</td>
+          <td>${order.customer_name || "—"}</td>
+          <td>${order.capacity_units_in_order || 0}</td>
+          <td><span class="badgeStatus ${order.status}">${STATUS_LABELS[order.status] || order.status}</span></td>
+          <td>${formatMoneyPence(order.total_price_pence)}</td>
+          <td class="muted">${summariseItems(order.lines)}</td>
+        `;
+        body.appendChild(tr);
       });
     }
 
-    function renderOrderCard(order){
-      const nextStatus = getNextStatus(order.status);
-      const card = document.createElement("div");
-      card.className = "order-card";
+    function renderOrderCard(order) {
+      const next = nextStatus(order.status);
+      const prev = prevStatus(order.status);
 
-      const pizzas = order.items.filter(i => (i.type || "pizza") !== "extra");
-      const extras = [...order.extras, ...order.items.filter(i => i.type === "extra")];
-
-      card.innerHTML = `
-        <div class="order-card-inner">
-          <div class="order-top">
-            <div>
-              <div class="order-id">Order #${order.id}</div>
-              <div class="order-name">${order.customerName}</div>
-            </div>
-            <div class="time-pill">${order.createdAt || "—"}</div>
-          </div>
-
-          <div>
-            ${pizzas.map(item => `
-              <div class="item-block">
-                <div class="item-line">
-                  <span>${item.name}</span>
-                  <span>×${item.qty}</span>
-                </div>
+      const capacityLinesHtml = order.grouped.capacity.length
+        ? `
+          <div class="lineBlock">
+            <div class="lineBlockTitle">${state.drop.capacity_category}</div>
+            ${order.grouped.capacity.map(line => `
+              <div class="lineItem">
+                <span>${line.product_name}</span>
+                <span>×${line.qty}</span>
               </div>
             `).join("")}
           </div>
-
-          ${extras.length ? `
-            <div class="extras">
-              <strong>Extras</strong>
-              <ul>
-                ${extras.map(extra => `<li>${extra.name} ×${extra.qty}</li>`).join("")}
-              </ul>
+        `
+        : `
+          <div class="lineBlock">
+            <div class="lineBlockTitle">${state.drop.capacity_category}</div>
+            <div class="lineItem">
+              <span class="muted">No ${state.drop.capacity_category} items</span>
+              <span>—</span>
             </div>
-          ` : ""}
+          </div>
+        `;
 
-          <div class="order-meta">
-            <span class="mini-pill">${getPizzaCount(order)} pizza${getPizzaCount(order) === 1 ? "" : "s"}</span>
-            <span class="mini-pill">${compactCurrency(order.total)}</span>
-            <span class="mini-pill">${STATUS_LABEL[order.status]}</span>
+      const extraLinesHtml = order.grouped.extras.length
+        ? `
+          <div class="lineBlock">
+            <div class="lineBlockTitle">Other items</div>
+            ${order.grouped.extras.map(line => `
+              <div class="lineItem">
+                <span>${line.product_name}</span>
+                <span>×${line.qty}</span>
+              </div>
+            `).join("")}
+          </div>
+        `
+        : "";
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "orderCard";
+      wrapper.innerHTML = `
+        <div class="orderCardInner">
+          <div class="orderCardTop">
+            <div>
+              <div class="orderId">Order #${order.order_id.slice(0, 8)}</div>
+              <div class="orderCustomer">${order.customer_name || "Customer"}</div>
+            </div>
+            <div class="timeChip">${formatShortDateTime(order.created_at)}</div>
           </div>
 
-          <div class="order-actions">
-            ${nextStatus ? `<button class="btn btn-next" data-order-id="${order.id}" data-next-status="${nextStatus}">${buttonLabel(nextStatus)}</button>` : ""}
-            ${order.status !== "placed" ? `<button class="btn btn-subtle" data-order-id="${order.id}" data-prev-status="${getPrevStatus(order.status)}">Back</button>` : ""}
+          ${capacityLinesHtml}
+          ${extraLinesHtml}
+
+          <div class="cardMeta">
+            <span class="metaChip">${order.capacity_units_in_order || 0} ${state.drop.capacity_category}</span>
+            <span class="metaChip">${formatMoneyPence(order.total_price_pence)}</span>
+            <span class="metaChip">${STATUS_LABELS[order.status] || order.status}</span>
+          </div>
+
+          <div class="cardActions">
+            ${next ? `<button class="btnAccent js-next" data-id="${order.order_id}" data-status="${next}">${STATUS_LABELS[next]}</button>` : ""}
+            ${prev ? `<button class="btnGhost js-prev" data-id="${order.order_id}" data-status="${prev}">Back</button>` : ""}
           </div>
         </div>
       `;
-
-      return card;
+      return wrapper;
     }
 
-    function buttonLabel(nextStatus){
-      if(nextStatus === "confirmed") return "Confirm";
-      if(nextStatus === "baking") return "Bake";
-      if(nextStatus === "ready") return "Ready";
+    function renderBoard() {
+      const cols = {
+        placed: byId("colPlaced"),
+        confirmed: byId("colConfirmed"),
+        baking: byId("colBaking"),
+        ready: byId("colReady"),
+        delivered: byId("colDelivered")
+      };
+
+      Object.values(cols).forEach(col => {
+        col.innerHTML = "";
+      });
+
+      const models = buildOrderModels();
+
+      STATUS_ORDER.forEach(status => {
+        const matches = models.filter(order => order.status === status);
+
+        if (!matches.length) {
+          cols[status].innerHTML = `<div class="emptyState">No ${status} orders.</div>`;
+          return;
+        }
+
+        matches.forEach(order => {
+          cols[status].appendChild(renderOrderCard(order));
+        });
+      });
+    }
+
+    async function updateOrderStatus(orderId, status) {
+      updateError("");
+
+      const { error } = await supabase
+        .from("orders")
+        .update({ status })
+        .eq("id", orderId);
+
+      if (error) {
+        updateError(`Status update failed: ${error.message}`);
+        return;
+      }
+
+      await refreshData();
+    }
+
+    function attachEvents() {
+      byId("dropSelect").addEventListener("change", async (e) => {
+        state.selectedDropId = e.target.value || null;
+        await refreshData();
+      });
+
+      byId("refreshBtn").addEventListener("click", async () => {
+        await refreshData();
+      });
+
+      document.body.addEventListener("click", async (e) => {
+        const nextBtn = e.target.closest(".js-next");
+        const prevBtn = e.target.closest(".js-prev");
+
+        if (nextBtn) {
+          const orderId = nextBtn.dataset.id;
+          const status = nextBtn.dataset.status;
+          await updateOrderStatus(orderId, status);
+        }
+
+        if (prevBtn) {
+          const orderId = prevBtn.dataset.id;
+          const status = prevBtn.dataset.status;
+          await updateOrderStatus(orderId, status);
+        }
+      });
+    }
+
+    function renderEverything() {
+      renderHeader();
+      renderQueue();
+      renderWorkflowCounts();
+      renderAllOrders();
+      renderBoard();
+    }
+
+    async function refreshData() {
+      try {
+        updateError("");
+
+        if (!state.drops.length) {
+          await loadDrops();
+        }
+
+        await loadSelectedDropData();
+        renderEverything();
+      } catch (err) {
+        console.error(err);
+        updateError(err.message || "Something went wrong loading the Service Board.");
+      }
+    }
+
+    async function init() {
+      try {
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !supabase) {
+          updateError("Missing Supabase config. Check /assets/config.js and ensure window.HEARTH_CONFIG is set.");
+          return;
+        }
+
+        attachEvents();
+        await loadDrops();
+        await refreshData();
+      } catch (err) {
+        console.error(err);
+        updateError(err.message || "Unable to initialise Service Board.");
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
       if(nextStatus === "delivered") return "Delivered";
       return "Next";
     }
