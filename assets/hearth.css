@@ -618,8 +618,9 @@ tbody td{
   grid-template-columns:repeat(5, 1fr);
   gap:14px;
   margin-top:14px;
-  margin-bottom:18px;
+  margin-bottom:24px;
   align-items:start;
+  padding-bottom:10px;
 }
 
 .boardCol{
@@ -670,11 +671,18 @@ tbody td{
   min-height:420px;
   max-height:56vh;
   overflow:auto;
-  padding:12px 12px 22px;
+  padding:12px 12px 26px;
   display:flex;
   flex-direction:column;
   gap:10px;
-  border-top:0;
+  border-bottom:1px solid transparent;
+}
+
+.boardColBody::after{
+  content:"";
+  display:block;
+  min-height:14px;
+  flex:0 0 14px;
 }
 
 .orderCard{
