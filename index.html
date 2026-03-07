@@ -35,7 +35,7 @@
     }
 
     .orderCardInner{
-      padding:11px !important;
+      padding:10px !important;
     }
 
     .orderCardTop{
@@ -46,49 +46,86 @@
       font-size:14px !important;
     }
 
-    .lineBlock{
-      padding:8px 10px !important;
-      margin-bottom:8px !important;
+    .summaryRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin:8px 0 10px;
+      flex-wrap:wrap;
     }
 
-    .lineBlockTitle{
-      margin-bottom:6px !important;
-      font-size:10px !important;
+    .summaryStats{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
     }
 
-    .lineItem{
-      margin-bottom:4px !important;
-      font-size:12px !important;
+    .summaryText{
+      font-size:12px;
+      font-weight:800;
+      color:var(--h-text);
     }
 
-    .cardMeta{
-      margin:8px 0 10px !important;
-    }
-
-    .metaChip{
-      font-size:10px !important;
-      padding:4px 7px !important;
+    .summaryMuted{
+      color:var(--h-muted);
+      font-weight:700;
     }
 
     .cardActions{
       display:flex !important;
       gap:8px !important;
-      margin:2px 0 8px !important;
-      position:sticky;
-      bottom:0;
-      background:rgba(255,255,255,0.96);
-      padding-top:2px;
+      margin:0 !important;
+      flex-wrap:wrap;
     }
 
     .cardActions .btnAccent,
-    .cardActions .btnGhost{
-      flex:1;
+    .cardActions .btnGhost,
+    .cardActions .btnSmall{
       display:flex !important;
       align-items:center;
       justify-content:center;
-      min-height:36px;
-      padding:8px 10px;
+      min-height:34px;
+      padding:7px 10px;
       text-decoration:none;
+      flex:1 1 0;
+    }
+
+    .detailsToggle{
+      min-width:82px;
+      flex:0 0 auto !important;
+    }
+
+    .detailsWrap{
+      margin-top:8px;
+      border-top:1px solid var(--h-border-2);
+      padding-top:8px;
+      display:none;
+    }
+
+    .detailsWrap.open{
+      display:block;
+    }
+
+    .detailsScroller{
+      max-height:170px;
+      overflow:auto;
+      padding-right:4px;
+    }
+
+    .lineBlock{
+      padding:8px 10px !important;
+      margin-bottom:8px !important;
+    }
+
+    .lineBlock:last-child{
+      margin-bottom:0 !important;
+    }
+
+    .lineBlockTitle{
+      margin-bottom:6px !important;
+      font-size:10px !important;
     }
 
     .compactList{
@@ -102,12 +139,6 @@
       gap:10px;
       font-size:12px;
       font-weight:700;
-    }
-
-    .compactMuted{
-      color:var(--h-muted);
-      font-size:12px;
-      font-weight:600;
     }
 
     .utilityLink{
@@ -137,6 +168,11 @@
       .boardColBody{
         height:auto;
         max-height:none;
+      }
+
+      .summaryRow{
+        align-items:flex-start;
+        flex-direction:column;
       }
     }
   </style>
@@ -360,7 +396,8 @@
         drop: null,
         capacity: null,
         ordersSummary: [],
-        itemDetails: []
+        itemDetails: [],
+        expandedOrders: new Set()
       };
 
       function byId(id) {
@@ -674,6 +711,7 @@
         const status = normaliseStatus(order.status);
         const next = getNextStatus(status);
         const prev = getPrevStatus(status);
+        const isExpanded = state.expandedOrders.has(order.order_id);
 
         const wrapper = document.createElement("div");
         wrapper.className = "orderCard";
@@ -687,19 +725,31 @@
               <div class="timeChip">${formatShortTime(order.created_at)}</div>
             </div>
 
-            <div class="cardMeta">
-              <span class="metaChip">${Number(order.capacity_units_in_order || 0)} ${state.drop.capacity_category}</span>
-              <span class="metaChip">${formatMoneyPence(order.total_price_pence)}</span>
-              <span class="metaChip">${status}</span>
+            <div class="summaryRow">
+              <div class="summaryStats">
+                <span class="metaChip">${Number(order.capacity_units_in_order || 0)} ${state.drop.capacity_category}</span>
+                <span class="metaChip">${formatMoneyPence(order.total_price_pence)}</span>
+                <span class="metaChip">${status}</span>
+              </div>
+              <div class="summaryText">
+                <span class="summaryMuted">Items:</span> ${order.lines.length}
+              </div>
             </div>
 
             <div class="cardActions">
               ${next ? `<button class="btnAccent js-next" type="button" data-id="${order.order_id}" data-status="${next}">${getActionLabelForNextStatus(next)}</button>` : ""}
               ${prev ? `<button class="btnGhost js-prev" type="button" data-id="${order.order_id}" data-status="${prev}">Back</button>` : ""}
+              <button class="btnSmall detailsToggle js-toggle-details" type="button" data-id="${order.order_id}">
+                ${isExpanded ? "Hide" : "Details"}
+              </button>
             </div>
 
-            ${renderCompactBlock(String(state.drop.capacity_category || "Capacity items").toUpperCase(), order.grouped.capacity)}
-            ${renderCompactBlock("OTHER ITEMS", order.grouped.extras)}
+            <div class="detailsWrap ${isExpanded ? "open" : ""}" id="details-${order.order_id}">
+              <div class="detailsScroller">
+                ${renderCompactBlock(String(state.drop.capacity_category || "Capacity items").toUpperCase(), order.grouped.capacity)}
+                ${renderCompactBlock("OTHER ITEMS", order.grouped.extras)}
+              </div>
+            </div>
           </div>
         `;
         return wrapper;
@@ -803,9 +853,7 @@
         showError("");
 
         const order = state.ordersSummary.find((o) => o.order_id === orderId);
-        if (!order) {
-          throw new Error("Order not found in current state.");
-        }
+        if (!order) throw new Error("Order not found in current state.");
 
         const fromStatus = normaliseStatus(order.status);
 
@@ -818,6 +866,15 @@
 
         await writeStatusEvent(order, fromStatus, toStatus);
         await refreshData();
+      }
+
+      function toggleDetails(orderId) {
+        if (state.expandedOrders.has(orderId)) {
+          state.expandedOrders.delete(orderId);
+        } else {
+          state.expandedOrders.add(orderId);
+        }
+        renderBoard();
       }
 
       function renderEverything() {
@@ -857,6 +914,12 @@
         document.body.addEventListener("click", async function (e) {
           const nextBtn = e.target.closest(".js-next");
           const prevBtn = e.target.closest(".js-prev");
+          const toggleBtn = e.target.closest(".js-toggle-details");
+
+          if (toggleBtn) {
+            toggleDetails(toggleBtn.dataset.id);
+            return;
+          }
 
           if (!nextBtn && !prevBtn) return;
 
