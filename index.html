@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Service Board</title>
 
-  <link rel="stylesheet" href="/assets/hearth.css?v=6" />
+  <link rel="stylesheet" href="/assets/hearth.css?v=8" />
   <script src="/assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -362,11 +362,11 @@
       }
 
       function getActionLabelForNextStatus(nextStatus) {
-        if (nextStatus === "confirmed") return "▶ Confirm";
-        if (nextStatus === "baking") return "▶ Bake";
-        if (nextStatus === "ready") return "▶ Ready";
-        if (nextStatus === "delivered") return "▶ Deliver";
-        return "▶ Next";
+        if (nextStatus === "confirmed") return "Confirm";
+        if (nextStatus === "baking") return "Bake";
+        if (nextStatus === "ready") return "Ready";
+        if (nextStatus === "delivered") return "Deliver";
+        return "Next";
       }
 
       function getBackLabel() {
@@ -662,7 +662,7 @@
         `;
       }
 
-      function renderActionRow(orderId, status, isExpanded) {
+      function renderActionRow(orderId, status) {
         const prev = getPrevStatus(status);
         const next = getNextStatus(status);
 
@@ -670,14 +670,12 @@
           <div class="cardActions">
             ${prev
               ? `<button class="btnGhost js-prev" type="button" data-id="${orderId}" data-status="${prev}">${getBackLabel()}</button>`
-              : `<div class="btnPlaceholder">—</div>`
+              : `<div class="btnPlaceholder"></div>`
             }
-            <button class="btnSmall detailsToggle js-toggle-details" type="button" data-id="${orderId}">
-              ${isExpanded ? "Details ▾" : "Details ▸"}
-            </button>
+            <button class="btnSmall js-toggle-details" type="button" data-id="${orderId}">Details</button>
             ${next
               ? `<button class="btnAccent js-next" type="button" data-id="${orderId}" data-status="${next}">${getActionLabelForNextStatus(next)}</button>`
-              : `<div class="btnPlaceholder">—</div>`
+              : `<div class="btnPlaceholder"></div>`
             }
           </div>
         `;
@@ -699,7 +697,7 @@
               <div class="timeChip">${formatShortTime(order.created_at)}</div>
             </div>
 
-            ${renderActionRow(order.order_id, status, isExpanded)}
+            ${renderActionRow(order.order_id, status)}
 
             <div class="summaryRow">
               <div class="summaryStats">
@@ -836,7 +834,8 @@
         const { error: updateError } = await supabase
           .from("orders")
           .update({ status: toStatus })
-          .eq("id", orderId);
+          .eq("id", orderId)
+          .select("id, status");
 
         if (updateError) throw updateError;
 
@@ -925,8 +924,7 @@
           try {
             if (nextBtn) {
               await updateOrderStatus(nextBtn.dataset.id, nextBtn.dataset.status);
-            }
-            if (prevBtn) {
+            } else if (prevBtn) {
               await updateOrderStatus(prevBtn.dataset.id, prevBtn.dataset.status);
             }
           } catch (err) {
