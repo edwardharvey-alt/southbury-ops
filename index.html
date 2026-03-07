@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Service Board</title>
 
-  <link rel="stylesheet" href="/assets/hearth.css?v=16" />
+  <link rel="stylesheet" href="/assets/hearth.css?v=18" />
   <script src="/assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -360,6 +360,11 @@
         return String(status || "").toLowerCase();
       }
 
+      function getCapacityLabel(count = 1) {
+        const raw = String(state.drop?.capacity_category || "unit").trim().toLowerCase();
+        return `${count} ${raw}`;
+      }
+
       function getNextStatus(status) {
         const idx = STATUS_ORDER.indexOf(status);
         if (idx < 0 || idx >= STATUS_ORDER.length - 1) return null;
@@ -672,20 +677,24 @@
         `;
       }
 
-      function renderActionRow(orderId, status) {
+      function renderActionRow(orderId, status, unitsLabel) {
         const prev = getPrevStatus(status);
         const next = getNextStatus(status);
 
         return `
-          <div class="cardActions">
+          <div class="cardActions cardActionsInline">
             ${prev
-              ? `<button class="btnGhost js-prev" type="button" data-id="${orderId}" data-status="${prev}">${getBackLabel()}</button>`
-              : `<div class="btnPlaceholder"></div>`
+              ? `<button class="btnGhost js-prev actionBtn actionBtnEdge" type="button" data-id="${orderId}" data-status="${prev}">${getBackLabel()}</button>`
+              : `<div class="btnPlaceholder actionBtn actionBtnEdge"></div>`
             }
-            <button class="btnSmall js-toggle-details" type="button" data-id="${orderId}">Details</button>
+
+            <span class="metaChip actionQty">${unitsLabel}</span>
+
+            <button class="btnSmall js-toggle-details actionBtn actionBtnDetail" type="button" data-id="${orderId}">Details</button>
+
             ${next
-              ? `<button class="btnAccent js-next" type="button" data-id="${orderId}" data-status="${next}">${getActionLabelForNextStatus(next)}</button>`
-              : `<div class="btnPlaceholder"></div>`
+              ? `<button class="btnAccent js-next actionBtn actionBtnEdge" type="button" data-id="${orderId}" data-status="${next}">${getActionLabelForNextStatus(next)}</button>`
+              : `<div class="btnPlaceholder actionBtn actionBtnEdge"></div>`
             }
           </div>
         `;
@@ -693,6 +702,7 @@
 
       function renderOrderCard(order) {
         const isExpanded = state.expandedOrders.has(order.order_id);
+        const unitsLabel = getCapacityLabel(Number(order.capacity_units_in_order || 0));
 
         const wrapper = document.createElement("div");
         wrapper.className = "orderCard";
@@ -706,13 +716,7 @@
               <div class="timeChip">${formatShortTime(order.created_at)}</div>
             </div>
 
-            ${renderActionRow(order.order_id, normaliseStatus(order.status))}
-
-            <div class="summaryRow">
-              <div class="summaryStats">
-                <span class="metaChip">${Number(order.capacity_units_in_order || 0)} ${state.drop.capacity_category}</span>
-              </div>
-            </div>
+            ${renderActionRow(order.order_id, normaliseStatus(order.status), unitsLabel)}
 
             <div class="detailsWrap ${isExpanded ? "open" : ""}">
               <div class="detailsScroller">
