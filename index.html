@@ -27,11 +27,124 @@
     }
 
     .boardColBody{
-      height:58vh;
+      height:56vh;
       min-height:420px;
-      max-height:58vh;
+      max-height:56vh;
       overflow:auto;
       padding-bottom:10px;
+    }
+
+    .utilityLink{
+      font-size:12px;
+      color:var(--h-muted);
+      padding:7px 10px;
+      border-radius:12px;
+      border:1px solid transparent;
+      text-decoration:none;
+    }
+
+    .utilityLink:hover{
+      border-color:var(--h-border);
+      background:var(--h-surface-2);
+      text-decoration:none;
+      color:var(--h-text);
+    }
+
+    .summaryPanel{
+      margin-bottom:14px;
+    }
+
+    .summaryGrid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+
+    @media (max-width: 980px){
+      .summaryGrid{
+        grid-template-columns:1fr;
+      }
+    }
+
+    .summaryBox{
+      border:1px solid var(--h-border-2);
+      border-radius:14px;
+      padding:12px;
+      background:rgba(255,255,255,0.92);
+      min-height:150px;
+    }
+
+    .summaryBoxTitle{
+      margin:0 0 10px;
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:0.2px;
+      color:var(--h-muted);
+      font-weight:800;
+    }
+
+    .summaryList{
+      display:grid;
+      gap:6px;
+      max-height:220px;
+      overflow:auto;
+      padding-right:4px;
+    }
+
+    .summaryLine{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .summaryLine .qty{
+      color:var(--h-muted);
+      font-weight:800;
+      white-space:nowrap;
+    }
+
+    .tableTight th:nth-child(3),
+    .tableTight td:nth-child(3){
+      width:74px;
+      white-space:nowrap;
+    }
+
+    .tableTight th:nth-child(4),
+    .tableTight td:nth-child(4){
+      width:96px;
+      white-space:nowrap;
+    }
+
+    .tableTight th:nth-child(5),
+    .tableTight td:nth-child(5){
+      width:88px;
+      white-space:nowrap;
+    }
+
+    .tableItems{
+      min-width:190px;
+      max-width:320px;
+    }
+
+    .itemsBlock{
+      display:grid;
+      gap:4px;
+    }
+
+    .itemsLine{
+      font-size:12px;
+      line-height:1.3;
+    }
+
+    .itemsLabel{
+      font-size:10px;
+      color:var(--h-muted);
+      text-transform:uppercase;
+      letter-spacing:0.2px;
+      font-weight:800;
+      margin-bottom:2px;
     }
 
     .orderCardInner{
@@ -40,24 +153,34 @@
 
     .orderCardTop{
       margin-bottom:8px !important;
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      align-items:flex-start;
     }
 
     .orderCustomer{
       font-size:14px !important;
+      line-height:1.15;
+    }
+
+    .orderId{
+      font-size:10px !important;
+      line-height:1.1;
     }
 
     .summaryRow{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
+      gap:8px;
       margin:8px 0 10px;
       flex-wrap:wrap;
     }
 
     .summaryStats{
       display:flex;
-      gap:8px;
+      gap:6px;
       flex-wrap:wrap;
       align-items:center;
     }
@@ -75,8 +198,8 @@
 
     .cardActions{
       display:flex !important;
-      gap:8px !important;
-      margin:0 !important;
+      gap:6px !important;
+      margin:0 0 8px !important;
       flex-wrap:wrap;
     }
 
@@ -98,7 +221,7 @@
     }
 
     .detailsWrap{
-      margin-top:8px;
+      margin-top:6px;
       border-top:1px solid var(--h-border-2);
       padding-top:8px;
       display:none;
@@ -109,7 +232,7 @@
     }
 
     .detailsScroller{
-      max-height:170px;
+      max-height:160px;
       overflow:auto;
       padding-right:4px;
     }
@@ -141,20 +264,10 @@
       font-weight:700;
     }
 
-    .utilityLink{
-      font-size:12px;
+    .compactMuted{
       color:var(--h-muted);
-      padding:7px 10px;
-      border-radius:12px;
-      border:1px solid transparent;
-      text-decoration:none;
-    }
-
-    .utilityLink:hover{
-      border-color:var(--h-border);
-      background:var(--h-surface-2);
-      text-decoration:none;
-      color:var(--h-text);
+      font-size:12px;
+      font-weight:600;
     }
 
     @media (max-width: 1320px){
@@ -307,6 +420,25 @@
         </div>
       </div>
 
+      <div class="card pad summaryPanel">
+        <div>
+          <h3 class="sectionTitle">Consolidated drop view</h3>
+          <p class="sectionSub">Roll-up by item across the selected drop</p>
+        </div>
+
+        <div class="summaryGrid" style="margin-top:10px;">
+          <div class="summaryBox">
+            <h4 class="summaryBoxTitle" id="capacitySummaryTitle">Capacity items</h4>
+            <div class="summaryList" id="summaryCapacityList"></div>
+          </div>
+
+          <div class="summaryBox">
+            <h4 class="summaryBoxTitle">Other items</h4>
+            <div class="summaryList" id="summaryOtherList"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="card pad">
         <div class="row space">
           <div>
@@ -316,20 +448,21 @@
         </div>
 
         <div class="tableWrap">
-          <table>
+          <table class="tableTight">
             <thead>
               <tr>
                 <th>Time</th>
                 <th>Customer</th>
-                <th>Capacity Units</th>
+                <th>Units</th>
                 <th>Status</th>
                 <th>Total</th>
-                <th>Items</th>
+                <th>Capacity items</th>
+                <th>Other items</th>
               </tr>
             </thead>
             <tbody id="allOrdersBody">
               <tr>
-                <td colspan="6" class="muted">Loading…</td>
+                <td colspan="7" class="muted">Loading…</td>
               </tr>
             </tbody>
           </table>
@@ -587,6 +720,7 @@
         byId("capacityCopyLeft").textContent = `${used} / ${total} ${drop.capacity_category || "units"}`;
         byId("capacityCopyRight").textContent = `${pct}% full`;
         byId("capacityFill").style.width = `${pct}%`;
+        byId("capacitySummaryTitle").textContent = `${String(drop.capacity_category || "Capacity").replace(/^./, c => c.toUpperCase())} items`;
       }
 
       function renderQueue() {
@@ -653,9 +787,54 @@
         byId("badgeDelivered").textContent = counts.delivered;
       }
 
-      function summariseItems(lines) {
-        if (!lines || !lines.length) return "—";
-        return lines.map((line) => `${line.product_name} ×${line.qty}`).join(", ");
+      function renderSummaryList(targetId, entries) {
+        const el = byId(targetId);
+        el.innerHTML = "";
+
+        if (!entries.length) {
+          el.innerHTML = `<div class="compactMuted">No items.</div>`;
+          return;
+        }
+
+        entries.forEach(([name, qty]) => {
+          const div = document.createElement("div");
+          div.className = "summaryLine";
+          div.innerHTML = `
+            <span>${name}</span>
+            <span class="qty">×${qty}</span>
+          `;
+          el.appendChild(div);
+        });
+      }
+
+      function renderConsolidatedView() {
+        const capacityMap = new Map();
+        const otherMap = new Map();
+
+        state.itemDetails.forEach((line) => {
+          const qty = Number(line.qty || 0);
+          if (state.drop && line.product_category === state.drop.capacity_category) {
+            capacityMap.set(line.product_name, (capacityMap.get(line.product_name) || 0) + qty);
+          } else {
+            otherMap.set(line.product_name, (otherMap.get(line.product_name) || 0) + qty);
+          }
+        });
+
+        const sortEntries = (map) => [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+        renderSummaryList("summaryCapacityList", sortEntries(capacityMap));
+        renderSummaryList("summaryOtherList", sortEntries(otherMap));
+      }
+
+      function renderItemsBlock(lines, emptyText) {
+        if (!lines.length) {
+          return `<div class="compactMuted">${emptyText}</div>`;
+        }
+        return `
+          <div class="itemsBlock">
+            ${lines.map((line) => `<div class="itemsLine">${line.product_name} ×${line.qty}</div>`).join("")}
+          </div>
+        `;
       }
 
       function renderAllOrders() {
@@ -665,7 +844,7 @@
         if (!state.ordersSummary.length) {
           body.innerHTML = `
             <tr>
-              <td colspan="6">
+              <td colspan="7">
                 <div class="emptyState">No orders yet for this drop.</div>
               </td>
             </tr>
@@ -683,14 +862,26 @@
             <td>${Number(order.capacity_units_in_order || 0)}</td>
             <td><span class="badgeStatus ${normaliseStatus(order.status)}">${normaliseStatus(order.status)}</span></td>
             <td>${formatMoneyPence(order.total_price_pence)}</td>
-            <td class="muted">${summariseItems(order.lines)}</td>
+            <td class="tableItems">
+              ${renderItemsBlock(order.grouped.capacity, "None")}
+            </td>
+            <td class="tableItems">
+              ${renderItemsBlock(order.grouped.extras, "None")}
+            </td>
           `;
           body.appendChild(tr);
         });
       }
 
       function renderCompactBlock(title, lines) {
-        if (!lines.length) return "";
+        if (!lines.length) {
+          return `
+            <div class="lineBlock">
+              <div class="lineBlockTitle">${title}</div>
+              <div class="compactMuted">None</div>
+            </div>
+          `;
+        }
 
         const html = lines.map((line) => `
           <div class="compactLine">
@@ -744,7 +935,7 @@
               </button>
             </div>
 
-            <div class="detailsWrap ${isExpanded ? "open" : ""}" id="details-${order.order_id}">
+            <div class="detailsWrap ${isExpanded ? "open" : ""}">
               <div class="detailsScroller">
                 ${renderCompactBlock(String(state.drop.capacity_category || "Capacity items").toUpperCase(), order.grouped.capacity)}
                 ${renderCompactBlock("OTHER ITEMS", order.grouped.extras)}
@@ -881,6 +1072,7 @@
         renderHeader();
         renderQueue();
         renderWorkflowCounts();
+        renderConsolidatedView();
         renderAllOrders();
         renderBoard();
       }
@@ -894,6 +1086,7 @@
       function attachEvents() {
         byId("dropSelect").addEventListener("change", async function (e) {
           state.selectedDropId = e.target.value || null;
+          state.expandedOrders.clear();
           try {
             await refreshData();
           } catch (err) {
