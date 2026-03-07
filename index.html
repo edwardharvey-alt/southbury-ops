@@ -10,52 +10,74 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    /* Compact card overrides so action buttons stay visible */
+    .boardGrid{
+      align-items:start;
+    }
+
+    .boardCol{
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+
+    .boardColHead{
+      position:sticky;
+      top:0;
+      z-index:2;
+    }
+
     .boardColBody{
-      max-height: 72vh;
-      overflow: auto;
+      height:58vh;
+      min-height:420px;
+      max-height:58vh;
+      overflow:auto;
+      padding-bottom:10px;
     }
 
     .orderCardInner{
-      padding: 11px !important;
+      padding:11px !important;
     }
 
     .orderCardTop{
-      margin-bottom: 8px !important;
+      margin-bottom:8px !important;
     }
 
     .orderCustomer{
-      font-size: 14px !important;
+      font-size:14px !important;
     }
 
     .lineBlock{
-      padding: 8px 10px !important;
-      margin-bottom: 8px !important;
+      padding:8px 10px !important;
+      margin-bottom:8px !important;
     }
 
     .lineBlockTitle{
-      margin-bottom: 6px !important;
-      font-size: 10px !important;
+      margin-bottom:6px !important;
+      font-size:10px !important;
     }
 
     .lineItem{
-      margin-bottom: 4px !important;
-      font-size: 12px !important;
+      margin-bottom:4px !important;
+      font-size:12px !important;
     }
 
     .cardMeta{
-      margin: 8px 0 10px !important;
+      margin:8px 0 10px !important;
     }
 
     .metaChip{
-      font-size: 10px !important;
-      padding: 4px 7px !important;
+      font-size:10px !important;
+      padding:4px 7px !important;
     }
 
     .cardActions{
       display:flex !important;
       gap:8px !important;
-      margin-top: 2px !important;
+      margin:2px 0 8px !important;
+      position:sticky;
+      bottom:0;
+      background:rgba(255,255,255,0.96);
+      padding-top:2px;
     }
 
     .cardActions .btnAccent,
@@ -64,8 +86,8 @@
       display:flex !important;
       align-items:center;
       justify-content:center;
-      min-height: 36px;
-      padding: 8px 10px;
+      min-height:36px;
+      padding:8px 10px;
       text-decoration:none;
     }
 
@@ -83,9 +105,39 @@
     }
 
     .compactMuted{
-      color: var(--h-muted);
+      color:var(--h-muted);
       font-size:12px;
       font-weight:600;
+    }
+
+    .utilityLink{
+      font-size:12px;
+      color:var(--h-muted);
+      padding:7px 10px;
+      border-radius:12px;
+      border:1px solid transparent;
+      text-decoration:none;
+    }
+
+    .utilityLink:hover{
+      border-color:var(--h-border);
+      background:var(--h-surface-2);
+      text-decoration:none;
+      color:var(--h-text);
+    }
+
+    @media (max-width: 1320px){
+      .boardColBody{
+        height:46vh;
+        max-height:46vh;
+      }
+    }
+
+    @media (max-width: 760px){
+      .boardColBody{
+        height:auto;
+        max-height:none;
+      }
     }
   </style>
 </head>
@@ -96,7 +148,7 @@
         <div class="brandMark">H</div>
         <div>
           <div class="brandTitle">Hearth — Service Board</div>
-          <div class="brandSubtitle">Generic live drop execution for capacity-bound vendors</div>
+          <div class="brandSubtitle">Operational view for live drops</div>
         </div>
       </div>
 
@@ -133,6 +185,7 @@
           </div>
 
           <div class="execRight">
+            <a href="order-entry.html" class="utilityLink">Test Order</a>
             <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
           </div>
         </div>
@@ -298,13 +351,6 @@
       const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
 
       const STATUS_ORDER = ["placed", "confirmed", "baking", "ready", "delivered"];
-      const STATUS_LABELS = {
-        placed: "Confirm",
-        confirmed: "Bake",
-        baking: "Ready",
-        ready: "Deliver",
-        delivered: "Delivered"
-      };
 
       let supabase = null;
 
@@ -737,16 +783,40 @@
         state.itemDetails = itemsRes.data || [];
       }
 
-      async function updateOrderStatus(orderId, status) {
-        showError("");
-
+      async function writeStatusEvent(order, fromStatus, toStatus) {
         const { error } = await supabase
-          .from("orders")
-          .update({ status })
-          .eq("id", orderId);
+          .from("order_status_events")
+          .insert({
+            order_id: order.order_id,
+            drop_id: state.selectedDropId,
+            from_status: fromStatus,
+            to_status: toStatus,
+            event_type: "status_change",
+            actor: "service_board",
+            actor_type: "operator"
+          });
 
         if (error) throw error;
+      }
 
+      async function updateOrderStatus(orderId, toStatus) {
+        showError("");
+
+        const order = state.ordersSummary.find((o) => o.order_id === orderId);
+        if (!order) {
+          throw new Error("Order not found in current state.");
+        }
+
+        const fromStatus = normaliseStatus(order.status);
+
+        const { error: updateError } = await supabase
+          .from("orders")
+          .update({ status: toStatus })
+          .eq("id", orderId);
+
+        if (updateError) throw updateError;
+
+        await writeStatusEvent(order, fromStatus, toStatus);
         await refreshData();
       }
 
