@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Service Board</title>
 
-  <link rel="stylesheet" href="/assets/hearth.css?v=8" />
+  <link rel="stylesheet" href="/assets/hearth.css?v=10" />
   <script src="/assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -362,11 +362,11 @@
       }
 
       function getActionLabelForNextStatus(nextStatus) {
-        if (nextStatus === "confirmed") return "Confirm";
-        if (nextStatus === "baking") return "Bake";
-        if (nextStatus === "ready") return "Ready";
-        if (nextStatus === "delivered") return "Deliver";
-        return "Next";
+        if (nextStatus === "confirmed") return "Confirm ▶";
+        if (nextStatus === "baking") return "Bake ▶";
+        if (nextStatus === "ready") return "Ready ▶";
+        if (nextStatus === "delivered") return "Deliver ▶";
+        return "Next ▶";
       }
 
       function getBackLabel() {
