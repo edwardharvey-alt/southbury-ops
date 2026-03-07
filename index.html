@@ -8,6 +8,86 @@
   <link rel="stylesheet" href="/assets/hearth.css?v=4" />
   <script src="/assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* Compact card overrides so action buttons stay visible */
+    .boardColBody{
+      max-height: 72vh;
+      overflow: auto;
+    }
+
+    .orderCardInner{
+      padding: 11px !important;
+    }
+
+    .orderCardTop{
+      margin-bottom: 8px !important;
+    }
+
+    .orderCustomer{
+      font-size: 14px !important;
+    }
+
+    .lineBlock{
+      padding: 8px 10px !important;
+      margin-bottom: 8px !important;
+    }
+
+    .lineBlockTitle{
+      margin-bottom: 6px !important;
+      font-size: 10px !important;
+    }
+
+    .lineItem{
+      margin-bottom: 4px !important;
+      font-size: 12px !important;
+    }
+
+    .cardMeta{
+      margin: 8px 0 10px !important;
+    }
+
+    .metaChip{
+      font-size: 10px !important;
+      padding: 4px 7px !important;
+    }
+
+    .cardActions{
+      display:flex !important;
+      gap:8px !important;
+      margin-top: 2px !important;
+    }
+
+    .cardActions .btnAccent,
+    .cardActions .btnGhost{
+      flex:1;
+      display:flex !important;
+      align-items:center;
+      justify-content:center;
+      min-height: 36px;
+      padding: 8px 10px;
+      text-decoration:none;
+    }
+
+    .compactList{
+      display:grid;
+      gap:4px;
+    }
+
+    .compactLine{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size:12px;
+      font-weight:700;
+    }
+
+    .compactMuted{
+      color: var(--h-muted);
+      font-size:12px;
+      font-weight:600;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -219,10 +299,10 @@
 
       const STATUS_ORDER = ["placed", "confirmed", "baking", "ready", "delivered"];
       const STATUS_LABELS = {
-        placed: "Placed",
-        confirmed: "Confirmed",
-        baking: "Baking",
-        ready: "Ready",
+        placed: "Confirm",
+        confirmed: "Bake",
+        baking: "Ready",
+        ready: "Deliver",
         delivered: "Delivered"
       };
 
@@ -275,9 +355,7 @@
         if (!drop) return "Select a drop to view live order flow.";
         const parts = [];
 
-        if (drop.drop_type) {
-          parts.push(drop.drop_type);
-        }
+        if (drop.drop_type) parts.push(drop.drop_type);
 
         if (drop.delivery_start && drop.delivery_end) {
           const start = new Date(drop.delivery_start).toLocaleString("en-GB", {
@@ -329,12 +407,18 @@
         return STATUS_ORDER[idx - 1];
       }
 
+      function getActionLabelForNextStatus(nextStatus) {
+        if (nextStatus === "confirmed") return "Confirm";
+        if (nextStatus === "baking") return "Bake";
+        if (nextStatus === "ready") return "Ready";
+        if (nextStatus === "delivered") return "Deliver";
+        return "Next";
+      }
+
       function groupItemDetailsByOrder(items) {
         const map = new Map();
         items.forEach((row) => {
-          if (!map.has(row.order_id)) {
-            map.set(row.order_id, []);
-          }
+          if (!map.has(row.order_id)) map.set(row.order_id, []);
           map.get(row.order_id).push(row);
         });
         return map;
@@ -345,10 +429,7 @@
 
         return state.ordersSummary.map((order) => {
           const lines = itemsByOrder.get(order.order_id) || [];
-          const grouped = {
-            capacity: [],
-            extras: []
-          };
+          const grouped = { capacity: [], extras: [] };
 
           lines.forEach((line) => {
             if (state.drop && line.product_category === state.drop.capacity_category) {
@@ -358,11 +439,7 @@
             }
           });
 
-          return {
-            ...order,
-            lines,
-            grouped
-          };
+          return { ...order, lines, grouped };
         });
       }
 
@@ -382,9 +459,7 @@
           const opt = document.createElement("option");
           opt.value = drop.id;
           opt.textContent = drop.name;
-          if (drop.id === state.selectedDropId) {
-            opt.selected = true;
-          }
+          if (drop.id === state.selectedDropId) opt.selected = true;
           select.appendChild(opt);
         });
       }
@@ -441,7 +516,7 @@
         }
 
         const relevant = state.itemDetails.filter((row) =>
-          row.status === "confirmed" &&
+          normaliseStatus(row.status) === "confirmed" &&
           row.product_category === state.drop.capacity_category
         );
 
@@ -479,9 +554,7 @@
 
         state.ordersSummary.forEach((order) => {
           const status = normaliseStatus(order.status);
-          if (Object.prototype.hasOwnProperty.call(counts, status)) {
-            counts[status] += 1;
-          }
+          if (Object.prototype.hasOwnProperty.call(counts, status)) counts[status] += 1;
         });
 
         byId("countPlaced").textContent = counts.placed;
@@ -525,7 +598,7 @@
             <td class="mono">${formatShortTime(order.created_at)}</td>
             <td>${order.customer_name || "—"}</td>
             <td>${Number(order.capacity_units_in_order || 0)}</td>
-            <td><span class="badgeStatus ${normaliseStatus(order.status)}">${STATUS_LABELS[normaliseStatus(order.status)] || order.status}</span></td>
+            <td><span class="badgeStatus ${normaliseStatus(order.status)}">${normaliseStatus(order.status)}</span></td>
             <td>${formatMoneyPence(order.total_price_pence)}</td>
             <td class="muted">${summariseItems(order.lines)}</td>
           `;
@@ -533,45 +606,28 @@
         });
       }
 
+      function renderCompactBlock(title, lines) {
+        if (!lines.length) return "";
+
+        const html = lines.map((line) => `
+          <div class="compactLine">
+            <span>${line.product_name}</span>
+            <span>×${line.qty}</span>
+          </div>
+        `).join("");
+
+        return `
+          <div class="lineBlock">
+            <div class="lineBlockTitle">${title}</div>
+            <div class="compactList">${html}</div>
+          </div>
+        `;
+      }
+
       function renderOrderCard(order) {
-        const next = getNextStatus(normaliseStatus(order.status));
-        const prev = getPrevStatus(normaliseStatus(order.status));
-
-        const capacityLinesHtml = order.grouped.capacity.length
-          ? `
-            <div class="lineBlock">
-              <div class="lineBlockTitle">${state.drop.capacity_category}</div>
-              ${order.grouped.capacity.map((line) => `
-                <div class="lineItem">
-                  <span>${line.product_name}</span>
-                  <span>×${line.qty}</span>
-                </div>
-              `).join("")}
-            </div>
-          `
-          : `
-            <div class="lineBlock">
-              <div class="lineBlockTitle">${state.drop.capacity_category}</div>
-              <div class="lineItem">
-                <span class="muted">No ${state.drop.capacity_category} items</span>
-                <span>—</span>
-              </div>
-            </div>
-          `;
-
-        const extraLinesHtml = order.grouped.extras.length
-          ? `
-            <div class="lineBlock">
-              <div class="lineBlockTitle">Other items</div>
-              ${order.grouped.extras.map((line) => `
-                <div class="lineItem">
-                  <span>${line.product_name}</span>
-                  <span>×${line.qty}</span>
-                </div>
-              `).join("")}
-            </div>
-          `
-          : "";
+        const status = normaliseStatus(order.status);
+        const next = getNextStatus(status);
+        const prev = getPrevStatus(status);
 
         const wrapper = document.createElement("div");
         wrapper.className = "orderCard";
@@ -585,19 +641,19 @@
               <div class="timeChip">${formatShortTime(order.created_at)}</div>
             </div>
 
-            ${capacityLinesHtml}
-            ${extraLinesHtml}
-
             <div class="cardMeta">
               <span class="metaChip">${Number(order.capacity_units_in_order || 0)} ${state.drop.capacity_category}</span>
               <span class="metaChip">${formatMoneyPence(order.total_price_pence)}</span>
-              <span class="metaChip">${STATUS_LABELS[normaliseStatus(order.status)] || order.status}</span>
+              <span class="metaChip">${status}</span>
             </div>
 
             <div class="cardActions">
-              ${next ? `<button class="btnAccent js-next" type="button" data-id="${order.order_id}" data-status="${next}">${STATUS_LABELS[next]}</button>` : ""}
+              ${next ? `<button class="btnAccent js-next" type="button" data-id="${order.order_id}" data-status="${next}">${getActionLabelForNextStatus(next)}</button>` : ""}
               ${prev ? `<button class="btnGhost js-prev" type="button" data-id="${order.order_id}" data-status="${prev}">Back</button>` : ""}
             </div>
+
+            ${renderCompactBlock(String(state.drop.capacity_category || "Capacity items").toUpperCase(), order.grouped.capacity)}
+            ${renderCompactBlock("OTHER ITEMS", order.grouped.extras)}
           </div>
         `;
         return wrapper;
@@ -664,29 +720,10 @@
         localStorage.setItem("hearth:selectedDropId", state.selectedDropId);
 
         const [dropRes, capacityRes, ordersRes, itemsRes] = await Promise.all([
-          supabase
-            .from("drops")
-            .select("*")
-            .eq("id", state.selectedDropId)
-            .single(),
-
-          supabase
-            .from("v_drop_capacity_usage")
-            .select("*")
-            .eq("drop_id", state.selectedDropId)
-            .single(),
-
-          supabase
-            .from("v_drop_orders_summary")
-            .select("*")
-            .eq("drop_id", state.selectedDropId)
-            .order("created_at", { ascending: true }),
-
-          supabase
-            .from("v_order_item_detail")
-            .select("*")
-            .eq("drop_id", state.selectedDropId)
-            .order("created_at", { ascending: true })
+          supabase.from("drops").select("*").eq("id", state.selectedDropId).single(),
+          supabase.from("v_drop_capacity_usage").select("*").eq("drop_id", state.selectedDropId).single(),
+          supabase.from("v_drop_orders_summary").select("*").eq("drop_id", state.selectedDropId).order("created_at", { ascending: true }),
+          supabase.from("v_order_item_detail").select("*").eq("drop_id", state.selectedDropId).order("created_at", { ascending: true })
         ]);
 
         if (dropRes.error) throw dropRes.error;
@@ -708,9 +745,7 @@
           .update({ status })
           .eq("id", orderId);
 
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
 
         await refreshData();
       }
