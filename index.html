@@ -105,6 +105,33 @@
       white-space:nowrap;
     }
 
+    .ordersSection{
+      margin-bottom:14px;
+    }
+
+    .sectionToggle{
+      border:1px solid var(--h-border);
+      background:var(--h-surface);
+      color:var(--h-text);
+      border-radius:12px;
+      padding:8px 12px;
+      font-size:12px;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    .sectionToggle:hover{
+      background:var(--h-surface-2);
+    }
+
+    .ordersPanelBody{
+      display:block;
+    }
+
+    .ordersPanelBody.hidden{
+      display:none;
+    }
+
     .ordersToolbar{
       display:flex;
       align-items:flex-end;
@@ -178,7 +205,7 @@
     .orderCard{
       border:1px solid var(--h-border-2);
       border-radius:14px;
-      background:rgba(255,255,255,0.96);
+      background:rgba(255,255,255,0.98);
       box-shadow:none;
     }
 
@@ -227,12 +254,38 @@
       font-weight:700;
     }
 
+    .cardActions{
+      display:flex !important;
+      gap:6px !important;
+      margin:0 0 8px !important;
+      flex-wrap:wrap;
+    }
+
+    .cardActions .btnAccent,
+    .cardActions .btnGhost,
+    .cardActions .btnSmall{
+      display:flex !important;
+      align-items:center;
+      justify-content:center;
+      min-height:34px;
+      padding:7px 10px;
+      text-decoration:none;
+      flex:1 1 0;
+      font-size:12px;
+      font-weight:800;
+    }
+
+    .detailsToggle{
+      min-width:82px;
+      flex:0 0 auto !important;
+    }
+
     .summaryRow{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:8px;
-      margin:8px 0 8px;
+      margin:8px 0 6px;
       flex-wrap:wrap;
     }
 
@@ -263,32 +316,6 @@
     .summaryMuted{
       color:var(--h-muted);
       font-weight:700;
-    }
-
-    .cardActions{
-      display:flex !important;
-      gap:6px !important;
-      margin:0 0 8px !important;
-      flex-wrap:wrap;
-    }
-
-    .cardActions .btnAccent,
-    .cardActions .btnGhost,
-    .cardActions .btnSmall{
-      display:flex !important;
-      align-items:center;
-      justify-content:center;
-      min-height:34px;
-      padding:7px 10px;
-      text-decoration:none;
-      flex:1 1 0;
-      font-size:12px;
-      font-weight:800;
-    }
-
-    .detailsToggle{
-      min-width:82px;
-      flex:0 0 auto !important;
     }
 
     .detailsWrap{
@@ -527,46 +554,49 @@
         </div>
       </div>
 
-      <div class="card pad">
+      <div class="card pad ordersSection">
         <div class="row space">
           <div>
             <h3 class="sectionTitle">All orders in this drop</h3>
             <p class="sectionSub">Compact scan view for every order</p>
           </div>
+          <button class="sectionToggle" id="toggleOrdersPanel" type="button">Hide</button>
         </div>
 
-        <div class="ordersToolbar">
-          <div class="ordersFilters">
-            <button class="filterChip active" type="button" data-status-filter="all">All</button>
-            <button class="filterChip" type="button" data-status-filter="placed">Placed</button>
-            <button class="filterChip" type="button" data-status-filter="confirmed">Confirmed</button>
-            <button class="filterChip" type="button" data-status-filter="baking">Baking</button>
-            <button class="filterChip" type="button" data-status-filter="ready">Ready</button>
-            <button class="filterChip" type="button" data-status-filter="delivered">Delivered</button>
+        <div class="ordersPanelBody" id="ordersPanelBody">
+          <div class="ordersToolbar">
+            <div class="ordersFilters">
+              <button class="filterChip active" type="button" data-status-filter="all">All</button>
+              <button class="filterChip" type="button" data-status-filter="placed">Placed</button>
+              <button class="filterChip" type="button" data-status-filter="confirmed">Confirmed</button>
+              <button class="filterChip" type="button" data-status-filter="baking">Baking</button>
+              <button class="filterChip" type="button" data-status-filter="ready">Ready</button>
+              <button class="filterChip" type="button" data-status-filter="delivered">Delivered</button>
+            </div>
+
+            <input id="orderSearch" class="filterSearch" type="text" placeholder="Search customer or item" />
           </div>
 
-          <input id="orderSearch" class="filterSearch" type="text" placeholder="Search customer or item" />
-        </div>
-
-        <div class="tableWrap">
-          <table class="tableTight">
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Customer</th>
-                <th>Units</th>
-                <th>Status</th>
-                <th>Total</th>
-                <th>Capacity items</th>
-                <th>Other items</th>
-              </tr>
-            </thead>
-            <tbody id="allOrdersBody">
-              <tr>
-                <td colspan="7" class="muted">Loading…</td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="tableWrap">
+            <table class="tableTight">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Customer</th>
+                  <th>Units</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                  <th>Capacity items</th>
+                  <th>Other items</th>
+                </tr>
+              </thead>
+              <tbody id="allOrdersBody">
+                <tr>
+                  <td colspan="7" class="muted">Loading…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -633,7 +663,8 @@
         itemDetails: [],
         expandedOrders: new Set(),
         tableStatusFilter: "all",
-        tableSearch: ""
+        tableSearch: "",
+        ordersPanelOpen: true
       };
 
       function byId(id) {
@@ -1041,6 +1072,14 @@
               <div class="timeChip">${formatShortTime(order.created_at)}</div>
             </div>
 
+            <div class="cardActions">
+              ${next ? `<button class="btnAccent js-next" type="button" data-id="${order.order_id}" data-status="${next}">${getActionLabelForNextStatus(next)}</button>` : ""}
+              ${prev ? `<button class="btnGhost js-prev" type="button" data-id="${order.order_id}" data-status="${prev}">Back</button>` : ""}
+              <button class="btnSmall detailsToggle js-toggle-details" type="button" data-id="${order.order_id}">
+                ${isExpanded ? "Hide" : "Details"}
+              </button>
+            </div>
+
             <div class="summaryRow">
               <div class="summaryStats">
                 <span class="metaChip">${Number(order.capacity_units_in_order || 0)} ${state.drop.capacity_category}</span>
@@ -1050,14 +1089,6 @@
               <div class="summaryText">
                 <span class="summaryMuted">Items:</span> ${order.lines.length}
               </div>
-            </div>
-
-            <div class="cardActions">
-              ${next ? `<button class="btnAccent js-next" type="button" data-id="${order.order_id}" data-status="${next}">${getActionLabelForNextStatus(next)}</button>` : ""}
-              ${prev ? `<button class="btnGhost js-prev" type="button" data-id="${order.order_id}" data-status="${prev}">Back</button>` : ""}
-              <button class="btnSmall detailsToggle js-toggle-details" type="button" data-id="${order.order_id}">
-                ${isExpanded ? "Hide" : "Details"}
-              </button>
             </div>
 
             <div class="detailsWrap ${isExpanded ? "open" : ""}">
@@ -1098,6 +1129,14 @@
             cols[status].appendChild(renderOrderCard(order));
           });
         });
+      }
+
+      function renderOrdersPanelState() {
+        const body = byId("ordersPanelBody");
+        const btn = byId("toggleOrdersPanel");
+
+        body.classList.toggle("hidden", !state.ordersPanelOpen);
+        btn.textContent = state.ordersPanelOpen ? "Hide" : "Show";
       }
 
       async function loadDrops() {
@@ -1198,6 +1237,7 @@
         renderQueue();
         renderWorkflowCounts();
         renderConsolidatedView();
+        renderOrdersPanelState();
         renderAllOrders();
         renderBoard();
       }
@@ -1227,6 +1267,11 @@
             console.error(err);
             showError(err.message || "Unable to refresh Service Board.");
           }
+        });
+
+        byId("toggleOrdersPanel").addEventListener("click", function () {
+          state.ordersPanelOpen = !state.ordersPanelOpen;
+          renderOrdersPanelState();
         });
 
         document.querySelectorAll(".filterChip").forEach((btn) => {
