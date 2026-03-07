@@ -105,15 +105,52 @@
       white-space:nowrap;
     }
 
+    .ordersToolbar{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin:10px 0 12px;
+    }
+
+    .ordersFilters{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .filterChip{
+      border:1px solid var(--h-border);
+      background:var(--h-surface);
+      color:var(--h-text);
+      border-radius:999px;
+      padding:7px 10px;
+      font-size:12px;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    .filterChip.active{
+      background:linear-gradient(135deg, rgba(249,115,22,0.18), rgba(251,146,60,0.10));
+      border-color:rgba(249,115,22,0.35);
+      color:var(--h-accent-ink);
+    }
+
+    .filterSearch{
+      min-width:240px;
+    }
+
     .tableTight th:nth-child(3),
     .tableTight td:nth-child(3){
-      width:74px;
+      width:70px;
       white-space:nowrap;
     }
 
     .tableTight th:nth-child(4),
     .tableTight td:nth-child(4){
-      width:96px;
+      width:92px;
       white-space:nowrap;
     }
 
@@ -138,13 +175,11 @@
       line-height:1.3;
     }
 
-    .itemsLabel{
-      font-size:10px;
-      color:var(--h-muted);
-      text-transform:uppercase;
-      letter-spacing:0.2px;
-      font-weight:800;
-      margin-bottom:2px;
+    .orderCard{
+      border:1px solid var(--h-border-2);
+      border-radius:14px;
+      background:rgba(255,255,255,0.96);
+      box-shadow:none;
     }
 
     .orderCardInner{
@@ -159,14 +194,37 @@
       align-items:flex-start;
     }
 
-    .orderCustomer{
-      font-size:14px !important;
-      line-height:1.15;
+    .orderHeaderLeft{
+      min-width:0;
     }
 
     .orderId{
       font-size:10px !important;
       line-height:1.1;
+      color:var(--h-muted);
+      letter-spacing:0.2px;
+      text-transform:uppercase;
+      font-weight:800;
+    }
+
+    .orderCustomer{
+      font-size:14px !important;
+      line-height:1.15;
+      font-weight:800;
+      margin-top:3px;
+      color:var(--h-text);
+      word-break:break-word;
+    }
+
+    .timeChip{
+      white-space:nowrap;
+      font-size:11px;
+      color:var(--h-muted);
+      padding:5px 8px;
+      border-radius:999px;
+      border:1px solid var(--h-border-2);
+      background:rgba(15,23,42,0.02);
+      font-weight:700;
     }
 
     .summaryRow{
@@ -174,7 +232,7 @@
       align-items:center;
       justify-content:space-between;
       gap:8px;
-      margin:8px 0 10px;
+      margin:8px 0 8px;
       flex-wrap:wrap;
     }
 
@@ -183,6 +241,17 @@
       gap:6px;
       flex-wrap:wrap;
       align-items:center;
+    }
+
+    .metaChip{
+      font-size:11px;
+      color:var(--h-muted);
+      padding:5px 8px;
+      border-radius:999px;
+      border:1px solid var(--h-border-2);
+      background:rgba(15,23,42,0.02);
+      font-weight:800;
+      white-space:nowrap;
     }
 
     .summaryText{
@@ -213,6 +282,8 @@
       padding:7px 10px;
       text-decoration:none;
       flex:1 1 0;
+      font-size:12px;
+      font-weight:800;
     }
 
     .detailsToggle{
@@ -240,6 +311,9 @@
     .lineBlock{
       padding:8px 10px !important;
       margin-bottom:8px !important;
+      border:1px solid var(--h-border-2);
+      border-radius:12px;
+      background:rgba(15,23,42,0.02);
     }
 
     .lineBlock:last-child{
@@ -249,6 +323,10 @@
     .lineBlockTitle{
       margin-bottom:6px !important;
       font-size:10px !important;
+      color:var(--h-muted);
+      letter-spacing:0.2px;
+      text-transform:uppercase;
+      font-weight:800;
     }
 
     .compactList{
@@ -262,6 +340,7 @@
       gap:10px;
       font-size:12px;
       font-weight:700;
+      color:var(--h-text);
     }
 
     .compactMuted{
@@ -286,6 +365,15 @@
       .summaryRow{
         align-items:flex-start;
         flex-direction:column;
+      }
+
+      .ordersToolbar{
+        align-items:stretch;
+      }
+
+      .filterSearch{
+        min-width:unset;
+        width:100%;
       }
     }
   </style>
@@ -447,6 +535,19 @@
           </div>
         </div>
 
+        <div class="ordersToolbar">
+          <div class="ordersFilters">
+            <button class="filterChip active" type="button" data-status-filter="all">All</button>
+            <button class="filterChip" type="button" data-status-filter="placed">Placed</button>
+            <button class="filterChip" type="button" data-status-filter="confirmed">Confirmed</button>
+            <button class="filterChip" type="button" data-status-filter="baking">Baking</button>
+            <button class="filterChip" type="button" data-status-filter="ready">Ready</button>
+            <button class="filterChip" type="button" data-status-filter="delivered">Delivered</button>
+          </div>
+
+          <input id="orderSearch" class="filterSearch" type="text" placeholder="Search customer or item" />
+        </div>
+
         <div class="tableWrap">
           <table class="tableTight">
             <thead>
@@ -530,7 +631,9 @@
         capacity: null,
         ordersSummary: [],
         itemDetails: [],
-        expandedOrders: new Set()
+        expandedOrders: new Set(),
+        tableStatusFilter: "all",
+        tableSearch: ""
       };
 
       function byId(id) {
@@ -837,22 +940,44 @@
         `;
       }
 
+      function getFilteredOrderModels() {
+        const models = buildOrderModels();
+        const search = state.tableSearch.trim().toLowerCase();
+
+        return models.filter((order) => {
+          const statusOk =
+            state.tableStatusFilter === "all" ||
+            normaliseStatus(order.status) === state.tableStatusFilter;
+
+          if (!statusOk) return false;
+
+          if (!search) return true;
+
+          const haystack = [
+            order.customer_name || "",
+            ...order.lines.map((l) => l.product_name || "")
+          ].join(" ").toLowerCase();
+
+          return haystack.includes(search);
+        });
+      }
+
       function renderAllOrders() {
         const body = byId("allOrdersBody");
         body.innerHTML = "";
 
-        if (!state.ordersSummary.length) {
+        const models = getFilteredOrderModels();
+
+        if (!models.length) {
           body.innerHTML = `
             <tr>
               <td colspan="7">
-                <div class="emptyState">No orders yet for this drop.</div>
+                <div class="emptyState">No matching orders for this filter.</div>
               </td>
             </tr>
           `;
           return;
         }
-
-        const models = buildOrderModels();
 
         models.forEach((order) => {
           const tr = document.createElement("tr");
@@ -909,7 +1034,7 @@
         wrapper.innerHTML = `
           <div class="orderCardInner">
             <div class="orderCardTop">
-              <div>
+              <div class="orderHeaderLeft">
                 <div class="orderId">Order #${String(order.order_id).slice(0, 8)}</div>
                 <div class="orderCustomer">${order.customer_name || "Customer"}</div>
               </div>
@@ -1102,6 +1227,21 @@
             console.error(err);
             showError(err.message || "Unable to refresh Service Board.");
           }
+        });
+
+        document.querySelectorAll(".filterChip").forEach((btn) => {
+          btn.addEventListener("click", function () {
+            state.tableStatusFilter = btn.dataset.statusFilter;
+            document.querySelectorAll(".filterChip").forEach((b) => {
+              b.classList.toggle("active", b === btn);
+            });
+            renderAllOrders();
+          });
+        });
+
+        byId("orderSearch").addEventListener("input", function (e) {
+          state.tableSearch = e.target.value || "";
+          renderAllOrders();
         });
 
         document.body.addEventListener("click", async function (e) {
