@@ -675,7 +675,8 @@ tbody td{
   display:flex;
   flex-direction:column;
   gap:10px;
-  border-bottom:1px solid transparent;
+  position:relative;
+  box-shadow:inset 0 -1px 0 var(--h-border-2);
 }
 
 .boardColBody::after{
@@ -735,9 +736,11 @@ tbody td{
   font-weight:700;
 }
 
+/* All three action buttons exactly the same width */
 .cardActions{
   display:grid;
-  grid-template-columns:1fr 76px 1fr;
+  grid-template-columns:84px 84px 84px;
+  justify-content:center;
   gap:6px;
   margin:6px 0 8px;
   align-items:center;
@@ -747,7 +750,7 @@ tbody td{
 .cardActions .btnAccent,
 .cardActions .btnPlaceholder,
 .cardActions .btnSmall{
-  width:100%;
+  width:84px;
   height:28px;
   min-height:28px;
   padding:0 8px;
@@ -925,6 +928,11 @@ tbody td{
   .summaryRow{ align-items:flex-start; flex-direction:column; }
   .ordersToolbar{ align-items:stretch; }
   .filterSearch{ min-width:unset; width:100%; }
+  .cardActions{
+    grid-template-columns:84px 84px 84px;
+    overflow-x:auto;
+    justify-content:start;
+  }
 }
 
 @media (max-width:640px){
