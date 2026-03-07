@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Service Board</title>
 
-  <link rel="stylesheet" href="/assets/hearth.css?v=10" />
+  <link rel="stylesheet" href="/assets/hearth.css?v=15" />
   <script src="/assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -140,20 +140,25 @@
       </div>
 
       <div class="card pad summaryPanel">
-        <div>
-          <h3 class="sectionTitle">Consolidated drop view</h3>
-          <p class="sectionSub">Roll-up by item across the selected drop</p>
+        <div class="row space">
+          <div>
+            <h3 class="sectionTitle">Consolidated drop view</h3>
+            <p class="sectionSub">Roll-up by item across the selected drop</p>
+          </div>
+          <button class="sectionToggle" id="toggleSummaryPanel" type="button">Hide</button>
         </div>
 
-        <div class="summaryGrid" style="margin-top:10px;">
-          <div class="summaryBox">
-            <h4 class="summaryBoxTitle" id="capacitySummaryTitle">Capacity items</h4>
-            <div class="summaryList" id="summaryCapacityList"></div>
-          </div>
+        <div id="summaryPanelBody">
+          <div class="summaryGrid" style="margin-top:10px;">
+            <div class="summaryBox">
+              <h4 class="summaryBoxTitle" id="capacitySummaryTitle">Capacity items</h4>
+              <div class="summaryList" id="summaryCapacityList"></div>
+            </div>
 
-          <div class="summaryBox">
-            <h4 class="summaryBoxTitle">Other items</h4>
-            <div class="summaryList" id="summaryOtherList"></div>
+            <div class="summaryBox">
+              <h4 class="summaryBoxTitle">Other items</h4>
+              <div class="summaryList" id="summaryOtherList"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -211,6 +216,7 @@
             <span class="colCount" id="badgePlaced">0</span>
           </div>
           <div class="boardColBody" id="colPlaced"></div>
+          <div class="boardColFooter"></div>
         </div>
 
         <div class="boardCol confirmed">
@@ -219,6 +225,7 @@
             <span class="colCount" id="badgeConfirmed">0</span>
           </div>
           <div class="boardColBody" id="colConfirmed"></div>
+          <div class="boardColFooter"></div>
         </div>
 
         <div class="boardCol baking">
@@ -227,6 +234,7 @@
             <span class="colCount" id="badgeBaking">0</span>
           </div>
           <div class="boardColBody" id="colBaking"></div>
+          <div class="boardColFooter"></div>
         </div>
 
         <div class="boardCol ready">
@@ -235,6 +243,7 @@
             <span class="colCount" id="badgeReady">0</span>
           </div>
           <div class="boardColBody" id="colReady"></div>
+          <div class="boardColFooter"></div>
         </div>
 
         <div class="boardCol delivered">
@@ -243,6 +252,7 @@
             <span class="colCount" id="badgeDelivered">0</span>
           </div>
           <div class="boardColBody" id="colDelivered"></div>
+          <div class="boardColFooter"></div>
         </div>
       </div>
     </div>
@@ -268,7 +278,8 @@
         expandedOrders: new Set(),
         tableStatusFilter: "all",
         tableSearch: "",
-        ordersPanelOpen: true
+        ordersPanelOpen: true,
+        summaryPanelOpen: true
       };
 
       function byId(id) {
@@ -445,7 +456,6 @@
 
         const used = Number(capacity.capacity_units_used || 0);
         const total = Number(capacity.capacity_units_total || 0);
-        const remaining = Number(capacity.capacity_units_remaining || 0);
         const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
         const revenuePence = state.ordersSummary.reduce((sum, row) => sum + Number(row.total_price_pence || 0), 0);
 
@@ -455,9 +465,9 @@
         byId("dropStatusDot").className = statusDotClass(normaliseStatus(drop.status));
         byId("kpiOrders").textContent = String(state.ordersSummary.length);
         byId("kpiCategory").textContent = drop.capacity_category || "—";
-        byId("kpiCapacityTotal").textContent = String(total);
+        byId("kpiCapacityTotal").textContent = String(capacity.capacity_units_total || 0);
         byId("kpiCapacityUsed").textContent = String(used);
-        byId("kpiCapacityRemaining").textContent = String(remaining);
+        byId("kpiCapacityRemaining").textContent = String(capacity.capacity_units_remaining || 0);
         byId("kpiRevenue").textContent = formatMoneyPence(revenuePence);
         byId("capacityCopyLeft").textContent = `${used} / ${total} ${drop.capacity_category || "units"}`;
         byId("capacityCopyRight").textContent = `${pct}% full`;
@@ -682,7 +692,6 @@
       }
 
       function renderOrderCard(order) {
-        const status = normaliseStatus(order.status);
         const isExpanded = state.expandedOrders.has(order.order_id);
 
         const wrapper = document.createElement("div");
@@ -697,17 +706,13 @@
               <div class="timeChip">${formatShortTime(order.created_at)}</div>
             </div>
 
-            ${renderActionRow(order.order_id, status)}
+            ${renderActionRow(order.order_id, normaliseStatus(order.status))}
 
             <div class="summaryRow">
               <div class="summaryStats">
                 <span class="metaChip">${Number(order.capacity_units_in_order || 0)} ${state.drop.capacity_category}</span>
-                <span class="metaChip">${formatMoneyPence(order.total_price_pence)}</span>
-                <span class="metaChip">${status}</span>
               </div>
-              <div class="summaryText">
-                <span class="summaryMuted">Items:</span> ${order.lines.length}
-              </div>
+              <div class="summaryText">Items: ${order.lines.length}</div>
             </div>
 
             <div class="detailsWrap ${isExpanded ? "open" : ""}">
@@ -756,6 +761,14 @@
 
         body.classList.toggle("hidden", !state.ordersPanelOpen);
         btn.textContent = state.ordersPanelOpen ? "Hide" : "Show";
+      }
+
+      function renderSummaryPanelState() {
+        const body = byId("summaryPanelBody");
+        const btn = byId("toggleSummaryPanel");
+
+        body.style.display = state.summaryPanelOpen ? "block" : "none";
+        btn.textContent = state.summaryPanelOpen ? "Hide" : "Show";
       }
 
       async function loadDrops() {
@@ -857,6 +870,7 @@
         renderQueue();
         renderWorkflowCounts();
         renderConsolidatedView();
+        renderSummaryPanelState();
         renderOrdersPanelState();
         renderAllOrders();
         renderBoard();
@@ -892,6 +906,11 @@
         byId("toggleOrdersPanel").addEventListener("click", function () {
           state.ordersPanelOpen = !state.ordersPanelOpen;
           renderOrdersPanelState();
+        });
+
+        byId("toggleSummaryPanel").addEventListener("click", function () {
+          state.summaryPanelOpen = !state.summaryPanelOpen;
+          renderSummaryPanelState();
         });
 
         document.querySelectorAll(".filterChip").forEach((btn) => {
