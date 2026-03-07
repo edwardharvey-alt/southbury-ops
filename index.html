@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Service Board</title>
 
-  <link rel="stylesheet" href="/assets/hearth.css?v=5" />
+  <link rel="stylesheet" href="/assets/hearth.css?v=6" />
   <script src="/assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -362,11 +362,15 @@
       }
 
       function getActionLabelForNextStatus(nextStatus) {
-        if (nextStatus === "confirmed") return "Confirm";
-        if (nextStatus === "baking") return "Bake";
-        if (nextStatus === "ready") return "Ready";
-        if (nextStatus === "delivered") return "Deliver";
-        return "Next";
+        if (nextStatus === "confirmed") return "▶ Confirm";
+        if (nextStatus === "baking") return "▶ Bake";
+        if (nextStatus === "ready") return "▶ Ready";
+        if (nextStatus === "delivered") return "▶ Deliver";
+        return "▶ Next";
+      }
+
+      function getBackLabel() {
+        return "◀ Back";
       }
 
       function groupItemDetailsByOrder(items) {
@@ -658,51 +662,34 @@
         `;
       }
 
-      function renderPlacedOrderCard(order, isExpanded) {
-        const next = getNextStatus("placed");
+      function renderActionRow(orderId, status, isExpanded) {
+        const prev = getPrevStatus(status);
+        const next = getNextStatus(status);
+
         return `
-          <div class="orderCardInner">
-            <div class="orderCardTop">
-              <div class="orderHeaderLeft">
-                <div class="orderId">Order #${String(order.order_id).slice(0, 8)}</div>
-                <div class="orderCustomer">${order.customer_name || "Customer"}</div>
-              </div>
-              <div class="timeChip">${formatShortTime(order.created_at)}</div>
-            </div>
-
-            <div class="cardActions">
-              <button class="btnAccent js-next" type="button" data-id="${order.order_id}" data-status="${next}">Confirm</button>
-              <button class="btnSmall detailsToggle js-toggle-details" type="button" data-id="${order.order_id}">
-                ${isExpanded ? "Hide" : "Details"}
-              </button>
-            </div>
-
-            <div class="summaryRow">
-              <div class="summaryStats">
-                <span class="metaChip">${Number(order.capacity_units_in_order || 0)} ${state.drop.capacity_category}</span>
-                <span class="metaChip">${formatMoneyPence(order.total_price_pence)}</span>
-                <span class="metaChip">placed</span>
-              </div>
-              <div class="summaryText">
-                <span class="summaryMuted">Items:</span> ${order.lines.length}
-              </div>
-            </div>
-
-            <div class="detailsWrap ${isExpanded ? "open" : ""}">
-              <div class="detailsScroller">
-                ${renderCompactBlock(String(state.drop.capacity_category || "Capacity items").toUpperCase(), order.grouped.capacity)}
-                ${renderCompactBlock("OTHER ITEMS", order.grouped.extras)}
-              </div>
-            </div>
+          <div class="cardActions">
+            ${prev
+              ? `<button class="btnGhost js-prev" type="button" data-id="${orderId}" data-status="${prev}">${getBackLabel()}</button>`
+              : `<div class="btnPlaceholder">—</div>`
+            }
+            <button class="btnSmall detailsToggle js-toggle-details" type="button" data-id="${orderId}">
+              ${isExpanded ? "Details ▾" : "Details ▸"}
+            </button>
+            ${next
+              ? `<button class="btnAccent js-next" type="button" data-id="${orderId}" data-status="${next}">${getActionLabelForNextStatus(next)}</button>`
+              : `<div class="btnPlaceholder">—</div>`
+            }
           </div>
         `;
       }
 
-      function renderStandardOrderCard(order, status, isExpanded) {
-        const next = getNextStatus(status);
-        const prev = getPrevStatus(status);
+      function renderOrderCard(order) {
+        const status = normaliseStatus(order.status);
+        const isExpanded = state.expandedOrders.has(order.order_id);
 
-        return `
+        const wrapper = document.createElement("div");
+        wrapper.className = "orderCard";
+        wrapper.innerHTML = `
           <div class="orderCardInner">
             <div class="orderCardTop">
               <div class="orderHeaderLeft">
@@ -712,13 +699,7 @@
               <div class="timeChip">${formatShortTime(order.created_at)}</div>
             </div>
 
-            <div class="cardActions">
-              ${next ? `<button class="btnAccent js-next" type="button" data-id="${order.order_id}" data-status="${next}">${getActionLabelForNextStatus(next)}</button>` : ""}
-              ${prev ? `<button class="btnGhost js-prev" type="button" data-id="${order.order_id}" data-status="${prev}">Back</button>` : ""}
-              <button class="btnSmall detailsToggle js-toggle-details" type="button" data-id="${order.order_id}">
-                ${isExpanded ? "Hide" : "Details"}
-              </button>
-            </div>
+            ${renderActionRow(order.order_id, status, isExpanded)}
 
             <div class="summaryRow">
               <div class="summaryStats">
@@ -739,21 +720,6 @@
             </div>
           </div>
         `;
-      }
-
-      function renderOrderCard(order) {
-        const status = normaliseStatus(order.status);
-        const isExpanded = state.expandedOrders.has(order.order_id);
-
-        const wrapper = document.createElement("div");
-        wrapper.className = "orderCard";
-
-        if (status === "placed") {
-          wrapper.innerHTML = renderPlacedOrderCard(order, isExpanded);
-        } else {
-          wrapper.innerHTML = renderStandardOrderCard(order, status, isExpanded);
-        }
-
         return wrapper;
       }
 
