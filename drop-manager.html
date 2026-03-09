@@ -1,545 +1,2503 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Southbury Farm Pizza — Drop Manager</title>
-<style>
-  body { font-family: system-ui; padding:20px; background:#fafafa; }
-  h2 { margin: 0 0 10px; }
-  .bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin: 10px 0 16px; }
-  .panel { background:#fff; border:1px solid #ddd; border-radius:8px; padding:12px; margin: 12px 0; }
-  table { width:100%; border-collapse:collapse; margin-top:10px; background:#fff; }
-  th, td { border:1px solid #ddd; padding:8px; text-align:left; vertical-align: top; }
-  th { background:#f2f2f2; }
-  input, select { padding:6px; border:1px solid #bbb; border-radius:6px; }
-  button { padding:6px 10px; border:1px solid #bbb; border-radius:6px; background:#fff; cursor:pointer; }
-  button:hover { background:#f3f3f3; }
-  .muted { color:#666; font-size:12px; }
-  .row { display:flex; gap:10px; flex-wrap:wrap; }
-  .row > div { display:flex; flex-direction:column; gap:4px; }
-  .danger { border-color:#d33; color:#d33; }
-  .ok { color: #0a0; }
-  .err { color: #c00; white-space: pre-wrap; }
-  a { color:#111; }
-  a.btnlink { display:inline-block; padding:6px 10px; border:1px solid #bbb; border-radius:6px; text-decoration:none; background:#fff; }
-  a.btnlink:hover { background:#f3f3f3; }
-  .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-  @media (max-width: 900px){ .grid2 { grid-template-columns: 1fr; } }
-  .checkbox { transform: scale(1.1); }
-  .tiny { font-size:11px; color:#666; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hearth — Drop Studio</title>
+
+  <link rel="stylesheet" href="/assets/hearth.css?v=18" />
+  <script src="/assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+
+  <style>
+    .studioShell{
+      display:grid;
+      grid-template-columns: 320px minmax(0,1fr) 340px;
+      gap:14px;
+      align-items:start;
+    }
+
+    .studioCol{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      min-width:0;
+    }
+
+    .studioSticky{
+      position:sticky;
+      top:16px;
+    }
+
+    .studioCard{
+      padding:16px 18px;
+    }
+
+    .studioSection{
+      border:1px solid var(--h-border-2);
+      border-radius:14px;
+      padding:14px;
+      background:rgba(255,255,255,0.92);
+      margin-top:12px;
+    }
+
+    .studioSection:first-of-type{
+      margin-top:0;
+    }
+
+    .studioSectionHead{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:12px;
+    }
+
+    .studioGrid2{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+
+    .studioGrid3{
+      display:grid;
+      grid-template-columns:repeat(3, 1fr);
+      gap:12px;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:0;
+    }
+
+    .field label{
+      font-size:11px;
+      color:var(--h-muted);
+      font-weight:700;
+    }
+
+    .field input,
+    .field select,
+    .field textarea{
+      width:100%;
+      min-width:0;
+    }
+
+    .field textarea{
+      resize:vertical;
+      min-height:86px;
+    }
+
+    .helperText{
+      font-size:11px;
+      color:var(--h-muted);
+      line-height:1.35;
+    }
+
+    .navigatorToolbar{
+      display:grid;
+      gap:10px;
+      margin-bottom:12px;
+    }
+
+    .navigatorFilters{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
+    }
+
+    .dropList{
+      display:grid;
+      gap:10px;
+      max-height:calc(100vh - 240px);
+      overflow:auto;
+      padding-right:2px;
+    }
+
+    .dropRow{
+      border:1px solid var(--h-border-2);
+      border-radius:14px;
+      background:rgba(255,255,255,0.9);
+      padding:12px;
+      cursor:pointer;
+      transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+
+    .dropRow:hover{
+      border-color:var(--h-border);
+      box-shadow:0 8px 18px rgba(15,23,42,0.06);
+    }
+
+    .dropRow.active{
+      border-color:rgba(249,115,22,0.35);
+      box-shadow:0 10px 22px rgba(249,115,22,0.08);
+      background:linear-gradient(135deg, rgba(249,115,22,0.07), rgba(251,146,60,0.04));
+    }
+
+    .dropRowTop{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+    }
+
+    .dropRowTitle{
+      font-size:14px;
+      font-weight:850;
+      line-height:1.2;
+      margin:0;
+    }
+
+    .dropRowSub{
+      margin:5px 0 0;
+      font-size:12px;
+      color:var(--h-muted);
+      line-height:1.35;
+    }
+
+    .dropRowMeta{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:8px;
+      align-items:end;
+      margin-top:10px;
+    }
+
+    .dropRowStats{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+    }
+
+    .miniChip{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:5px 8px;
+      border-radius:999px;
+      border:1px solid var(--h-border-2);
+      background:rgba(15,23,42,0.02);
+      font-size:11px;
+      color:var(--h-muted);
+      font-weight:700;
+      white-space:nowrap;
+    }
+
+    .dropRowActions{
+      display:flex;
+      gap:6px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    .hostPreview{
+      border:1px dashed var(--h-border);
+      border-radius:12px;
+      padding:10px 12px;
+      background:rgba(15,23,42,0.02);
+      font-size:12px;
+      line-height:1.45;
+    }
+
+    .hostPreview strong{
+      display:block;
+      color:var(--h-text);
+      margin-bottom:2px;
+    }
+
+    .toggleRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:10px 12px;
+      border:1px solid var(--h-border-2);
+      border-radius:12px;
+      background:rgba(15,23,42,0.02);
+      margin-bottom:10px;
+    }
+
+    .toggleRow input[type="checkbox"]{
+      width:18px;
+      height:18px;
+      margin:0;
+      accent-color:var(--h-accent);
+    }
+
+    .railCard{
+      border:1px solid var(--h-border-2);
+      border-radius:14px;
+      background:rgba(255,255,255,0.92);
+      padding:14px;
+    }
+
+    .railList{
+      display:grid;
+      gap:8px;
+      margin-top:10px;
+    }
+
+    .checkRow{
+      display:flex;
+      align-items:flex-start;
+      gap:8px;
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    .checkRow .mark{
+      width:18px;
+      min-width:18px;
+      height:18px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:11px;
+      font-weight:900;
+      margin-top:1px;
+    }
+
+    .checkRow.pass .mark{
+      background:rgba(22,163,74,0.12);
+      color:var(--h-good);
+      border:1px solid rgba(22,163,74,0.2);
+    }
+
+    .checkRow.fail .mark{
+      background:rgba(245,158,11,0.12);
+      color:#b45309;
+      border:1px solid rgba(245,158,11,0.2);
+    }
+
+    .summaryBlock{
+      display:grid;
+      gap:8px;
+      margin-top:10px;
+    }
+
+    .summaryItem{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:flex-start;
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    .summaryItem .label{
+      color:var(--h-muted);
+      font-weight:700;
+    }
+
+    .summaryItem .value{
+      color:var(--h-text);
+      font-weight:800;
+      text-align:right;
+    }
+
+    .metricsGrid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+
+    .metricTile{
+      border:1px solid var(--h-border-2);
+      border-radius:12px;
+      padding:10px;
+      background:rgba(15,23,42,0.02);
+    }
+
+    .metricTile .label{
+      display:block;
+      font-size:11px;
+      color:var(--h-muted);
+      font-weight:700;
+      margin-bottom:8px;
+    }
+
+    .metricTile .value{
+      display:block;
+      font-size:18px;
+      font-weight:900;
+      line-height:1;
+    }
+
+    .shareBox{
+      margin-top:10px;
+      display:grid;
+      gap:10px;
+    }
+
+    .shareLink{
+      border:1px solid var(--h-border-2);
+      border-radius:12px;
+      padding:10px 12px;
+      background:rgba(15,23,42,0.02);
+      font-size:12px;
+      line-height:1.4;
+      word-break:break-all;
+    }
+
+    .qrWrap{
+      display:grid;
+      place-items:center;
+      border:1px solid var(--h-border-2);
+      border-radius:14px;
+      padding:14px;
+      background:#fff;
+      min-height:180px;
+    }
+
+    .railActions{
+      display:grid;
+      gap:8px;
+      margin-top:10px;
+    }
+
+    .railActions .btnAccent,
+    .railActions .btnGhost,
+    .railActions .btnSmall{
+      width:100%;
+      min-height:38px;
+      font-size:12px;
+    }
+
+    .assignmentHeader{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:12px;
+      flex-wrap:wrap;
+    }
+
+    .assignmentTools{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .assignmentTable{
+      width:100%;
+      border-collapse:collapse;
+    }
+
+    .assignmentTable th,
+    .assignmentTable td{
+      padding:10px 10px;
+      border-bottom:1px solid rgba(15,23,42,0.06);
+      vertical-align:middle;
+      font-size:13px;
+    }
+
+    .assignmentTable th{
+      text-align:left;
+      font-size:11px;
+      text-transform:uppercase;
+      color:var(--h-muted);
+      background:rgba(15,23,42,0.02);
+    }
+
+    .assignmentTable td input[type="checkbox"]{
+      width:16px;
+      height:16px;
+      accent-color:var(--h-accent);
+    }
+
+    .assignmentTable td input[type="number"]{
+      min-width:84px;
+      width:100%;
+    }
+
+    .assignmentTable td .priceInput{
+      min-width:110px;
+    }
+
+    .assignmentTable td .sortInput{
+      min-width:72px;
+    }
+
+    .productName{
+      font-weight:800;
+    }
+
+    .subMeta{
+      display:block;
+      margin-top:4px;
+      font-size:11px;
+      color:var(--h-muted);
+    }
+
+    .capacityTag{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+      white-space:nowrap;
+      border:1px solid rgba(249,115,22,0.2);
+      color:var(--h-accent-ink);
+      background:rgba(249,115,22,0.10);
+    }
+
+    .modalBackdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,0.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      z-index:50;
+    }
+
+    .modalBackdrop.open{
+      display:flex;
+    }
+
+    .modalCard{
+      width:min(640px, 100%);
+      max-height:90vh;
+      overflow:auto;
+      background:var(--h-surface);
+      border-radius:18px;
+      border:1px solid var(--h-border-2);
+      box-shadow:0 20px 44px rgba(15,23,42,0.18);
+      padding:18px;
+    }
+
+    .modalHead{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:14px;
+    }
+
+    .modalActions{
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+      margin-top:14px;
+      flex-wrap:wrap;
+    }
+
+    .saveBar{
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+      margin-top:12px;
+      flex-wrap:wrap;
+    }
+
+    .statusPill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--h-border);
+      background:rgba(255,255,255,0.7);
+      font-size:12px;
+      color:var(--h-muted);
+      font-weight:800;
+    }
+
+    .inlineNotice{
+      margin-top:10px;
+      border:1px solid var(--h-border-2);
+      border-radius:12px;
+      padding:10px 12px;
+      background:rgba(15,23,42,0.02);
+      font-size:12px;
+      color:var(--h-muted);
+      line-height:1.45;
+    }
+
+    .hidden{
+      display:none !important;
+    }
+
+    @media (max-width:1280px){
+      .studioShell{
+        grid-template-columns:300px minmax(0,1fr);
+      }
+      .studioColRail{
+        grid-column:1 / -1;
+      }
+      .studioSticky{
+        position:static;
+      }
+    }
+
+    @media (max-width:980px){
+      .studioShell{
+        grid-template-columns:1fr;
+      }
+      .studioGrid2,
+      .studioGrid3,
+      .metricsGrid,
+      .navigatorFilters{
+        grid-template-columns:1fr;
+      }
+      .assignmentTable th:nth-child(5),
+      .assignmentTable td:nth-child(5),
+      .assignmentTable th:nth-child(6),
+      .assignmentTable td:nth-child(6){
+        min-width:120px;
+      }
+    }
+  </style>
 </head>
 <body>
-
-<div class="bar">
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-  <div>
-    <h1 style="margin:0;">🔥 Hearth</h1>
-    <div style="font-size:14px;color:#666;">Drop Studio</div>
-  </div>
-  <div style="display:flex;gap:10px;">
-    <a href="./index.html" style="text-decoration:none;">Service Board</a>
-    <a href="./drop-manager.html" style="text-decoration:none;">Drop Studio</a>
-    <a href="./products.html" style="text-decoration:none;">Menu Library</a>
-  </div>
-</div>
-  <span class="muted">Manage drops + assign menus (products per drop).</span>
-  <span style="margin-left:auto;">
-    <a class="btnlink" href="./index.html">← Back to Operator Dashboard</a>
-  </span>
-</div>
-
-<div id="msg" class="err"></div>
-
-<div class="panel">
-  <h3 style="margin:0 0 10px;">Create new drop</h3>
-  <div class="row">
-    <div style="min-width:260px;">
-      <label class="tiny">Name</label>
-      <input id="new_name" placeholder="e.g., Test Drop — Southbury" />
-    </div>
-    <div>
-      <label class="tiny">Status</label>
-      <select id="new_status">
-        <option value="planned">planned</option>
-        <option value="live">live</option>
-        <option value="closed">closed</option>
-      </select>
-    </div>
-    <div>
-      <label class="tiny">Opens at (optional)</label>
-      <input id="new_opens" type="datetime-local" />
-    </div>
-    <div>
-      <label class="tiny">Closes at</label>
-      <input id="new_closes" type="datetime-local" />
-    </div>
-    <div>
-      <label class="tiny">Max orders</label>
-      <input id="new_max_orders" type="number" value="40" />
-    </div>
-    <div>
-      <label class="tiny">Capacity units total (optional)</label>
-      <input id="new_units_total" type="number" placeholder="e.g. 80" />
-    </div>
-  </div>
-  <div class="bar" style="margin-top:12px;">
-    <button id="createDropBtn">Create drop</button>
-    <span class="muted">After creation, use “Manage menu” in the drop list below.</span>
-  </div>
-</div>
-
-<div class="panel">
-  <div class="bar" style="margin:0;">
-    <h3 style="margin:0;">Drops</h3>
-    <button id="refreshBtn">Refresh</button>
-  </div>
-  <div class="muted">Tip: “View dashboard” opens the Operator page filtered to that drop.</div>
-
-  <table>
-    <thead>
-      <tr>
-        <th style="width:180px;">Name</th>
-        <th style="width:90px;">Status</th>
-        <th style="width:170px;">Closes</th>
-        <th style="width:110px;">Max orders</th>
-        <th style="width:140px;">Units total</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="dropRows"></tbody>
-  </table>
-</div>
-
-<div class="panel" id="menuPanel" style="display:none;">
-  <div class="bar" style="margin:0;">
-    <h3 style="margin:0;">Manage menu for drop: <span id="menuDropLabel" class="pill"></span></h3>
-    <button id="closeMenuBtn" class="danger">Close</button>
-  </div>
-
-  <div class="grid2" style="margin-top:12px;">
-    <div class="panel" style="margin:0;">
-      <h4 style="margin:0 0 8px;">Drop details</h4>
-      <div class="row">
-        <div style="min-width:260px;">
-          <label class="tiny">Name</label>
-          <input id="edit_name" />
-        </div>
+  <div class="container">
+    <div class="card headerBar">
+      <div class="brand">
+        <div class="brandMark">H</div>
         <div>
-          <label class="tiny">Status</label>
-          <select id="edit_status">
-            <option value="planned">planned</option>
-            <option value="live">live</option>
-            <option value="closed">closed</option>
+          <div class="brandTitle">Hearth — Drop Studio</div>
+          <div class="brandSubtitle">Create, configure and publish drops</div>
+        </div>
+      </div>
+
+      <div class="nav">
+        <a href="index.html">Service Board</a>
+        <a href="drop-manager.html" class="active">Drop Studio</a>
+        <a href="drop-menu.html">Menu Library</a>
+        <a href="#">Insights</a>
+      </div>
+    </div>
+
+    <div class="studioShell">
+      <!-- LEFT -->
+      <div class="studioCol">
+        <div class="card studioCard studioSticky">
+          <div class="row space" style="margin-bottom:10px;">
+            <div>
+              <h3 class="sectionTitle">Drops</h3>
+              <p class="sectionSub">Browse and manage delivery moments</p>
+            </div>
+          </div>
+
+          <div class="navigatorToolbar">
+            <button class="btnAccent" id="newDropBtn" type="button">+ New Drop</button>
+            <input id="dropSearch" type="text" placeholder="Search drops or hosts" />
+            <div class="navigatorFilters">
+              <select id="statusFilter">
+                <option value="all">All statuses</option>
+                <option value="draft">Draft</option>
+                <option value="live">Live</option>
+                <option value="closed">Closed</option>
+                <option value="archived">Archived</option>
+              </select>
+              <select id="typeFilter">
+                <option value="all">All types</option>
+                <option value="neighbourhood">Neighbourhood</option>
+                <option value="community">Community</option>
+                <option value="event">Event</option>
+              </select>
+            </div>
+            <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
+          </div>
+
+          <div class="dropList" id="dropList"></div>
+        </div>
+      </div>
+
+      <!-- CENTRE -->
+      <div class="studioCol">
+        <div class="card studioCard">
+          <div class="row space" style="margin-bottom:12px;">
+            <div>
+              <h3 class="sectionTitle">Drop Editor</h3>
+              <p class="sectionSub">Configure the selected drop</p>
+            </div>
+            <div class="statusPill">
+              <span class="dot" id="editorStatusDot"></span>
+              <span id="editorStatusText">—</span>
+            </div>
+          </div>
+
+          <div class="errorBox" id="errorBox"></div>
+
+          <div class="studioSection">
+            <div class="studioSectionHead">
+              <div>
+                <h4 class="sectionTitle" style="font-size:15px;">Basics</h4>
+                <p class="sectionSub">Core identity and lifecycle</p>
+              </div>
+            </div>
+
+            <div class="studioGrid2">
+              <div class="field">
+                <label for="dropName">Drop name</label>
+                <input id="dropName" type="text" placeholder="Friday Pizza Drop" />
+              </div>
+
+              <div class="field">
+                <label for="dropSlug">Slug</label>
+                <input id="dropSlug" type="text" placeholder="friday-pizza-drop" />
+              </div>
+
+              <div class="field">
+                <label for="dropType">Drop type</label>
+                <select id="dropType">
+                  <option value="neighbourhood">Neighbourhood</option>
+                  <option value="community">Community</option>
+                  <option value="event">Event</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="dropStatus">Status</label>
+                <select id="dropStatus">
+                  <option value="draft">Draft</option>
+                  <option value="live">Live</option>
+                  <option value="closed">Closed</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="studioSection">
+            <div class="studioSectionHead">
+              <div>
+                <h4 class="sectionTitle" style="font-size:15px;">Host / Context</h4>
+                <p class="sectionSub">Attach a club, school, pub, venue or private host</p>
+              </div>
+              <button class="btnGhost" id="openHostModalBtn" type="button">+ New Host</button>
+            </div>
+
+            <div class="studioGrid2">
+              <div class="field">
+                <label for="hostSelect">Host</label>
+                <select id="hostSelect">
+                  <option value="">No host selected</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label>Selected host</label>
+                <div class="hostPreview" id="hostPreview">
+                  <strong>No host selected</strong>
+                  Add a host for community or hosted drops.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="studioSection">
+            <div class="studioSectionHead">
+              <div>
+                <h4 class="sectionTitle" style="font-size:15px;">Ordering Window</h4>
+                <p class="sectionSub">When customers can place orders</p>
+              </div>
+            </div>
+
+            <div class="studioGrid2">
+              <div class="field">
+                <label for="opensAt">Opens at</label>
+                <input id="opensAt" type="datetime-local" />
+              </div>
+
+              <div class="field">
+                <label for="closesAt">Closes at</label>
+                <input id="closesAt" type="datetime-local" />
+              </div>
+            </div>
+          </div>
+
+          <div class="studioSection">
+            <div class="studioSectionHead">
+              <div>
+                <h4 class="sectionTitle" style="font-size:15px;">Fulfilment Window</h4>
+                <p class="sectionSub">Service timing used by operations</p>
+              </div>
+            </div>
+
+            <div class="studioGrid3">
+              <div class="field">
+                <label for="deliveryStart">Delivery start</label>
+                <input id="deliveryStart" type="datetime-local" />
+              </div>
+
+              <div class="field">
+                <label for="deliveryEnd">Delivery end</label>
+                <input id="deliveryEnd" type="datetime-local" />
+              </div>
+
+              <div class="field">
+                <label for="cutoffTime">Cutoff time</label>
+                <input id="cutoffTime" type="datetime-local" />
+              </div>
+            </div>
+          </div>
+
+          <div class="studioSection">
+            <div class="studioSectionHead">
+              <div>
+                <h4 class="sectionTitle" style="font-size:15px;">Capacity</h4>
+                <p class="sectionSub">Bound the drop and protect quality</p>
+              </div>
+            </div>
+
+            <div class="studioGrid2">
+              <div class="field">
+                <label for="capacityCategory">Capacity category</label>
+                <select id="capacityCategory">
+                  <option value="pizza">Pizza</option>
+                  <option value="side">Side</option>
+                  <option value="drink">Drink</option>
+                  <option value="sauce">Sauce</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="capacityTotal">Capacity total</label>
+                <input id="capacityTotal" type="number" min="0" step="1" />
+              </div>
+            </div>
+          </div>
+
+          <div class="studioSection">
+            <div class="studioSectionHead">
+              <div>
+                <h4 class="sectionTitle" style="font-size:15px;">Fulfilment & Geography</h4>
+                <p class="sectionSub">How and where the drop operates</p>
+              </div>
+            </div>
+
+            <div class="studioGrid3">
+              <div class="field">
+                <label for="fulfilmentMode">Fulfilment mode</label>
+                <select id="fulfilmentMode">
+                  <option value="">Select mode</option>
+                  <option value="delivery">Delivery</option>
+                  <option value="collection">Collection</option>
+                  <option value="mixed">Mixed</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="centrePostcode">Centre postcode</label>
+                <input id="centrePostcode" type="text" placeholder="RG10 0JP" />
+              </div>
+
+              <div class="field">
+                <label for="radiusKm">Radius (km)</label>
+                <input id="radiusKm" type="number" min="0" step="0.1" />
+              </div>
+            </div>
+          </div>
+
+          <div class="studioSection">
+            <div class="studioSectionHead">
+              <div>
+                <h4 class="sectionTitle" style="font-size:15px;">Community Contribution</h4>
+                <p class="sectionSub">Public-facing support for clubs, schools or community causes</p>
+              </div>
+            </div>
+
+            <div class="toggleRow">
+              <div>
+                <div style="font-weight:800;">Enable community contribution</div>
+                <div class="helperText">Shown as a positive community contribution on the ordering page if configured.</div>
+              </div>
+              <input id="fundraisingEnabled" type="checkbox" />
+            </div>
+
+            <div id="fundraisingFields" class="hidden">
+              <div class="studioGrid2">
+                <div class="field">
+                  <label for="fundraisingModel">Contribution model</label>
+                  <select id="fundraisingModel">
+                    <option value="">Select model</option>
+                    <option value="percentage">Percentage of sales</option>
+                    <option value="per_order">Fixed amount per order</option>
+                  </select>
+                </div>
+
+                <div class="field hidden" id="fundraisingPercentageField">
+                  <label for="fundraisingPercentage">Percentage</label>
+                  <input id="fundraisingPercentage" type="number" min="0" step="0.01" placeholder="5" />
+                </div>
+
+                <div class="field hidden" id="fundraisingPerOrderField">
+                  <label for="fundraisingPerOrderPence">Amount per order (pence)</label>
+                  <input id="fundraisingPerOrderPence" type="number" min="0" step="1" placeholder="100" />
+                </div>
+
+                <div class="field" style="grid-column:1 / -1;">
+                  <label for="fundraisingDisplayText">Customer-facing text</label>
+                  <input id="fundraisingDisplayText" type="text" placeholder="£1 from every order supports Ruscombe Cricket Club" />
+                </div>
+
+                <div class="field" style="grid-column:1 / -1;">
+                  <label for="fundraisingNotes">Internal notes</label>
+                  <textarea id="fundraisingNotes" placeholder="Supporting junior cricket programme"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="studioSection">
+            <div class="studioSectionHead">
+              <div>
+                <h4 class="sectionTitle" style="font-size:15px;">Commercial Host Share</h4>
+                <p class="sectionSub">Private or optionally visible settlement for pubs, venues or commercial hosts</p>
+              </div>
+            </div>
+
+            <div class="toggleRow">
+              <div>
+                <div style="font-weight:800;">Enable host share</div>
+                <div class="helperText">Use this for commercial host arrangements that are separate from community fundraising.</div>
+              </div>
+              <input id="hostShareEnabled" type="checkbox" />
+            </div>
+
+            <div id="hostShareFields" class="hidden">
+              <div class="studioGrid2">
+                <div class="field">
+                  <label for="hostShareModel">Host share model</label>
+                  <select id="hostShareModel">
+                    <option value="">Select model</option>
+                    <option value="percentage">Percentage of sales</option>
+                    <option value="per_order">Fixed amount per order</option>
+                    <option value="fixed">Fixed amount for drop</option>
+                  </select>
+                </div>
+
+                <div class="field hidden" id="hostSharePercentageField">
+                  <label for="hostSharePercentage">Percentage</label>
+                  <input id="hostSharePercentage" type="number" min="0" step="0.01" placeholder="10" />
+                </div>
+
+                <div class="field hidden" id="hostSharePerOrderField">
+                  <label for="hostSharePerOrderPence">Amount per order (pence)</label>
+                  <input id="hostSharePerOrderPence" type="number" min="0" step="1" placeholder="150" />
+                </div>
+
+                <div class="field hidden" id="hostShareFixedField">
+                  <label for="hostShareFixedPence">Fixed amount (pence)</label>
+                  <input id="hostShareFixedPence" type="number" min="0" step="1" placeholder="7500" />
+                </div>
+
+                <div class="field">
+                  <label for="hostShareCustomerVisible">Customer visible?</label>
+                  <select id="hostShareCustomerVisible">
+                    <option value="false">No</option>
+                    <option value="true">Yes</option>
+                  </select>
+                </div>
+
+                <div class="field" style="grid-column:1 / -1;">
+                  <label for="hostShareNotes">Internal notes</label>
+                  <textarea id="hostShareNotes" placeholder="Pub receives 10% of drop GMV for hosting"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="studioSection">
+            <div class="studioSectionHead">
+              <div>
+                <h4 class="sectionTitle" style="font-size:15px;">Internal Notes</h4>
+                <p class="sectionSub">Operational notes for the vendor team</p>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="notesInternal">Internal notes</label>
+              <textarea id="notesInternal" placeholder="Match night, expect higher demand, shorter radius if buffalo on menu"></textarea>
+            </div>
+          </div>
+
+          <div class="saveBar">
+            <button class="btnGhost" id="revertBtn" type="button">Revert changes</button>
+            <button class="btnAccent" id="saveBtn" type="button">Save changes</button>
+          </div>
+        </div>
+
+        <div class="card studioCard">
+          <div class="assignmentHeader">
+            <div>
+              <h3 class="sectionTitle">Products for this Drop</h3>
+              <p class="sectionSub">Enable products, override prices and set order</p>
+            </div>
+
+            <div class="assignmentTools">
+              <button class="btnGhost" id="openProductModalBtn" type="button">+ Add Product</button>
+              <a href="drop-menu.html" class="utilityLink">Menu Library</a>
+            </div>
+          </div>
+
+          <div class="inlineNotice">
+            Products are managed in the vendor menu, but you can create a new one here if you realise the drop needs it before launch.
+          </div>
+
+          <div class="tableWrap" style="margin-top:12px;">
+            <table class="assignmentTable">
+              <thead>
+                <tr>
+                  <th style="width:72px;">On</th>
+                  <th>Product</th>
+                  <th style="width:110px;">Category</th>
+                  <th style="width:110px;">Base</th>
+                  <th style="width:130px;">Override</th>
+                  <th style="width:110px;">Effective</th>
+                  <th style="width:90px;">Sort</th>
+                  <th style="width:150px;">Capacity</th>
+                </tr>
+              </thead>
+              <tbody id="assignmentBody">
+                <tr>
+                  <td colspan="8" class="muted">Loading products…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="studioCol studioColRail">
+        <div class="card studioCard studioSticky">
+          <div class="railCard">
+            <h3 class="sectionTitle">Readiness</h3>
+            <p class="sectionSub">Checks before moving the drop live</p>
+            <div class="railList" id="readinessList"></div>
+          </div>
+
+          <div class="railCard" style="margin-top:12px;">
+            <h3 class="sectionTitle">Drop Summary</h3>
+            <p class="sectionSub">What is about to go live</p>
+            <div class="summaryBlock" id="dropSummary"></div>
+          </div>
+
+          <div class="railCard" style="margin-top:12px;">
+            <h3 class="sectionTitle">Live Metrics</h3>
+            <p class="sectionSub">Current performance and economics</p>
+            <div class="metricsGrid" id="metricsGrid"></div>
+          </div>
+
+          <div class="railCard" style="margin-top:12px;">
+            <h3 class="sectionTitle">Share & Distribution</h3>
+            <p class="sectionSub">Ordering link and QR for this drop</p>
+            <div class="shareBox">
+              <div class="shareLink" id="shareLinkPreview">No slug yet — save a slug to generate the link.</div>
+              <div class="qrWrap">
+                <canvas id="qrCanvas"></canvas>
+              </div>
+              <div class="railActions">
+                <button class="btnGhost" id="copyLinkBtn" type="button">Copy link</button>
+                <button class="btnGhost" id="downloadQrBtn" type="button">Download QR</button>
+                <button class="btnGhost" id="openOrderPageBtn" type="button">Open customer page</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="railCard" style="margin-top:12px;">
+            <h3 class="sectionTitle">Lifecycle Actions</h3>
+            <p class="sectionSub">Save, go live, close, archive or duplicate</p>
+            <div class="railActions">
+              <button class="btnAccent" id="moveLiveBtn" type="button">Move live</button>
+              <button class="btnGhost" id="duplicateBtn" type="button">Duplicate drop</button>
+              <button class="btnGhost" id="closeBtn" type="button">Close drop</button>
+              <button class="btnGhost" id="archiveBtn" type="button">Archive drop</button>
+              <button class="btnGhost" id="openBoardBtn" type="button">Open Service Board</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOST MODAL -->
+  <div class="modalBackdrop" id="hostModal">
+    <div class="modalCard">
+      <div class="modalHead">
+        <div>
+          <h3 class="sectionTitle">Create Host</h3>
+          <p class="sectionSub">Add a new club, school, pub, venue or private host</p>
+        </div>
+        <button class="btnGhost" id="closeHostModalBtn" type="button">Close</button>
+      </div>
+
+      <div class="studioGrid2">
+        <div class="field">
+          <label for="newHostName">Host name</label>
+          <input id="newHostName" type="text" placeholder="Ruscombe Cricket Club" />
+        </div>
+
+        <div class="field">
+          <label for="newHostType">Host type</label>
+          <select id="newHostType">
+            <option value="club">Club</option>
+            <option value="school">School</option>
+            <option value="pub">Pub</option>
+            <option value="venue">Venue</option>
+            <option value="private_host">Private host</option>
+            <option value="other">Other</option>
           </select>
         </div>
-        <div>
-          <label class="tiny">Opens at</label>
-          <input id="edit_opens" type="datetime-local" />
-        </div>
-        <div>
-          <label class="tiny">Closes at</label>
-          <input id="edit_closes" type="datetime-local" />
-        </div>
-        <div>
-          <label class="tiny">Max orders</label>
-          <input id="edit_max_orders" type="number" />
-        </div>
-        <div>
-          <label class="tiny">Capacity units total</label>
-          <input id="edit_units_total" type="number" />
-        </div>
-      </div>
-      <div class="bar" style="margin-top:10px;">
-        <button id="saveDropBtn">Save drop details</button>
-        <a id="openDashLink" class="btnlink" href="#" target="_blank">View dashboard</a>
-      </div>
-      <div class="muted">This updates the <code>drops</code> row.</div>
-    </div>
 
-    <div class="panel" style="margin:0;">
-      <h4 style="margin:0 0 8px;">Menu rules</h4>
-      <div class="muted">
-        Menu is driven by <code>drop_products</code> rows for the selected drop.<br/>
-        Tick products to include them for this drop; set:
-        <ul>
-          <li><b>is_available</b> (TRUE/FALSE)</li>
-          <li><b>sort_order</b> (lower = earlier)</li>
-          <li><b>price_override_pence</b> (optional)</li>
-        </ul>
+        <div class="field">
+          <label for="newHostPostcode">Postcode</label>
+          <input id="newHostPostcode" type="text" placeholder="RG10 0JP" />
+        </div>
+
+        <div class="field">
+          <label for="newHostAddress">Address summary</label>
+          <input id="newHostAddress" type="text" placeholder="Ruscombe, Berkshire" />
+        </div>
+
+        <div class="field" style="grid-column:1 / -1;">
+          <label for="newHostNotes">Internal notes</label>
+          <textarea id="newHostNotes" placeholder="Regular summer hosting opportunity"></textarea>
+        </div>
+      </div>
+
+      <div class="modalActions">
+        <button class="btnGhost" id="cancelHostBtn" type="button">Cancel</button>
+        <button class="btnAccent" id="saveHostBtn" type="button">Create host</button>
       </div>
     </div>
   </div>
 
-  <div class="panel" style="margin-top:12px;">
-    <div class="bar" style="margin:0;">
-      <h4 style="margin:0;">Products for this drop</h4>
-      <button id="reloadMenuBtn">Reload menu</button>
-      <button id="saveMenuBtn">Save menu</button>
-      <span id="saveOk" class="ok"></span>
-    </div>
+  <!-- PRODUCT MODAL -->
+  <div class="modalBackdrop" id="productModal">
+    <div class="modalCard">
+      <div class="modalHead">
+        <div>
+          <h3 class="sectionTitle">Create Product</h3>
+          <p class="sectionSub">Add a new item to the vendor menu and assign it to this drop</p>
+        </div>
+        <button class="btnGhost" id="closeProductModalBtn" type="button">Close</button>
+      </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th style="width:80px;">Include</th>
-          <th>Name</th>
-          <th style="width:120px;">Category</th>
-          <th style="width:120px;">Base price</th>
-          <th style="width:140px;">Override (pence)</th>
-          <th style="width:120px;">Available</th>
-          <th style="width:120px;">Sort order</th>
-        </tr>
-      </thead>
-      <tbody id="menuRows"></tbody>
-    </table>
+      <div class="studioGrid2">
+        <div class="field">
+          <label for="newProductName">Product name</label>
+          <input id="newProductName" type="text" placeholder="Margherita" />
+        </div>
 
-    <div class="muted" style="margin-top:10px;">
-      If you don’t tick a product, we will remove it from the drop menu (delete from <code>drop_products</code> for that product + drop).
-    </div>
-  </div>
-</div>
-
-<script src="./assets/config.js"></script>
-<script>
-/*** CONFIG ***/
-const SUPABASE_URL = window.HEARTH_CONFIG.SUPABASE_URL;
-const SUPABASE_ANON_KEY = window.HEARTH_CONFIG.SUPABASE_ANON_KEY;
-  
-const headers = {
-  apikey: SUPABASE_ANON_KEY,
-  Authorization: "Bearer " + SUPABASE_ANON_KEY,
-  "Content-Type": "application/json"
-};
-
-const msg = document.getElementById("msg");
-const dropRows = document.getElementById("dropRows");
-
-const refreshBtn = document.getElementById("refreshBtn");
-const createDropBtn = document.getElementById("createDropBtn");
-
-const new_name = document.getElementById("new_name");
-const new_status = document.getElementById("new_status");
-const new_opens = document.getElementById("new_opens");
-const new_closes = document.getElementById("new_closes");
-const new_max_orders = document.getElementById("new_max_orders");
-const new_units_total = document.getElementById("new_units_total");
-
-const menuPanel = document.getElementById("menuPanel");
-const menuDropLabel = document.getElementById("menuDropLabel");
-const closeMenuBtn = document.getElementById("closeMenuBtn");
-const reloadMenuBtn = document.getElementById("reloadMenuBtn");
-const saveMenuBtn = document.getElementById("saveMenuBtn");
-const menuRows = document.getElementById("menuRows");
-const saveOk = document.getElementById("saveOk");
-
-const edit_name = document.getElementById("edit_name");
-const edit_status = document.getElementById("edit_status");
-const edit_opens = document.getElementById("edit_opens");
-const edit_closes = document.getElementById("edit_closes");
-const edit_max_orders = document.getElementById("edit_max_orders");
-const edit_units_total = document.getElementById("edit_units_total");
-const saveDropBtn = document.getElementById("saveDropBtn");
-const openDashLink = document.getElementById("openDashLink");
-
-let dropsCache = [];
-let productsCache = [];
-let dropProductsCache = [];
-let activeDropId = null;
-
-/*** HELPERS ***/
-function esc(s){
-  return String(s ?? "").replace(/[&<>"']/g,
-    m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
-}
-function toIsoFromLocal(localStr){
-  // datetime-local => ISO string (no timezone in input; browser assumes local)
-  if(!localStr) return null;
-  const d = new Date(localStr);
-  if(String(d) === "Invalid Date") return null;
-  return d.toISOString();
-}
-function toLocalFromIso(iso){
-  if(!iso) return "";
-  const d = new Date(iso);
-  if(String(d) === "Invalid Date") return "";
-  // convert to YYYY-MM-DDTHH:MM for datetime-local
-  const pad = n => String(n).padStart(2,"0");
-  const yyyy = d.getFullYear();
-  const mm = pad(d.getMonth()+1);
-  const dd = pad(d.getDate());
-  const hh = pad(d.getHours());
-  const mi = pad(d.getMinutes());
-  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
-}
-async function fetchJson(url){
-  const res = await fetch(url, { headers });
-  const text = await res.text();
-  if(!res.ok) throw new Error(`${res.status} ${text}`);
-  return JSON.parse(text);
-}
-async function postJson(url, body, method="POST"){
-  const res = await fetch(url, {
-    method,
-    headers: { ...headers, Prefer: "return=representation" },
-    body: JSON.stringify(body)
-  });
-  const text = await res.text();
-  if(!res.ok) throw new Error(`${res.status} ${text}`);
-  return JSON.parse(text);
-}
-function money(pence){
-  if(pence == null || pence === "") return "—";
-  const n = Number(pence);
-  if(!Number.isFinite(n)) return "—";
-  return `£${(n/100).toFixed(2)}`;
-}
-
-/*** LOAD DROPS + PRODUCTS ***/
-async function loadDrops(){
-  msg.textContent = "";
-  const url =
-    `${SUPABASE_URL}/rest/v1/drops` +
-    `?select=id,name,status,opens_at,closes_at,max_orders,capacity_units_total` +
-    `&order=closes_at.desc.nullslast`;
-
-  dropsCache = await fetchJson(url);
-  renderDrops();
-}
-
-async function loadProducts(){
-  const url =
-    `${SUPABASE_URL}/rest/v1/products` +
-    `?select=id,name,category,price_pence,capacity_units,is_active,sort_order` +
-    `&order=sort_order.asc.nullslast&order=name.asc`;
-
-  productsCache = await fetchJson(url);
-}
-
-function renderDrops(){
-  dropRows.innerHTML = dropsCache.map(d=>{
-    const closes = d.closes_at ? new Date(d.closes_at).toLocaleString() : "—";
-    const units = (d.capacity_units_total != null) ? d.capacity_units_total : "—";
-    return `
-      <tr>
-        <td>${esc(d.name || "—")}</td>
-        <td><span class="pill">${esc(d.status || "—")}</span></td>
-        <td>${esc(closes)}</td>
-        <td>${d.max_orders ?? "—"}</td>
-        <td>${esc(String(units))}</td>
-        <td>
-          <a class="btnlink" href="./drop-menu.html?drop_id=${d.id}">Manage menu</a>
-          <a class="btnlink" href="./index.html?drop_id=${d.id}" target="_blank">View dashboard</a>
-        </td>
-      </tr>
-    `;
-  }).join("");
-}
-window.openMenu = openMenu;
-
-/*** CREATE DROP ***/
-async function createDrop(){
-  try{
-    msg.textContent = "";
-    const body = {
-      name: new_name.value.trim() || null,
-      status: new_status.value,
-      opens_at: toIsoFromLocal(new_opens.value),
-      closes_at: toIsoFromLocal(new_closes.value),
-      max_orders: (new_max_orders.value !== "" ? Number(new_max_orders.value) : null),
-      capacity_units_total: (new_units_total.value !== "" ? Number(new_units_total.value) : null)
-    };
-
-    // Basic guard: closes_at is strongly recommended
-    if(!body.closes_at) throw new Error("Please set closes_at for the new drop.");
-
-    await postJson(`${SUPABASE_URL}/rest/v1/drops`, body, "POST");
-
-    // clear inputs (keep status)
-    new_name.value = "";
-    new_opens.value = "";
-    new_closes.value = "";
-    new_units_total.value = "";
-
-    await loadDrops();
-  }catch(e){
-    msg.textContent = `Create drop failed: ${e.message}`;
-  }
-}
-
-/*** MENU MGMT ***/
-async function openMenu(dropId){
-  activeDropId = dropId;
-  saveOk.textContent = "";
-
-  const d = dropsCache.find(x=>x.id===dropId);
-  menuDropLabel.textContent = d?.name || dropId;
-
-  // fill drop edit fields
-  edit_name.value = d?.name || "";
-  edit_status.value = d?.status || "planned";
-  edit_opens.value = toLocalFromIso(d?.opens_at);
-  edit_closes.value = toLocalFromIso(d?.closes_at);
-  edit_max_orders.value = (d?.max_orders != null ? d.max_orders : "");
-  edit_units_total.value = (d?.capacity_units_total != null ? d.capacity_units_total : "");
-
-  openDashLink.href = `./index.html?drop_id=${dropId}`;
-
-  menuPanel.style.display = "block";
-
-  // Ensure products loaded
-  if(!productsCache.length) await loadProducts();
-
-  await loadDropProducts(dropId);
-  renderMenuTable();
-}
-
-async function loadDropProducts(dropId){
-  // fetch drop_products for this drop
-  const url =
-    `${SUPABASE_URL}/rest/v1/drop_products` +
-    `?drop_id=eq.${dropId}` +
-    `&select=drop_id,product_id,price_override_pence,is_available,sort_order`;
-
-  dropProductsCache = await fetchJson(url);
-}
-
-function renderMenuTable(){
-  // map existing drop_products by product_id
-  const map = new Map(dropProductsCache.map(x => [x.product_id, x]));
-
-  menuRows.innerHTML = productsCache.map(p=>{
-    const dp = map.get(p.id);
-    const included = !!dp;
-    const isAvail = (dp?.is_available != null) ? !!dp.is_available : true;
-    const sortOrder = (dp?.sort_order != null) ? dp.sort_order : (p.sort_order ?? "");
-    const override = (dp?.price_override_pence != null) ? dp.price_override_pence : "";
-
-    return `
-      <tr data-product-id="${p.id}">
-        <td>
-          <input class="checkbox" type="checkbox" ${included ? "checked" : ""} />
-        </td>
-        <td>${esc(p.name)}</td>
-        <td>${esc(p.category || "—")}</td>
-        <td>${esc(money(p.price_pence))}</td>
-        <td><input type="number" class="override" placeholder="(optional)" value="${esc(String(override))}" /></td>
-        <td>
-          <select class="avail">
-            <option value="true" ${isAvail ? "selected" : ""}>TRUE</option>
-            <option value="false" ${!isAvail ? "selected" : ""}>FALSE</option>
+        <div class="field">
+          <label for="newProductCategory">Category</label>
+          <select id="newProductCategory">
+            <option value="pizza">Pizza</option>
+            <option value="side">Side</option>
+            <option value="drink">Drink</option>
+            <option value="sauce">Sauce</option>
           </select>
-        </td>
-        <td><input type="number" class="sort" placeholder="(optional)" value="${esc(String(sortOrder))}" /></td>
-      </tr>
-    `;
-  }).join("");
-}
+        </div>
 
-async function saveDropDetails(){
-  try{
-    msg.textContent = "";
-    saveOk.textContent = "";
+        <div class="field">
+          <label for="newProductPricePence">Base price (pence)</label>
+          <input id="newProductPricePence" type="number" min="0" step="1" placeholder="1100" />
+        </div>
 
-    if(!activeDropId) return;
+        <div class="field">
+          <label for="newProductCapacityUnits">Capacity units</label>
+          <input id="newProductCapacityUnits" type="number" min="0" step="0.1" value="1" />
+        </div>
 
-    const patch = {
-      name: edit_name.value.trim() || null,
-      status: edit_status.value,
-      opens_at: toIsoFromLocal(edit_opens.value),
-      closes_at: toIsoFromLocal(edit_closes.value),
-      max_orders: (edit_max_orders.value !== "" ? Number(edit_max_orders.value) : null),
-      capacity_units_total: (edit_units_total.value !== "" ? Number(edit_units_total.value) : null)
-    };
+        <div class="field">
+          <label for="newProductSortOrder">Sort order</label>
+          <input id="newProductSortOrder" type="number" min="0" step="1" value="100" />
+        </div>
 
-    await postJson(`${SUPABASE_URL}/rest/v1/drops?id=eq.${activeDropId}`, patch, "PATCH");
+        <div class="field">
+          <label for="newProductActive">Active</label>
+          <select id="newProductActive">
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+      </div>
 
-    saveOk.textContent = "Saved drop.";
-    await loadDrops(); // refresh list + cache
-  }catch(e){
-    msg.textContent = `Save drop failed: ${e.message}`;
-  }
-}
+      <div class="modalActions">
+        <button class="btnGhost" id="cancelProductBtn" type="button">Cancel</button>
+        <button class="btnAccent" id="saveProductBtn" type="button">Create product</button>
+      </div>
+    </div>
+  </div>
 
-async function saveMenu(){
-  try{
-    msg.textContent = "";
-    saveOk.textContent = "";
-    if(!activeDropId) return;
+  <script>
+    (function () {
+      const CONFIG = window.HEARTH_CONFIG || {};
+      const SUPABASE_URL = CONFIG.SUPABASE_URL;
+      const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
+      const DEFAULT_VENDOR_SLUG = "southbury-farm-pizza";
 
-    // Current state from UI
-    const rows = Array.from(menuRows.querySelectorAll("tr[data-product-id]"));
-    const selected = [];
+      let supabase = null;
 
-    for(const r of rows){
-      const product_id = r.getAttribute("data-product-id");
-      const checked = r.querySelector("input[type=checkbox]")?.checked;
-      if(!checked) continue;
+      const state = {
+        vendorId: null,
+        drops: [],
+        hosts: [],
+        products: [],
+        selectedDropId: null,
+        selectedDropSummary: null,
+        economics: null,
+        drop: null,
+        dropProducts: [],
+        productAssignments: [],
+        search: "",
+        statusFilter: "all",
+        typeFilter: "all",
+        dirty: false
+      };
 
-      const overrideVal = r.querySelector("input.override")?.value;
-      const availVal = r.querySelector("select.avail")?.value;
-      const sortVal = r.querySelector("input.sort")?.value;
+      function byId(id) {
+        return document.getElementById(id);
+      }
 
-      selected.push({
-        drop_id: activeDropId,
-        product_id,
-        is_available: (availVal === "true"),
-        sort_order: (sortVal !== "" ? Number(sortVal) : null),
-        price_override_pence: (overrideVal !== "" ? Number(overrideVal) : null)
-      });
-    }
+      function showError(message) {
+        const el = byId("errorBox");
+        if (!message) {
+          el.style.display = "none";
+          el.textContent = "";
+          return;
+        }
+        el.style.display = "block";
+        el.textContent = message;
+      }
 
-    // Strategy:
-    // 1) delete all drop_products for this drop
-    // 2) insert selected rows fresh
-    // This is simplest + robust.
-    await fetch(`${SUPABASE_URL}/rest/v1/drop_products?drop_id=eq.${activeDropId}`, {
-      method: "DELETE",
-      headers
-    });
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
 
-    if(selected.length){
-      await postJson(`${SUPABASE_URL}/rest/v1/drop_products`, selected, "POST");
-    }
+      function slugify(text) {
+        return String(text || "")
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .replace(/-{2,}/g, "-");
+      }
 
-    saveOk.textContent = `Saved menu (${selected.length} products).`;
-    await loadDropProducts(activeDropId);
-  }catch(e){
-    msg.textContent = `Save menu failed: ${e.message}`;
-  }
-}
+      function uidSuffix() {
+        return Math.random().toString(36).slice(2, 7);
+      }
 
-function closeMenu(){
-  activeDropId = null;
-  menuPanel.style.display = "none";
-  saveOk.textContent = "";
-}
+      function formatMoneyPence(pence) {
+        return new Intl.NumberFormat("en-GB", {
+          style: "currency",
+          currency: "GBP",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        }).format((Number(pence || 0)) / 100);
+      }
 
-/*** WIRING ***/
-refreshBtn.addEventListener("click", loadDrops);
-createDropBtn.addEventListener("click", createDrop);
+      function formatDateTimeShort(value) {
+        if (!value) return "—";
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return "—";
+        return d.toLocaleString("en-GB", {
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      }
 
-closeMenuBtn.addEventListener("click", closeMenu);
-reloadMenuBtn.addEventListener("click", async ()=>{
-  if(!activeDropId) return;
-  saveOk.textContent = "";
-  await loadDropProducts(activeDropId);
-  renderMenuTable();
-});
-saveMenuBtn.addEventListener("click", saveMenu);
-saveDropBtn.addEventListener("click", saveDropDetails);
+      function formatDateTimeLocal(value) {
+        if (!value) return "";
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return "";
+        const pad = (n) => String(n).padStart(2, "0");
+        return [
+          d.getFullYear(),
+          "-",
+          pad(d.getMonth() + 1),
+          "-",
+          pad(d.getDate()),
+          "T",
+          pad(d.getHours()),
+          ":",
+          pad(d.getMinutes())
+        ].join("");
+      }
 
-/*** INIT ***/
-(async function init(){
-  try{
-    await loadProducts();
-    await loadDrops();
-  }catch(e){
-    msg.textContent = `Init failed: ${e.message}`;
-  }
-})();
-</script>
+      function parseDateTimeLocal(value) {
+        if (!value) return null;
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return null;
+        return d.toISOString();
+      }
 
+      function statusDotClass(status) {
+        const s = String(status || "").toLowerCase();
+        if (s === "live") return "dot live";
+        if (s === "draft") return "dot draft";
+        return "dot closed";
+      }
+
+      function isTruthyString(value) {
+        return String(value) === "true";
+      }
+
+      function getSelectedHost() {
+        if (!state.drop?.host_id) return null;
+        return state.hosts.find((h) => h.id === state.drop.host_id) || null;
+      }
+
+      function getSharePath() {
+        const slug = (state.drop?.slug || "").trim();
+        if (!slug) return "";
+        return `/order.html?drop=${encodeURIComponent(slug)}`;
+      }
+
+      function getShareUrl() {
+        const path = getSharePath();
+        if (!path) return "";
+        try {
+          return new URL(path, window.location.origin).toString();
+        } catch {
+          return path;
+        }
+      }
+
+      function markDirty(value = true) {
+        state.dirty = value;
+      }
+
+      async function loadVendorId() {
+        const { data, error } = await supabase
+          .from("vendors")
+          .select("id, slug, name")
+          .eq("slug", DEFAULT_VENDOR_SLUG)
+          .single();
+
+        if (error) throw error;
+        state.vendorId = data.id;
+      }
+
+      async function loadHosts() {
+        const { data, error } = await supabase
+          .from("hosts")
+          .select("*")
+          .neq("status", "archived")
+          .order("name", { ascending: true });
+
+        if (error) throw error;
+        state.hosts = data || [];
+      }
+
+      async function loadProducts() {
+        const { data, error } = await supabase
+          .from("products")
+          .select("*")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+          .order("name", { ascending: true });
+
+        if (error) throw error;
+        state.products = data || [];
+      }
+
+      async function loadDrops() {
+        const { data, error } = await supabase
+          .from("v_drop_summary")
+          .select("*")
+          .order("delivery_start", { ascending: false });
+
+        if (error) throw error;
+        state.drops = data || [];
+
+        const currentStillExists = state.drops.some((d) => d.drop_id === state.selectedDropId);
+        if (!currentStillExists) {
+          const live = state.drops.find((d) => d.status === "live");
+          const draft = state.drops.find((d) => d.status === "draft");
+          state.selectedDropId = (live || draft || state.drops[0] || {}).drop_id || null;
+        }
+      }
+
+      async function loadSelectedDrop() {
+        if (!state.selectedDropId) {
+          state.drop = null;
+          state.selectedDropSummary = null;
+          state.economics = null;
+          state.dropProducts = [];
+          state.productAssignments = [];
+          renderEverything();
+          return;
+        }
+
+        const [dropRes, summaryRes, econRes, dropProductsRes] = await Promise.all([
+          supabase.from("drops").select("*").eq("id", state.selectedDropId).single(),
+          supabase.from("v_drop_summary").select("*").eq("drop_id", state.selectedDropId).single(),
+          supabase.from("v_drop_fundraising_summary").select("*").eq("drop_id", state.selectedDropId).single(),
+          supabase.from("drop_products").select("*").eq("drop_id", state.selectedDropId)
+        ]);
+
+        if (dropRes.error) throw dropRes.error;
+        if (summaryRes.error) throw summaryRes.error;
+        if (econRes.error) throw econRes.error;
+        if (dropProductsRes.error) throw dropProductsRes.error;
+
+        state.drop = dropRes.data;
+        state.selectedDropSummary = summaryRes.data;
+        state.economics = econRes.data;
+        state.dropProducts = dropProductsRes.data || [];
+        state.productAssignments = buildProductAssignments();
+        markDirty(false);
+      }
+
+      function buildProductAssignments() {
+        const assignmentMap = new Map(
+          (state.dropProducts || []).map((row) => [row.product_id, row])
+        );
+
+        return state.products.map((product) => {
+          const assigned = assignmentMap.get(product.id);
+          return {
+            product_id: product.id,
+            name: product.name,
+            category: product.category,
+            base_price_pence: product.price_pence,
+            capacity_units: product.capacity_units,
+            product_sort_order: product.sort_order,
+            enabled: Boolean(assigned?.is_available),
+            price_override_pence: assigned?.price_override_pence ?? null,
+            sort_order: assigned?.sort_order ?? product.sort_order ?? 100
+          };
+        }).sort((a, b) => {
+          const enabledDiff = Number(b.enabled) - Number(a.enabled);
+          if (enabledDiff !== 0) return enabledDiff;
+          const sortDiff = Number(a.sort_order ?? 9999) - Number(b.sort_order ?? 9999);
+          if (sortDiff !== 0) return sortDiff;
+          return a.name.localeCompare(b.name);
+        });
+      }
+
+      function getFilteredDrops() {
+        const search = state.search.trim().toLowerCase();
+        return state.drops.filter((drop) => {
+          const statusOk = state.statusFilter === "all" || drop.status === state.statusFilter;
+          const typeOk = state.typeFilter === "all" || drop.drop_type === state.typeFilter;
+
+          if (!statusOk || !typeOk) return false;
+
+          if (!search) return true;
+
+          const haystack = [
+            drop.drop_name || "",
+            drop.host_name || "",
+            drop.drop_type || "",
+            drop.status || ""
+          ].join(" ").toLowerCase();
+
+          return haystack.includes(search);
+        });
+      }
+
+      function renderNavigator() {
+        const list = byId("dropList");
+        const drops = getFilteredDrops();
+
+        if (!drops.length) {
+          list.innerHTML = `
+            <div class="emptyState">
+              No drops found.
+            </div>
+          `;
+          return;
+        }
+
+        list.innerHTML = drops.map((drop) => {
+          const active = drop.drop_id === state.selectedDropId ? "active" : "";
+          const hostLine = drop.host_name
+            ? `${escapeHtml(drop.host_name)} • ${escapeHtml(drop.drop_type || "drop")}`
+            : `${escapeHtml(drop.drop_type || "drop")}`;
+
+          const capacityText = `${Number(drop.capacity_units_used || 0)} / ${Number(drop.capacity_units_total || 0)} ${escapeHtml(drop.capacity_category || "units")}`;
+          const deliveryText = drop.delivery_start && drop.delivery_end
+            ? `${formatDateTimeShort(drop.delivery_start)}–${new Date(drop.delivery_end).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
+            : "No fulfilment window";
+
+          return `
+            <div class="dropRow ${active}" data-drop-id="${drop.drop_id}">
+              <div class="dropRowTop">
+                <div>
+                  <h4 class="dropRowTitle">${escapeHtml(drop.drop_name || "Untitled drop")}</h4>
+                  <p class="dropRowSub">${hostLine}</p>
+                </div>
+                <span class="miniChip">${escapeHtml(drop.status || "—")}</span>
+              </div>
+
+              <div class="dropRowSub">${escapeHtml(deliveryText)}</div>
+
+              <div class="dropRowMeta">
+                <div class="dropRowStats">
+                  <span class="miniChip">${escapeHtml(capacityText)}</span>
+                  <span class="miniChip">${Number(drop.order_count || 0)} orders</span>
+                </div>
+              </div>
+
+              <div class="dropRowActions">
+                <button class="btnSmall js-duplicate-drop" type="button" data-drop-id="${drop.drop_id}">Duplicate</button>
+                <button class="btnGhost js-archive-drop" type="button" data-drop-id="${drop.drop_id}">Archive</button>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      function renderEditorStatus() {
+        const status = state.drop?.status || "—";
+        byId("editorStatusText").textContent = status;
+        byId("editorStatusDot").className = statusDotClass(status);
+      }
+
+      function renderHostOptions() {
+        const select = byId("hostSelect");
+        const current = state.drop?.host_id || "";
+        const options = [
+          `<option value="">No host selected</option>`,
+          ...state.hosts.map((host) => `
+            <option value="${host.id}" ${host.id === current ? "selected" : ""}>
+              ${escapeHtml(host.name)} (${escapeHtml(host.host_type)})
+            </option>
+          `)
+        ];
+        select.innerHTML = options.join("");
+      }
+
+      function renderHostPreview() {
+        const host = getSelectedHost();
+        const preview = byId("hostPreview");
+
+        if (!host) {
+          preview.innerHTML = `
+            <strong>No host selected</strong>
+            Add a host for community or hosted drops.
+          `;
+          return;
+        }
+
+        preview.innerHTML = `
+          <strong>${escapeHtml(host.name)}</strong>
+          ${escapeHtml(host.host_type)}${host.postcode ? ` • ${escapeHtml(host.postcode)}` : ""}
+          ${host.address_summary ? `<div style="margin-top:4px;">${escapeHtml(host.address_summary)}</div>` : ""}
+        `;
+      }
+
+      function setFieldValuesFromDrop() {
+        const d = state.drop;
+        if (!d) return;
+
+        byId("dropName").value = d.name || "";
+        byId("dropSlug").value = d.slug || "";
+        byId("dropType").value = d.drop_type || "neighbourhood";
+        byId("dropStatus").value = d.status || "draft";
+        byId("opensAt").value = formatDateTimeLocal(d.opens_at);
+        byId("closesAt").value = formatDateTimeLocal(d.closes_at);
+        byId("deliveryStart").value = formatDateTimeLocal(d.delivery_start);
+        byId("deliveryEnd").value = formatDateTimeLocal(d.delivery_end);
+        byId("cutoffTime").value = formatDateTimeLocal(d.cutoff_time);
+        byId("capacityCategory").value = d.capacity_category || "pizza";
+        byId("capacityTotal").value = Number(d.capacity_units_total || 0);
+        byId("fulfilmentMode").value = d.fulfilment_mode || "";
+        byId("centrePostcode").value = d.centre_postcode || "";
+        byId("radiusKm").value = d.radius_km ?? "";
+        byId("notesInternal").value = d.notes_internal || "";
+
+        byId("fundraisingEnabled").checked = Boolean(d.fundraising_enabled);
+        byId("fundraisingModel").value = d.fundraising_model || "";
+        byId("fundraisingPercentage").value = d.fundraising_percentage ?? "";
+        byId("fundraisingPerOrderPence").value = d.fundraising_per_order_pence ?? "";
+        byId("fundraisingDisplayText").value = d.fundraising_display_text || "";
+        byId("fundraisingNotes").value = d.fundraising_notes || "";
+
+        byId("hostShareEnabled").checked = Boolean(d.host_share_enabled);
+        byId("hostShareModel").value = d.host_share_model || "";
+        byId("hostSharePercentage").value = d.host_share_percentage ?? "";
+        byId("hostSharePerOrderPence").value = d.host_share_per_order_pence ?? "";
+        byId("hostShareFixedPence").value = d.host_share_fixed_pence ?? "";
+        byId("hostShareCustomerVisible").value = String(Boolean(d.host_share_customer_visible));
+        byId("hostShareNotes").value = d.host_share_notes || "";
+
+        renderConditionalFields();
+      }
+
+      function readDropFromForm() {
+        const existing = state.drop || {};
+        return {
+          ...existing,
+          name: byId("dropName").value.trim(),
+          slug: slugify(byId("dropSlug").value.trim()),
+          drop_type: byId("dropType").value,
+          status: byId("dropStatus").value,
+          host_id: byId("hostSelect").value || null,
+          opens_at: parseDateTimeLocal(byId("opensAt").value),
+          closes_at: parseDateTimeLocal(byId("closesAt").value),
+          delivery_start: parseDateTimeLocal(byId("deliveryStart").value),
+          delivery_end: parseDateTimeLocal(byId("deliveryEnd").value),
+          cutoff_time: parseDateTimeLocal(byId("cutoffTime").value),
+          capacity_category: byId("capacityCategory").value,
+          capacity_units_total: Number(byId("capacityTotal").value || 0),
+          fulfilment_mode: byId("fulfilmentMode").value || null,
+          centre_postcode: byId("centrePostcode").value.trim() || null,
+          radius_km: byId("radiusKm").value === "" ? null : Number(byId("radiusKm").value),
+          notes_internal: byId("notesInternal").value.trim() || null,
+
+          fundraising_enabled: byId("fundraisingEnabled").checked,
+          fundraising_model: byId("fundraisingEnabled").checked ? (byId("fundraisingModel").value || null) : null,
+          fundraising_percentage: byId("fundraisingEnabled").checked && byId("fundraisingModel").value === "percentage"
+            ? (byId("fundraisingPercentage").value === "" ? null : Number(byId("fundraisingPercentage").value))
+            : null,
+          fundraising_per_order_pence: byId("fundraisingEnabled").checked && byId("fundraisingModel").value === "per_order"
+            ? (byId("fundraisingPerOrderPence").value === "" ? null : Number(byId("fundraisingPerOrderPence").value))
+            : null,
+          fundraising_display_text: byId("fundraisingEnabled").checked
+            ? (byId("fundraisingDisplayText").value.trim() || null)
+            : null,
+          fundraising_notes: byId("fundraisingEnabled").checked
+            ? (byId("fundraisingNotes").value.trim() || null)
+            : null,
+
+          host_share_enabled: byId("hostShareEnabled").checked,
+          host_share_model: byId("hostShareEnabled").checked ? (byId("hostShareModel").value || null) : null,
+          host_share_percentage: byId("hostShareEnabled").checked && byId("hostShareModel").value === "percentage"
+            ? (byId("hostSharePercentage").value === "" ? null : Number(byId("hostSharePercentage").value))
+            : null,
+          host_share_per_order_pence: byId("hostShareEnabled").checked && byId("hostShareModel").value === "per_order"
+            ? (byId("hostSharePerOrderPence").value === "" ? null : Number(byId("hostSharePerOrderPence").value))
+            : null,
+          host_share_fixed_pence: byId("hostShareEnabled").checked && byId("hostShareModel").value === "fixed"
+            ? (byId("hostShareFixedPence").value === "" ? null : Number(byId("hostShareFixedPence").value))
+            : null,
+          host_share_customer_visible: byId("hostShareEnabled").checked
+            ? isTruthyString(byId("hostShareCustomerVisible").value)
+            : false,
+          host_share_notes: byId("hostShareEnabled").checked
+            ? (byId("hostShareNotes").value.trim() || null)
+            : null
+        };
+      }
+
+      function renderConditionalFields() {
+        const fundraisingEnabled = byId("fundraisingEnabled").checked;
+        const fundraisingModel = byId("fundraisingModel").value;
+        byId("fundraisingFields").classList.toggle("hidden", !fundraisingEnabled);
+        byId("fundraisingPercentageField").classList.toggle("hidden", fundraisingModel !== "percentage");
+        byId("fundraisingPerOrderField").classList.toggle("hidden", fundraisingModel !== "per_order");
+
+        const hostShareEnabled = byId("hostShareEnabled").checked;
+        const hostShareModel = byId("hostShareModel").value;
+        byId("hostShareFields").classList.toggle("hidden", !hostShareEnabled);
+        byId("hostSharePercentageField").classList.toggle("hidden", hostShareModel !== "percentage");
+        byId("hostSharePerOrderField").classList.toggle("hidden", hostShareModel !== "per_order");
+        byId("hostShareFixedField").classList.toggle("hidden", hostShareModel !== "fixed");
+      }
+
+      function renderAssignments() {
+        const body = byId("assignmentBody");
+        const capacityCategory = state.drop?.capacity_category || "pizza";
+
+        if (!state.productAssignments.length) {
+          body.innerHTML = `
+            <tr>
+              <td colspan="8"><div class="emptyState">No active products found.</div></td>
+            </tr>
+          `;
+          return;
+        }
+
+        body.innerHTML = state.productAssignments.map((row, idx) => {
+          const effectivePence = row.price_override_pence == null || row.price_override_pence === ""
+            ? row.base_price_pence
+            : Number(row.price_override_pence);
+          const capacityTag = row.category === capacityCategory
+            ? `<span class="capacityTag">Counts toward capacity</span>`
+            : `<span class="miniChip">Not capacity driving</span>`;
+
+          return `
+            <tr data-product-id="${row.product_id}">
+              <td>
+                <input class="js-assign-enabled" type="checkbox" ${row.enabled ? "checked" : ""} />
+              </td>
+              <td>
+                <span class="productName">${escapeHtml(row.name)}</span>
+                <span class="subMeta">${escapeHtml(row.category)}</span>
+              </td>
+              <td>${escapeHtml(row.category)}</td>
+              <td>${formatMoneyPence(row.base_price_pence)}</td>
+              <td>
+                <input class="js-assign-override priceInput" type="number" min="0" step="1" value="${row.price_override_pence ?? ""}" placeholder="—" />
+              </td>
+              <td>${formatMoneyPence(effectivePence)}</td>
+              <td>
+                <input class="js-assign-sort sortInput" type="number" min="0" step="1" value="${Number(row.sort_order ?? 100)}" />
+              </td>
+              <td>${capacityTag}</td>
+            </tr>
+          `;
+        }).join("");
+      }
+
+      function buildReadinessChecks(dropData = state.drop) {
+        const productCount = state.productAssignments.filter((p) => p.enabled).length;
+        const checks = [
+          { label: "Drop name defined", ok: Boolean(dropData?.name?.trim()) },
+          { label: "Slug defined", ok: Boolean(dropData?.slug?.trim()) },
+          { label: "Drop type set", ok: Boolean(dropData?.drop_type) },
+          { label: "Ordering window set", ok: Boolean(dropData?.opens_at && dropData?.closes_at) },
+          { label: "Fulfilment window set", ok: Boolean(dropData?.delivery_start && dropData?.delivery_end && dropData?.cutoff_time) },
+          { label: "Capacity configured", ok: Boolean(dropData?.capacity_category && Number(dropData?.capacity_units_total || 0) > 0) },
+          { label: "At least one product assigned", ok: productCount > 0 }
+        ];
+
+        if (dropData?.drop_type === "community") {
+          checks.push({ label: "Host selected for community drop", ok: Boolean(dropData?.host_id) });
+        }
+
+        if (dropData?.fundraising_enabled) {
+          const valid = Boolean(
+            dropData?.fundraising_model &&
+            (
+              (dropData.fundraising_model === "percentage" && Number(dropData.fundraising_percentage || 0) > 0) ||
+              (dropData.fundraising_model === "per_order" && Number(dropData.fundraising_per_order_pence || 0) > 0)
+            )
+          );
+          checks.push({ label: "Community contribution configured", ok: valid });
+        }
+
+        if (dropData?.host_share_enabled) {
+          const valid = Boolean(
+            dropData?.host_share_model &&
+            (
+              (dropData.host_share_model === "percentage" && Number(dropData.host_share_percentage || 0) > 0) ||
+              (dropData.host_share_model === "per_order" && Number(dropData.host_share_per_order_pence || 0) > 0) ||
+              (dropData.host_share_model === "fixed" && Number(dropData.host_share_fixed_pence || 0) > 0)
+            )
+          );
+          checks.push({ label: "Commercial host share configured", ok: valid });
+        }
+
+        return {
+          checks,
+          isReady: checks.every((c) => c.ok)
+        };
+      }
+
+      function renderReadiness() {
+        const container = byId("readinessList");
+        if (!state.drop) {
+          container.innerHTML = `<div class="emptyState">No drop selected.</div>`;
+          return;
+        }
+
+        const readiness = buildReadinessChecks();
+        container.innerHTML = readiness.checks.map((check) => `
+          <div class="checkRow ${check.ok ? "pass" : "fail"}">
+            <span class="mark">${check.ok ? "✓" : "!"}</span>
+            <span>${escapeHtml(check.label)}</span>
+          </div>
+        `).join("");
+      }
+
+      function getContributionSummary(dropData) {
+        if (!dropData?.fundraising_enabled) return "None";
+        if (dropData.fundraising_model === "percentage" && dropData.fundraising_percentage != null) {
+          return `${dropData.fundraising_percentage}% of sales`;
+        }
+        if (dropData.fundraising_model === "per_order" && dropData.fundraising_per_order_pence != null) {
+          return `${formatMoneyPence(dropData.fundraising_per_order_pence)} per order`;
+        }
+        return "Configured";
+      }
+
+      function getHostShareSummary(dropData) {
+        if (!dropData?.host_share_enabled) return "None";
+        if (dropData.host_share_model === "percentage" && dropData.host_share_percentage != null) {
+          return `${dropData.host_share_percentage}% of sales`;
+        }
+        if (dropData.host_share_model === "per_order" && dropData.host_share_per_order_pence != null) {
+          return `${formatMoneyPence(dropData.host_share_per_order_pence)} per order`;
+        }
+        if (dropData.host_share_model === "fixed" && dropData.host_share_fixed_pence != null) {
+          return `${formatMoneyPence(dropData.host_share_fixed_pence)} fixed`;
+        }
+        return "Configured";
+      }
+
+      function renderDropSummary() {
+        const el = byId("dropSummary");
+        if (!state.drop) {
+          el.innerHTML = `<div class="emptyState">No drop selected.</div>`;
+          return;
+        }
+
+        const host = getSelectedHost();
+        const productCount = state.productAssignments.filter((p) => p.enabled).length;
+
+        const items = [
+          ["Drop", state.drop.name || "—"],
+          ["Host", host ? host.name : "No host"],
+          ["Type", state.drop.drop_type || "—"],
+          ["Ordering", state.drop.opens_at && state.drop.closes_at ? `${formatDateTimeShort(state.drop.opens_at)} → ${formatDateTimeShort(state.drop.closes_at)}` : "Not set"],
+          ["Fulfilment", state.drop.delivery_start && state.drop.delivery_end ? `${formatDateTimeShort(state.drop.delivery_start)} → ${formatDateTimeShort(state.drop.delivery_end)}` : "Not set"],
+          ["Mode", state.drop.fulfilment_mode || "Not set"],
+          ["Geography", [state.drop.centre_postcode, state.drop.radius_km ? `${state.drop.radius_km}km` : ""].filter(Boolean).join(" • ") || "Not set"],
+          ["Capacity", `${Number(state.drop.capacity_units_total || 0)} ${state.drop.capacity_category || "units"}`],
+          ["Products", `${productCount} enabled`],
+          ["Community contribution", getContributionSummary(state.drop)],
+          ["Host share", getHostShareSummary(state.drop)],
+          ["Link", getSharePath() || "No slug yet"]
+        ];
+
+        el.innerHTML = items.map(([label, value]) => `
+          <div class="summaryItem">
+            <span class="label">${escapeHtml(label)}</span>
+            <span class="value">${escapeHtml(value)}</span>
+          </div>
+        `).join("");
+      }
+
+      function renderMetrics() {
+        const el = byId("metricsGrid");
+        const summary = state.selectedDropSummary;
+        if (!summary) {
+          el.innerHTML = `<div class="emptyState" style="grid-column:1 / -1;">No metrics yet.</div>`;
+          return;
+        }
+
+        const tiles = [
+          ["Orders", Number(summary.order_count || 0)],
+          ["Capacity used", Number(summary.capacity_units_used || 0)],
+          ["Remaining", Number(summary.capacity_units_remaining || 0)],
+          ["GMV", formatMoneyPence(summary.drop_gmv_pence || 0)],
+          ["Community", formatMoneyPence(summary.fundraising_total_pence || 0)],
+          ["Host share", formatMoneyPence(summary.host_share_total_pence || 0)]
+        ];
+
+        el.innerHTML = tiles.map(([label, value]) => `
+          <div class="metricTile">
+            <span class="label">${escapeHtml(label)}</span>
+            <span class="value">${escapeHtml(String(value))}</span>
+          </div>
+        `).join("");
+      }
+
+      function renderShareBox() {
+        const shareUrl = getShareUrl();
+        const preview = byId("shareLinkPreview");
+        preview.textContent = shareUrl || "No slug yet — save a slug to generate the link.";
+
+        renderQrCode(shareUrl);
+      }
+
+      function renderQrCode(text) {
+        const canvas = byId("qrCanvas");
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (!text) {
+          canvas.width = 160;
+          canvas.height = 160;
+          ctx.fillStyle = "#f8fafc";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#64748b";
+          ctx.font = "12px sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("No link yet", canvas.width / 2, canvas.height / 2);
+          return;
+        }
+
+        QRCode.toCanvas(canvas, text, {
+          width: 160,
+          margin: 1
+        }, function (error) {
+          if (error) {
+            console.error(error);
+          }
+        });
+      }
+
+      function renderEverything() {
+        renderNavigator();
+        renderEditorStatus();
+        renderHostOptions();
+        renderHostPreview();
+        setFieldValuesFromDrop();
+        renderAssignments();
+        renderReadiness();
+        renderDropSummary();
+        renderMetrics();
+        renderShareBox();
+      }
+
+      async function refreshAll() {
+        showError("");
+        await Promise.all([loadHosts(), loadProducts(), loadDrops()]);
+        await loadSelectedDrop();
+        renderEverything();
+      }
+
+      function getDropPayload(dropData) {
+        return {
+          vendor_id: dropData.vendor_id,
+          host_id: dropData.host_id,
+          slug: dropData.slug,
+          name: dropData.name,
+          drop_type: dropData.drop_type,
+          status: dropData.status,
+          opens_at: dropData.opens_at,
+          closes_at: dropData.closes_at,
+          delivery_start: dropData.delivery_start,
+          delivery_end: dropData.delivery_end,
+          cutoff_time: dropData.cutoff_time,
+          capacity_units_total: dropData.capacity_units_total,
+          capacity_category: dropData.capacity_category,
+          fulfilment_mode: dropData.fulfilment_mode,
+          centre_postcode: dropData.centre_postcode,
+          radius_km: dropData.radius_km,
+          notes_internal: dropData.notes_internal,
+
+          fundraising_enabled: dropData.fundraising_enabled,
+          fundraising_model: dropData.fundraising_model,
+          fundraising_percentage: dropData.fundraising_percentage,
+          fundraising_per_order_pence: dropData.fundraising_per_order_pence,
+          fundraising_display_text: dropData.fundraising_display_text,
+          fundraising_notes: dropData.fundraising_notes,
+
+          host_share_enabled: dropData.host_share_enabled,
+          host_share_model: dropData.host_share_model,
+          host_share_percentage: dropData.host_share_percentage,
+          host_share_per_order_pence: dropData.host_share_per_order_pence,
+          host_share_fixed_pence: dropData.host_share_fixed_pence,
+          host_share_customer_visible: dropData.host_share_customer_visible,
+          host_share_notes: dropData.host_share_notes
+        };
+      }
+
+      async function saveAssignments() {
+        const enabledAssignments = state.productAssignments
+          .filter((row) => row.enabled)
+          .map((row) => ({
+            drop_id: state.selectedDropId,
+            product_id: row.product_id,
+            is_available: true,
+            price_override_pence: row.price_override_pence === "" || row.price_override_pence == null ? null : Number(row.price_override_pence),
+            sort_order: Number(row.sort_order ?? 100)
+          }));
+
+        const { error: deleteError } = await supabase
+          .from("drop_products")
+          .delete()
+          .eq("drop_id", state.selectedDropId);
+
+        if (deleteError) throw deleteError;
+
+        if (enabledAssignments.length) {
+          const { error: insertError } = await supabase
+            .from("drop_products")
+            .insert(enabledAssignments);
+
+          if (insertError) throw insertError;
+        }
+      }
+
+      async function saveDrop() {
+        if (!state.selectedDropId || !state.drop) return;
+
+        const dropData = readDropFromForm();
+        if (!dropData.slug) {
+          throw new Error("Slug is required.");
+        }
+
+        const { error } = await supabase
+          .from("drops")
+          .update(getDropPayload(dropData))
+          .eq("id", state.selectedDropId);
+
+        if (error) throw error;
+
+        state.drop = { ...state.drop, ...dropData };
+        await saveAssignments();
+        await loadDrops();
+        await loadSelectedDrop();
+        renderEverything();
+      }
+
+      async function createNewDrop() {
+        const now = new Date();
+        const baseName = "New Drop";
+        const baseSlug = `new-drop-${uidSuffix()}`;
+
+        const payload = {
+          vendor_id: state.vendorId,
+          name: baseName,
+          slug: baseSlug,
+          drop_type: "neighbourhood",
+          status: "draft",
+          delivery_start: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          delivery_end: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString(),
+          cutoff_time: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000 - 60 * 60 * 1000).toISOString(),
+          capacity_units_total: 40,
+          capacity_category: "pizza",
+          fundraising_enabled: false,
+          host_share_enabled: false
+        };
+
+        const { data, error } = await supabase
+          .from("drops")
+          .insert(payload)
+          .select("id")
+          .single();
+
+        if (error) throw error;
+
+        state.selectedDropId = data.id;
+        await refreshAll();
+      }
+
+      async function duplicateDrop(dropId) {
+        const targetId = dropId || state.selectedDropId;
+        if (!targetId) return;
+
+        const { data: sourceDrop, error: sourceError } = await supabase
+          .from("drops")
+          .select("*")
+          .eq("id", targetId)
+          .single();
+
+        if (sourceError) throw sourceError;
+
+        const { data: sourceAssignments, error: assignmentsError } = await supabase
+          .from("drop_products")
+          .select("*")
+          .eq("drop_id", targetId);
+
+        if (assignmentsError) throw assignmentsError;
+
+        const newSlug = `${slugify(sourceDrop.slug || sourceDrop.name || "drop")}-${uidSuffix()}`;
+        const duplicatePayload = {
+          ...getDropPayload(sourceDrop),
+          slug: newSlug,
+          name: `${sourceDrop.name} Copy`,
+          status: "draft",
+          published_at: null,
+          closed_at: null,
+          archived_at: null
+        };
+
+        const { data: insertedDrop, error: insertDropError } = await supabase
+          .from("drops")
+          .insert(duplicatePayload)
+          .select("id")
+          .single();
+
+        if (insertDropError) throw insertDropError;
+
+        if ((sourceAssignments || []).length) {
+          const rows = sourceAssignments.map((row) => ({
+            drop_id: insertedDrop.id,
+            product_id: row.product_id,
+            is_available: row.is_available,
+            price_override_pence: row.price_override_pence,
+            sort_order: row.sort_order
+          }));
+
+          const { error: insertAssignmentsError } = await supabase
+            .from("drop_products")
+            .insert(rows);
+
+          if (insertAssignmentsError) throw insertAssignmentsError;
+        }
+
+        state.selectedDropId = insertedDrop.id;
+        await refreshAll();
+      }
+
+      async function updateDropStatus(status) {
+        if (!state.selectedDropId || !state.drop) return;
+
+        const payload = { status };
+        if (status === "live") payload.published_at = new Date().toISOString();
+        if (status === "closed") payload.closed_at = new Date().toISOString();
+        if (status === "archived") payload.archived_at = new Date().toISOString();
+
+        const { error } = await supabase
+          .from("drops")
+          .update(payload)
+          .eq("id", state.selectedDropId);
+
+        if (error) throw error;
+
+        await refreshAll();
+      }
+
+      async function archiveFromRow(dropId) {
+        const { error } = await supabase
+          .from("drops")
+          .update({ status: "archived", archived_at: new Date().toISOString() })
+          .eq("id", dropId);
+
+        if (error) throw error;
+
+        if (dropId === state.selectedDropId) {
+          state.selectedDropId = null;
+        }
+        await refreshAll();
+      }
+
+      async function createHost() {
+        const name = byId("newHostName").value.trim();
+        if (!name) throw new Error("Host name is required.");
+
+        const payload = {
+          name,
+          slug: slugify(name),
+          host_type: byId("newHostType").value,
+          postcode: byId("newHostPostcode").value.trim() || null,
+          address_summary: byId("newHostAddress").value.trim() || null,
+          notes_internal: byId("newHostNotes").value.trim() || null
+        };
+
+        const { data, error } = await supabase
+          .from("hosts")
+          .insert(payload)
+          .select("*")
+          .single();
+
+        if (error) throw error;
+
+        await loadHosts();
+        renderHostOptions();
+        byId("hostSelect").value = data.id;
+        state.drop.host_id = data.id;
+        renderHostPreview();
+        markDirty(true);
+        closeModal("hostModal");
+        clearHostModal();
+      }
+
+      async function createProduct() {
+        const name = byId("newProductName").value.trim();
+        if (!name) throw new Error("Product name is required.");
+        if (!state.selectedDropId) throw new Error("Select a drop before adding a product.");
+
+        const payload = {
+          vendor_id: state.vendorId,
+          name,
+          category: byId("newProductCategory").value,
+          price_pence: Number(byId("newProductPricePence").value || 0),
+          capacity_units: Number(byId("newProductCapacityUnits").value || 1),
+          sort_order: Number(byId("newProductSortOrder").value || 100),
+          is_active: isTruthyString(byId("newProductActive").value)
+        };
+
+        const { data: product, error: productError } = await supabase
+          .from("products")
+          .insert(payload)
+          .select("*")
+          .single();
+
+        if (productError) throw productError;
+
+        const assignmentPayload = {
+          drop_id: state.selectedDropId,
+          product_id: product.id,
+          is_available: true,
+          sort_order: product.sort_order
+        };
+
+        const { error: assignmentError } = await supabase
+          .from("drop_products")
+          .insert(assignmentPayload);
+
+        if (assignmentError) throw assignmentError;
+
+        await loadProducts();
+        await loadSelectedDrop();
+        renderEverything();
+        closeModal("productModal");
+        clearProductModal();
+      }
+
+      function openModal(id) {
+        byId(id).classList.add("open");
+      }
+
+      function closeModal(id) {
+        byId(id).classList.remove("open");
+      }
+
+      function clearHostModal() {
+        byId("newHostName").value = "";
+        byId("newHostType").value = "club";
+        byId("newHostPostcode").value = "";
+        byId("newHostAddress").value = "";
+        byId("newHostNotes").value = "";
+      }
+
+      function clearProductModal() {
+        byId("newProductName").value = "";
+        byId("newProductCategory").value = "pizza";
+        byId("newProductPricePence").value = "";
+        byId("newProductCapacityUnits").value = "1";
+        byId("newProductSortOrder").value = "100";
+        byId("newProductActive").value = "true";
+      }
+
+      function syncAssignmentRow(tr) {
+        const productId = tr.dataset.productId;
+        const assignment = state.productAssignments.find((p) => p.product_id === productId);
+        if (!assignment) return;
+
+        assignment.enabled = tr.querySelector(".js-assign-enabled").checked;
+        const overrideValue = tr.querySelector(".js-assign-override").value;
+        assignment.price_override_pence = overrideValue === "" ? null : Number(overrideValue);
+        assignment.sort_order = Number(tr.querySelector(".js-assign-sort").value || 100);
+
+        markDirty(true);
+        renderAssignments();
+        renderReadiness();
+        renderDropSummary();
+      }
+
+      function attachFieldDirtyTracking() {
+        [
+          "dropName", "dropSlug", "dropType", "dropStatus", "hostSelect", "opensAt", "closesAt",
+          "deliveryStart", "deliveryEnd", "cutoffTime", "capacityCategory", "capacityTotal",
+          "fulfilmentMode", "centrePostcode", "radiusKm", "notesInternal", "fundraisingEnabled",
+          "fundraisingModel", "fundraisingPercentage", "fundraisingPerOrderPence",
+          "fundraisingDisplayText", "fundraisingNotes", "hostShareEnabled", "hostShareModel",
+          "hostSharePercentage", "hostSharePerOrderPence", "hostShareFixedPence",
+          "hostShareCustomerVisible", "hostShareNotes"
+        ].forEach((id) => {
+          const el = byId(id);
+          if (!el) return;
+          el.addEventListener("input", function () {
+            if (id === "dropName" && !byId("dropSlug").value.trim()) {
+              byId("dropSlug").value = slugify(byId("dropName").value);
+            }
+            renderConditionalFields();
+            state.drop = readDropFromForm();
+            renderEditorStatus();
+            renderHostPreview();
+            renderReadiness();
+            renderDropSummary();
+            renderShareBox();
+            markDirty(true);
+          });
+          el.addEventListener("change", function () {
+            renderConditionalFields();
+            state.drop = readDropFromForm();
+            renderEditorStatus();
+            renderHostPreview();
+            renderReadiness();
+            renderDropSummary();
+            renderShareBox();
+            markDirty(true);
+          });
+        });
+      }
+
+      function downloadQr() {
+        const canvas = byId("qrCanvas");
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/png");
+        link.download = `${(state.drop?.slug || "drop")}-qr.png`;
+        link.click();
+      }
+
+      async function copyLink() {
+        const url = getShareUrl();
+        if (!url) throw new Error("No share link available yet.");
+        await navigator.clipboard.writeText(url);
+      }
+
+      function openOrderPage() {
+        const url = getShareUrl();
+        if (!url) throw new Error("No share link available yet.");
+        window.open(url, "_blank");
+      }
+
+      function openServiceBoard() {
+        if (!state.selectedDropId) return;
+        localStorage.setItem("hearth:selectedDropId", state.selectedDropId);
+        window.location.href = "index.html";
+      }
+
+      function bindEvents() {
+        byId("dropSearch").addEventListener("input", function (e) {
+          state.search = e.target.value || "";
+          renderNavigator();
+        });
+
+        byId("statusFilter").addEventListener("change", function (e) {
+          state.statusFilter = e.target.value || "all";
+          renderNavigator();
+        });
+
+        byId("typeFilter").addEventListener("change", function (e) {
+          state.typeFilter = e.target.value || "all";
+          renderNavigator();
+        });
+
+        byId("refreshBtn").addEventListener("click", async function () {
+          try {
+            await refreshAll();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to refresh Drop Studio.");
+          }
+        });
+
+        byId("newDropBtn").addEventListener("click", async function () {
+          try {
+            await createNewDrop();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to create new drop.");
+          }
+        });
+
+        byId("saveBtn").addEventListener("click", async function () {
+          try {
+            await saveDrop();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to save drop.");
+          }
+        });
+
+        byId("revertBtn").addEventListener("click", async function () {
+          try {
+            await loadSelectedDrop();
+            renderEverything();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to revert changes.");
+          }
+        });
+
+        byId("moveLiveBtn").addEventListener("click", async function () {
+          try {
+            state.drop = readDropFromForm();
+            const readiness = buildReadinessChecks(state.drop);
+            if (!readiness.isReady) {
+              throw new Error("Drop is not ready to go live yet.");
+            }
+            await saveDrop();
+            await updateDropStatus("live");
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to move drop live.");
+          }
+        });
+
+        byId("closeBtn").addEventListener("click", async function () {
+          try {
+            await saveDrop();
+            await updateDropStatus("closed");
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to close drop.");
+          }
+        });
+
+        byId("archiveBtn").addEventListener("click", async function () {
+          try {
+            await saveDrop();
+            await updateDropStatus("archived");
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to archive drop.");
+          }
+        });
+
+        byId("duplicateBtn").addEventListener("click", async function () {
+          try {
+            await duplicateDrop();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to duplicate drop.");
+          }
+        });
+
+        byId("openBoardBtn").addEventListener("click", function () {
+          try {
+            openServiceBoard();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to open Service Board.");
+          }
+        });
+
+        byId("copyLinkBtn").addEventListener("click", async function () {
+          try {
+            await copyLink();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to copy link.");
+          }
+        });
+
+        byId("downloadQrBtn").addEventListener("click", function () {
+          try {
+            downloadQr();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to download QR.");
+          }
+        });
+
+        byId("openOrderPageBtn").addEventListener("click", function () {
+          try {
+            openOrderPage();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to open customer page.");
+          }
+        });
+
+        byId("openHostModalBtn").addEventListener("click", function () {
+          openModal("hostModal");
+        });
+
+        byId("closeHostModalBtn").addEventListener("click", function () {
+          closeModal("hostModal");
+        });
+
+        byId("cancelHostBtn").addEventListener("click", function () {
+          closeModal("hostModal");
+        });
+
+        byId("saveHostBtn").addEventListener("click", async function () {
+          try {
+            await createHost();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to create host.");
+          }
+        });
+
+        byId("openProductModalBtn").addEventListener("click", function () {
+          openModal("productModal");
+        });
+
+        byId("closeProductModalBtn").addEventListener("click", function () {
+          closeModal("productModal");
+        });
+
+        byId("cancelProductBtn").addEventListener("click", function () {
+          closeModal("productModal");
+        });
+
+        byId("saveProductBtn").addEventListener("click", async function () {
+          try {
+            await createProduct();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to create product.");
+          }
+        });
+
+        byId("hostModal").addEventListener("click", function (e) {
+          if (e.target === byId("hostModal")) closeModal("hostModal");
+        });
+
+        byId("productModal").addEventListener("click", function (e) {
+          if (e.target === byId("productModal")) closeModal("productModal");
+        });
+
+        byId("assignmentBody").addEventListener("input", function (e) {
+          const tr = e.target.closest("tr[data-product-id]");
+          if (!tr) return;
+          syncAssignmentRow(tr);
+        });
+
+        byId("assignmentBody").addEventListener("change", function (e) {
+          const tr = e.target.closest("tr[data-product-id]");
+          if (!tr) return;
+          syncAssignmentRow(tr);
+        });
+
+        document.body.addEventListener("click", async function (e) {
+          const row = e.target.closest(".dropRow");
+          if (row && !e.target.closest(".js-duplicate-drop") && !e.target.closest(".js-archive-drop")) {
+            state.selectedDropId = row.dataset.dropId;
+            try {
+              await loadSelectedDrop();
+              renderEverything();
+            } catch (err) {
+              console.error(err);
+              showError(err.message || "Unable to load selected drop.");
+            }
+            return;
+          }
+
+          const duplicateBtn = e.target.closest(".js-duplicate-drop");
+          if (duplicateBtn) {
+            e.stopPropagation();
+            try {
+              await duplicateDrop(duplicateBtn.dataset.dropId);
+            } catch (err) {
+              console.error(err);
+              showError(err.message || "Unable to duplicate drop.");
+            }
+            return;
+          }
+
+          const archiveBtn = e.target.closest(".js-archive-drop");
+          if (archiveBtn) {
+            e.stopPropagation();
+            try {
+              await archiveFromRow(archiveBtn.dataset.dropId);
+            } catch (err) {
+              console.error(err);
+              showError(err.message || "Unable to archive drop.");
+            }
+          }
+        });
+
+        attachFieldDirtyTracking();
+      }
+
+      async function init() {
+        try {
+          if (!window.supabase || !window.supabase.createClient) {
+            throw new Error("Supabase library failed to load.");
+          }
+          if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+            throw new Error("Missing Supabase config. Check /assets/config.js.");
+          }
+
+          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+          bindEvents();
+          await loadVendorId();
+          await refreshAll();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to initialise Drop Studio.");
+        }
+      }
+
+      init();
+    })();
+  </script>
 </body>
 </html>
