@@ -11,103 +11,144 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 
   <style>
-    .studioShell{
+    .studioStack{
       display:grid;
-      grid-template-columns:340px minmax(0,1fr);
       gap:14px;
       align-items:start;
-    }
-
-    .studioCol{
-      display:flex;
-      flex-direction:column;
-      gap:14px;
-      min-width:0;
-    }
-
-    .studioSticky{
-      position:sticky;
-      top:16px;
     }
 
     .studioCard{
       padding:16px 18px;
     }
 
-    .navigatorToolbar{
+    .browserToolbar{
       display:grid;
-      gap:8px;
+      grid-template-columns:220px minmax(220px,1fr) 180px 180px 120px;
+      gap:10px;
+      align-items:center;
       margin-bottom:12px;
     }
 
-    .navigatorToolbar .btnAccent,
-    .navigatorToolbar .btnGhost,
-    .navigatorToolbar input,
-    .navigatorToolbar select{
+    .browserToolbar .btnAccent,
+    .browserToolbar .btnGhost,
+    .browserToolbar input,
+    .browserToolbar select{
       width:100%;
       min-width:0;
     }
 
-    .dropList{
-      display:grid;
-      gap:10px;
-      max-height:calc(100vh - 250px);
-      overflow:auto;
-      padding-right:2px;
+    .dropBandWrap{
+      position:relative;
     }
 
-    .dropRow{
+    .dropBandFade{
+      position:absolute;
+      top:0;
+      bottom:0;
+      width:36px;
+      pointer-events:none;
+      z-index:2;
+    }
+
+    .dropBandFade.left{
+      left:0;
+      background:linear-gradient(to right, rgba(247,247,251,1), rgba(247,247,251,0));
+      border-top-left-radius:14px;
+      border-bottom-left-radius:14px;
+    }
+
+    .dropBandFade.right{
+      right:0;
+      background:linear-gradient(to left, rgba(247,247,251,1), rgba(247,247,251,0));
+      border-top-right-radius:14px;
+      border-bottom-right-radius:14px;
+    }
+
+    .dropBand{
+      display:flex;
+      gap:12px;
+      overflow-x:auto;
+      overflow-y:hidden;
+      padding:4px 2px 6px;
+      scroll-behavior:smooth;
+      cursor:grab;
+    }
+
+    .dropBand.dragging{
+      cursor:grabbing;
+      user-select:none;
+    }
+
+    .groupMarker{
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      min-width:86px;
+      padding-top:8px;
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.04em;
+      color:var(--h-muted);
+      text-transform:uppercase;
+    }
+
+    .dropCard{
+      min-width:260px;
+      max-width:260px;
       border:1px solid var(--h-border-2);
       border-radius:14px;
-      background:rgba(255,255,255,0.9);
+      background:rgba(255,255,255,0.92);
       padding:12px;
       cursor:pointer;
       transition:border-color .15s ease, box-shadow .15s ease;
+      flex:0 0 auto;
     }
 
-    .dropRow:hover{
+    .dropCard:hover{
       border-color:var(--h-border);
       box-shadow:0 8px 18px rgba(15,23,42,0.06);
     }
 
-    .dropRow.active{
+    .dropCard.active{
       border-color:rgba(249,115,22,0.35);
       box-shadow:0 10px 22px rgba(249,115,22,0.08);
       background:linear-gradient(135deg, rgba(249,115,22,0.07), rgba(251,146,60,0.04));
     }
 
-    .dropRowTop{
+    .dropCardTop{
       display:flex;
       justify-content:space-between;
       gap:10px;
-      margin-bottom:8px;
       align-items:flex-start;
+      margin-bottom:8px;
     }
 
-    .dropRowTitle{
+    .dropCardTitle{
       font-size:14px;
       font-weight:850;
       line-height:1.2;
       margin:0;
     }
 
-    .dropRowSub{
-      margin:5px 0 0;
+    .dropCardSub{
+      margin:4px 0 0;
       font-size:12px;
       color:var(--h-muted);
       line-height:1.35;
     }
 
-    .dropRowMeta{
-      display:grid;
-      gap:8px;
-      margin-top:10px;
-    }
-
-    .dropRowStats{
+    .dropCardStats{
       display:flex;
       flex-wrap:wrap;
       gap:6px;
+      margin-top:10px;
+    }
+
+    .dropCardActions{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      margin-top:10px;
     }
 
     .miniChip{
@@ -123,13 +164,6 @@
       font-weight:700;
       white-space:nowrap;
       max-width:max-content;
-    }
-
-    .dropRowActions{
-      display:flex;
-      gap:6px;
-      flex-wrap:wrap;
-      margin-top:10px;
     }
 
     .workspaceHeader{
@@ -148,7 +182,7 @@
       padding:6px 10px;
       border-radius:999px;
       border:1px solid var(--h-border);
-      background:rgba(255,255,255,0.7);
+      background:rgba(255,255,255,0.95);
       font-size:12px;
       color:var(--h-muted);
       font-weight:800;
@@ -160,12 +194,13 @@
     .saveStateBar{
       position:sticky;
       top:16px;
-      z-index:10;
+      z-index:20;
       margin-bottom:12px;
-      border:1px solid var(--h-border-2);
+      border:1px solid var(--h-border);
       border-radius:12px;
       padding:10px 12px;
-      background:rgba(15,23,42,0.02);
+      background:var(--h-surface);
+      box-shadow:0 8px 18px rgba(15,23,42,0.08);
       font-size:12px;
       font-weight:800;
       color:var(--h-muted);
@@ -178,14 +213,14 @@
 
     .saveStateBar.saving{
       color:#b45309;
-      background:rgba(245,158,11,0.08);
-      border-color:rgba(245,158,11,0.18);
+      background:#fff7ed;
+      border-color:rgba(245,158,11,0.25);
     }
 
     .saveStateBar.saved{
       color:var(--h-good);
-      background:rgba(22,163,74,0.07);
-      border-color:rgba(22,163,74,0.16);
+      background:#f0fdf4;
+      border-color:rgba(22,163,74,0.22);
     }
 
     .saveStateBar.error{
@@ -206,12 +241,10 @@
       display:none;
     }
 
-    .summaryStrip{
+    .summaryGrid{
       display:grid;
-      grid-template-columns:repeat(5, minmax(220px, 1fr));
+      grid-template-columns:1fr 1fr;
       gap:12px;
-      overflow:auto;
-      padding-bottom:4px;
       margin-bottom:12px;
     }
 
@@ -220,11 +253,13 @@
       border-radius:14px;
       background:rgba(255,255,255,0.92);
       padding:14px;
-      min-height:180px;
     }
 
-    .summaryCard.compact{
-      min-height:0;
+    .summaryGridLower{
+      display:grid;
+      grid-template-columns:1.15fr 0.85fr;
+      gap:12px;
+      margin-bottom:12px;
     }
 
     .railList{
@@ -294,7 +329,7 @@
 
     .metricsGrid{
       display:grid;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns:repeat(3, 1fr);
       gap:10px;
       margin-top:10px;
     }
@@ -335,7 +370,13 @@
       font-size:12px;
       line-height:1.4;
       word-break:break-all;
-      min-height:0;
+    }
+
+    .linkQrGrid{
+      display:grid;
+      grid-template-columns:1fr 150px;
+      gap:10px;
+      align-items:start;
     }
 
     .qrWrap{
@@ -343,9 +384,9 @@
       place-items:center;
       border:1px solid var(--h-border-2);
       border-radius:14px;
-      padding:12px;
+      padding:10px;
       background:#fff;
-      min-height:120px;
+      min-height:150px;
     }
 
     .railActions{
@@ -360,6 +401,22 @@
       width:100%;
       min-height:34px;
       font-size:12px;
+    }
+
+    .actionBar{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+
+    .actionBarLeft,
+    .actionBarRight{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
     }
 
     .editorSection{
@@ -688,30 +745,45 @@
     }
 
     @media (max-width:1180px){
-      .studioShell{
+      .browserToolbar{
+        grid-template-columns:1fr 1fr;
+      }
+
+      .summaryGrid,
+      .summaryGridLower{
         grid-template-columns:1fr;
       }
 
-      .studioSticky{
-        position:static;
+      .metricsGrid{
+        grid-template-columns:1fr 1fr;
       }
 
-      .summaryStrip{
-        grid-template-columns:repeat(2, minmax(220px, 1fr));
+      .linkQrGrid{
+        grid-template-columns:1fr;
       }
     }
 
     @media (max-width:900px){
+      .browserToolbar,
       .studioGrid2,
       .studioGrid3,
-      .metricsGrid,
-      .summaryStrip{
+      .metricsGrid{
         grid-template-columns:1fr;
       }
 
       .assignmentTable{
         display:block;
         overflow:auto;
+      }
+
+      .actionBar{
+        flex-direction:column;
+        align-items:stretch;
+      }
+
+      .actionBarLeft,
+      .actionBarRight{
+        width:100%;
       }
     }
   </style>
@@ -735,397 +807,389 @@
       </div>
     </div>
 
-    <div class="studioShell">
-      <!-- LEFT NAV -->
-      <div class="studioCol">
-        <div class="card studioCard studioSticky">
-          <div class="row space" style="margin-bottom:10px;">
-            <div>
-              <h3 class="sectionTitle">Drops</h3>
-              <p class="sectionSub">Browse and manage delivery moments</p>
-            </div>
+    <div class="studioStack">
+      <!-- DROP BROWSER -->
+      <div class="card studioCard">
+        <div class="row space" style="margin-bottom:10px;">
+          <div>
+            <h3 class="sectionTitle">Drops</h3>
+            <p class="sectionSub">Choose a drop to work on</p>
           </div>
+        </div>
 
-          <div class="navigatorToolbar">
-            <button class="btnAccent" id="newDropBtn" type="button">+ New Drop</button>
-            <input id="dropSearch" type="text" placeholder="Search drops or hosts" />
-            <select id="statusFilter">
-              <option value="all">All statuses</option>
-              <option value="draft">Draft</option>
-              <option value="live">Live</option>
-              <option value="closed">Closed</option>
-              <option value="archived">Archived</option>
-            </select>
-            <select id="typeFilter">
-              <option value="all">All types</option>
-              <option value="neighbourhood">Neighbourhood</option>
-              <option value="community">Community</option>
-              <option value="event">Event</option>
-            </select>
-            <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
-          </div>
+        <div class="browserToolbar">
+          <button class="btnAccent" id="newDropBtn" type="button">+ New Drop</button>
+          <input id="dropSearch" type="text" placeholder="Search drops or hosts" />
+          <select id="statusFilter">
+            <option value="all">All statuses</option>
+            <option value="draft">Draft</option>
+            <option value="live">Live</option>
+            <option value="closed">Closed</option>
+            <option value="archived">Archived</option>
+          </select>
+          <select id="typeFilter">
+            <option value="all">All types</option>
+            <option value="neighbourhood">Neighbourhood</option>
+            <option value="community">Community</option>
+            <option value="event">Event</option>
+          </select>
+          <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
+        </div>
 
-          <div class="dropList" id="dropList"></div>
+        <div class="dropBandWrap">
+          <div class="dropBandFade left"></div>
+          <div class="dropBandFade right"></div>
+          <div class="dropBand" id="dropBand"></div>
         </div>
       </div>
 
-      <!-- MAIN WORKSPACE -->
-      <div class="studioCol">
-        <div class="card studioCard">
-          <div class="workspaceHeader">
-            <div>
-              <h3 class="sectionTitle">Drop Editor</h3>
-              <p class="sectionSub">Configure the selected drop</p>
-            </div>
-            <div class="statusPill">
-              <span class="dot" id="editorStatusDot"></span>
-              <span id="editorStatusText">—</span>
-            </div>
+      <!-- EDITOR -->
+      <div class="card studioCard">
+        <div class="workspaceHeader">
+          <div>
+            <h3 class="sectionTitle">Drop Editor</h3>
+            <p class="sectionSub">Configure the selected drop</p>
+          </div>
+          <div class="statusPill">
+            <span class="dot" id="editorStatusDot"></span>
+            <span id="editorStatusText">—</span>
+          </div>
+        </div>
+
+        <div class="saveStateBar" id="saveStateBar">
+          <span id="saveStateText">All changes saved</span>
+          <span class="helperText" id="saveStateMeta"></span>
+        </div>
+
+        <div class="inlineSuccess" id="inlineSuccess"></div>
+        <div class="errorBox" id="errorBox"></div>
+
+        <div class="summaryGrid">
+          <div class="summaryCard">
+            <h3 class="sectionTitle">Readiness</h3>
+            <p class="sectionSub">Checks before moving live</p>
+            <div class="railList" id="readinessList"></div>
           </div>
 
-          <div class="saveStateBar" id="saveStateBar">
-            <span id="saveStateText">All changes saved</span>
-            <span class="helperText" id="saveStateMeta"></span>
+          <div class="summaryCard">
+            <h3 class="sectionTitle">Drop Summary</h3>
+            <p class="sectionSub">What is about to go live</p>
+            <div class="summaryBlock" id="dropSummary"></div>
+          </div>
+        </div>
+
+        <div class="summaryGridLower">
+          <div class="summaryCard">
+            <h3 class="sectionTitle">Live Metrics</h3>
+            <p class="sectionSub">Current performance and economics</p>
+            <div class="metricsGrid" id="metricsGrid"></div>
           </div>
 
-          <div class="inlineSuccess" id="inlineSuccess"></div>
-          <div class="errorBox" id="errorBox"></div>
-
-          <div class="summaryStrip">
-            <div class="summaryCard compact">
-              <h3 class="sectionTitle">Readiness</h3>
-              <p class="sectionSub">Checks before moving live</p>
-              <div class="railList" id="readinessList"></div>
-            </div>
-
-            <div class="summaryCard compact">
-              <h3 class="sectionTitle">Drop Summary</h3>
-              <p class="sectionSub">What is about to go live</p>
-              <div class="summaryBlock" id="dropSummary"></div>
-            </div>
-
-            <div class="summaryCard compact">
-              <h3 class="sectionTitle">Live Metrics</h3>
-              <p class="sectionSub">Current performance and economics</p>
-              <div class="metricsGrid" id="metricsGrid"></div>
-            </div>
-
-            <div class="summaryCard compact">
-              <h3 class="sectionTitle">Drop Link & QR</h3>
-              <p class="sectionSub">Sharing assets for this drop</p>
-              <div class="shareBox">
-                <div class="shareLink" id="shareLinkPreview">No drop link yet — save a drop link name to generate the link.</div>
-                <div class="qrWrap" id="qrWrap">
-                  <canvas id="qrCanvas"></canvas>
-                </div>
+          <div class="summaryCard">
+            <h3 class="sectionTitle">Drop Link & QR</h3>
+            <p class="sectionSub">Sharing assets for this drop</p>
+            <div class="shareBox">
+              <div class="shareLink" id="shareLinkPreview">No drop link yet — save a drop link name to generate the link.</div>
+              <div class="linkQrGrid">
                 <div class="railActions">
                   <button class="btnGhost" id="copyLinkBtn" type="button">Copy link</button>
                   <button class="btnGhost" id="downloadQrBtn" type="button">Download QR</button>
                   <button class="btnGhost" id="openOrderPageBtn" type="button">Open customer page</button>
                 </div>
-              </div>
-            </div>
-
-            <div class="summaryCard compact">
-              <h3 class="sectionTitle">Drop Actions</h3>
-              <p class="sectionSub">Publish and control</p>
-              <div class="railActions">
-                <button class="btnAccent" id="moveLiveBtn" type="button">Move live</button>
-                <button class="btnGhost" id="duplicateBtn" type="button">Duplicate drop</button>
-                <button class="btnGhost" id="openBoardBtn" type="button">Open Service Board</button>
-                <button class="btnGhost" id="closeBtn" type="button">Close drop</button>
-                <button class="btnGhost" id="archiveBtn" type="button">Archive drop</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="editorSection open" data-section="basics">
-            <div class="editorSectionHead">
-              <div>
-                <h4 class="editorSectionTitle">Basics</h4>
-                <p class="editorSectionSub">Core identity and lifecycle</p>
-              </div>
-              <span class="accordionIcon">▾</span>
-            </div>
-            <div class="editorSectionBody">
-              <div class="studioGrid2">
-                <div class="field">
-                  <label for="dropName">Drop Name</label>
-                  <input id="dropName" type="text" placeholder="Friday Pizza Drop" />
+                <div class="qrWrap" id="qrWrap">
+                  <canvas id="qrCanvas"></canvas>
                 </div>
-
-                <div class="field">
-                  <label for="dropSlug">Drop Link Name</label>
-                  <input id="dropSlug" type="text" placeholder="friday-pizza-drop" />
-                  <div class="helperText">Used in the ordering link for this drop</div>
-                </div>
-
-                <div class="field">
-                  <label for="dropType">Drop Type</label>
-                  <select id="dropType">
-                    <option value="neighbourhood">Neighbourhood</option>
-                    <option value="community">Community</option>
-                    <option value="event">Event</option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label for="dropStatus">Status</label>
-                  <select id="dropStatus">
-                    <option value="draft">Draft</option>
-                    <option value="live">Live</option>
-                    <option value="closed">Closed</option>
-                    <option value="archived">Archived</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="editorSection open" data-section="hostTiming">
-            <div class="editorSectionHead">
-              <div>
-                <h4 class="editorSectionTitle">Host & Timing</h4>
-                <p class="editorSectionSub">Attach a host and set ordering / fulfilment windows</p>
-              </div>
-              <span class="accordionIcon">▾</span>
-            </div>
-            <div class="editorSectionBody">
-              <div class="studioGrid2" style="margin-bottom:12px;">
-                <div class="field">
-                  <label for="hostSelect">Host</label>
-                  <select id="hostSelect">
-                    <option value="">No host selected</option>
-                  </select>
-                  <div class="helperText" id="hostHelperText">Optional for neighbourhood drops. Required for community drops.</div>
-                </div>
-
-                <div class="field">
-                  <label>Selected Host</label>
-                  <div class="hostPreview" id="hostPreview">
-                    <strong>No host selected</strong>
-                    Add a host for community or hosted drops.
-                  </div>
-                </div>
-              </div>
-
-              <div style="margin-bottom:12px;">
-                <button class="btnGhost" id="openHostModalBtn" type="button">+ New Host</button>
-              </div>
-
-              <div class="studioGrid2" style="margin-bottom:12px;">
-                <div class="field">
-                  <label for="opensAt">Opens At</label>
-                  <input id="opensAt" type="datetime-local" />
-                </div>
-
-                <div class="field">
-                  <label for="closesAt">Closes At</label>
-                  <input id="closesAt" type="datetime-local" />
-                </div>
-              </div>
-
-              <div class="studioGrid3">
-                <div class="field">
-                  <label for="deliveryStart">Delivery Start</label>
-                  <input id="deliveryStart" type="datetime-local" />
-                </div>
-
-                <div class="field">
-                  <label for="deliveryEnd">Delivery End</label>
-                  <input id="deliveryEnd" type="datetime-local" />
-                </div>
-
-                <div class="field">
-                  <label for="cutoffTime">Cutoff Time</label>
-                  <input id="cutoffTime" type="datetime-local" />
-                  <div class="helperText">Defaults to the ordering close time</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="editorSection open" data-section="operations">
-            <div class="editorSectionHead">
-              <div>
-                <h4 class="editorSectionTitle">Operations Setup</h4>
-                <p class="editorSectionSub">Capacity, fulfilment and geography</p>
-              </div>
-              <span class="accordionIcon">▾</span>
-            </div>
-            <div class="editorSectionBody">
-              <div class="studioGrid2" style="margin-bottom:12px;">
-                <div class="field">
-                  <label for="capacityCategory">Capacity Category</label>
-                  <select id="capacityCategory">
-                    <option value="pizza">Pizza</option>
-                    <option value="side">Side</option>
-                    <option value="drink">Drink</option>
-                    <option value="sauce">Sauce</option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label for="capacityTotal">Capacity Total</label>
-                  <input id="capacityTotal" type="number" min="0" step="1" />
-                </div>
-              </div>
-
-              <div class="studioGrid3">
-                <div class="field">
-                  <label for="fulfilmentMode">Fulfilment Mode</label>
-                  <select id="fulfilmentMode">
-                    <option value="">Select mode</option>
-                    <option value="delivery">Delivery</option>
-                    <option value="collection">Collection</option>
-                    <option value="mixed">Mixed</option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label for="centrePostcode">Centre Postcode</label>
-                  <input id="centrePostcode" type="text" placeholder="RG10 0JP" />
-                </div>
-
-                <div class="field">
-                  <label for="radiusKm">Radius (km)</label>
-                  <input id="radiusKm" type="number" min="0" step="0.1" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="editorSection" data-section="fundraising">
-            <div class="editorSectionHead">
-              <div>
-                <h4 class="editorSectionTitle">Community Contribution</h4>
-                <p class="editorSectionSub">Public-facing support for clubs, schools or community causes</p>
-              </div>
-              <span class="accordionIcon">▾</span>
-            </div>
-            <div class="editorSectionBody">
-              <div class="toggleRow">
-                <div>
-                  <div style="font-weight:800;">Enable Community Contribution</div>
-                  <div class="helperText">Shown as a positive community contribution on the ordering page if configured.</div>
-                </div>
-                <input id="fundraisingEnabled" type="checkbox" />
-              </div>
-
-              <div id="fundraisingFields" class="hidden">
-                <div class="studioGrid2">
-                  <div class="field">
-                    <label for="fundraisingModel">Contribution Model</label>
-                    <select id="fundraisingModel">
-                      <option value="">Select model</option>
-                      <option value="percentage">Percentage of sales</option>
-                      <option value="per_order">Fixed amount per order</option>
-                    </select>
-                  </div>
-
-                  <div class="field hidden" id="fundraisingPercentageField">
-                    <label for="fundraisingPercentage">Percentage</label>
-                    <input id="fundraisingPercentage" type="number" min="0" step="0.01" placeholder="5" />
-                  </div>
-
-                  <div class="field hidden" id="fundraisingPerOrderField">
-                    <label for="fundraisingPerOrderPence">Amount per Order (pence)</label>
-                    <input id="fundraisingPerOrderPence" type="number" min="0" step="1" placeholder="100" />
-                  </div>
-
-                  <div class="field" style="grid-column:1 / -1;">
-                    <label for="fundraisingDisplayText">Customer-facing Text</label>
-                    <input id="fundraisingDisplayText" type="text" placeholder="£1 from every order supports Ruscombe Cricket Club" />
-                  </div>
-
-                  <div class="field" style="grid-column:1 / -1;">
-                    <label for="fundraisingNotes">Internal Notes</label>
-                    <textarea id="fundraisingNotes" placeholder="Supporting junior cricket programme"></textarea>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="editorSection" data-section="hostShare">
-            <div class="editorSectionHead">
-              <div>
-                <h4 class="editorSectionTitle">Commercial Host Share</h4>
-                <p class="editorSectionSub">Private or optionally visible settlement for pubs, venues or commercial hosts</p>
-              </div>
-              <span class="accordionIcon">▾</span>
-            </div>
-            <div class="editorSectionBody">
-              <div class="toggleRow">
-                <div>
-                  <div style="font-weight:800;">Enable Host Share</div>
-                  <div class="helperText">Use this for commercial host arrangements that are separate from community contribution.</div>
-                </div>
-                <input id="hostShareEnabled" type="checkbox" />
-              </div>
-
-              <div id="hostShareFields" class="hidden">
-                <div class="studioGrid2">
-                  <div class="field">
-                    <label for="hostShareModel">Host Share Model</label>
-                    <select id="hostShareModel">
-                      <option value="">Select model</option>
-                      <option value="percentage">Percentage of sales</option>
-                      <option value="per_order">Fixed amount per order</option>
-                      <option value="fixed">Fixed amount for drop</option>
-                    </select>
-                  </div>
-
-                  <div class="field hidden" id="hostSharePercentageField">
-                    <label for="hostSharePercentage">Percentage</label>
-                    <input id="hostSharePercentage" type="number" min="0" step="0.01" placeholder="10" />
-                  </div>
-
-                  <div class="field hidden" id="hostSharePerOrderField">
-                    <label for="hostSharePerOrderPence">Amount per Order (pence)</label>
-                    <input id="hostSharePerOrderPence" type="number" min="0" step="1" placeholder="150" />
-                  </div>
-
-                  <div class="field hidden" id="hostShareFixedField">
-                    <label for="hostShareFixedPence">Fixed Amount (pence)</label>
-                    <input id="hostShareFixedPence" type="number" min="0" step="1" placeholder="7500" />
-                  </div>
-
-                  <div class="field">
-                    <label for="hostShareCustomerVisible">Customer Visible?</label>
-                    <select id="hostShareCustomerVisible">
-                      <option value="false">No</option>
-                      <option value="true">Yes</option>
-                    </select>
-                  </div>
-
-                  <div class="field" style="grid-column:1 / -1;">
-                    <label for="hostShareNotes">Internal Notes</label>
-                    <textarea id="hostShareNotes" placeholder="Pub receives 10% of drop GMV for hosting"></textarea>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="editorSection" data-section="notes">
-            <div class="editorSectionHead">
-              <div>
-                <h4 class="editorSectionTitle">Internal Notes</h4>
-                <p class="editorSectionSub">Operational notes for the vendor team</p>
-              </div>
-              <span class="accordionIcon">▾</span>
-            </div>
-            <div class="editorSectionBody">
-              <div class="field">
-                <label for="notesInternal">Internal Notes</label>
-                <textarea id="notesInternal" placeholder="Match night, expect higher demand, shorter radius if buffalo on menu"></textarea>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="card studioCard">
+        <div class="editorSection open" data-section="basics">
+          <div class="editorSectionHead">
+            <div>
+              <h4 class="editorSectionTitle">Basics</h4>
+              <p class="editorSectionSub">Core identity and lifecycle</p>
+            </div>
+            <span class="accordionIcon">▾</span>
+          </div>
+          <div class="editorSectionBody">
+            <div class="studioGrid2">
+              <div class="field">
+                <label for="dropName">Drop Name</label>
+                <input id="dropName" type="text" placeholder="Friday Pizza Drop" />
+              </div>
+
+              <div class="field">
+                <label for="dropSlug">Drop Link Name</label>
+                <input id="dropSlug" type="text" placeholder="friday-pizza-drop" />
+                <div class="helperText">Used in the ordering link for this drop</div>
+              </div>
+
+              <div class="field">
+                <label for="dropType">Drop Type</label>
+                <select id="dropType">
+                  <option value="neighbourhood">Neighbourhood</option>
+                  <option value="community">Community</option>
+                  <option value="event">Event</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="dropStatus">Status</label>
+                <select id="dropStatus">
+                  <option value="draft">Draft</option>
+                  <option value="live">Live</option>
+                  <option value="closed">Closed</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="editorSection open" data-section="hostTiming">
+          <div class="editorSectionHead">
+            <div>
+              <h4 class="editorSectionTitle">Host & Timing</h4>
+              <p class="editorSectionSub">Attach a host and set ordering / fulfilment windows</p>
+            </div>
+            <span class="accordionIcon">▾</span>
+          </div>
+          <div class="editorSectionBody">
+            <div class="studioGrid2" style="margin-bottom:12px;">
+              <div class="field">
+                <label for="hostSelect">Host</label>
+                <select id="hostSelect">
+                  <option value="">No host selected</option>
+                </select>
+                <div class="helperText" id="hostHelperText">Optional for neighbourhood drops. Required for community drops.</div>
+              </div>
+
+              <div class="field">
+                <label>Selected Host</label>
+                <div class="hostPreview" id="hostPreview">
+                  <strong>No host selected</strong>
+                  Add a host for community or hosted drops.
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+              <button class="btnGhost" id="openHostModalBtn" type="button">+ New Host</button>
+            </div>
+
+            <div class="studioGrid2" style="margin-bottom:12px;">
+              <div class="field">
+                <label for="opensAt">Opens At</label>
+                <input id="opensAt" type="datetime-local" />
+              </div>
+
+              <div class="field">
+                <label for="closesAt">Closes At</label>
+                <input id="closesAt" type="datetime-local" />
+              </div>
+            </div>
+
+            <div class="studioGrid3">
+              <div class="field">
+                <label for="deliveryStart">Delivery Start</label>
+                <input id="deliveryStart" type="datetime-local" />
+              </div>
+
+              <div class="field">
+                <label for="deliveryEnd">Delivery End</label>
+                <input id="deliveryEnd" type="datetime-local" />
+              </div>
+
+              <div class="field">
+                <label for="cutoffTime">Cutoff Time</label>
+                <input id="cutoffTime" type="datetime-local" />
+                <div class="helperText">Defaults to the ordering close time</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="editorSection open" data-section="operations">
+          <div class="editorSectionHead">
+            <div>
+              <h4 class="editorSectionTitle">Operations Setup</h4>
+              <p class="editorSectionSub">Capacity, fulfilment and geography</p>
+            </div>
+            <span class="accordionIcon">▾</span>
+          </div>
+          <div class="editorSectionBody">
+            <div class="studioGrid2" style="margin-bottom:12px;">
+              <div class="field">
+                <label for="capacityCategory">Capacity Category</label>
+                <select id="capacityCategory">
+                  <option value="pizza">Pizza</option>
+                  <option value="side">Side</option>
+                  <option value="drink">Drink</option>
+                  <option value="sauce">Sauce</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="capacityTotal">Capacity Total</label>
+                <input id="capacityTotal" type="number" min="0" step="1" />
+              </div>
+            </div>
+
+            <div class="studioGrid3">
+              <div class="field">
+                <label for="fulfilmentMode">Fulfilment Mode</label>
+                <select id="fulfilmentMode">
+                  <option value="">Select mode</option>
+                  <option value="delivery">Delivery</option>
+                  <option value="collection">Collection</option>
+                  <option value="mixed">Mixed</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="centrePostcode">Centre Postcode</label>
+                <input id="centrePostcode" type="text" placeholder="RG10 0JP" />
+              </div>
+
+              <div class="field">
+                <label for="radiusKm">Radius (km)</label>
+                <input id="radiusKm" type="number" min="0" step="0.1" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="editorSection" data-section="fundraising">
+          <div class="editorSectionHead">
+            <div>
+              <h4 class="editorSectionTitle">Community Contribution</h4>
+              <p class="editorSectionSub">Public-facing support for clubs, schools or community causes</p>
+            </div>
+            <span class="accordionIcon">▾</span>
+          </div>
+          <div class="editorSectionBody">
+            <div class="toggleRow">
+              <div>
+                <div style="font-weight:800;">Enable Community Contribution</div>
+                <div class="helperText">Shown as a positive community contribution on the ordering page if configured.</div>
+              </div>
+              <input id="fundraisingEnabled" type="checkbox" />
+            </div>
+
+            <div id="fundraisingFields" class="hidden">
+              <div class="studioGrid2">
+                <div class="field">
+                  <label for="fundraisingModel">Contribution Model</label>
+                  <select id="fundraisingModel">
+                    <option value="">Select model</option>
+                    <option value="percentage">Percentage of sales</option>
+                    <option value="per_order">Fixed amount per order</option>
+                  </select>
+                </div>
+
+                <div class="field hidden" id="fundraisingPercentageField">
+                  <label for="fundraisingPercentage">Percentage</label>
+                  <input id="fundraisingPercentage" type="number" min="0" step="0.01" placeholder="5" />
+                </div>
+
+                <div class="field hidden" id="fundraisingPerOrderField">
+                  <label for="fundraisingPerOrderPence">Amount per Order (pence)</label>
+                  <input id="fundraisingPerOrderPence" type="number" min="0" step="1" placeholder="100" />
+                </div>
+
+                <div class="field" style="grid-column:1 / -1;">
+                  <label for="fundraisingDisplayText">Customer-facing Text</label>
+                  <input id="fundraisingDisplayText" type="text" placeholder="£1 from every order supports Ruscombe Cricket Club" />
+                </div>
+
+                <div class="field" style="grid-column:1 / -1;">
+                  <label for="fundraisingNotes">Internal Notes</label>
+                  <textarea id="fundraisingNotes" placeholder="Supporting junior cricket programme"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="editorSection" data-section="hostShare">
+          <div class="editorSectionHead">
+            <div>
+              <h4 class="editorSectionTitle">Commercial Host Share</h4>
+              <p class="editorSectionSub">Private or optionally visible settlement for pubs, venues or commercial hosts</p>
+            </div>
+            <span class="accordionIcon">▾</span>
+          </div>
+          <div class="editorSectionBody">
+            <div class="toggleRow">
+              <div>
+                <div style="font-weight:800;">Enable Host Share</div>
+                <div class="helperText">Use this for commercial host arrangements that are separate from community contribution.</div>
+              </div>
+              <input id="hostShareEnabled" type="checkbox" />
+            </div>
+
+            <div id="hostShareFields" class="hidden">
+              <div class="studioGrid2">
+                <div class="field">
+                  <label for="hostShareModel">Host Share Model</label>
+                  <select id="hostShareModel">
+                    <option value="">Select model</option>
+                    <option value="percentage">Percentage of sales</option>
+                    <option value="per_order">Fixed amount per order</option>
+                    <option value="fixed">Fixed amount for drop</option>
+                  </select>
+                </div>
+
+                <div class="field hidden" id="hostSharePercentageField">
+                  <label for="hostSharePercentage">Percentage</label>
+                  <input id="hostSharePercentage" type="number" min="0" step="0.01" placeholder="10" />
+                </div>
+
+                <div class="field hidden" id="hostSharePerOrderField">
+                  <label for="hostSharePerOrderPence">Amount per Order (pence)</label>
+                  <input id="hostSharePerOrderPence" type="number" min="0" step="1" placeholder="150" />
+                </div>
+
+                <div class="field hidden" id="hostShareFixedField">
+                  <label for="hostShareFixedPence">Fixed Amount (pence)</label>
+                  <input id="hostShareFixedPence" type="number" min="0" step="1" placeholder="7500" />
+                </div>
+
+                <div class="field">
+                  <label for="hostShareCustomerVisible">Customer Visible?</label>
+                  <select id="hostShareCustomerVisible">
+                    <option value="false">No</option>
+                    <option value="true">Yes</option>
+                  </select>
+                </div>
+
+                <div class="field" style="grid-column:1 / -1;">
+                  <label for="hostShareNotes">Internal Notes</label>
+                  <textarea id="hostShareNotes" placeholder="Pub receives 10% of drop GMV for hosting"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="editorSection" data-section="notes">
+          <div class="editorSectionHead">
+            <div>
+              <h4 class="editorSectionTitle">Internal Notes</h4>
+              <p class="editorSectionSub">Operational notes for the vendor team</p>
+            </div>
+            <span class="accordionIcon">▾</span>
+          </div>
+          <div class="editorSectionBody">
+            <div class="field">
+              <label for="notesInternal">Internal Notes</label>
+              <textarea id="notesInternal" placeholder="Match night, expect higher demand, shorter radius if buffalo on menu"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="border:none; box-shadow:none; background:transparent; padding:0; margin-top:0;">
           <div class="assignmentHeader">
             <div>
               <h3 class="sectionTitle">Products for this Drop</h3>
@@ -1144,9 +1208,19 @@
 
           <div id="assignmentGroups"></div>
 
-          <div class="saveBar">
-            <button class="btnGhost" id="revertBtn" type="button">Revert changes</button>
-            <button class="btnAccent" id="saveBtn" type="button">Save changes</button>
+          <div class="actionBar">
+            <div class="actionBarLeft">
+              <button class="btnGhost" id="revertBtn" type="button">Revert changes</button>
+              <button class="btnAccent" id="saveBtn" type="button">Save changes</button>
+            </div>
+
+            <div class="actionBarRight">
+              <button class="btnAccent" id="moveLiveBtn" type="button">Move live</button>
+              <button class="btnGhost" id="duplicateBtn" type="button">Duplicate drop</button>
+              <button class="btnGhost" id="openBoardBtn" type="button">Open Service Board</button>
+              <button class="btnGhost" id="closeBtn" type="button">Close drop</button>
+              <button class="btnGhost" id="archiveBtn" type="button">Archive drop</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1500,6 +1574,15 @@
         return groups;
       }
 
+      function getStatusPriority(status) {
+        const s = String(status || "").toLowerCase();
+        if (s === "live") return 1;
+        if (s === "draft") return 2;
+        if (s === "closed") return 3;
+        if (s === "archived") return 4;
+        return 5;
+      }
+
       async function loadVendorId() {
         const { data, error } = await supabase
           .from("vendors")
@@ -1538,11 +1621,18 @@
       async function loadDrops() {
         const { data, error } = await supabase
           .from("v_drop_summary")
-          .select("*")
-          .order("delivery_start", { ascending: false });
+          .select("*");
 
         if (error) throw error;
-        state.drops = data || [];
+
+        state.drops = (data || []).sort((a, b) => {
+          const statusDiff = getStatusPriority(a.status) - getStatusPriority(b.status);
+          if (statusDiff !== 0) return statusDiff;
+
+          const aTime = a.delivery_start ? new Date(a.delivery_start).getTime() : Number.MAX_SAFE_INTEGER;
+          const bTime = b.delivery_start ? new Date(b.delivery_start).getTime() : Number.MAX_SAFE_INTEGER;
+          return aTime - bTime;
+        });
 
         const currentStillExists = state.drops.some((d) => d.drop_id === state.selectedDropId);
         if (!currentStillExists) {
@@ -1613,7 +1703,7 @@
 
       function getFilteredDrops() {
         const search = state.search.trim().toLowerCase();
-        return state.drops.filter((drop) => {
+        const filtered = state.drops.filter((drop) => {
           const statusOk = state.statusFilter === "all" || drop.status === state.statusFilter;
           const typeOk = state.typeFilter === "all" || drop.drop_type === state.typeFilter;
           if (!statusOk || !typeOk) return false;
@@ -1629,18 +1719,29 @@
 
           return haystack.includes(search);
         });
+
+        const selected = filtered.find((d) => d.drop_id === state.selectedDropId);
+        const rest = filtered.filter((d) => d.drop_id !== state.selectedDropId);
+        return selected ? [selected, ...rest] : rest;
       }
 
-      function renderNavigator() {
-        const list = byId("dropList");
+      function renderDropBand() {
+        const band = byId("dropBand");
         const drops = getFilteredDrops();
 
         if (!drops.length) {
-          list.innerHTML = `<div class="emptyState">No drops found.</div>`;
+          band.innerHTML = `<div class="emptyState" style="min-width:320px;">No drops found.</div>`;
           return;
         }
 
-        list.innerHTML = drops.map((drop) => {
+        let lastStatus = null;
+        band.innerHTML = drops.map((drop) => {
+          const status = String(drop.status || "").toLowerCase();
+          const marker = status !== lastStatus
+            ? `<div class="groupMarker">${escapeHtml(status)}</div>`
+            : "";
+          lastStatus = status;
+
           const active = drop.drop_id === state.selectedDropId ? "active" : "";
           const hostLine = drop.host_name
             ? `${escapeHtml(drop.host_name)} • ${escapeHtml(drop.drop_type || "drop")}`
@@ -1652,25 +1753,24 @@
             : "No fulfilment window";
 
           return `
-            <div class="dropRow ${active}" data-drop-id="${drop.drop_id}">
-              <div class="dropRowTop">
+            ${marker}
+            <div class="dropCard ${active}" data-drop-id="${drop.drop_id}">
+              <div class="dropCardTop">
                 <div>
-                  <h4 class="dropRowTitle">${escapeHtml(drop.drop_name || "Untitled drop")}</h4>
-                  <p class="dropRowSub">${hostLine}</p>
+                  <h4 class="dropCardTitle">${escapeHtml(drop.drop_name || "Untitled drop")}</h4>
+                  <p class="dropCardSub">${hostLine}</p>
                 </div>
                 <span class="miniChip">${escapeHtml(drop.status || "—")}</span>
               </div>
 
-              <div class="dropRowSub">${escapeHtml(deliveryText)}</div>
+              <div class="dropCardSub">${escapeHtml(deliveryText)}</div>
 
-              <div class="dropRowMeta">
-                <div class="dropRowStats">
-                  <span class="miniChip">${escapeHtml(capacityText)}</span>
-                  <span class="miniChip">${Number(drop.order_count || 0)} orders</span>
-                </div>
+              <div class="dropCardStats">
+                <span class="miniChip">${escapeHtml(capacityText)}</span>
+                <span class="miniChip">${Number(drop.order_count || 0)} orders</span>
               </div>
 
-              <div class="dropRowActions">
+              <div class="dropCardActions">
                 <button class="btnSmall js-duplicate-drop" type="button" data-drop-id="${drop.drop_id}">Duplicate</button>
                 <button class="btnGhost js-archive-drop" type="button" data-drop-id="${drop.drop_id}">Archive</button>
               </div>
@@ -2060,10 +2160,8 @@
       }
 
       function renderQrCode(text) {
-        const canvas = byId("qrCanvas");
         const wrap = byId("qrWrap");
-
-        if (!canvas || !wrap) return;
+        if (!wrap) return;
 
         if (!text) {
           wrap.innerHTML = `<div class="helperText">QR preview unavailable until a drop link is set.</div>`;
@@ -2076,10 +2174,10 @@
         }
 
         wrap.innerHTML = `<canvas id="qrCanvas"></canvas>`;
-        const freshCanvas = byId("qrCanvas");
+        const canvas = byId("qrCanvas");
 
-        window.QRCode.toCanvas(freshCanvas, text, {
-          width: 140,
+        window.QRCode.toCanvas(canvas, text, {
+          width: 128,
           margin: 1
         }, function (error) {
           if (error) {
@@ -2090,7 +2188,7 @@
       }
 
       function renderEverything() {
-        renderNavigator();
+        renderDropBand();
         renderEditorStatus();
         renderHostOptions();
         renderHostPreview();
@@ -2480,12 +2578,8 @@
         const closesAt = closesEl.value;
         if (!closesAt) return;
 
-        if (!cutoffEl.value) {
-          cutoffEl.value = closesAt;
-        }
-        if (!deliveryStartEl.value) {
-          deliveryStartEl.value = addHoursToLocalInput(closesAt, 1);
-        }
+        if (!cutoffEl.value) cutoffEl.value = closesAt;
+        if (!deliveryStartEl.value) deliveryStartEl.value = addHoursToLocalInput(closesAt, 1);
         if (!deliveryEndEl.value && deliveryStartEl.value) {
           deliveryEndEl.value = addHoursToLocalInput(deliveryStartEl.value, 1);
         }
@@ -2508,9 +2602,7 @@
             if (id === "dropName" && !byId("dropSlug").value.trim()) {
               byId("dropSlug").value = slugify(byId("dropName").value);
             }
-            if (id === "closesAt") {
-              applyTimingDefaults();
-            }
+            if (id === "closesAt") applyTimingDefaults();
             renderConditionalFields();
             state.drop = readDropFromForm();
             renderEditorStatus();
@@ -2523,9 +2615,7 @@
           });
 
           el.addEventListener("change", function () {
-            if (id === "closesAt") {
-              applyTimingDefaults();
-            }
+            if (id === "closesAt") applyTimingDefaults();
             renderConditionalFields();
             state.drop = readDropFromForm();
             renderEditorStatus();
@@ -2577,20 +2667,52 @@
         });
       }
 
+      function bindDropBandDrag() {
+        const band = byId("dropBand");
+        let isDown = false;
+        let startX = 0;
+        let scrollLeft = 0;
+
+        band.addEventListener("mousedown", (e) => {
+          isDown = true;
+          band.classList.add("dragging");
+          startX = e.pageX - band.offsetLeft;
+          scrollLeft = band.scrollLeft;
+        });
+
+        band.addEventListener("mouseleave", () => {
+          isDown = false;
+          band.classList.remove("dragging");
+        });
+
+        band.addEventListener("mouseup", () => {
+          isDown = false;
+          band.classList.remove("dragging");
+        });
+
+        band.addEventListener("mousemove", (e) => {
+          if (!isDown) return;
+          e.preventDefault();
+          const x = e.pageX - band.offsetLeft;
+          const walk = (x - startX) * 1.1;
+          band.scrollLeft = scrollLeft - walk;
+        });
+      }
+
       function bindEvents() {
         byId("dropSearch").addEventListener("input", function (e) {
           state.search = e.target.value || "";
-          renderNavigator();
+          renderDropBand();
         });
 
         byId("statusFilter").addEventListener("change", function (e) {
           state.statusFilter = e.target.value || "all";
-          renderNavigator();
+          renderDropBand();
         });
 
         byId("typeFilter").addEventListener("change", function (e) {
           state.typeFilter = e.target.value || "all";
-          renderNavigator();
+          renderDropBand();
         });
 
         byId("refreshBtn").addEventListener("click", async function () {
@@ -2773,9 +2895,9 @@
         });
 
         document.body.addEventListener("click", async function (e) {
-          const row = e.target.closest(".dropRow");
-          if (row && !e.target.closest(".js-duplicate-drop") && !e.target.closest(".js-archive-drop")) {
-            state.selectedDropId = row.dataset.dropId;
+          const card = e.target.closest(".dropCard");
+          if (card && !e.target.closest(".js-duplicate-drop") && !e.target.closest(".js-archive-drop")) {
+            state.selectedDropId = card.dataset.dropId;
             try {
               await loadSelectedDrop();
               renderEverything();
@@ -2812,6 +2934,7 @@
 
         attachFieldDirtyTracking();
         bindAccordionEvents();
+        bindDropBandDrag();
       }
 
       async function init() {
