@@ -13,7 +13,7 @@
   <style>
     .studioShell{
       display:grid;
-      grid-template-columns:280px minmax(0,1fr) 320px;
+      grid-template-columns:340px minmax(0,1fr);
       gap:14px;
       align-items:start;
     }
@@ -81,6 +81,7 @@
       justify-content:space-between;
       gap:10px;
       margin-bottom:8px;
+      align-items:flex-start;
     }
 
     .dropRowTitle{
@@ -121,6 +122,7 @@
       color:var(--h-muted);
       font-weight:700;
       white-space:nowrap;
+      max-width:max-content;
     }
 
     .dropRowActions{
@@ -130,13 +132,13 @@
       margin-top:10px;
     }
 
-    .editorHeader{
+    .workspaceHeader{
       display:flex;
       align-items:flex-start;
       justify-content:space-between;
       gap:14px;
-      margin-bottom:12px;
       flex-wrap:wrap;
+      margin-bottom:12px;
     }
 
     .statusPill{
@@ -150,9 +152,15 @@
       font-size:12px;
       color:var(--h-muted);
       font-weight:800;
+      max-width:max-content;
+      align-self:flex-start;
+      flex:0 0 auto;
     }
 
     .saveStateBar{
+      position:sticky;
+      top:16px;
+      z-index:10;
       margin-bottom:12px;
       border:1px solid var(--h-border-2);
       border-radius:12px;
@@ -196,6 +204,162 @@
       font-size:12px;
       font-weight:800;
       display:none;
+    }
+
+    .summaryStrip{
+      display:grid;
+      grid-template-columns:repeat(5, minmax(220px, 1fr));
+      gap:12px;
+      overflow:auto;
+      padding-bottom:4px;
+      margin-bottom:12px;
+    }
+
+    .summaryCard{
+      border:1px solid var(--h-border-2);
+      border-radius:14px;
+      background:rgba(255,255,255,0.92);
+      padding:14px;
+      min-height:180px;
+    }
+
+    .summaryCard.compact{
+      min-height:0;
+    }
+
+    .railList{
+      display:grid;
+      gap:8px;
+      margin-top:10px;
+    }
+
+    .checkRow{
+      display:flex;
+      align-items:flex-start;
+      gap:8px;
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    .checkRow .mark{
+      width:18px;
+      min-width:18px;
+      height:18px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:11px;
+      font-weight:900;
+      margin-top:1px;
+    }
+
+    .checkRow.pass .mark{
+      background:rgba(22,163,74,0.12);
+      color:var(--h-good);
+      border:1px solid rgba(22,163,74,0.2);
+    }
+
+    .checkRow.fail .mark{
+      background:rgba(245,158,11,0.12);
+      color:#b45309;
+      border:1px solid rgba(245,158,11,0.2);
+    }
+
+    .summaryBlock{
+      display:grid;
+      gap:8px;
+      margin-top:10px;
+    }
+
+    .summaryItem{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:flex-start;
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    .summaryItem .label{
+      color:var(--h-muted);
+      font-weight:700;
+    }
+
+    .summaryItem .value{
+      color:var(--h-text);
+      font-weight:800;
+      text-align:right;
+    }
+
+    .metricsGrid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+
+    .metricTile{
+      border:1px solid var(--h-border-2);
+      border-radius:12px;
+      padding:10px;
+      background:rgba(15,23,42,0.02);
+    }
+
+    .metricTile .label{
+      display:block;
+      font-size:11px;
+      color:var(--h-muted);
+      font-weight:700;
+      margin-bottom:8px;
+    }
+
+    .metricTile .value{
+      display:block;
+      font-size:18px;
+      font-weight:900;
+      line-height:1;
+    }
+
+    .shareBox{
+      margin-top:10px;
+      display:grid;
+      gap:10px;
+    }
+
+    .shareLink{
+      border:1px solid var(--h-border-2);
+      border-radius:12px;
+      padding:10px 12px;
+      background:rgba(15,23,42,0.02);
+      font-size:12px;
+      line-height:1.4;
+      word-break:break-all;
+      min-height:0;
+    }
+
+    .qrWrap{
+      display:grid;
+      place-items:center;
+      border:1px solid var(--h-border-2);
+      border-radius:14px;
+      padding:12px;
+      background:#fff;
+      min-height:120px;
+    }
+
+    .railActions{
+      display:grid;
+      gap:8px;
+      margin-top:10px;
+    }
+
+    .railActions .btnAccent,
+    .railActions .btnGhost,
+    .railActions .btnSmall{
+      width:100%;
+      min-height:34px;
+      font-size:12px;
     }
 
     .editorSection{
@@ -330,148 +494,6 @@
       accent-color:var(--h-accent);
     }
 
-    .railCard{
-      border:1px solid var(--h-border-2);
-      border-radius:14px;
-      background:rgba(255,255,255,0.92);
-      padding:14px;
-      margin-bottom:12px;
-    }
-
-    .railList{
-      display:grid;
-      gap:8px;
-      margin-top:10px;
-    }
-
-    .checkRow{
-      display:flex;
-      align-items:flex-start;
-      gap:8px;
-      font-size:12px;
-      line-height:1.4;
-    }
-
-    .checkRow .mark{
-      width:18px;
-      min-width:18px;
-      height:18px;
-      border-radius:999px;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      font-size:11px;
-      font-weight:900;
-      margin-top:1px;
-    }
-
-    .checkRow.pass .mark{
-      background:rgba(22,163,74,0.12);
-      color:var(--h-good);
-      border:1px solid rgba(22,163,74,0.2);
-    }
-
-    .checkRow.fail .mark{
-      background:rgba(245,158,11,0.12);
-      color:#b45309;
-      border:1px solid rgba(245,158,11,0.2);
-    }
-
-    .summaryBlock{
-      display:grid;
-      gap:8px;
-      margin-top:10px;
-    }
-
-    .summaryItem{
-      display:flex;
-      justify-content:space-between;
-      gap:12px;
-      align-items:flex-start;
-      font-size:12px;
-      line-height:1.4;
-    }
-
-    .summaryItem .label{
-      color:var(--h-muted);
-      font-weight:700;
-    }
-
-    .summaryItem .value{
-      color:var(--h-text);
-      font-weight:800;
-      text-align:right;
-    }
-
-    .metricsGrid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px;
-      margin-top:10px;
-    }
-
-    .metricTile{
-      border:1px solid var(--h-border-2);
-      border-radius:12px;
-      padding:10px;
-      background:rgba(15,23,42,0.02);
-    }
-
-    .metricTile .label{
-      display:block;
-      font-size:11px;
-      color:var(--h-muted);
-      font-weight:700;
-      margin-bottom:8px;
-    }
-
-    .metricTile .value{
-      display:block;
-      font-size:18px;
-      font-weight:900;
-      line-height:1;
-    }
-
-    .shareBox{
-      margin-top:10px;
-      display:grid;
-      gap:10px;
-    }
-
-    .shareLink{
-      border:1px solid var(--h-border-2);
-      border-radius:12px;
-      padding:10px 12px;
-      background:rgba(15,23,42,0.02);
-      font-size:12px;
-      line-height:1.4;
-      word-break:break-all;
-    }
-
-    .qrWrap{
-      display:grid;
-      place-items:center;
-      border:1px solid var(--h-border-2);
-      border-radius:14px;
-      padding:12px;
-      background:#fff;
-      min-height:170px;
-    }
-
-    .railActions{
-      display:grid;
-      gap:8px;
-      margin-top:10px;
-    }
-
-    .railActions .btnAccent,
-    .railActions .btnGhost,
-    .railActions .btnSmall{
-      width:100%;
-      min-height:36px;
-      font-size:12px;
-    }
-
     .assignmentHeader{
       display:flex;
       align-items:flex-start;
@@ -590,6 +612,10 @@
       gap:8px;
       margin-top:12px;
       flex-wrap:wrap;
+      position:sticky;
+      bottom:12px;
+      padding-top:8px;
+      background:linear-gradient(to top, var(--h-bg) 60%, rgba(247,247,251,0));
     }
 
     .modalBackdrop{
@@ -661,26 +687,31 @@
       display:none !important;
     }
 
-    @media (max-width:1280px){
+    @media (max-width:1180px){
       .studioShell{
-        grid-template-columns:280px minmax(0,1fr);
+        grid-template-columns:1fr;
       }
-      .studioColRail{
-        grid-column:1 / -1;
-      }
+
       .studioSticky{
         position:static;
       }
+
+      .summaryStrip{
+        grid-template-columns:repeat(2, minmax(220px, 1fr));
+      }
     }
 
-    @media (max-width:980px){
-      .studioShell{
-        grid-template-columns:1fr;
-      }
+    @media (max-width:900px){
       .studioGrid2,
       .studioGrid3,
-      .metricsGrid{
+      .metricsGrid,
+      .summaryStrip{
         grid-template-columns:1fr;
+      }
+
+      .assignmentTable{
+        display:block;
+        overflow:auto;
       }
     }
   </style>
@@ -705,7 +736,7 @@
     </div>
 
     <div class="studioShell">
-      <!-- LEFT -->
+      <!-- LEFT NAV -->
       <div class="studioCol">
         <div class="card studioCard studioSticky">
           <div class="row space" style="margin-bottom:10px;">
@@ -738,10 +769,10 @@
         </div>
       </div>
 
-      <!-- CENTRE -->
+      <!-- MAIN WORKSPACE -->
       <div class="studioCol">
         <div class="card studioCard">
-          <div class="editorHeader">
+          <div class="workspaceHeader">
             <div>
               <h3 class="sectionTitle">Drop Editor</h3>
               <p class="sectionSub">Configure the selected drop</p>
@@ -759,6 +790,54 @@
 
           <div class="inlineSuccess" id="inlineSuccess"></div>
           <div class="errorBox" id="errorBox"></div>
+
+          <div class="summaryStrip">
+            <div class="summaryCard compact">
+              <h3 class="sectionTitle">Readiness</h3>
+              <p class="sectionSub">Checks before moving live</p>
+              <div class="railList" id="readinessList"></div>
+            </div>
+
+            <div class="summaryCard compact">
+              <h3 class="sectionTitle">Drop Summary</h3>
+              <p class="sectionSub">What is about to go live</p>
+              <div class="summaryBlock" id="dropSummary"></div>
+            </div>
+
+            <div class="summaryCard compact">
+              <h3 class="sectionTitle">Live Metrics</h3>
+              <p class="sectionSub">Current performance and economics</p>
+              <div class="metricsGrid" id="metricsGrid"></div>
+            </div>
+
+            <div class="summaryCard compact">
+              <h3 class="sectionTitle">Drop Link & QR</h3>
+              <p class="sectionSub">Sharing assets for this drop</p>
+              <div class="shareBox">
+                <div class="shareLink" id="shareLinkPreview">No drop link yet — save a drop link name to generate the link.</div>
+                <div class="qrWrap" id="qrWrap">
+                  <canvas id="qrCanvas"></canvas>
+                </div>
+                <div class="railActions">
+                  <button class="btnGhost" id="copyLinkBtn" type="button">Copy link</button>
+                  <button class="btnGhost" id="downloadQrBtn" type="button">Download QR</button>
+                  <button class="btnGhost" id="openOrderPageBtn" type="button">Open customer page</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="summaryCard compact">
+              <h3 class="sectionTitle">Drop Actions</h3>
+              <p class="sectionSub">Publish and control</p>
+              <div class="railActions">
+                <button class="btnAccent" id="moveLiveBtn" type="button">Move live</button>
+                <button class="btnGhost" id="duplicateBtn" type="button">Duplicate drop</button>
+                <button class="btnGhost" id="openBoardBtn" type="button">Open Service Board</button>
+                <button class="btnGhost" id="closeBtn" type="button">Close drop</button>
+                <button class="btnGhost" id="archiveBtn" type="button">Archive drop</button>
+              </div>
+            </div>
+          </div>
 
           <div class="editorSection open" data-section="basics">
             <div class="editorSectionHead">
@@ -1068,57 +1147,6 @@
           <div class="saveBar">
             <button class="btnGhost" id="revertBtn" type="button">Revert changes</button>
             <button class="btnAccent" id="saveBtn" type="button">Save changes</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- RIGHT -->
-      <div class="studioCol studioColRail">
-        <div class="studioSticky">
-          <div class="railCard">
-            <h3 class="sectionTitle">Readiness</h3>
-            <p class="sectionSub">Checks before moving the drop live</p>
-            <div class="railList" id="readinessList"></div>
-          </div>
-
-          <div class="railCard">
-            <h3 class="sectionTitle">Drop Summary</h3>
-            <p class="sectionSub">What is about to go live</p>
-            <div class="summaryBlock" id="dropSummary"></div>
-          </div>
-
-          <div class="railCard">
-            <h3 class="sectionTitle">Live Metrics</h3>
-            <p class="sectionSub">Current performance and economics</p>
-            <div class="metricsGrid" id="metricsGrid"></div>
-          </div>
-
-          <div class="railCard">
-            <h3 class="sectionTitle">Drop Link & QR</h3>
-            <p class="sectionSub">Sharing assets for this drop</p>
-            <div class="shareBox">
-              <div class="shareLink" id="shareLinkPreview">No drop link yet — save a drop link name to generate the link.</div>
-              <div class="qrWrap">
-                <canvas id="qrCanvas"></canvas>
-              </div>
-              <div class="railActions">
-                <button class="btnGhost" id="copyLinkBtn" type="button">Copy link</button>
-                <button class="btnGhost" id="downloadQrBtn" type="button">Download QR</button>
-                <button class="btnGhost" id="openOrderPageBtn" type="button">Open customer page</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="railCard">
-            <h3 class="sectionTitle">Drop Actions</h3>
-            <p class="sectionSub">Publish, close, archive or duplicate</p>
-            <div class="railActions">
-              <button class="btnAccent" id="moveLiveBtn" type="button">Move live</button>
-              <button class="btnGhost" id="duplicateBtn" type="button">Duplicate drop</button>
-              <button class="btnGhost" id="closeBtn" type="button">Close drop</button>
-              <button class="btnGhost" id="archiveBtn" type="button">Archive drop</button>
-              <button class="btnGhost" id="openBoardBtn" type="button">Open Service Board</button>
-            </div>
           </div>
         </div>
       </div>
@@ -1827,10 +1855,6 @@
           .map((category) => {
             const items = groups.get(category);
             const rows = items.map((row) => {
-              const effectivePence = row.price_override_pence == null || row.price_override_pence === ""
-                ? row.base_price_pence
-                : Number(row.price_override_pence);
-
               const countsTowardCapacity = row.category === (state.drop?.capacity_category || "pizza");
 
               return `
@@ -2037,26 +2061,31 @@
 
       function renderQrCode(text) {
         const canvas = byId("qrCanvas");
-        const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const wrap = byId("qrWrap");
+
+        if (!canvas || !wrap) return;
 
         if (!text) {
-          canvas.width = 160;
-          canvas.height = 160;
-          ctx.fillStyle = "#f8fafc";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = "#64748b";
-          ctx.font = "12px sans-serif";
-          ctx.textAlign = "center";
-          ctx.fillText("No link yet", canvas.width / 2, canvas.height / 2);
+          wrap.innerHTML = `<div class="helperText">QR preview unavailable until a drop link is set.</div>`;
           return;
         }
 
-        QRCode.toCanvas(canvas, text, {
-          width: 160,
+        if (!window.QRCode || typeof window.QRCode.toCanvas !== "function") {
+          wrap.innerHTML = `<div class="helperText">QR preview unavailable.</div>`;
+          return;
+        }
+
+        wrap.innerHTML = `<canvas id="qrCanvas"></canvas>`;
+        const freshCanvas = byId("qrCanvas");
+
+        window.QRCode.toCanvas(freshCanvas, text, {
+          width: 140,
           margin: 1
         }, function (error) {
-          if (error) console.error(error);
+          if (error) {
+            console.error(error);
+            wrap.innerHTML = `<div class="helperText">QR preview unavailable.</div>`;
+          }
         });
       }
 
@@ -2512,6 +2541,9 @@
 
       function downloadQr() {
         const canvas = byId("qrCanvas");
+        if (!canvas || typeof canvas.toDataURL !== "function") {
+          throw new Error("QR preview unavailable.");
+        }
         const link = document.createElement("a");
         link.href = canvas.toDataURL("image/png");
         link.download = `${(state.drop?.slug || "drop")}-qr.png`;
