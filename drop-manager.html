@@ -37,33 +37,6 @@
       min-width:0;
     }
 
-    .dropBandWrap{
-      position:relative;
-    }
-
-    .dropBandFade{
-      position:absolute;
-      top:0;
-      bottom:0;
-      width:36px;
-      pointer-events:none;
-      z-index:2;
-    }
-
-    .dropBandFade.left{
-      left:0;
-      background:linear-gradient(to right, rgba(247,247,251,1), rgba(247,247,251,0));
-      border-top-left-radius:14px;
-      border-bottom-left-radius:14px;
-    }
-
-    .dropBandFade.right{
-      right:0;
-      background:linear-gradient(to left, rgba(247,247,251,1), rgba(247,247,251,0));
-      border-top-right-radius:14px;
-      border-bottom-right-radius:14px;
-    }
-
     .dropBand{
       display:flex;
       gap:12px;
@@ -71,47 +44,29 @@
       overflow-y:hidden;
       padding:4px 2px 6px;
       scroll-behavior:smooth;
-      cursor:grab;
-    }
-
-    .dropBand.dragging{
-      cursor:grabbing;
-      user-select:none;
-    }
-
-    .groupMarker{
-      display:flex;
-      align-items:flex-start;
-      justify-content:center;
-      min-width:86px;
-      padding-top:8px;
-      font-size:11px;
-      font-weight:900;
-      letter-spacing:.04em;
-      color:var(--h-muted);
-      text-transform:uppercase;
     }
 
     .dropCard{
-      min-width:260px;
-      max-width:260px;
+      min-width:270px;
+      max-width:270px;
       border:1px solid var(--h-border-2);
       border-radius:14px;
-      background:rgba(255,255,255,0.92);
+      background:rgba(255,255,255,0.94);
       padding:12px;
       cursor:pointer;
-      transition:border-color .15s ease, box-shadow .15s ease;
+      transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease;
       flex:0 0 auto;
     }
 
     .dropCard:hover{
       border-color:var(--h-border);
       box-shadow:0 8px 18px rgba(15,23,42,0.06);
+      transform:translateY(-1px);
     }
 
     .dropCard.active{
       border-color:rgba(249,115,22,0.35);
-      box-shadow:0 10px 22px rgba(249,115,22,0.08);
+      box-shadow:0 10px 22px rgba(249,115,22,0.10);
       background:linear-gradient(135deg, rgba(249,115,22,0.07), rgba(251,146,60,0.04));
     }
 
@@ -135,6 +90,13 @@
       font-size:12px;
       color:var(--h-muted);
       line-height:1.35;
+    }
+
+    .dropCardMeta{
+      margin-top:8px;
+      font-size:12px;
+      color:var(--h-text);
+      font-weight:700;
     }
 
     .dropCardStats{
@@ -166,67 +128,162 @@
       max-width:max-content;
     }
 
-    .workspaceHeader{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:14px;
-      flex-wrap:wrap;
-      margin-bottom:12px;
+    .miniChip.live{
+      background:rgba(22,163,74,0.10);
+      border-color:rgba(22,163,74,0.18);
+      color:var(--h-good);
     }
 
-    .statusPill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid var(--h-border);
-      background:rgba(255,255,255,0.95);
-      font-size:12px;
+    .miniChip.scheduled{
+      background:rgba(59,130,246,0.10);
+      border-color:rgba(59,130,246,0.18);
+      color:#1d4ed8;
+    }
+
+    .miniChip.draft{
+      background:rgba(245,158,11,0.10);
+      border-color:rgba(245,158,11,0.18);
+      color:#b45309;
+    }
+
+    .miniChip.closed,
+    .miniChip.completed,
+    .miniChip.archived,
+    .miniChip.cancelled{
+      background:rgba(15,23,42,0.05);
+      border-color:rgba(15,23,42,0.10);
       color:var(--h-muted);
-      font-weight:800;
-      max-width:max-content;
-      align-self:flex-start;
-      flex:0 0 auto;
     }
 
-    .saveStateBar{
+    .stageBar{
       position:sticky;
       top:16px;
       z-index:20;
-      margin-bottom:12px;
       border:1px solid var(--h-border);
-      border-radius:12px;
-      padding:10px 12px;
+      border-radius:16px;
+      padding:14px;
       background:var(--h-surface);
-      box-shadow:0 8px 18px rgba(15,23,42,0.08);
+      box-shadow:0 10px 22px rgba(15,23,42,0.08);
+      margin-bottom:12px;
+    }
+
+    .stageBarTop{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+
+    .stageBarMeta{
+      font-size:12px;
+      color:var(--h-muted);
+      font-weight:700;
+      margin-top:4px;
+    }
+
+    .saveStateInline{
       font-size:12px;
       font-weight:800;
       color:var(--h-muted);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      flex-wrap:wrap;
+      padding:7px 10px;
+      border-radius:999px;
+      border:1px solid var(--h-border-2);
+      background:rgba(15,23,42,0.02);
+      max-width:max-content;
     }
 
-    .saveStateBar.saving{
-      color:#b45309;
-      background:#fff7ed;
-      border-color:rgba(245,158,11,0.25);
-    }
-
-    .saveStateBar.saved{
+    .saveStateInline.saved{
       color:var(--h-good);
       background:#f0fdf4;
-      border-color:rgba(22,163,74,0.22);
+      border-color:rgba(22,163,74,0.2);
     }
 
-    .saveStateBar.error{
+    .saveStateInline.saving{
+      color:#b45309;
+      background:#fff7ed;
+      border-color:rgba(245,158,11,0.2);
+    }
+
+    .saveStateInline.error{
       color:#991b1b;
       background:#fef2f2;
       border-color:#fecaca;
+    }
+
+    .stagePills{
+      display:flex;
+      gap:10px;
+      overflow-x:auto;
+      padding-bottom:2px;
+    }
+
+    .stagePill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--h-border-2);
+      background:rgba(15,23,42,0.02);
+      color:var(--h-muted);
+      font-size:12px;
+      font-weight:800;
+      cursor:pointer;
+      white-space:nowrap;
+      flex:0 0 auto;
+    }
+
+    .stagePill.active{
+      border-color:rgba(249,115,22,0.28);
+      background:linear-gradient(135deg, rgba(249,115,22,0.13), rgba(251,146,60,0.08));
+      color:var(--h-accent-ink);
+    }
+
+    .stagePill.complete{
+      border-color:rgba(22,163,74,0.18);
+      background:rgba(22,163,74,0.08);
+      color:var(--h-good);
+    }
+
+    .stagePill.attention{
+      border-color:rgba(245,158,11,0.18);
+      background:rgba(245,158,11,0.10);
+      color:#b45309;
+    }
+
+    .stageIcon{
+      width:18px;
+      min-width:18px;
+      height:18px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:11px;
+      font-weight:900;
+      border:1px solid currentColor;
+    }
+
+    .workspaceCard{
+      padding:16px 18px;
+    }
+
+    .workspaceHeader{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+
+    .workspaceHeaderActions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
     }
 
     .inlineSuccess{
@@ -241,237 +298,44 @@
       display:none;
     }
 
-    .summaryGrid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:12px;
+    .errorBox{
+      display:none;
       margin-bottom:12px;
-    }
-
-    .summaryCard{
-      border:1px solid var(--h-border-2);
+      padding:12px 14px;
       border-radius:14px;
-      background:rgba(255,255,255,0.92);
-      padding:14px;
-    }
-
-    .summaryGridLower{
-      display:grid;
-      grid-template-columns:1.15fr 0.85fr;
-      gap:12px;
-      margin-bottom:12px;
-    }
-
-    .railList{
-      display:grid;
-      gap:8px;
-      margin-top:10px;
-    }
-
-    .checkRow{
-      display:flex;
-      align-items:flex-start;
-      gap:8px;
-      font-size:12px;
-      line-height:1.4;
-    }
-
-    .checkRow .mark{
-      width:18px;
-      min-width:18px;
-      height:18px;
-      border-radius:999px;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      font-size:11px;
-      font-weight:900;
-      margin-top:1px;
-    }
-
-    .checkRow.pass .mark{
-      background:rgba(22,163,74,0.12);
-      color:var(--h-good);
-      border:1px solid rgba(22,163,74,0.2);
-    }
-
-    .checkRow.fail .mark{
-      background:rgba(245,158,11,0.12);
-      color:#b45309;
-      border:1px solid rgba(245,158,11,0.2);
-    }
-
-    .summaryBlock{
-      display:grid;
-      gap:8px;
-      margin-top:10px;
-    }
-
-    .summaryItem{
-      display:flex;
-      justify-content:space-between;
-      gap:12px;
-      align-items:flex-start;
-      font-size:12px;
-      line-height:1.4;
-    }
-
-    .summaryItem .label{
-      color:var(--h-muted);
+      background:#fef2f2;
+      color:#991b1b;
+      border:1px solid #fecaca;
+      font-size:13px;
       font-weight:700;
     }
 
-    .summaryItem .value{
-      color:var(--h-text);
-      font-weight:800;
-      text-align:right;
+    .stagePane{
+      display:none;
     }
 
-    .metricsGrid{
-      display:grid;
-      grid-template-columns:repeat(3, 1fr);
-      gap:10px;
-      margin-top:10px;
-    }
-
-    .metricTile{
-      border:1px solid var(--h-border-2);
-      border-radius:12px;
-      padding:10px;
-      background:rgba(15,23,42,0.02);
-    }
-
-    .metricTile .label{
+    .stagePane.active{
       display:block;
-      font-size:11px;
-      color:var(--h-muted);
-      font-weight:700;
-      margin-bottom:8px;
     }
 
-    .metricTile .value{
-      display:block;
-      font-size:18px;
-      font-weight:900;
-      line-height:1;
-    }
-
-    .shareBox{
-      margin-top:10px;
-      display:grid;
-      gap:10px;
-    }
-
-    .shareLink{
+    .stageSection{
       border:1px solid var(--h-border-2);
-      border-radius:12px;
-      padding:10px 12px;
-      background:rgba(15,23,42,0.02);
-      font-size:12px;
-      line-height:1.4;
-      word-break:break-all;
-    }
-
-    .linkQrGrid{
-      display:grid;
-      grid-template-columns:1fr 150px;
-      gap:10px;
-      align-items:start;
-    }
-
-    .qrWrap{
-      display:grid;
-      place-items:center;
-      border:1px solid var(--h-border-2);
-      border-radius:14px;
-      padding:10px;
-      background:#fff;
-      min-height:150px;
-    }
-
-    .railActions{
-      display:grid;
-      gap:8px;
-      margin-top:10px;
-    }
-
-    .railActions .btnAccent,
-    .railActions .btnGhost,
-    .railActions .btnSmall{
-      width:100%;
-      min-height:34px;
-      font-size:12px;
-    }
-
-    .actionBar{
-      display:flex;
-      justify-content:space-between;
-      gap:12px;
-      flex-wrap:wrap;
-      margin-top:12px;
-    }
-
-    .actionBarLeft,
-    .actionBarRight{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      align-items:center;
-    }
-
-    .editorSection{
-      border:1px solid var(--h-border-2);
-      border-radius:14px;
+      border-radius:16px;
       background:rgba(255,255,255,0.92);
-      overflow:hidden;
+      padding:14px;
       margin-bottom:12px;
     }
 
-    .editorSectionHead{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      padding:14px;
-      cursor:pointer;
-      background:rgba(15,23,42,0.015);
-    }
-
-    .editorSectionHead:hover{
-      background:rgba(15,23,42,0.03);
-    }
-
-    .editorSectionTitle{
-      margin:0;
+    .stageSectionTitle{
+      margin:0 0 4px;
       font-size:15px;
       font-weight:850;
     }
 
-    .editorSectionSub{
-      margin:4px 0 0;
+    .stageSectionSub{
+      margin:0 0 12px;
       font-size:12px;
       color:var(--h-muted);
-    }
-
-    .accordionIcon{
-      font-size:12px;
-      color:var(--h-muted);
-      font-weight:900;
-      transition:transform .15s ease;
-    }
-
-    .editorSection.open .accordionIcon{
-      transform:rotate(180deg);
-    }
-
-    .editorSectionBody{
-      display:none;
-      padding:14px;
-      border-top:1px solid var(--h-border-2);
-    }
-
-    .editorSection.open .editorSectionBody{
-      display:block;
     }
 
     .studioGrid2{
@@ -508,7 +372,7 @@
 
     .field textarea{
       resize:vertical;
-      min-height:86px;
+      min-height:92px;
     }
 
     .helperText{
@@ -551,31 +415,82 @@
       accent-color:var(--h-accent);
     }
 
-    .assignmentHeader{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom:12px;
-      flex-wrap:wrap;
+    .repeatBlock{
+      border:1px solid var(--h-border-2);
+      border-radius:14px;
+      padding:12px;
+      background:rgba(15,23,42,0.02);
+      margin-top:12px;
     }
 
-    .assignmentTools{
+    .repeatChoice{
       display:flex;
-      gap:8px;
+      gap:16px;
       flex-wrap:wrap;
       align-items:center;
+      margin-bottom:12px;
     }
 
-    .inlineNotice{
-      margin-bottom:12px;
+    .repeatChoice label{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      font-size:13px;
+      font-weight:700;
+      color:var(--h-text);
+    }
+
+    .scheduleTableWrap{
+      overflow:auto;
       border:1px solid var(--h-border-2);
-      border-radius:12px;
-      padding:10px 12px;
-      background:rgba(15,23,42,0.02);
-      font-size:12px;
+      border-radius:14px;
+      background:#fff;
+      margin-top:10px;
+    }
+
+    .scheduleTable{
+      width:100%;
+      border-collapse:collapse;
+    }
+
+    .scheduleTable th,
+    .scheduleTable td{
+      padding:10px;
+      border-bottom:1px solid rgba(15,23,42,0.06);
+      font-size:13px;
+      vertical-align:middle;
+    }
+
+    .scheduleTable th{
+      text-align:left;
+      font-size:11px;
+      text-transform:uppercase;
       color:var(--h-muted);
-      line-height:1.45;
+      background:rgba(15,23,42,0.02);
+    }
+
+    .scheduleTable select,
+    .scheduleTable input{
+      width:100%;
+      min-width:0;
+    }
+
+    .previewList{
+      display:grid;
+      gap:8px;
+      margin-top:10px;
+    }
+
+    .previewLine{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--h-border-2);
+      background:rgba(255,255,255,0.92);
+      font-size:12px;
+      font-weight:700;
     }
 
     .productGroup{
@@ -663,16 +578,116 @@
       background:rgba(15,23,42,0.02);
     }
 
-    .saveBar{
-      display:flex;
-      justify-content:flex-end;
+    .reviewGrid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+
+    .summaryBlock{
+      display:grid;
       gap:8px;
-      margin-top:12px;
+      margin-top:10px;
+    }
+
+    .summaryItem{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:flex-start;
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    .summaryItem .label{
+      color:var(--h-muted);
+      font-weight:700;
+    }
+
+    .summaryItem .value{
+      color:var(--h-text);
+      font-weight:800;
+      text-align:right;
+    }
+
+    .readinessList{
+      display:grid;
+      gap:8px;
+      margin-top:10px;
+    }
+
+    .readinessItem{
+      display:flex;
+      align-items:flex-start;
+      gap:8px;
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    .readinessMark{
+      width:18px;
+      min-width:18px;
+      height:18px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:11px;
+      font-weight:900;
+      margin-top:1px;
+    }
+
+    .readinessItem.pass .readinessMark{
+      background:rgba(22,163,74,0.12);
+      color:var(--h-good);
+      border:1px solid rgba(22,163,74,0.2);
+    }
+
+    .readinessItem.fail .readinessMark{
+      background:rgba(245,158,11,0.12);
+      color:#b45309;
+      border:1px solid rgba(245,158,11,0.2);
+    }
+
+    .shareLink{
+      border:1px solid var(--h-border-2);
+      border-radius:12px;
+      padding:10px 12px;
+      background:rgba(15,23,42,0.02);
+      font-size:12px;
+      line-height:1.4;
+      word-break:break-all;
+    }
+
+    .qrWrap{
+      display:grid;
+      place-items:center;
+      border:1px solid var(--h-border-2);
+      border-radius:14px;
+      padding:10px;
+      background:#fff;
+      min-height:150px;
+      margin-top:10px;
+    }
+
+    .stageFooter{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      margin-top:14px;
       flex-wrap:wrap;
       position:sticky;
       bottom:12px;
       padding-top:8px;
       background:linear-gradient(to top, var(--h-bg) 60%, rgba(247,247,251,0));
+    }
+
+    .stageFooterLeft,
+    .stageFooterRight{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
     }
 
     .modalBackdrop{
@@ -691,7 +706,7 @@
     }
 
     .modalCard{
-      width:min(640px, 100%);
+      width:min(680px, 100%);
       max-height:90vh;
       overflow:auto;
       background:var(--h-surface);
@@ -728,61 +743,40 @@
       display:none;
     }
 
-    .errorBox{
-      display:none;
-      margin-bottom:12px;
-      padding:12px 14px;
-      border-radius:14px;
-      background:#fef2f2;
-      color:#991b1b;
-      border:1px solid #fecaca;
-      font-size:13px;
-      font-weight:700;
-    }
-
     .hidden{
       display:none !important;
     }
 
     @media (max-width:1180px){
-      .browserToolbar{
-        grid-template-columns:1fr 1fr;
-      }
-
-      .summaryGrid,
-      .summaryGridLower{
+      .browserToolbar,
+      .studioGrid2,
+      .reviewGrid{
         grid-template-columns:1fr;
       }
 
-      .metricsGrid{
-        grid-template-columns:1fr 1fr;
-      }
-
-      .linkQrGrid{
+      .studioGrid3{
         grid-template-columns:1fr;
       }
     }
 
     @media (max-width:900px){
-      .browserToolbar,
-      .studioGrid2,
-      .studioGrid3,
-      .metricsGrid{
+      .browserToolbar{
         grid-template-columns:1fr;
       }
 
-      .assignmentTable{
+      .assignmentTable,
+      .scheduleTable{
         display:block;
         overflow:auto;
       }
 
-      .actionBar{
+      .stageFooter{
         flex-direction:column;
         align-items:stretch;
       }
 
-      .actionBarLeft,
-      .actionBarRight{
+      .stageFooterLeft,
+      .stageFooterRight{
         width:100%;
       }
     }
@@ -808,7 +802,6 @@
     </div>
 
     <div class="studioStack">
-      <!-- DROP BROWSER -->
       <div class="card studioCard">
         <div class="row space" style="margin-bottom:10px;">
           <div>
@@ -822,9 +815,12 @@
           <input id="dropSearch" type="text" placeholder="Search drops or hosts" />
           <select id="statusFilter">
             <option value="all">All statuses</option>
-            <option value="draft">Draft</option>
             <option value="live">Live</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="draft">Draft</option>
             <option value="closed">Closed</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
             <option value="archived">Archived</option>
           </select>
           <select id="typeFilter">
@@ -836,93 +832,74 @@
           <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
         </div>
 
-        <div class="dropBandWrap">
-          <div class="dropBandFade left"></div>
-          <div class="dropBandFade right"></div>
-          <div class="dropBand" id="dropBand"></div>
+        <div class="dropBand" id="dropBand"></div>
+      </div>
+
+      <div class="stageBar">
+        <div class="stageBarTop">
+          <div>
+            <div class="sectionTitle" id="stageBarDropName">No drop selected</div>
+            <div class="stageBarMeta" id="stageBarMeta">Select a drop to begin</div>
+          </div>
+          <div class="saveStateInline" id="saveStateInline">All changes saved</div>
+        </div>
+
+        <div class="stagePills">
+          <button class="stagePill active" data-stage="basics" type="button">
+            <span class="stageIcon" id="icon-basics">1</span>
+            <span>Basics</span>
+          </button>
+          <button class="stagePill" data-stage="timing" type="button">
+            <span class="stageIcon" id="icon-timing">2</span>
+            <span>Timing & Ops</span>
+          </button>
+          <button class="stagePill" data-stage="menu" type="button">
+            <span class="stageIcon" id="icon-menu">3</span>
+            <span>Menu</span>
+          </button>
+          <button class="stagePill" data-stage="commercials" type="button">
+            <span class="stageIcon" id="icon-commercials">4</span>
+            <span>Commercials</span>
+          </button>
+          <button class="stagePill" data-stage="review" type="button">
+            <span class="stageIcon" id="icon-review">5</span>
+            <span>Review</span>
+          </button>
         </div>
       </div>
 
-      <!-- EDITOR -->
-      <div class="card studioCard">
+      <div class="card workspaceCard">
         <div class="workspaceHeader">
           <div>
-            <h3 class="sectionTitle">Drop Editor</h3>
-            <p class="sectionSub">Configure the selected drop</p>
+            <h3 class="sectionTitle" id="workspaceTitle">Basics</h3>
+            <p class="sectionSub" id="workspaceSub">Define what the drop is</p>
           </div>
-          <div class="statusPill">
-            <span class="dot" id="editorStatusDot"></span>
-            <span id="editorStatusText">—</span>
-          </div>
-        </div>
 
-        <div class="saveStateBar" id="saveStateBar">
-          <span id="saveStateText">All changes saved</span>
-          <span class="helperText" id="saveStateMeta"></span>
+          <div class="workspaceHeaderActions">
+            <button class="btnGhost hidden" id="openBoardBtn" type="button">Open Service Board</button>
+            <button class="btnGhost" id="previewOrderPageBtn" type="button">Preview Ordering Page</button>
+          </div>
         </div>
 
         <div class="inlineSuccess" id="inlineSuccess"></div>
         <div class="errorBox" id="errorBox"></div>
 
-        <div class="summaryGrid">
-          <div class="summaryCard">
-            <h3 class="sectionTitle">Readiness</h3>
-            <p class="sectionSub">Checks before moving live</p>
-            <div class="railList" id="readinessList"></div>
-          </div>
+        <!-- STAGE 1 -->
+        <div class="stagePane active" id="pane-basics">
+          <div class="stageSection">
+            <h4 class="stageSectionTitle">Basics</h4>
+            <p class="stageSectionSub">Create the identity of the drop before moving into scheduling and menu setup.</p>
 
-          <div class="summaryCard">
-            <h3 class="sectionTitle">Drop Summary</h3>
-            <p class="sectionSub">What is about to go live</p>
-            <div class="summaryBlock" id="dropSummary"></div>
-          </div>
-        </div>
-
-        <div class="summaryGridLower">
-          <div class="summaryCard">
-            <h3 class="sectionTitle">Live Metrics</h3>
-            <p class="sectionSub">Current performance and economics</p>
-            <div class="metricsGrid" id="metricsGrid"></div>
-          </div>
-
-          <div class="summaryCard">
-            <h3 class="sectionTitle">Drop Link & QR</h3>
-            <p class="sectionSub">Sharing assets for this drop</p>
-            <div class="shareBox">
-              <div class="shareLink" id="shareLinkPreview">No drop link yet — save a drop link name to generate the link.</div>
-              <div class="linkQrGrid">
-                <div class="railActions">
-                  <button class="btnGhost" id="copyLinkBtn" type="button">Copy link</button>
-                  <button class="btnGhost" id="downloadQrBtn" type="button">Download QR</button>
-                  <button class="btnGhost" id="openOrderPageBtn" type="button">Open customer page</button>
-                </div>
-                <div class="qrWrap" id="qrWrap">
-                  <canvas id="qrCanvas"></canvas>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="editorSection open" data-section="basics">
-          <div class="editorSectionHead">
-            <div>
-              <h4 class="editorSectionTitle">Basics</h4>
-              <p class="editorSectionSub">Core identity and lifecycle</p>
-            </div>
-            <span class="accordionIcon">▾</span>
-          </div>
-          <div class="editorSectionBody">
             <div class="studioGrid2">
               <div class="field">
                 <label for="dropName">Drop Name</label>
-                <input id="dropName" type="text" placeholder="Friday Pizza Drop" />
+                <input id="dropName" type="text" placeholder="Friday Pizza Night" />
               </div>
 
               <div class="field">
                 <label for="dropSlug">Drop Link Name</label>
-                <input id="dropSlug" type="text" placeholder="friday-pizza-drop" />
-                <div class="helperText">Used in the ordering link for this drop</div>
+                <input id="dropSlug" type="text" placeholder="friday-pizza-night" />
+                <div class="helperText">Used in the customer ordering URL for this drop.</div>
               </div>
 
               <div class="field">
@@ -938,25 +915,15 @@
                 <label for="dropStatus">Status</label>
                 <select id="dropStatus">
                   <option value="draft">Draft</option>
+                  <option value="scheduled">Scheduled</option>
                   <option value="live">Live</option>
                   <option value="closed">Closed</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
                   <option value="archived">Archived</option>
                 </select>
               </div>
-            </div>
-          </div>
-        </div>
 
-        <div class="editorSection open" data-section="hostTiming">
-          <div class="editorSectionHead">
-            <div>
-              <h4 class="editorSectionTitle">Host & Timing</h4>
-              <p class="editorSectionSub">Attach a host and set ordering / fulfilment windows</p>
-            </div>
-            <span class="accordionIcon">▾</span>
-          </div>
-          <div class="editorSectionBody">
-            <div class="studioGrid2" style="margin-bottom:12px;">
               <div class="field">
                 <label for="hostSelect">Host</label>
                 <select id="hostSelect">
@@ -972,54 +939,165 @@
                   Add a host for community or hosted drops.
                 </div>
               </div>
-            </div>
 
-            <div style="margin-bottom:12px;">
-              <button class="btnGhost" id="openHostModalBtn" type="button">+ New Host</button>
-            </div>
-
-            <div class="studioGrid2" style="margin-bottom:12px;">
-              <div class="field">
-                <label for="opensAt">Opens At</label>
-                <input id="opensAt" type="datetime-local" />
-              </div>
-
-              <div class="field">
-                <label for="closesAt">Closes At</label>
-                <input id="closesAt" type="datetime-local" />
+              <div class="field" style="grid-column:1 / -1;">
+                <label for="notesInternal">Internal Notes</label>
+                <textarea id="notesInternal" placeholder="Any internal operational notes for this drop"></textarea>
               </div>
             </div>
 
-            <div class="studioGrid3">
-              <div class="field">
-                <label for="deliveryStart">Delivery Start</label>
-                <input id="deliveryStart" type="datetime-local" />
-              </div>
-
-              <div class="field">
-                <label for="deliveryEnd">Delivery End</label>
-                <input id="deliveryEnd" type="datetime-local" />
-              </div>
-
-              <div class="field">
-                <label for="cutoffTime">Cutoff Time</label>
-                <input id="cutoffTime" type="datetime-local" />
-                <div class="helperText">Defaults to the ordering close time</div>
-              </div>
+            <div style="margin-top:12px;">
+              <button class="btnGhost" id="openHostModalBtn" type="button">+ Create Host</button>
             </div>
           </div>
         </div>
 
-        <div class="editorSection open" data-section="operations">
-          <div class="editorSectionHead">
-            <div>
-              <h4 class="editorSectionTitle">Operations Setup</h4>
-              <p class="editorSectionSub">Capacity, fulfilment and geography</p>
+        <!-- STAGE 2 -->
+        <div class="stagePane" id="pane-timing">
+          <div class="stageSection">
+            <h4 class="stageSectionTitle">Fulfilment</h4>
+            <p class="stageSectionSub">Define when the drop happens.</p>
+
+            <div class="studioGrid3">
+              <div class="field">
+                <label for="deliveryDate">Drop Date</label>
+                <input id="deliveryDate" type="date" />
+              </div>
+
+              <div class="field">
+                <label for="deliveryStartTime">From</label>
+                <input id="deliveryStartTime" type="time" />
+              </div>
+
+              <div class="field">
+                <label for="deliveryEndTime">To</label>
+                <input id="deliveryEndTime" type="time" />
+              </div>
             </div>
-            <span class="accordionIcon">▾</span>
           </div>
-          <div class="editorSectionBody">
-            <div class="studioGrid2" style="margin-bottom:12px;">
+
+          <div class="stageSection">
+            <h4 class="stageSectionTitle">Order Window</h4>
+            <p class="stageSectionSub">Define when customers can place orders.</p>
+
+            <div class="studioGrid2">
+              <div class="field">
+                <label for="opensAtDate">Open for Orders</label>
+                <div class="studioGrid2" style="gap:8px;">
+                  <input id="opensAtDate" type="date" />
+                  <input id="opensAtTime" type="time" />
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="closesAtDate">Close Orders</label>
+                <div class="studioGrid2" style="gap:8px;">
+                  <input id="closesAtDate" type="date" />
+                  <input id="closesAtTime" type="time" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="stageSection">
+            <h4 class="stageSectionTitle">Repeat Pattern</h4>
+            <p class="stageSectionSub">Set the drop as one-off or recurring.</p>
+
+            <div class="repeatChoice">
+              <label><input type="radio" name="repeatPattern" value="one_off" checked /> One-off drop</label>
+              <label><input type="radio" name="repeatPattern" value="recurring" /> Recurring</label>
+            </div>
+
+            <div class="repeatBlock hidden" id="recurringBlock">
+              <div class="row space" style="margin-bottom:10px;">
+                <div>
+                  <h4 class="stageSectionTitle" style="font-size:14px; margin:0;">Recurring Schedule</h4>
+                  <p class="stageSectionSub" style="margin:4px 0 0;">Add one or more weekly schedule lines.</p>
+                </div>
+                <button class="btnGhost" id="addScheduleRowBtn" type="button">+ Add another day</button>
+              </div>
+
+              <div class="scheduleTableWrap">
+                <table class="scheduleTable">
+                  <thead>
+                    <tr>
+                      <th>Day</th>
+                      <th>From</th>
+                      <th>To</th>
+                      <th>Orders Close</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="scheduleRowsBody"></tbody>
+                </table>
+              </div>
+
+              <div class="studioGrid2" style="margin-top:12px;">
+                <div class="field">
+                  <label for="seriesStartDate">Series Start Date</label>
+                  <input id="seriesStartDate" type="date" />
+                </div>
+
+                <div class="field">
+                  <label for="ordersOpenRule">Orders Open</label>
+                  <select id="ordersOpenRule">
+                    <option value="immediately">Immediately</option>
+                    <option value="days_before">X days before drop</option>
+                    <option value="fixed_start">Fixed start date</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="studioGrid3" id="ordersOpenRuleFields" style="margin-top:12px;">
+                <div class="field hidden" id="ordersOpenDaysBeforeField">
+                  <label for="ordersOpenDaysBefore">Days Before Drop</label>
+                  <input id="ordersOpenDaysBefore" type="number" min="0" step="1" value="3" />
+                </div>
+
+                <div class="field hidden" id="seriesFixedOpenDateField">
+                  <label for="seriesFixedOpenDate">Fixed Open Date</label>
+                  <input id="seriesFixedOpenDate" type="date" />
+                </div>
+
+                <div class="field hidden" id="seriesFixedOpenTimeField">
+                  <label for="seriesFixedOpenTime">Fixed Open Time</label>
+                  <input id="seriesFixedOpenTime" type="time" />
+                </div>
+              </div>
+
+              <div class="studioGrid2" style="margin-top:12px;">
+                <div class="field">
+                  <label for="seriesEndMode">Series Ends By</label>
+                  <select id="seriesEndMode">
+                    <option value="end_date">End date</option>
+                    <option value="drop_count">Number of drops</option>
+                  </select>
+                </div>
+
+                <div class="field" id="seriesEndDateField">
+                  <label for="seriesEndDate">End Date</label>
+                  <input id="seriesEndDate" type="date" />
+                </div>
+
+                <div class="field hidden" id="seriesDropCountField">
+                  <label for="seriesDropCount">Number of Drops</label>
+                  <input id="seriesDropCount" type="number" min="1" step="1" value="8" />
+                </div>
+              </div>
+
+              <div style="margin-top:12px;">
+                <div class="helperText" id="seriesSummaryText">This will create a recurring series once implemented.</div>
+              </div>
+
+              <div class="previewList" id="seriesPreviewList"></div>
+            </div>
+          </div>
+
+          <div class="stageSection">
+            <h4 class="stageSectionTitle">Operations</h4>
+            <p class="stageSectionSub">Set capacity, fulfilment mode and delivery geography.</p>
+
+            <div class="studioGrid3">
               <div class="field">
                 <label for="capacityCategory">Capacity Category</label>
                 <select id="capacityCategory">
@@ -1034,9 +1112,7 @@
                 <label for="capacityTotal">Capacity Total</label>
                 <input id="capacityTotal" type="number" min="0" step="1" />
               </div>
-            </div>
 
-            <div class="studioGrid3">
               <div class="field">
                 <label for="fulfilmentMode">Fulfilment Mode</label>
                 <select id="fulfilmentMode">
@@ -1060,19 +1136,34 @@
           </div>
         </div>
 
-        <div class="editorSection" data-section="fundraising">
-          <div class="editorSectionHead">
-            <div>
-              <h4 class="editorSectionTitle">Community Contribution</h4>
-              <p class="editorSectionSub">Public-facing support for clubs, schools or community causes</p>
+        <!-- STAGE 3 -->
+        <div class="stagePane" id="pane-menu">
+          <div class="stageSection">
+            <h4 class="stageSectionTitle">Menu</h4>
+            <p class="stageSectionSub">Choose which products are available in this drop.</p>
+
+            <div class="row space" style="margin-bottom:12px;">
+              <div class="helperText">Enable products, override prices and manage stock limits.</div>
+              <div class="row" style="gap:8px; flex-wrap:wrap;">
+                <button class="btnGhost" id="openProductModalBtn" type="button">+ Add Product</button>
+                <a href="drop-menu.html" class="utilityLink">Menu Library</a>
+              </div>
             </div>
-            <span class="accordionIcon">▾</span>
+
+            <div id="assignmentGroups"></div>
           </div>
-          <div class="editorSectionBody">
+        </div>
+
+        <!-- STAGE 4 -->
+        <div class="stagePane" id="pane-commercials">
+          <div class="stageSection">
+            <h4 class="stageSectionTitle">Community Contribution</h4>
+            <p class="stageSectionSub">Optional public-facing support for schools, clubs or causes.</p>
+
             <div class="toggleRow">
               <div>
                 <div style="font-weight:800;">Enable Community Contribution</div>
-                <div class="helperText">Shown as a positive community contribution on the ordering page if configured.</div>
+                <div class="helperText">Shown to customers if configured.</div>
               </div>
               <input id="fundraisingEnabled" type="checkbox" />
             </div>
@@ -1102,29 +1193,18 @@
                   <label for="fundraisingDisplayText">Customer-facing Text</label>
                   <input id="fundraisingDisplayText" type="text" placeholder="£1 from every order supports Ruscombe Cricket Club" />
                 </div>
-
-                <div class="field" style="grid-column:1 / -1;">
-                  <label for="fundraisingNotes">Internal Notes</label>
-                  <textarea id="fundraisingNotes" placeholder="Supporting junior cricket programme"></textarea>
-                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="editorSection" data-section="hostShare">
-          <div class="editorSectionHead">
-            <div>
-              <h4 class="editorSectionTitle">Commercial Host Share</h4>
-              <p class="editorSectionSub">Private or optionally visible settlement for pubs, venues or commercial hosts</p>
-            </div>
-            <span class="accordionIcon">▾</span>
-          </div>
-          <div class="editorSectionBody">
+          <div class="stageSection">
+            <h4 class="stageSectionTitle">Commercial Host Share</h4>
+            <p class="stageSectionSub">Optional commercial settlement for pubs, venues or hosts.</p>
+
             <div class="toggleRow">
               <div>
                 <div style="font-weight:800;">Enable Host Share</div>
-                <div class="helperText">Use this for commercial host arrangements that are separate from community contribution.</div>
+                <div class="helperText">Separate from community contribution.</div>
               </div>
               <input id="hostShareEnabled" type="checkbox" />
             </div>
@@ -1163,64 +1243,62 @@
                     <option value="true">Yes</option>
                   </select>
                 </div>
-
-                <div class="field" style="grid-column:1 / -1;">
-                  <label for="hostShareNotes">Internal Notes</label>
-                  <textarea id="hostShareNotes" placeholder="Pub receives 10% of drop GMV for hosting"></textarea>
-                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="editorSection" data-section="notes">
-          <div class="editorSectionHead">
-            <div>
-              <h4 class="editorSectionTitle">Internal Notes</h4>
-              <p class="editorSectionSub">Operational notes for the vendor team</p>
+        <!-- STAGE 5 -->
+        <div class="stagePane" id="pane-review">
+          <div class="reviewGrid">
+            <div class="stageSection">
+              <h4 class="stageSectionTitle">Drop Summary</h4>
+              <p class="stageSectionSub">Review what will go live.</p>
+              <div class="summaryBlock" id="reviewSummary"></div>
             </div>
-            <span class="accordionIcon">▾</span>
+
+            <div class="stageSection">
+              <h4 class="stageSectionTitle">Readiness</h4>
+              <p class="stageSectionSub">Blocking issues and stage completion.</p>
+              <div class="readinessList" id="reviewReadiness"></div>
+            </div>
           </div>
-          <div class="editorSectionBody">
-            <div class="field">
-              <label for="notesInternal">Internal Notes</label>
-              <textarea id="notesInternal" placeholder="Match night, expect higher demand, shorter radius if buffalo on menu"></textarea>
+
+          <div class="reviewGrid" style="margin-top:12px;">
+            <div class="stageSection">
+              <h4 class="stageSectionTitle">Share Link</h4>
+              <p class="stageSectionSub">Customer ordering page for this drop.</p>
+              <div class="shareLink" id="shareLinkPreview">No drop link yet.</div>
+              <div class="row" style="gap:8px; flex-wrap:wrap; margin-top:10px;">
+                <button class="btnGhost" id="copyLinkBtn" type="button">Copy Link</button>
+                <button class="btnGhost" id="downloadQrBtn" type="button">Download QR</button>
+              </div>
+              <div class="qrWrap" id="qrWrap">
+                <canvas id="qrCanvas"></canvas>
+              </div>
+            </div>
+
+            <div class="stageSection">
+              <h4 class="stageSectionTitle">Review & Publish</h4>
+              <p class="stageSectionSub">Final actions for this drop.</p>
+              <div class="helperText" id="publishHelpText">Resolve blocking issues to publish this drop.</div>
+              <div style="margin-top:12px; display:grid; gap:8px;">
+                <button class="btnAccent" id="publishBtn" type="button">Publish Drop</button>
+                <button class="btnGhost" id="cancelDropBtn" type="button">Cancel Drop</button>
+                <button class="btnGhost" id="archiveDropBtn" type="button">Archive Drop</button>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="card" style="border:none; box-shadow:none; background:transparent; padding:0; margin-top:0;">
-          <div class="assignmentHeader">
-            <div>
-              <h3 class="sectionTitle">Products for this Drop</h3>
-              <p class="sectionSub">Enable products, override prices and manage stock limits</p>
-            </div>
-
-            <div class="assignmentTools">
-              <button class="btnGhost" id="openProductModalBtn" type="button">+ Add Product</button>
-              <a href="drop-menu.html" class="utilityLink">Menu Library</a>
-            </div>
+        <div class="stageFooter">
+          <div class="stageFooterLeft">
+            <button class="btnGhost" id="backStageBtn" type="button">← Back</button>
           </div>
 
-          <div class="inlineNotice">
-            Products are grouped by category. Stock limits are optional and help prevent over-ordering of limited items like drinks, desserts or specials.
-          </div>
-
-          <div id="assignmentGroups"></div>
-
-          <div class="actionBar">
-            <div class="actionBarLeft">
-              <button class="btnGhost" id="revertBtn" type="button">Revert changes</button>
-              <button class="btnAccent" id="saveBtn" type="button">Save changes</button>
-            </div>
-
-            <div class="actionBarRight">
-              <button class="btnAccent" id="moveLiveBtn" type="button">Move live</button>
-              <button class="btnGhost" id="duplicateBtn" type="button">Duplicate drop</button>
-              <button class="btnGhost" id="openBoardBtn" type="button">Open Service Board</button>
-              <button class="btnGhost" id="closeBtn" type="button">Close drop</button>
-              <button class="btnGhost" id="archiveBtn" type="button">Archive drop</button>
-            </div>
+          <div class="stageFooterRight">
+            <button class="btnGhost" id="saveDraftBtn" type="button">Save Draft</button>
+            <button class="btnAccent" id="continueStageBtn" type="button">Continue →</button>
           </div>
         </div>
       </div>
@@ -1268,7 +1346,7 @@
 
         <div class="field" style="grid-column:1 / -1;">
           <label for="newHostNotes">Internal Notes</label>
-          <textarea id="newHostNotes" placeholder="Regular summer hosting opportunity"></textarea>
+          <textarea id="newHostNotes" placeholder="Regular hosting opportunity"></textarea>
         </div>
       </div>
 
@@ -1276,7 +1354,7 @@
 
       <div class="modalActions">
         <button class="btnGhost" id="cancelHostBtn" type="button">Cancel</button>
-        <button class="btnAccent" id="saveHostBtn" type="button">Create host</button>
+        <button class="btnAccent" id="saveHostBtn" type="button">Create Host</button>
       </div>
     </div>
   </div>
@@ -1336,7 +1414,7 @@
 
       <div class="modalActions">
         <button class="btnGhost" id="cancelProductBtn" type="button">Cancel</button>
-        <button class="btnAccent" id="saveProductBtn" type="button">Create product</button>
+        <button class="btnAccent" id="saveProductBtn" type="button">Create Product</button>
       </div>
     </div>
   </div>
@@ -1347,9 +1425,9 @@
       const SUPABASE_URL = CONFIG.SUPABASE_URL;
       const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
       const DEFAULT_VENDOR_SLUG = "southbury-farm-pizza";
+      const STAGES = ["basics", "timing", "menu", "commercials", "review"];
 
       let supabase = null;
-      let saveStateResetTimer = null;
       let successTimer = null;
 
       const state = {
@@ -1359,16 +1437,17 @@
         products: [],
         selectedDropId: null,
         selectedDropSummary: null,
-        economics: null,
         drop: null,
+        readiness: null,
         dropProducts: [],
         dropProductStock: [],
         productAssignments: [],
         search: "",
         statusFilter: "all",
         typeFilter: "all",
-        dirty: false,
-        saveState: "saved"
+        saveState: "saved",
+        currentStage: "basics",
+        seriesRows: []
       };
 
       function byId(id) {
@@ -1394,60 +1473,24 @@
         successTimer = setTimeout(() => {
           el.style.display = "none";
           el.textContent = "";
-        }, 3000);
+        }, 2500);
       }
 
-      function showModalMessage(id, message, isError = false) {
-        const el = byId(id);
-        if (!message) {
-          el.style.display = "none";
-          el.textContent = "";
-          el.style.color = "var(--h-muted)";
-          el.style.background = "rgba(15,23,42,0.02)";
-          el.style.borderColor = "var(--h-border-2)";
-          return;
-        }
-        el.style.display = "block";
-        el.textContent = message;
-        if (isError) {
-          el.style.color = "#991b1b";
-          el.style.background = "#fef2f2";
-          el.style.borderColor = "#fecaca";
-        } else {
-          el.style.color = "var(--h-good)";
-          el.style.background = "rgba(22,163,74,0.07)";
-          el.style.borderColor = "rgba(22,163,74,0.16)";
-        }
-      }
-
-      function setSaveState(status, meta = "") {
-        clearTimeout(saveStateResetTimer);
+      function setSaveState(status, text) {
         state.saveState = status;
-
-        const bar = byId("saveStateBar");
-        const text = byId("saveStateText");
-        const metaEl = byId("saveStateMeta");
-
-        bar.classList.remove("saving", "saved", "error");
-
-        if (status === "unsaved") {
-          text.textContent = "Unsaved changes";
-          metaEl.textContent = meta || "";
+        const el = byId("saveStateInline");
+        el.className = "saveStateInline";
+        if (status === "saved") {
+          el.classList.add("saved");
+          el.textContent = text || "All changes saved";
         } else if (status === "saving") {
-          bar.classList.add("saving");
-          text.textContent = "Saving changes…";
-          metaEl.textContent = meta || "";
-        } else if (status === "saved") {
-          bar.classList.add("saved");
-          text.textContent = "All changes saved";
-          metaEl.textContent = meta || "";
-          saveStateResetTimer = setTimeout(() => {
-            metaEl.textContent = "";
-          }, 2000);
+          el.classList.add("saving");
+          el.textContent = text || "Saving changes…";
         } else if (status === "error") {
-          bar.classList.add("error");
-          text.textContent = "Save failed";
-          metaEl.textContent = meta || "";
+          el.classList.add("error");
+          el.textContent = text || "Save failed";
+        } else {
+          el.textContent = text || "Unsaved changes";
         }
       }
 
@@ -1482,70 +1525,48 @@
         }).format((Number(pence || 0)) / 100);
       }
 
-      function formatDateTimeShort(value) {
+      function formatDateShort(value) {
         if (!value) return "—";
         const d = new Date(value);
         if (Number.isNaN(d.getTime())) return "—";
-        return d.toLocaleString("en-GB", {
+        return d.toLocaleDateString("en-GB", {
+          weekday: "short",
           day: "numeric",
-          month: "short",
+          month: "short"
+        });
+      }
+
+      function formatTimeOnly(value) {
+        if (!value) return "—";
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return "—";
+        return d.toLocaleTimeString("en-GB", {
           hour: "2-digit",
           minute: "2-digit"
         });
       }
 
-      function formatDateTimeLocal(value) {
+      function formatDateInput(value) {
         if (!value) return "";
         const d = new Date(value);
         if (Number.isNaN(d.getTime())) return "";
         const pad = (n) => String(n).padStart(2, "0");
-        return [
-          d.getFullYear(),
-          "-",
-          pad(d.getMonth() + 1),
-          "-",
-          pad(d.getDate()),
-          "T",
-          pad(d.getHours()),
-          ":",
-          pad(d.getMinutes())
-        ].join("");
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
       }
 
-      function parseDateTimeLocal(value) {
-        if (!value) return null;
-        const d = new Date(value);
-        if (Number.isNaN(d.getTime())) return null;
-        return d.toISOString();
-      }
-
-      function addHoursToLocalInput(value, hours) {
+      function formatTimeInput(value) {
         if (!value) return "";
         const d = new Date(value);
         if (Number.isNaN(d.getTime())) return "";
-        d.setHours(d.getHours() + hours);
-        return formatDateTimeLocal(d.toISOString());
+        const pad = (n) => String(n).padStart(2, "0");
+        return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
       }
 
-      function statusDotClass(status) {
-        const s = String(status || "").toLowerCase();
-        if (s === "live") return "dot live";
-        if (s === "draft") return "dot draft";
-        return "dot closed";
-      }
-
-      function isTruthyString(value) {
-        return String(value) === "true";
-      }
-
-      function markDirty(value = true) {
-        state.dirty = value;
-        if (value) setSaveState("unsaved");
-      }
-
-      function getSelectedHost() {
-        if (!state.drop?.host_id) return null;
-        return state.hosts.find((h) => h.id === state.drop.host_id) || null;
+      function combineDateTime(dateStr, timeStr) {
+        if (!dateStr || !timeStr) return null;
+        const date = new Date(`${dateStr}T${timeStr}`);
+        if (Number.isNaN(date.getTime())) return null;
+        return date.toISOString();
       }
 
       function getSharePath() {
@@ -1564,6 +1585,18 @@
         }
       }
 
+      function getStatusPriority(status) {
+        const s = String(status || "").toLowerCase();
+        if (s === "live") return 1;
+        if (s === "scheduled") return 2;
+        if (s === "draft") return 3;
+        if (s === "closed") return 4;
+        if (s === "completed") return 5;
+        if (s === "cancelled") return 6;
+        if (s === "archived") return 7;
+        return 8;
+      }
+
       function groupByCategory(items) {
         const groups = new Map();
         items.forEach((item) => {
@@ -1574,19 +1607,84 @@
         return groups;
       }
 
-      function getStatusPriority(status) {
-        const s = String(status || "").toLowerCase();
-        if (s === "live") return 1;
-        if (s === "draft") return 2;
-        if (s === "closed") return 3;
-        if (s === "archived") return 4;
-        return 5;
+      function getStageStatus(stage) {
+        if (!state.readiness || !state.drop) return "not_started";
+
+        if (stage === "basics") {
+          return state.readiness.basics_complete ? "complete" : "attention";
+        }
+
+        if (stage === "timing") {
+          return state.readiness.timing_complete ? "complete" : "attention";
+        }
+
+        if (stage === "menu") {
+          return (state.readiness.menu_complete && state.readiness.capacity_product_present) ? "complete" : "attention";
+        }
+
+        if (stage === "commercials") {
+          return state.readiness.commercials_valid ? "complete" : "attention";
+        }
+
+        if (stage === "review") {
+          return state.readiness.ready_to_publish ? "complete" : "attention";
+        }
+
+        return "not_started";
+      }
+
+      function renderStageBar() {
+        const name = state.drop?.name || "No drop selected";
+        const status = state.drop?.status || "draft";
+        const completeCount = STAGES.filter((stage) => getStageStatus(stage) === "complete").length;
+
+        byId("stageBarDropName").textContent = name;
+        byId("stageBarMeta").textContent = `${status} • ${completeCount} of 5 stages complete`;
+
+        document.querySelectorAll(".stagePill").forEach((pill) => {
+          const stage = pill.dataset.stage;
+          const stageStatus = getStageStatus(stage);
+
+          pill.classList.remove("active", "complete", "attention");
+          if (stage === state.currentStage) pill.classList.add("active");
+          if (stageStatus === "complete") pill.classList.add("complete");
+          if (stageStatus === "attention") pill.classList.add("attention");
+
+          const icon = byId(`icon-${stage}`);
+          if (stageStatus === "complete") icon.textContent = "✓";
+          else if (stageStatus === "attention") icon.textContent = "!";
+          else icon.textContent = String(STAGES.indexOf(stage) + 1);
+        });
+      }
+
+      function updateWorkspaceHeader() {
+        const map = {
+          basics: ["Basics", "Define what the drop is"],
+          timing: ["Timing & Operations", "Set fulfilment, ordering and recurrence"],
+          menu: ["Menu", "Choose what can be ordered"],
+          commercials: ["Commercials", "Optional economics and internal detail"],
+          review: ["Review & Publish", "Check readiness and publish when ready"]
+        };
+        byId("workspaceTitle").textContent = map[state.currentStage][0];
+        byId("workspaceSub").textContent = map[state.currentStage][1];
+
+        document.querySelectorAll(".stagePane").forEach((pane) => pane.classList.remove("active"));
+        byId(`pane-${state.currentStage}`).classList.add("active");
+
+        const backBtn = byId("backStageBtn");
+        backBtn.classList.toggle("hidden", state.currentStage === "basics");
+
+        const continueBtn = byId("continueStageBtn");
+        continueBtn.textContent = state.currentStage === "review" ? "Stay on Review" : "Continue →";
+
+        const openBoardBtn = byId("openBoardBtn");
+        openBoardBtn.classList.toggle("hidden", !(state.drop && ["live", "closed"].includes(state.drop.status)));
       }
 
       async function loadVendorId() {
         const { data, error } = await supabase
           .from("vendors")
-          .select("id, slug, name")
+          .select("id")
           .eq("slug", DEFAULT_VENDOR_SLUG)
           .single();
 
@@ -1628,17 +1726,14 @@
         state.drops = (data || []).sort((a, b) => {
           const statusDiff = getStatusPriority(a.status) - getStatusPriority(b.status);
           if (statusDiff !== 0) return statusDiff;
-
           const aTime = a.delivery_start ? new Date(a.delivery_start).getTime() : Number.MAX_SAFE_INTEGER;
           const bTime = b.delivery_start ? new Date(b.delivery_start).getTime() : Number.MAX_SAFE_INTEGER;
           return aTime - bTime;
         });
 
-        const currentStillExists = state.drops.some((d) => d.drop_id === state.selectedDropId);
-        if (!currentStillExists) {
-          const live = state.drops.find((d) => d.status === "live");
-          const draft = state.drops.find((d) => d.status === "draft");
-          state.selectedDropId = (live || draft || state.drops[0] || {}).drop_id || null;
+        const exists = state.drops.some((d) => d.drop_id === state.selectedDropId);
+        if (!exists) {
+          state.selectedDropId = (state.drops[0] || {}).drop_id || null;
         }
       }
 
@@ -1646,35 +1741,33 @@
         if (!state.selectedDropId) {
           state.drop = null;
           state.selectedDropSummary = null;
-          state.economics = null;
+          state.readiness = null;
           state.dropProducts = [];
           state.dropProductStock = [];
           state.productAssignments = [];
-          renderEverything();
           return;
         }
 
-        const [dropRes, summaryRes, econRes, dropProductsRes, stockRes] = await Promise.all([
+        const [dropRes, summaryRes, readinessRes, dropProductsRes, stockRes] = await Promise.all([
           supabase.from("drops").select("*").eq("id", state.selectedDropId).single(),
           supabase.from("v_drop_summary").select("*").eq("drop_id", state.selectedDropId).single(),
-          supabase.from("v_drop_fundraising_summary").select("*").eq("drop_id", state.selectedDropId).single(),
+          supabase.from("v_drop_readiness").select("*").eq("drop_id", state.selectedDropId).single(),
           supabase.from("drop_products").select("*").eq("drop_id", state.selectedDropId),
           supabase.from("v_drop_product_stock").select("*").eq("drop_id", state.selectedDropId)
         ]);
 
         if (dropRes.error) throw dropRes.error;
         if (summaryRes.error) throw summaryRes.error;
-        if (econRes.error) throw econRes.error;
+        if (readinessRes.error) throw readinessRes.error;
         if (dropProductsRes.error) throw dropProductsRes.error;
         if (stockRes.error) throw stockRes.error;
 
         state.drop = dropRes.data;
         state.selectedDropSummary = summaryRes.data;
-        state.economics = econRes.data;
+        state.readiness = readinessRes.data;
         state.dropProducts = dropProductsRes.data || [];
         state.dropProductStock = stockRes.data || [];
         state.productAssignments = buildProductAssignments();
-        state.dirty = false;
         setSaveState("saved");
       }
 
@@ -1703,11 +1796,10 @@
 
       function getFilteredDrops() {
         const search = state.search.trim().toLowerCase();
-        const filtered = state.drops.filter((drop) => {
+        return state.drops.filter((drop) => {
           const statusOk = state.statusFilter === "all" || drop.status === state.statusFilter;
           const typeOk = state.typeFilter === "all" || drop.drop_type === state.typeFilter;
           if (!statusOk || !typeOk) return false;
-
           if (!search) return true;
 
           const haystack = [
@@ -1719,10 +1811,6 @@
 
           return haystack.includes(search);
         });
-
-        const selected = filtered.find((d) => d.drop_id === state.selectedDropId);
-        const rest = filtered.filter((d) => d.drop_id !== state.selectedDropId);
-        return selected ? [selected, ...rest] : rest;
       }
 
       function renderDropBand() {
@@ -1734,80 +1822,57 @@
           return;
         }
 
-        let lastStatus = null;
         band.innerHTML = drops.map((drop) => {
-          const status = String(drop.status || "").toLowerCase();
-          const marker = status !== lastStatus
-            ? `<div class="groupMarker">${escapeHtml(status)}</div>`
-            : "";
-          lastStatus = status;
-
           const active = drop.drop_id === state.selectedDropId ? "active" : "";
           const hostLine = drop.host_name
-            ? `${escapeHtml(drop.host_name)} • ${escapeHtml(drop.drop_type || "drop")}`
+            ? `${escapeHtml(drop.drop_type || "drop")} • ${escapeHtml(drop.host_name)}`
             : `${escapeHtml(drop.drop_type || "drop")}`;
 
-          const capacityText = `${Number(drop.capacity_units_used || 0)} / ${Number(drop.capacity_units_total || 0)} ${escapeHtml(drop.capacity_category || "units")}`;
-          const deliveryText = drop.delivery_start && drop.delivery_end
-            ? `${formatDateTimeShort(drop.delivery_start)}–${new Date(drop.delivery_end).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
-            : "No fulfilment window";
-
           return `
-            ${marker}
             <div class="dropCard ${active}" data-drop-id="${drop.drop_id}">
               <div class="dropCardTop">
                 <div>
                   <h4 class="dropCardTitle">${escapeHtml(drop.drop_name || "Untitled drop")}</h4>
                   <p class="dropCardSub">${hostLine}</p>
                 </div>
-                <span class="miniChip">${escapeHtml(drop.status || "—")}</span>
+                <span class="miniChip ${escapeHtml(drop.status || "")}">${escapeHtml(drop.status || "—")}</span>
               </div>
 
-              <div class="dropCardSub">${escapeHtml(deliveryText)}</div>
+              <div class="dropCardMeta">${escapeHtml(formatDateShort(drop.delivery_start))} • ${escapeHtml(formatTimeOnly(drop.delivery_start))}–${escapeHtml(formatTimeOnly(drop.delivery_end))}</div>
 
               <div class="dropCardStats">
-                <span class="miniChip">${escapeHtml(capacityText)}</span>
+                <span class="miniChip">${Number(drop.capacity_units_used || 0)} / ${Number(drop.capacity_units_total || 0)} ${escapeHtml(drop.capacity_category || "units")}</span>
                 <span class="miniChip">${Number(drop.order_count || 0)} orders</span>
               </div>
 
               <div class="dropCardActions">
                 <button class="btnSmall js-duplicate-drop" type="button" data-drop-id="${drop.drop_id}">Duplicate</button>
-                <button class="btnGhost js-archive-drop" type="button" data-drop-id="${drop.drop_id}">Archive</button>
+                <button class="btnGhost js-archive-drop" type="button" data-drop-id="${drop.drop_id}">More</button>
               </div>
             </div>
           `;
         }).join("");
       }
 
-      function renderEditorStatus() {
-        const status = state.drop?.status || "—";
-        byId("editorStatusText").textContent = status;
-        byId("editorStatusDot").className = statusDotClass(status);
-      }
-
       function renderHostOptions() {
         const select = byId("hostSelect");
         const current = state.drop?.host_id || "";
-        const options = [
+        select.innerHTML = [
           `<option value="">No host selected</option>`,
           ...state.hosts.map((host) => `
             <option value="${host.id}" ${host.id === current ? "selected" : ""}>
               ${escapeHtml(host.name)} (${escapeHtml(host.host_type)})
             </option>
           `)
-        ];
-        select.innerHTML = options.join("");
+        ].join("");
       }
 
       function renderHostPreview() {
-        const host = getSelectedHost();
+        const host = state.hosts.find((h) => h.id === state.drop?.host_id);
         const preview = byId("hostPreview");
 
         if (!host) {
-          preview.innerHTML = `
-            <strong>No host selected</strong>
-            Add a host for community or hosted drops.
-          `;
+          preview.innerHTML = `<strong>No host selected</strong>Add a host for community or hosted drops.`;
           return;
         }
 
@@ -1819,18 +1884,14 @@
       }
 
       function renderHostHelper() {
-        const type = byId("dropType").value || state.drop?.drop_type || "neighbourhood";
+        const type = byId("dropType").value || "neighbourhood";
         const helper = byId("hostHelperText");
-        if (type === "community") {
-          helper.textContent = "Required for community drops.";
-        } else if (type === "event") {
-          helper.textContent = "Optional, but useful for hosted events.";
-        } else {
-          helper.textContent = "Optional for neighbourhood drops.";
-        }
+        if (type === "community") helper.textContent = "Required for community drops.";
+        else if (type === "event") helper.textContent = "Optional, but useful for hosted events.";
+        else helper.textContent = "Optional for neighbourhood drops.";
       }
 
-      function setFieldValuesFromDrop() {
+      function populateForm() {
         const d = state.drop;
         if (!d) return;
 
@@ -1838,24 +1899,28 @@
         byId("dropSlug").value = d.slug || "";
         byId("dropType").value = d.drop_type || "neighbourhood";
         byId("dropStatus").value = d.status || "draft";
-        byId("opensAt").value = formatDateTimeLocal(d.opens_at);
-        byId("closesAt").value = formatDateTimeLocal(d.closes_at);
-        byId("deliveryStart").value = formatDateTimeLocal(d.delivery_start);
-        byId("deliveryEnd").value = formatDateTimeLocal(d.delivery_end);
-        byId("cutoffTime").value = formatDateTimeLocal(d.cutoff_time);
+        byId("notesInternal").value = d.notes_internal || "";
+
+        byId("deliveryDate").value = formatDateInput(d.delivery_start);
+        byId("deliveryStartTime").value = formatTimeInput(d.delivery_start);
+        byId("deliveryEndTime").value = formatTimeInput(d.delivery_end);
+
+        byId("opensAtDate").value = formatDateInput(d.opens_at);
+        byId("opensAtTime").value = formatTimeInput(d.opens_at);
+        byId("closesAtDate").value = formatDateInput(d.closes_at);
+        byId("closesAtTime").value = formatTimeInput(d.closes_at);
+
         byId("capacityCategory").value = d.capacity_category || "pizza";
         byId("capacityTotal").value = Number(d.capacity_units_total || 0);
         byId("fulfilmentMode").value = d.fulfilment_mode || "";
         byId("centrePostcode").value = d.centre_postcode || "";
         byId("radiusKm").value = d.radius_km ?? "";
-        byId("notesInternal").value = d.notes_internal || "";
 
         byId("fundraisingEnabled").checked = Boolean(d.fundraising_enabled);
         byId("fundraisingModel").value = d.fundraising_model || "";
         byId("fundraisingPercentage").value = d.fundraising_percentage ?? "";
         byId("fundraisingPerOrderPence").value = d.fundraising_per_order_pence ?? "";
         byId("fundraisingDisplayText").value = d.fundraising_display_text || "";
-        byId("fundraisingNotes").value = d.fundraising_notes || "";
 
         byId("hostShareEnabled").checked = Boolean(d.host_share_enabled);
         byId("hostShareModel").value = d.host_share_model || "";
@@ -1863,81 +1928,11 @@
         byId("hostSharePerOrderPence").value = d.host_share_per_order_pence ?? "";
         byId("hostShareFixedPence").value = d.host_share_fixed_pence ?? "";
         byId("hostShareCustomerVisible").value = String(Boolean(d.host_share_customer_visible));
-        byId("hostShareNotes").value = d.host_share_notes || "";
 
         renderConditionalFields();
+        renderHostOptions();
+        renderHostPreview();
         renderHostHelper();
-      }
-
-      function readDropFromForm() {
-        const existing = state.drop || {};
-        return {
-          ...existing,
-          name: byId("dropName").value.trim(),
-          slug: slugify(byId("dropSlug").value.trim()),
-          drop_type: byId("dropType").value,
-          status: byId("dropStatus").value,
-          host_id: byId("hostSelect").value || null,
-          opens_at: parseDateTimeLocal(byId("opensAt").value),
-          closes_at: parseDateTimeLocal(byId("closesAt").value),
-          delivery_start: parseDateTimeLocal(byId("deliveryStart").value),
-          delivery_end: parseDateTimeLocal(byId("deliveryEnd").value),
-          cutoff_time: parseDateTimeLocal(byId("cutoffTime").value),
-          capacity_category: byId("capacityCategory").value,
-          capacity_units_total: Number(byId("capacityTotal").value || 0),
-          fulfilment_mode: byId("fulfilmentMode").value || null,
-          centre_postcode: byId("centrePostcode").value.trim() || null,
-          radius_km: byId("radiusKm").value === "" ? null : Number(byId("radiusKm").value),
-          notes_internal: byId("notesInternal").value.trim() || null,
-
-          fundraising_enabled: byId("fundraisingEnabled").checked,
-          fundraising_model: byId("fundraisingEnabled").checked ? (byId("fundraisingModel").value || null) : null,
-          fundraising_percentage: byId("fundraisingEnabled").checked && byId("fundraisingModel").value === "percentage"
-            ? (byId("fundraisingPercentage").value === "" ? null : Number(byId("fundraisingPercentage").value))
-            : null,
-          fundraising_per_order_pence: byId("fundraisingEnabled").checked && byId("fundraisingModel").value === "per_order"
-            ? (byId("fundraisingPerOrderPence").value === "" ? null : Number(byId("fundraisingPerOrderPence").value))
-            : null,
-          fundraising_display_text: byId("fundraisingEnabled").checked
-            ? (byId("fundraisingDisplayText").value.trim() || null)
-            : null,
-          fundraising_notes: byId("fundraisingEnabled").checked
-            ? (byId("fundraisingNotes").value.trim() || null)
-            : null,
-
-          host_share_enabled: byId("hostShareEnabled").checked,
-          host_share_model: byId("hostShareEnabled").checked ? (byId("hostShareModel").value || null) : null,
-          host_share_percentage: byId("hostShareEnabled").checked && byId("hostShareModel").value === "percentage"
-            ? (byId("hostSharePercentage").value === "" ? null : Number(byId("hostSharePercentage").value))
-            : null,
-          host_share_per_order_pence: byId("hostShareEnabled").checked && byId("hostShareModel").value === "per_order"
-            ? (byId("hostSharePerOrderPence").value === "" ? null : Number(byId("hostSharePerOrderPence").value))
-            : null,
-          host_share_fixed_pence: byId("hostShareEnabled").checked && byId("hostShareModel").value === "fixed"
-            ? (byId("hostShareFixedPence").value === "" ? null : Number(byId("hostShareFixedPence").value))
-            : null,
-          host_share_customer_visible: byId("hostShareEnabled").checked
-            ? isTruthyString(byId("hostShareCustomerVisible").value)
-            : false,
-          host_share_notes: byId("hostShareEnabled").checked
-            ? (byId("hostShareNotes").value.trim() || null)
-            : null
-        };
-      }
-
-      function renderConditionalFields() {
-        const fundraisingEnabled = byId("fundraisingEnabled").checked;
-        const fundraisingModel = byId("fundraisingModel").value;
-        byId("fundraisingFields").classList.toggle("hidden", !fundraisingEnabled);
-        byId("fundraisingPercentageField").classList.toggle("hidden", fundraisingModel !== "percentage");
-        byId("fundraisingPerOrderField").classList.toggle("hidden", fundraisingModel !== "per_order");
-
-        const hostShareEnabled = byId("hostShareEnabled").checked;
-        const hostShareModel = byId("hostShareModel").value;
-        byId("hostShareFields").classList.toggle("hidden", !hostShareEnabled);
-        byId("hostSharePercentageField").classList.toggle("hidden", hostShareModel !== "percentage");
-        byId("hostSharePerOrderField").classList.toggle("hidden", hostShareModel !== "per_order");
-        byId("hostShareFixedField").classList.toggle("hidden", hostShareModel !== "fixed");
       }
 
       function renderAssignments() {
@@ -1950,37 +1945,24 @@
         const groups = groupByCategory(state.productAssignments);
         const categoryOrder = ["pizza", "side", "drink", "sauce", "other"];
 
-        const sections = categoryOrder
+        container.innerHTML = categoryOrder
           .filter((cat) => groups.has(cat))
           .map((category) => {
             const items = groups.get(category);
             const rows = items.map((row) => {
               const countsTowardCapacity = row.category === (state.drop?.capacity_category || "pizza");
-
               return `
                 <tr data-product-id="${row.product_id}">
-                  <td style="width:72px;">
-                    <input class="js-assign-enabled" type="checkbox" ${row.enabled ? "checked" : ""} />
-                  </td>
+                  <td style="width:72px;"><input class="js-assign-enabled" type="checkbox" ${row.enabled ? "checked" : ""} /></td>
                   <td>
                     <span class="productName">${escapeHtml(row.name)}</span>
                     <span class="subMeta">${escapeHtml(row.category)}</span>
                   </td>
                   <td style="width:110px;">${formatMoneyPence(row.base_price_pence)}</td>
-                  <td style="width:130px;">
-                    <input class="js-assign-override" type="number" min="0" step="1" value="${row.price_override_pence ?? ""}" placeholder="—" />
-                  </td>
-                  <td style="width:120px;">
-                    <input class="js-assign-stock-limit" type="number" min="0" step="1" value="${row.stock_limit ?? ""}" placeholder="∞" />
-                  </td>
-                  <td style="width:100px;">
-                    ${row.stock_remaining == null ? "—" : Number(row.stock_remaining)}
-                  </td>
-                  <td style="width:170px;">
-                    <span class="capacityTag ${countsTowardCapacity ? "yes" : "no"}">
-                      ${countsTowardCapacity ? "Counts toward capacity" : "Does not count"}
-                    </span>
-                  </td>
+                  <td style="width:130px;"><input class="js-assign-override" type="number" min="0" step="1" value="${row.price_override_pence ?? ""}" placeholder="—" /></td>
+                  <td style="width:120px;"><input class="js-assign-stock-limit" type="number" min="0" step="1" value="${row.stock_limit ?? ""}" placeholder="∞" /></td>
+                  <td style="width:100px;">${row.stock_remaining == null ? "—" : row.stock_remaining}</td>
+                  <td style="width:170px;"><span class="capacityTag ${countsTowardCapacity ? "yes" : "no"}">${countsTowardCapacity ? "Counts toward capacity" : "Does not count"}</span></td>
                 </tr>
               `;
             }).join("");
@@ -2004,170 +1986,210 @@
                 </table>
               </div>
             `;
-          });
-
-        container.innerHTML = sections.join("");
+          }).join("");
       }
 
-      function buildReadinessChecks(dropData = state.drop) {
-        const productCount = state.productAssignments.filter((p) => p.enabled).length;
-        const checks = [
-          { label: "Drop name defined", ok: Boolean(dropData?.name?.trim()) },
-          { label: "Drop link name defined", ok: Boolean(dropData?.slug?.trim()) },
-          { label: "Drop type set", ok: Boolean(dropData?.drop_type) },
-          { label: "Ordering window set", ok: Boolean(dropData?.opens_at && dropData?.closes_at) },
-          { label: "Fulfilment window set", ok: Boolean(dropData?.delivery_start && dropData?.delivery_end && dropData?.cutoff_time) },
-          { label: "Capacity configured", ok: Boolean(dropData?.capacity_category && Number(dropData?.capacity_units_total || 0) > 0) },
-          { label: "At least one product assigned", ok: productCount > 0 }
-        ];
+      function renderConditionalFields() {
+        const fundraisingEnabled = byId("fundraisingEnabled").checked;
+        const fundraisingModel = byId("fundraisingModel").value;
+        byId("fundraisingFields").classList.toggle("hidden", !fundraisingEnabled);
+        byId("fundraisingPercentageField").classList.toggle("hidden", fundraisingModel !== "percentage");
+        byId("fundraisingPerOrderField").classList.toggle("hidden", fundraisingModel !== "per_order");
 
-        if (dropData?.drop_type === "community") {
-          checks.push({ label: "Host selected for community drop", ok: Boolean(dropData?.host_id) });
-        }
+        const hostShareEnabled = byId("hostShareEnabled").checked;
+        const hostShareModel = byId("hostShareModel").value;
+        byId("hostShareFields").classList.toggle("hidden", !hostShareEnabled);
+        byId("hostSharePercentageField").classList.toggle("hidden", hostShareModel !== "percentage");
+        byId("hostSharePerOrderField").classList.toggle("hidden", hostShareModel !== "per_order");
+        byId("hostShareFixedField").classList.toggle("hidden", hostShareModel !== "fixed");
 
-        if (dropData?.fundraising_enabled) {
-          const valid = Boolean(
-            dropData?.fundraising_model &&
-            (
-              (dropData.fundraising_model === "percentage" && Number(dropData.fundraising_percentage || 0) > 0) ||
-              (dropData.fundraising_model === "per_order" && Number(dropData.fundraising_per_order_pence || 0) > 0)
-            )
-          );
-          checks.push({ label: "Community contribution configured", ok: valid });
-        }
+        const recurring = getRepeatPattern() === "recurring";
+        byId("recurringBlock").classList.toggle("hidden", !recurring);
 
-        if (dropData?.host_share_enabled) {
-          const valid = Boolean(
-            dropData?.host_share_model &&
-            (
-              (dropData.host_share_model === "percentage" && Number(dropData.host_share_percentage || 0) > 0) ||
-              (dropData.host_share_model === "per_order" && Number(dropData.host_share_per_order_pence || 0) > 0) ||
-              (dropData.host_share_model === "fixed" && Number(dropData.host_share_fixed_pence || 0) > 0)
-            )
-          );
-          checks.push({ label: "Commercial host share configured", ok: valid });
-        }
+        const openRule = byId("ordersOpenRule").value;
+        byId("ordersOpenDaysBeforeField").classList.toggle("hidden", openRule !== "days_before");
+        byId("seriesFixedOpenDateField").classList.toggle("hidden", openRule !== "fixed_start");
+        byId("seriesFixedOpenTimeField").classList.toggle("hidden", openRule !== "fixed_start");
 
-        return {
-          checks,
-          isReady: checks.every((c) => c.ok)
-        };
+        const endMode = byId("seriesEndMode").value;
+        byId("seriesEndDateField").classList.toggle("hidden", endMode !== "end_date");
+        byId("seriesDropCountField").classList.toggle("hidden", endMode !== "drop_count");
       }
 
-      function renderReadiness() {
-        const container = byId("readinessList");
-        if (!state.drop) {
-          container.innerHTML = `<div class="emptyState">No drop selected.</div>`;
+      function getRepeatPattern() {
+        const checked = document.querySelector('input[name="repeatPattern"]:checked');
+        return checked ? checked.value : "one_off";
+      }
+
+      function ensureScheduleRows() {
+        if (!state.seriesRows.length) {
+          state.seriesRows = [
+            { id: uidSuffix(), day_of_week: "4", fulfilment_start: "19:00", fulfilment_end: "20:00", order_close_time: "18:00" }
+          ];
+        }
+      }
+
+      function renderScheduleRows() {
+        ensureScheduleRows();
+        const body = byId("scheduleRowsBody");
+        body.innerHTML = state.seriesRows.map((row) => `
+          <tr data-row-id="${row.id}">
+            <td>
+              <select class="js-schedule-day">
+                <option value="0" ${row.day_of_week === "0" ? "selected" : ""}>Sunday</option>
+                <option value="1" ${row.day_of_week === "1" ? "selected" : ""}>Monday</option>
+                <option value="2" ${row.day_of_week === "2" ? "selected" : ""}>Tuesday</option>
+                <option value="3" ${row.day_of_week === "3" ? "selected" : ""}>Wednesday</option>
+                <option value="4" ${row.day_of_week === "4" ? "selected" : ""}>Thursday</option>
+                <option value="5" ${row.day_of_week === "5" ? "selected" : ""}>Friday</option>
+                <option value="6" ${row.day_of_week === "6" ? "selected" : ""}>Saturday</option>
+              </select>
+            </td>
+            <td><input class="js-schedule-start" type="time" value="${row.fulfilment_start || ""}" /></td>
+            <td><input class="js-schedule-end" type="time" value="${row.fulfilment_end || ""}" /></td>
+            <td><input class="js-schedule-close" type="time" value="${row.order_close_time || ""}" /></td>
+            <td><button class="btnGhost js-remove-schedule-row" type="button">Remove</button></td>
+          </tr>
+        `).join("");
+      }
+
+      function renderSeriesPreview() {
+        const list = byId("seriesPreviewList");
+        const summary = byId("seriesSummaryText");
+        if (getRepeatPattern() !== "recurring") {
+          list.innerHTML = "";
+          summary.textContent = "One-off drop.";
           return;
         }
 
-        const readiness = buildReadinessChecks();
-        container.innerHTML = readiness.checks.map((check) => `
-          <div class="checkRow ${check.ok ? "pass" : "fail"}">
-            <span class="mark">${check.ok ? "✓" : "!"}</span>
-            <span>${escapeHtml(check.label)}</span>
+        const startDate = byId("seriesStartDate").value;
+        if (!startDate) {
+          list.innerHTML = "";
+          summary.textContent = "Add a start date and schedule to preview generated drops.";
+          return;
+        }
+
+        const rows = state.seriesRows.filter((r) => r.day_of_week !== "" && r.fulfilment_start && r.fulfilment_end);
+        if (!rows.length) {
+          list.innerHTML = "";
+          summary.textContent = "Add at least one weekly schedule line.";
+          return;
+        }
+
+        const previews = [];
+        const start = new Date(`${startDate}T12:00:00`);
+        const endMode = byId("seriesEndMode").value;
+        const endDateVal = byId("seriesEndDate").value;
+        const dropCountVal = Number(byId("seriesDropCount").value || 0);
+
+        let cursor = new Date(start);
+        let safety = 0;
+
+        while (previews.length < 8 && safety < 365) {
+          rows.forEach((row) => {
+            const targetDow = Number(row.day_of_week);
+            const d = new Date(cursor);
+            d.setDate(d.getDate() + ((targetDow - d.getDay() + 7) % 7));
+            if (d < start) return;
+
+            if (endMode === "end_date" && endDateVal) {
+              const endDate = new Date(`${endDateVal}T23:59:59`);
+              if (d > endDate) return;
+            }
+
+            previews.push({
+              date: new Date(d),
+              start: row.fulfilment_start,
+              end: row.fulfilment_end
+            });
+          });
+
+          cursor.setDate(cursor.getDate() + 7);
+          safety += 7;
+          if (endMode === "drop_count" && dropCountVal && previews.length >= dropCountVal) break;
+        }
+
+        previews.sort((a, b) => a.date - b.date);
+        const finalPreviews = endMode === "drop_count" && dropCountVal ? previews.slice(0, dropCountVal) : previews.slice(0, 8);
+
+        summary.textContent = `Previewing ${finalPreviews.length} upcoming generated drop${finalPreviews.length === 1 ? "" : "s"}.`;
+
+        list.innerHTML = finalPreviews.map((item) => `
+          <div class="previewLine">
+            <span>${escapeHtml(item.date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }))}</span>
+            <span>${escapeHtml(item.start)}–${escapeHtml(item.end)}</span>
           </div>
         `).join("");
       }
 
-      function getContributionSummary(dropData) {
-        if (!dropData?.fundraising_enabled) return "None";
-        if (dropData.fundraising_model === "percentage" && dropData.fundraising_percentage != null) {
-          return `${dropData.fundraising_percentage}% of sales`;
-        }
-        if (dropData.fundraising_model === "per_order" && dropData.fundraising_per_order_pence != null) {
-          return `${formatMoneyPence(dropData.fundraising_per_order_pence)} per order`;
-        }
-        return "Configured";
-      }
+      function renderReview() {
+        const summary = byId("reviewSummary");
+        const readiness = byId("reviewReadiness");
+        const share = byId("shareLinkPreview");
+        const publishHelp = byId("publishHelpText");
+        const publishBtn = byId("publishBtn");
 
-      function getHostShareSummary(dropData) {
-        if (!dropData?.host_share_enabled) return "None";
-        if (dropData.host_share_model === "percentage" && dropData.host_share_percentage != null) {
-          return `${dropData.host_share_percentage}% of sales`;
-        }
-        if (dropData.host_share_model === "per_order" && dropData.host_share_per_order_pence != null) {
-          return `${formatMoneyPence(dropData.host_share_per_order_pence)} per order`;
-        }
-        if (dropData.host_share_model === "fixed" && dropData.host_share_fixed_pence != null) {
-          return `${formatMoneyPence(dropData.host_share_fixed_pence)} fixed`;
-        }
-        return "Configured";
-      }
-
-      function renderDropSummary() {
-        const el = byId("dropSummary");
-        if (!state.drop) {
-          el.innerHTML = `<div class="emptyState">No drop selected.</div>`;
+        if (!state.drop || !state.readiness) {
+          summary.innerHTML = `<div class="emptyState">No drop selected.</div>`;
+          readiness.innerHTML = `<div class="emptyState">No drop selected.</div>`;
+          share.textContent = "No drop link yet.";
           return;
         }
 
-        const host = getSelectedHost();
-        const productCount = state.productAssignments.filter((p) => p.enabled).length;
+        const host = state.hosts.find((h) => h.id === state.drop.host_id);
+        const enabledProducts = state.productAssignments.filter((p) => p.enabled).length;
 
-        const items = [
+        summary.innerHTML = [
           ["Drop", state.drop.name || "—"],
-          ["Host", host ? host.name : "No host"],
           ["Type", state.drop.drop_type || "—"],
-          ["Ordering", state.drop.opens_at && state.drop.closes_at ? `${formatDateTimeShort(state.drop.opens_at)} → ${formatDateTimeShort(state.drop.closes_at)}` : "Not set"],
-          ["Fulfilment", state.drop.delivery_start && state.drop.delivery_end ? `${formatDateTimeShort(state.drop.delivery_start)} → ${formatDateTimeShort(state.drop.delivery_end)}` : "Not set"],
-          ["Mode", state.drop.fulfilment_mode || "Not set"],
-          ["Geography", [state.drop.centre_postcode, state.drop.radius_km ? `${state.drop.radius_km}km` : ""].filter(Boolean).join(" • ") || "Not set"],
+          ["Host", host ? host.name : "No host"],
+          ["Status", state.drop.status || "draft"],
+          ["Order Window", state.drop.opens_at && state.drop.closes_at ? `${formatDateShort(state.drop.opens_at)} ${formatTimeOnly(state.drop.opens_at)} → ${formatDateShort(state.drop.closes_at)} ${formatTimeOnly(state.drop.closes_at)}` : "Not set"],
+          ["Fulfilment", state.drop.delivery_start && state.drop.delivery_end ? `${formatDateShort(state.drop.delivery_start)} ${formatTimeOnly(state.drop.delivery_start)}–${formatTimeOnly(state.drop.delivery_end)}` : "Not set"],
           ["Capacity", `${Number(state.drop.capacity_units_total || 0)} ${state.drop.capacity_category || "units"}`],
-          ["Products", `${productCount} enabled`],
-          ["Community", getContributionSummary(state.drop)],
-          ["Host Share", getHostShareSummary(state.drop)],
-          ["Link", getSharePath() || "No link yet"]
-        ];
-
-        el.innerHTML = items.map(([label, value]) => `
+          ["Products", `${enabledProducts} enabled`]
+        ].map(([label, value]) => `
           <div class="summaryItem">
             <span class="label">${escapeHtml(label)}</span>
             <span class="value">${escapeHtml(value)}</span>
           </div>
         `).join("");
-      }
 
-      function renderMetrics() {
-        const el = byId("metricsGrid");
-        const summary = state.selectedDropSummary;
-        if (!summary) {
-          el.innerHTML = `<div class="emptyState" style="grid-column:1 / -1;">No metrics yet.</div>`;
-          return;
-        }
-
-        const tiles = [
-          ["Orders", Number(summary.order_count || 0)],
-          ["Capacity used", Number(summary.capacity_units_used || 0)],
-          ["Remaining", Number(summary.capacity_units_remaining || 0)],
-          ["GMV", formatMoneyPence(summary.drop_gmv_pence || 0)],
-          ["Community", formatMoneyPence(summary.fundraising_total_pence || 0)],
-          ["Host share", formatMoneyPence(summary.host_share_total_pence || 0)]
+        const items = [
+          { ok: state.readiness.basics_complete, label: "Basics complete" },
+          { ok: state.readiness.timing_complete, label: "Timing & operations complete" },
+          { ok: state.readiness.menu_complete, label: "At least one product enabled" },
+          { ok: state.readiness.capacity_product_present, label: "Capacity-driving product present" },
+          { ok: state.readiness.commercials_valid, label: "Commercials configured correctly" }
         ];
 
-        el.innerHTML = tiles.map(([label, value]) => `
-          <div class="metricTile">
-            <span class="label">${escapeHtml(label)}</span>
-            <span class="value">${escapeHtml(String(value))}</span>
+        readiness.innerHTML = items.map((item) => `
+          <div class="readinessItem ${item.ok ? "pass" : "fail"}">
+            <span class="readinessMark">${item.ok ? "✓" : "!"}</span>
+            <span>${escapeHtml(item.label)}</span>
           </div>
         `).join("");
-      }
 
-      function renderShareBox() {
-        const shareUrl = getShareUrl();
-        byId("shareLinkPreview").textContent = shareUrl || "No drop link yet — save a drop link name to generate the link.";
-        renderQrCode(shareUrl);
+        share.textContent = getShareUrl() || "No drop link yet.";
+        renderQrCode(getShareUrl());
+
+        if (state.readiness.ready_to_publish) {
+          publishHelp.textContent = "This drop is ready to publish.";
+          publishBtn.disabled = false;
+        } else {
+          publishHelp.textContent = "Resolve the highlighted issues before publishing.";
+          publishBtn.disabled = true;
+        }
+
+        publishBtn.textContent = state.drop.status === "scheduled" ? "Keep Scheduled" : "Publish Drop";
       }
 
       function renderQrCode(text) {
         const wrap = byId("qrWrap");
-        if (!wrap) return;
-
         if (!text) {
-          wrap.innerHTML = `<div class="helperText">QR preview unavailable until a drop link is set.</div>`;
+          wrap.innerHTML = `<div class="helperText">QR preview unavailable until a drop link name is set.</div>`;
           return;
         }
-
         if (!window.QRCode || typeof window.QRCode.toCanvas !== "function") {
           wrap.innerHTML = `<div class="helperText">QR preview unavailable.</div>`;
           return;
@@ -2175,11 +2197,7 @@
 
         wrap.innerHTML = `<canvas id="qrCanvas"></canvas>`;
         const canvas = byId("qrCanvas");
-
-        window.QRCode.toCanvas(canvas, text, {
-          width: 128,
-          margin: 1
-        }, function (error) {
+        window.QRCode.toCanvas(canvas, text, { width: 128, margin: 1 }, function (error) {
           if (error) {
             console.error(error);
             wrap.innerHTML = `<div class="helperText">QR preview unavailable.</div>`;
@@ -2187,24 +2205,51 @@
         });
       }
 
-      function renderEverything() {
-        renderDropBand();
-        renderEditorStatus();
-        renderHostOptions();
-        renderHostPreview();
-        setFieldValuesFromDrop();
-        renderAssignments();
-        renderReadiness();
-        renderDropSummary();
-        renderMetrics();
-        renderShareBox();
-      }
+      function readDropFromForm() {
+        const existing = state.drop || {};
+        return {
+          ...existing,
+          name: byId("dropName").value.trim(),
+          slug: slugify(byId("dropSlug").value.trim()),
+          drop_type: byId("dropType").value,
+          status: byId("dropStatus").value,
+          host_id: byId("hostSelect").value || null,
+          notes_internal: byId("notesInternal").value.trim() || null,
 
-      async function refreshAll() {
-        showError("");
-        await Promise.all([loadHosts(), loadProducts(), loadDrops()]);
-        await loadSelectedDrop();
-        renderEverything();
+          delivery_start: combineDateTime(byId("deliveryDate").value, byId("deliveryStartTime").value),
+          delivery_end: combineDateTime(byId("deliveryDate").value, byId("deliveryEndTime").value),
+          opens_at: combineDateTime(byId("opensAtDate").value, byId("opensAtTime").value),
+          closes_at: combineDateTime(byId("closesAtDate").value, byId("closesAtTime").value),
+
+          capacity_category: byId("capacityCategory").value,
+          capacity_units_total: Number(byId("capacityTotal").value || 0),
+          fulfilment_mode: byId("fulfilmentMode").value || null,
+          centre_postcode: byId("centrePostcode").value.trim() || null,
+          radius_km: byId("radiusKm").value === "" ? null : Number(byId("radiusKm").value),
+
+          fundraising_enabled: byId("fundraisingEnabled").checked,
+          fundraising_model: byId("fundraisingEnabled").checked ? (byId("fundraisingModel").value || null) : null,
+          fundraising_percentage: byId("fundraisingEnabled").checked && byId("fundraisingModel").value === "percentage"
+            ? (byId("fundraisingPercentage").value === "" ? null : Number(byId("fundraisingPercentage").value))
+            : null,
+          fundraising_per_order_pence: byId("fundraisingEnabled").checked && byId("fundraisingModel").value === "per_order"
+            ? (byId("fundraisingPerOrderPence").value === "" ? null : Number(byId("fundraisingPerOrderPence").value))
+            : null,
+          fundraising_display_text: byId("fundraisingEnabled").checked ? (byId("fundraisingDisplayText").value.trim() || null) : null,
+
+          host_share_enabled: byId("hostShareEnabled").checked,
+          host_share_model: byId("hostShareEnabled").checked ? (byId("hostShareModel").value || null) : null,
+          host_share_percentage: byId("hostShareEnabled").checked && byId("hostShareModel").value === "percentage"
+            ? (byId("hostSharePercentage").value === "" ? null : Number(byId("hostSharePercentage").value))
+            : null,
+          host_share_per_order_pence: byId("hostShareEnabled").checked && byId("hostShareModel").value === "per_order"
+            ? (byId("hostSharePerOrderPence").value === "" ? null : Number(byId("hostSharePerOrderPence").value))
+            : null,
+          host_share_fixed_pence: byId("hostShareEnabled").checked && byId("hostShareModel").value === "fixed"
+            ? (byId("hostShareFixedPence").value === "" ? null : Number(byId("hostShareFixedPence").value))
+            : null,
+          host_share_customer_visible: byId("hostShareEnabled").checked ? (byId("hostShareCustomerVisible").value === "true") : false
+        };
       }
 
       function getDropPayload(dropData) {
@@ -2219,7 +2264,6 @@
           closes_at: dropData.closes_at,
           delivery_start: dropData.delivery_start,
           delivery_end: dropData.delivery_end,
-          cutoff_time: dropData.cutoff_time,
           capacity_units_total: dropData.capacity_units_total,
           capacity_category: dropData.capacity_category,
           fulfilment_mode: dropData.fulfilment_mode,
@@ -2232,15 +2276,13 @@
           fundraising_percentage: dropData.fundraising_percentage,
           fundraising_per_order_pence: dropData.fundraising_per_order_pence,
           fundraising_display_text: dropData.fundraising_display_text,
-          fundraising_notes: dropData.fundraising_notes,
 
           host_share_enabled: dropData.host_share_enabled,
           host_share_model: dropData.host_share_model,
           host_share_percentage: dropData.host_share_percentage,
           host_share_per_order_pence: dropData.host_share_per_order_pence,
           host_share_fixed_pence: dropData.host_share_fixed_pence,
-          host_share_customer_visible: dropData.host_share_customer_visible,
-          host_share_notes: dropData.host_share_notes
+          host_share_customer_visible: dropData.host_share_customer_visible
         };
       }
 
@@ -2263,10 +2305,7 @@
         if (deleteError) throw deleteError;
 
         if (enabledAssignments.length) {
-          const { error: insertError } = await supabase
-            .from("drop_products")
-            .insert(enabledAssignments);
-
+          const { error: insertError } = await supabase.from("drop_products").insert(enabledAssignments);
           if (insertError) throw insertError;
         }
       }
@@ -2302,15 +2341,26 @@
 
       async function createNewDrop() {
         const now = new Date();
+        const deliveryStart = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        deliveryStart.setHours(19, 0, 0, 0);
+        const deliveryEnd = new Date(deliveryStart);
+        deliveryEnd.setHours(20, 0, 0, 0);
+        const opensAt = new Date(deliveryStart);
+        opensAt.setDate(opensAt.getDate() - 2);
+        opensAt.setHours(12, 0, 0, 0);
+        const closesAt = new Date(deliveryStart);
+        closesAt.setHours(18, 0, 0, 0);
+
         const payload = {
           vendor_id: state.vendorId,
           name: "New Drop",
           slug: `new-drop-${uidSuffix()}`,
           drop_type: "neighbourhood",
           status: "draft",
-          delivery_start: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          delivery_end: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString(),
-          cutoff_time: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000 - 60 * 60 * 1000).toISOString(),
+          opens_at: opensAt.toISOString(),
+          closes_at: closesAt.toISOString(),
+          delivery_start: deliveryStart.toISOString(),
+          delivery_end: deliveryEnd.toISOString(),
           capacity_units_total: 40,
           capacity_category: "pizza",
           fundraising_enabled: false,
@@ -2326,6 +2376,7 @@
         if (error) throw error;
 
         state.selectedDropId = data.id;
+        state.currentStage = "basics";
         await refreshAll();
         showInlineSuccess("New draft drop created");
       }
@@ -2354,9 +2405,8 @@
           slug: `${slugify(sourceDrop.slug || sourceDrop.name || "drop")}-${uidSuffix()}`,
           name: `${sourceDrop.name} Copy`,
           status: "draft",
-          published_at: null,
-          closed_at: null,
-          archived_at: null
+          series_id: null,
+          series_position: null
         };
 
         const { data: insertedDrop, error: insertDropError } = await supabase
@@ -2376,29 +2426,22 @@
             stock_limit: row.stock_limit
           }));
 
-          const { error: insertAssignmentsError } = await supabase
-            .from("drop_products")
-            .insert(rows);
-
+          const { error: insertAssignmentsError } = await supabase.from("drop_products").insert(rows);
           if (insertAssignmentsError) throw insertAssignmentsError;
         }
 
         state.selectedDropId = insertedDrop.id;
+        state.currentStage = "basics";
         await refreshAll();
         showInlineSuccess("Drop duplicated");
       }
 
       async function updateDropStatus(status) {
-        if (!state.selectedDropId || !state.drop) return;
-
-        const payload = { status };
-        if (status === "live") payload.published_at = new Date().toISOString();
-        if (status === "closed") payload.closed_at = new Date().toISOString();
-        if (status === "archived") payload.archived_at = new Date().toISOString();
+        if (!state.selectedDropId) return;
 
         const { error } = await supabase
           .from("drops")
-          .update(payload)
+          .update({ status })
           .eq("id", state.selectedDropId);
 
         if (error) throw error;
@@ -2406,149 +2449,49 @@
         await refreshAll();
       }
 
-      async function archiveFromRow(dropId) {
-        const { error } = await supabase
-          .from("drops")
-          .update({ status: "archived", archived_at: new Date().toISOString() })
-          .eq("id", dropId);
-
-        if (error) throw error;
-
-        if (dropId === state.selectedDropId) {
-          state.selectedDropId = null;
-        }
-        await refreshAll();
+      function renderEverything() {
+        renderDropBand();
+        populateForm();
+        renderAssignments();
+        renderConditionalFields();
+        renderScheduleRows();
+        renderSeriesPreview();
+        renderStageBar();
+        updateWorkspaceHeader();
+        renderReview();
       }
 
-      async function createHost() {
-        const name = byId("newHostName").value.trim();
-        if (!name) throw new Error("Host Name is required.");
+      async function refreshAll() {
+        showError("");
+        await Promise.all([loadHosts(), loadProducts(), loadDrops()]);
+        await loadSelectedDrop();
+        renderEverything();
+      }
 
-        showModalMessage("hostModalMessage", "");
-        const btn = byId("saveHostBtn");
-        const originalText = btn.textContent;
-        btn.textContent = "Creating…";
-        btn.disabled = true;
+      function markDirty() {
+        setSaveState("default", "Unsaved changes");
+        state.drop = { ...state.drop, ...readDropFromForm() };
+        renderHostPreview();
+        renderHostHelper();
+        renderReview();
+      }
 
-        try {
-          const payload = {
-            name,
-            slug: slugify(name),
-            host_type: byId("newHostType").value,
-            postcode: byId("newHostPostcode").value.trim() || null,
-            address_summary: byId("newHostAddress").value.trim() || null,
-            notes_internal: byId("newHostNotes").value.trim() || null
-          };
+      function openStage(stage) {
+        state.currentStage = stage;
+        renderStageBar();
+        updateWorkspaceHeader();
+      }
 
-          const { data, error } = await supabase
-            .from("hosts")
-            .insert(payload)
-            .select("*")
-            .single();
-
-          if (error) throw error;
-
-          await loadHosts();
-          renderHostOptions();
-          byId("hostSelect").value = data.id;
-          state.drop.host_id = data.id;
-          renderHostPreview();
-          renderHostHelper();
-          markDirty(true);
-          clearHostModal();
-          closeModal("hostModal");
-          showInlineSuccess("Host created and selected");
-        } catch (err) {
-          showModalMessage("hostModalMessage", err.message || "Unable to create host.", true);
-          throw err;
-        } finally {
-          btn.textContent = originalText;
-          btn.disabled = false;
+      function goNextStage() {
+        const idx = STAGES.indexOf(state.currentStage);
+        if (idx >= 0 && idx < STAGES.length - 1) {
+          openStage(STAGES[idx + 1]);
         }
       }
 
-      async function createProduct() {
-        const name = byId("newProductName").value.trim();
-        if (!name) throw new Error("Product Name is required.");
-        if (!state.selectedDropId) throw new Error("Select a drop before adding a product.");
-
-        showModalMessage("productModalMessage", "");
-        const btn = byId("saveProductBtn");
-        const originalText = btn.textContent;
-        btn.textContent = "Creating…";
-        btn.disabled = true;
-
-        try {
-          const payload = {
-            vendor_id: state.vendorId,
-            name,
-            category: byId("newProductCategory").value,
-            price_pence: Number(byId("newProductPricePence").value || 0),
-            capacity_units: Number(byId("newProductCapacityUnits").value || 1),
-            sort_order: Number(byId("newProductSortOrder").value || 100),
-            is_active: isTruthyString(byId("newProductActive").value)
-          };
-
-          const { data: product, error: productError } = await supabase
-            .from("products")
-            .insert(payload)
-            .select("*")
-            .single();
-
-          if (productError) throw productError;
-
-          const assignmentPayload = {
-            drop_id: state.selectedDropId,
-            product_id: product.id,
-            is_available: true
-          };
-
-          const { error: assignmentError } = await supabase
-            .from("drop_products")
-            .insert(assignmentPayload);
-
-          if (assignmentError) throw assignmentError;
-
-          await loadProducts();
-          await loadSelectedDrop();
-          renderEverything();
-          clearProductModal();
-          closeModal("productModal");
-          showInlineSuccess("Product created and assigned to this drop");
-        } catch (err) {
-          showModalMessage("productModalMessage", err.message || "Unable to create product.", true);
-          throw err;
-        } finally {
-          btn.textContent = originalText;
-          btn.disabled = false;
-        }
-      }
-
-      function openModal(id) {
-        byId(id).classList.add("open");
-      }
-
-      function closeModal(id) {
-        byId(id).classList.remove("open");
-      }
-
-      function clearHostModal() {
-        byId("newHostName").value = "";
-        byId("newHostType").value = "club";
-        byId("newHostPostcode").value = "";
-        byId("newHostAddress").value = "";
-        byId("newHostNotes").value = "";
-        showModalMessage("hostModalMessage", "");
-      }
-
-      function clearProductModal() {
-        byId("newProductName").value = "";
-        byId("newProductCategory").value = "pizza";
-        byId("newProductPricePence").value = "";
-        byId("newProductCapacityUnits").value = "1";
-        byId("newProductSortOrder").value = "100";
-        byId("newProductActive").value = "true";
-        showModalMessage("productModalMessage", "");
+      function goPrevStage() {
+        const idx = STAGES.indexOf(state.currentStage);
+        if (idx > 0) openStage(STAGES[idx - 1]);
       }
 
       function syncAssignmentRow(tr) {
@@ -2563,77 +2506,27 @@
         assignment.price_override_pence = overrideValue === "" ? null : Number(overrideValue);
         assignment.stock_limit = stockLimitValue === "" ? null : Number(stockLimitValue);
 
-        markDirty(true);
+        markDirty();
         renderAssignments();
-        renderReadiness();
-        renderDropSummary();
+        renderReview();
       }
 
-      function applyTimingDefaults() {
-        const closesEl = byId("closesAt");
-        const deliveryStartEl = byId("deliveryStart");
-        const deliveryEndEl = byId("deliveryEnd");
-        const cutoffEl = byId("cutoffTime");
+      function syncScheduleRow(tr) {
+        const id = tr.dataset.rowId;
+        const row = state.seriesRows.find((r) => r.id === id);
+        if (!row) return;
 
-        const closesAt = closesEl.value;
-        if (!closesAt) return;
-
-        if (!cutoffEl.value) cutoffEl.value = closesAt;
-        if (!deliveryStartEl.value) deliveryStartEl.value = addHoursToLocalInput(closesAt, 1);
-        if (!deliveryEndEl.value && deliveryStartEl.value) {
-          deliveryEndEl.value = addHoursToLocalInput(deliveryStartEl.value, 1);
-        }
-      }
-
-      function attachFieldDirtyTracking() {
-        [
-          "dropName", "dropSlug", "dropType", "dropStatus", "hostSelect", "opensAt", "closesAt",
-          "deliveryStart", "deliveryEnd", "cutoffTime", "capacityCategory", "capacityTotal",
-          "fulfilmentMode", "centrePostcode", "radiusKm", "notesInternal", "fundraisingEnabled",
-          "fundraisingModel", "fundraisingPercentage", "fundraisingPerOrderPence",
-          "fundraisingDisplayText", "fundraisingNotes", "hostShareEnabled", "hostShareModel",
-          "hostSharePercentage", "hostSharePerOrderPence", "hostShareFixedPence",
-          "hostShareCustomerVisible", "hostShareNotes"
-        ].forEach((id) => {
-          const el = byId(id);
-          if (!el) return;
-
-          el.addEventListener("input", function () {
-            if (id === "dropName" && !byId("dropSlug").value.trim()) {
-              byId("dropSlug").value = slugify(byId("dropName").value);
-            }
-            if (id === "closesAt") applyTimingDefaults();
-            renderConditionalFields();
-            state.drop = readDropFromForm();
-            renderEditorStatus();
-            renderHostPreview();
-            renderHostHelper();
-            renderReadiness();
-            renderDropSummary();
-            renderShareBox();
-            markDirty(true);
-          });
-
-          el.addEventListener("change", function () {
-            if (id === "closesAt") applyTimingDefaults();
-            renderConditionalFields();
-            state.drop = readDropFromForm();
-            renderEditorStatus();
-            renderHostPreview();
-            renderHostHelper();
-            renderReadiness();
-            renderDropSummary();
-            renderShareBox();
-            markDirty(true);
-          });
-        });
+        row.day_of_week = tr.querySelector(".js-schedule-day").value;
+        row.fulfilment_start = tr.querySelector(".js-schedule-start").value;
+        row.fulfilment_end = tr.querySelector(".js-schedule-end").value;
+        row.order_close_time = tr.querySelector(".js-schedule-close").value;
+        renderSeriesPreview();
+        markDirty();
       }
 
       function downloadQr() {
         const canvas = byId("qrCanvas");
-        if (!canvas || typeof canvas.toDataURL !== "function") {
-          throw new Error("QR preview unavailable.");
-        }
+        if (!canvas || typeof canvas.toDataURL !== "function") throw new Error("QR preview unavailable.");
         const link = document.createElement("a");
         link.href = canvas.toDataURL("image/png");
         link.download = `${(state.drop?.slug || "drop")}-qr.png`;
@@ -2647,7 +2540,7 @@
         showInlineSuccess("Drop link copied");
       }
 
-      function openOrderPage() {
+      function previewOrderPage() {
         const url = getShareUrl();
         if (!url) throw new Error("No drop link available yet.");
         window.open(url, "_blank");
@@ -2659,63 +2552,114 @@
         window.location.href = "index.html";
       }
 
-      function bindAccordionEvents() {
-        document.querySelectorAll(".editorSectionHead").forEach((head) => {
-          head.addEventListener("click", function () {
-            head.parentElement.classList.toggle("open");
+      function showModalMessage(id, message, isError = false) {
+        const el = byId(id);
+        if (!message) {
+          el.style.display = "none";
+          el.textContent = "";
+          return;
+        }
+        el.style.display = "block";
+        el.textContent = message;
+        el.style.color = isError ? "#991b1b" : "var(--h-good)";
+      }
+
+      function openModal(id) {
+        byId(id).classList.add("open");
+      }
+
+      function closeModal(id) {
+        byId(id).classList.remove("open");
+      }
+
+      async function createHost() {
+        const name = byId("newHostName").value.trim();
+        if (!name) throw new Error("Host Name is required.");
+
+        const payload = {
+          name,
+          slug: slugify(name),
+          host_type: byId("newHostType").value,
+          postcode: byId("newHostPostcode").value.trim() || null,
+          address_summary: byId("newHostAddress").value.trim() || null,
+          notes_internal: byId("newHostNotes").value.trim() || null
+        };
+
+        const { data, error } = await supabase
+          .from("hosts")
+          .insert(payload)
+          .select("*")
+          .single();
+
+        if (error) throw error;
+
+        await loadHosts();
+        renderHostOptions();
+        byId("hostSelect").value = data.id;
+        state.drop.host_id = data.id;
+        renderHostPreview();
+        markDirty();
+        closeModal("hostModal");
+        showInlineSuccess("Host created and selected");
+      }
+
+      async function createProduct() {
+        const name = byId("newProductName").value.trim();
+        if (!name) throw new Error("Product Name is required.");
+        if (!state.selectedDropId) throw new Error("Select a drop before adding a product.");
+
+        const payload = {
+          vendor_id: state.vendorId,
+          name,
+          category: byId("newProductCategory").value,
+          price_pence: Number(byId("newProductPricePence").value || 0),
+          capacity_units: Number(byId("newProductCapacityUnits").value || 1),
+          sort_order: Number(byId("newProductSortOrder").value || 100),
+          is_active: byId("newProductActive").value === "true"
+        };
+
+        const { data: product, error: productError } = await supabase
+          .from("products")
+          .insert(payload)
+          .select("*")
+          .single();
+
+        if (productError) throw productError;
+
+        const { error: assignError } = await supabase
+          .from("drop_products")
+          .insert({
+            drop_id: state.selectedDropId,
+            product_id: product.id,
+            is_available: true
           });
-        });
+
+        if (assignError) throw assignError;
+
+        await loadProducts();
+        await loadSelectedDrop();
+        renderEverything();
+        closeModal("productModal");
+        showInlineSuccess("Product created and assigned");
       }
 
-      function bindDropBandDrag() {
-        const band = byId("dropBand");
-        let isDown = false;
-        let startX = 0;
-        let scrollLeft = 0;
-
-        band.addEventListener("mousedown", (e) => {
-          isDown = true;
-          band.classList.add("dragging");
-          startX = e.pageX - band.offsetLeft;
-          scrollLeft = band.scrollLeft;
-        });
-
-        band.addEventListener("mouseleave", () => {
-          isDown = false;
-          band.classList.remove("dragging");
-        });
-
-        band.addEventListener("mouseup", () => {
-          isDown = false;
-          band.classList.remove("dragging");
-        });
-
-        band.addEventListener("mousemove", (e) => {
-          if (!isDown) return;
-          e.preventDefault();
-          const x = e.pageX - band.offsetLeft;
-          const walk = (x - startX) * 1.1;
-          band.scrollLeft = scrollLeft - walk;
-        });
-      }
-
-      function bindEvents() {
-        byId("dropSearch").addEventListener("input", function (e) {
+      function attachEvents() {
+        byId("dropSearch").addEventListener("input", (e) => {
           state.search = e.target.value || "";
           renderDropBand();
         });
 
-        byId("statusFilter").addEventListener("change", function (e) {
+        byId("statusFilter").addEventListener("change", (e) => {
           state.statusFilter = e.target.value || "all";
           renderDropBand();
         });
 
-        byId("typeFilter").addEventListener("change", function (e) {
+        byId("typeFilter").addEventListener("change", (e) => {
           state.typeFilter = e.target.value || "all";
           renderDropBand();
         });
 
-        byId("refreshBtn").addEventListener("click", async function () {
+        byId("refreshBtn").addEventListener("click", async () => {
           try {
             await refreshAll();
           } catch (err) {
@@ -2724,16 +2668,98 @@
           }
         });
 
-        byId("newDropBtn").addEventListener("click", async function () {
+        byId("newDropBtn").addEventListener("click", async () => {
           try {
             await createNewDrop();
           } catch (err) {
             console.error(err);
-            showError(err.message || "Unable to create new drop.");
+            showError(err.message || "Unable to create drop.");
           }
         });
 
-        byId("saveBtn").addEventListener("click", async function () {
+        document.querySelectorAll(".stagePill").forEach((pill) => {
+          pill.addEventListener("click", () => openStage(pill.dataset.stage));
+        });
+
+        [
+          "dropName","dropSlug","dropType","dropStatus","hostSelect","notesInternal",
+          "deliveryDate","deliveryStartTime","deliveryEndTime",
+          "opensAtDate","opensAtTime","closesAtDate","closesAtTime",
+          "capacityCategory","capacityTotal","fulfilmentMode","centrePostcode","radiusKm",
+          "fundraisingEnabled","fundraisingModel","fundraisingPercentage","fundraisingPerOrderPence","fundraisingDisplayText",
+          "hostShareEnabled","hostShareModel","hostSharePercentage","hostSharePerOrderPence","hostShareFixedPence","hostShareCustomerVisible",
+          "ordersOpenRule","ordersOpenDaysBefore","seriesStartDate","seriesFixedOpenDate","seriesFixedOpenTime","seriesEndMode","seriesEndDate","seriesDropCount"
+        ].forEach((id) => {
+          const el = byId(id);
+          if (!el) return;
+          el.addEventListener("input", () => {
+            if (id === "dropName" && !byId("dropSlug").value.trim()) {
+              byId("dropSlug").value = slugify(byId("dropName").value);
+            }
+            renderConditionalFields();
+            renderSeriesPreview();
+            markDirty();
+          });
+          el.addEventListener("change", () => {
+            renderConditionalFields();
+            renderSeriesPreview();
+            markDirty();
+          });
+        });
+
+        document.querySelectorAll('input[name="repeatPattern"]').forEach((radio) => {
+          radio.addEventListener("change", () => {
+            renderConditionalFields();
+            renderSeriesPreview();
+            markDirty();
+          });
+        });
+
+        byId("addScheduleRowBtn").addEventListener("click", () => {
+          state.seriesRows.push({ id: uidSuffix(), day_of_week: "6", fulfilment_start: "19:00", fulfilment_end: "20:00", order_close_time: "18:00" });
+          renderScheduleRows();
+          renderSeriesPreview();
+          markDirty();
+        });
+
+        byId("scheduleRowsBody").addEventListener("input", (e) => {
+          const tr = e.target.closest("tr[data-row-id]");
+          if (!tr) return;
+          syncScheduleRow(tr);
+        });
+
+        byId("scheduleRowsBody").addEventListener("change", (e) => {
+          const tr = e.target.closest("tr[data-row-id]");
+          if (!tr) return;
+          syncScheduleRow(tr);
+        });
+
+        byId("scheduleRowsBody").addEventListener("click", (e) => {
+          const btn = e.target.closest(".js-remove-schedule-row");
+          if (!btn) return;
+          const tr = btn.closest("tr[data-row-id]");
+          state.seriesRows = state.seriesRows.filter((r) => r.id !== tr.dataset.rowId);
+          renderScheduleRows();
+          renderSeriesPreview();
+          markDirty();
+        });
+
+        byId("assignmentGroups").addEventListener("input", (e) => {
+          const tr = e.target.closest("tr[data-product-id]");
+          if (!tr) return;
+          syncAssignmentRow(tr);
+        });
+
+        byId("assignmentGroups").addEventListener("change", (e) => {
+          const tr = e.target.closest("tr[data-product-id]");
+          if (!tr) return;
+          syncAssignmentRow(tr);
+        });
+
+        byId("backStageBtn").addEventListener("click", goPrevStage);
+        byId("continueStageBtn").addEventListener("click", goNextStage);
+
+        byId("saveDraftBtn").addEventListener("click", async () => {
           try {
             await saveDrop(true);
           } catch (err) {
@@ -2742,43 +2768,29 @@
           }
         });
 
-        byId("revertBtn").addEventListener("click", async function () {
-          try {
-            await loadSelectedDrop();
-            renderEverything();
-            setSaveState("saved");
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to revert changes.");
-          }
-        });
-
-        byId("moveLiveBtn").addEventListener("click", async function () {
-          try {
-            state.drop = readDropFromForm();
-            const readiness = buildReadinessChecks(state.drop);
-            if (!readiness.isReady) throw new Error("Drop is not ready to go live yet.");
-            await saveDrop(false);
-            await updateDropStatus("live");
-            showInlineSuccess("Drop moved live");
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to move drop live.");
-          }
-        });
-
-        byId("closeBtn").addEventListener("click", async function () {
+        byId("publishBtn").addEventListener("click", async () => {
           try {
             await saveDrop(false);
-            await updateDropStatus("closed");
-            showInlineSuccess("Drop closed");
+            await updateDropStatus("scheduled");
+            showInlineSuccess("Drop published to scheduled");
           } catch (err) {
             console.error(err);
-            showError(err.message || "Unable to close drop.");
+            showError(err.message || "Unable to publish drop.");
           }
         });
 
-        byId("archiveBtn").addEventListener("click", async function () {
+        byId("cancelDropBtn").addEventListener("click", async () => {
+          try {
+            await saveDrop(false);
+            await updateDropStatus("cancelled");
+            showInlineSuccess("Drop cancelled");
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to cancel drop.");
+          }
+        });
+
+        byId("archiveDropBtn").addEventListener("click", async () => {
           try {
             await saveDrop(false);
             await updateDropStatus("archived");
@@ -2789,25 +2801,7 @@
           }
         });
 
-        byId("duplicateBtn").addEventListener("click", async function () {
-          try {
-            await duplicateDrop();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to duplicate drop.");
-          }
-        });
-
-        byId("openBoardBtn").addEventListener("click", function () {
-          try {
-            openServiceBoard();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to open Service Board.");
-          }
-        });
-
-        byId("copyLinkBtn").addEventListener("click", async function () {
+        byId("copyLinkBtn").addEventListener("click", async () => {
           try {
             await copyLink();
           } catch (err) {
@@ -2816,7 +2810,7 @@
           }
         });
 
-        byId("downloadQrBtn").addEventListener("click", function () {
+        byId("downloadQrBtn").addEventListener("click", () => {
           try {
             downloadQr();
           } catch (err) {
@@ -2825,94 +2819,44 @@
           }
         });
 
-        byId("openOrderPageBtn").addEventListener("click", function () {
+        byId("previewOrderPageBtn").addEventListener("click", () => {
           try {
-            openOrderPage();
+            previewOrderPage();
           } catch (err) {
             console.error(err);
-            showError(err.message || "Unable to open customer page.");
+            showError(err.message || "Unable to preview ordering page.");
           }
         });
 
-        byId("openHostModalBtn").addEventListener("click", function () {
-          openModal("hostModal");
-        });
-
-        byId("closeHostModalBtn").addEventListener("click", function () {
-          closeModal("hostModal");
-        });
-
-        byId("cancelHostBtn").addEventListener("click", function () {
-          closeModal("hostModal");
-        });
-
-        byId("saveHostBtn").addEventListener("click", async function () {
+        byId("openBoardBtn").addEventListener("click", () => {
           try {
-            await createHost();
+            openServiceBoard();
           } catch (err) {
             console.error(err);
+            showError(err.message || "Unable to open Service Board.");
           }
         });
 
-        byId("openProductModalBtn").addEventListener("click", function () {
-          openModal("productModal");
-        });
-
-        byId("closeProductModalBtn").addEventListener("click", function () {
-          closeModal("productModal");
-        });
-
-        byId("cancelProductBtn").addEventListener("click", function () {
-          closeModal("productModal");
-        });
-
-        byId("saveProductBtn").addEventListener("click", async function () {
-          try {
-            await createProduct();
-          } catch (err) {
-            console.error(err);
-          }
-        });
-
-        byId("hostModal").addEventListener("click", function (e) {
-          if (e.target === byId("hostModal")) closeModal("hostModal");
-        });
-
-        byId("productModal").addEventListener("click", function (e) {
-          if (e.target === byId("productModal")) closeModal("productModal");
-        });
-
-        byId("assignmentGroups").addEventListener("input", function (e) {
-          const tr = e.target.closest("tr[data-product-id]");
-          if (!tr) return;
-          syncAssignmentRow(tr);
-        });
-
-        byId("assignmentGroups").addEventListener("change", function (e) {
-          const tr = e.target.closest("tr[data-product-id]");
-          if (!tr) return;
-          syncAssignmentRow(tr);
-        });
-
-        document.body.addEventListener("click", async function (e) {
+        document.body.addEventListener("click", async (e) => {
           const card = e.target.closest(".dropCard");
           if (card && !e.target.closest(".js-duplicate-drop") && !e.target.closest(".js-archive-drop")) {
             state.selectedDropId = card.dataset.dropId;
             try {
               await loadSelectedDrop();
+              const firstAttention = STAGES.find((stage) => getStageStatus(stage) === "attention");
+              state.currentStage = firstAttention || "review";
               renderEverything();
             } catch (err) {
               console.error(err);
-              showError(err.message || "Unable to load selected drop.");
+              showError(err.message || "Unable to load drop.");
             }
             return;
           }
 
-          const duplicateBtn = e.target.closest(".js-duplicate-drop");
-          if (duplicateBtn) {
-            e.stopPropagation();
+          const dup = e.target.closest(".js-duplicate-drop");
+          if (dup) {
             try {
-              await duplicateDrop(duplicateBtn.dataset.dropId);
+              await duplicateDrop(dup.dataset.dropId);
             } catch (err) {
               console.error(err);
               showError(err.message || "Unable to duplicate drop.");
@@ -2920,11 +2864,12 @@
             return;
           }
 
-          const archiveBtn = e.target.closest(".js-archive-drop");
-          if (archiveBtn) {
-            e.stopPropagation();
+          const more = e.target.closest(".js-archive-drop");
+          if (more) {
             try {
-              await archiveFromRow(archiveBtn.dataset.dropId);
+              await supabase.from("drops").update({ status: "archived" }).eq("id", more.dataset.dropId);
+              await refreshAll();
+              showInlineSuccess("Drop archived");
             } catch (err) {
               console.error(err);
               showError(err.message || "Unable to archive drop.");
@@ -2932,9 +2877,37 @@
           }
         });
 
-        attachFieldDirtyTracking();
-        bindAccordionEvents();
-        bindDropBandDrag();
+        byId("openHostModalBtn").addEventListener("click", () => openModal("hostModal"));
+        byId("closeHostModalBtn").addEventListener("click", () => closeModal("hostModal"));
+        byId("cancelHostBtn").addEventListener("click", () => closeModal("hostModal"));
+        byId("saveHostBtn").addEventListener("click", async () => {
+          try {
+            await createHost();
+          } catch (err) {
+            console.error(err);
+            showModalMessage("hostModalMessage", err.message || "Unable to create host.", true);
+          }
+        });
+
+        byId("openProductModalBtn").addEventListener("click", () => openModal("productModal"));
+        byId("closeProductModalBtn").addEventListener("click", () => closeModal("productModal"));
+        byId("cancelProductBtn").addEventListener("click", () => closeModal("productModal"));
+        byId("saveProductBtn").addEventListener("click", async () => {
+          try {
+            await createProduct();
+          } catch (err) {
+            console.error(err);
+            showModalMessage("productModalMessage", err.message || "Unable to create product.", true);
+          }
+        });
+
+        byId("hostModal").addEventListener("click", (e) => {
+          if (e.target === byId("hostModal")) closeModal("hostModal");
+        });
+
+        byId("productModal").addEventListener("click", (e) => {
+          if (e.target === byId("productModal")) closeModal("productModal");
+        });
       }
 
       async function init() {
@@ -2948,7 +2921,7 @@
 
           supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-          bindEvents();
+          attachEvents();
           await loadVendorId();
           await refreshAll();
         } catch (err) {
