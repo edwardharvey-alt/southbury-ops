@@ -11,22 +11,24 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 
   <style>
-    .studioStack{
+    .studioPage{
+      max-width:1200px;
+      margin:0 auto;
       display:grid;
       gap:14px;
-      align-items:start;
     }
 
     .studioCard{
-      padding:16px 18px;
+      padding:14px 16px;
+      overflow:hidden;
     }
 
     .browserToolbar{
       display:grid;
-      grid-template-columns:220px minmax(220px,1fr) 180px 180px 120px;
+      grid-template-columns:180px minmax(180px,1fr) 160px 160px 110px;
       gap:10px;
       align-items:center;
-      margin-bottom:12px;
+      margin-bottom:10px;
     }
 
     .browserToolbar .btnAccent,
@@ -37,24 +39,34 @@
       min-width:0;
     }
 
+    .dropBandWrap{
+      overflow:hidden;
+    }
+
     .dropBand{
       display:flex;
       gap:12px;
       overflow-x:auto;
       overflow-y:hidden;
-      padding:4px 2px 6px;
+      padding:2px 2px 6px;
       scroll-behavior:smooth;
+      align-items:stretch;
     }
 
     .dropCard{
-      min-width:270px;
-      max-width:270px;
+      width:224px;
+      min-width:224px;
+      max-width:224px;
+      min-height:146px;
       border:1px solid var(--h-border-2);
       border-radius:14px;
-      background:rgba(255,255,255,0.94);
+      background:rgba(255,255,255,0.95);
       padding:12px;
       cursor:pointer;
       transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
       flex:0 0 auto;
     }
 
@@ -73,30 +85,31 @@
     .dropCardTop{
       display:flex;
       justify-content:space-between;
-      gap:10px;
+      gap:8px;
       align-items:flex-start;
-      margin-bottom:8px;
+      margin-bottom:6px;
     }
 
     .dropCardTitle{
-      font-size:14px;
+      font-size:13px;
       font-weight:850;
-      line-height:1.2;
+      line-height:1.25;
       margin:0;
     }
 
     .dropCardSub{
       margin:4px 0 0;
-      font-size:12px;
+      font-size:11px;
       color:var(--h-muted);
       line-height:1.35;
     }
 
     .dropCardMeta{
       margin-top:8px;
-      font-size:12px;
+      font-size:11px;
       color:var(--h-text);
       font-weight:700;
+      line-height:1.35;
     }
 
     .dropCardStats{
@@ -109,21 +122,27 @@
     .dropCardActions{
       display:flex;
       gap:6px;
-      flex-wrap:wrap;
       margin-top:10px;
+    }
+
+    .dropCardActions .btnSmall{
+      width:100%;
+      min-height:28px;
+      font-size:11px;
+      padding:0 10px;
     }
 
     .miniChip{
       display:inline-flex;
       align-items:center;
       gap:6px;
-      padding:5px 8px;
+      padding:4px 7px;
       border-radius:999px;
       border:1px solid var(--h-border-2);
       background:rgba(15,23,42,0.02);
-      font-size:11px;
+      font-size:10px;
       color:var(--h-muted);
-      font-weight:700;
+      font-weight:800;
       white-space:nowrap;
       max-width:max-content;
     }
@@ -155,16 +174,20 @@
       color:var(--h-muted);
     }
 
-    .stageBar{
+    .stageShell{
       position:sticky;
       top:16px;
       z-index:20;
+      display:grid;
+      gap:10px;
+    }
+
+    .stageBar{
       border:1px solid var(--h-border);
       border-radius:16px;
-      padding:14px;
+      padding:12px 14px;
       background:var(--h-surface);
       box-shadow:0 10px 22px rgba(15,23,42,0.08);
-      margin-bottom:12px;
     }
 
     .stageBarTop{
@@ -197,13 +220,13 @@
     .saveStateInline.saved{
       color:var(--h-good);
       background:#f0fdf4;
-      border-color:rgba(22,163,74,0.2);
+      border-color:rgba(22,163,74,0.20);
     }
 
     .saveStateInline.saving{
       color:#b45309;
       background:#fff7ed;
-      border-color:rgba(245,158,11,0.2);
+      border-color:rgba(245,158,11,0.20);
     }
 
     .saveStateInline.error{
@@ -214,7 +237,7 @@
 
     .stagePills{
       display:flex;
-      gap:10px;
+      gap:8px;
       overflow-x:auto;
       padding-bottom:2px;
     }
@@ -223,12 +246,12 @@
       display:inline-flex;
       align-items:center;
       gap:8px;
-      padding:10px 12px;
-      border-radius:14px;
+      padding:8px 10px;
+      border-radius:13px;
       border:1px solid var(--h-border-2);
       background:rgba(15,23,42,0.02);
       color:var(--h-muted);
-      font-size:12px;
+      font-size:11px;
       font-weight:800;
       cursor:pointer;
       white-space:nowrap;
@@ -254,20 +277,60 @@
     }
 
     .stageIcon{
-      width:18px;
-      min-width:18px;
-      height:18px;
+      width:16px;
+      min-width:16px;
+      height:16px;
       border-radius:999px;
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      font-size:11px;
+      font-size:10px;
       font-weight:900;
       border:1px solid currentColor;
     }
 
+    .contextBar{
+      border:1px solid var(--h-border-2);
+      border-radius:14px;
+      padding:10px 12px;
+      background:rgba(255,255,255,0.96);
+      box-shadow:0 6px 14px rgba(15,23,42,0.05);
+      display:grid;
+      gap:6px;
+    }
+
+    .contextTitle{
+      font-size:13px;
+      font-weight:850;
+      line-height:1.2;
+    }
+
+    .contextMeta{
+      font-size:11px;
+      color:var(--h-muted);
+      font-weight:700;
+      line-height:1.35;
+    }
+
+    .contextChips{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+
+    .workspaceOuter{
+      width:100%;
+    }
+
+    .workspaceInner{
+      max-width:960px;
+      margin:0 auto;
+      display:grid;
+      gap:12px;
+    }
+
     .workspaceCard{
-      padding:16px 18px;
+      padding:14px 16px;
     }
 
     .workspaceHeader{
@@ -276,7 +339,7 @@
       gap:14px;
       align-items:flex-start;
       flex-wrap:wrap;
-      margin-bottom:14px;
+      margin-bottom:12px;
     }
 
     .workspaceHeaderActions{
@@ -286,8 +349,15 @@
       align-items:center;
     }
 
+    .workspaceHeaderActions .btnGhost,
+    .workspaceHeaderActions .btnAccent{
+      min-height:30px;
+      font-size:11px;
+      padding:0 10px;
+    }
+
     .inlineSuccess{
-      margin-bottom:12px;
+      margin-bottom:10px;
       border:1px solid rgba(22,163,74,0.18);
       border-radius:12px;
       padding:10px 12px;
@@ -300,13 +370,13 @@
 
     .errorBox{
       display:none;
-      margin-bottom:12px;
-      padding:12px 14px;
-      border-radius:14px;
+      margin-bottom:10px;
+      padding:10px 12px;
+      border-radius:12px;
       background:#fef2f2;
       color:#991b1b;
       border:1px solid #fecaca;
-      font-size:13px;
+      font-size:12px;
       font-weight:700;
     }
 
@@ -320,47 +390,49 @@
 
     .stageSection{
       border:1px solid var(--h-border-2);
-      border-radius:16px;
-      background:rgba(255,255,255,0.92);
-      padding:14px;
-      margin-bottom:12px;
+      border-radius:14px;
+      background:rgba(255,255,255,0.94);
+      padding:12px;
+      margin-bottom:10px;
     }
 
     .stageSectionTitle{
       margin:0 0 4px;
-      font-size:15px;
+      font-size:14px;
       font-weight:850;
     }
 
     .stageSectionSub{
-      margin:0 0 12px;
-      font-size:12px;
+      margin:0 0 10px;
+      font-size:11px;
       color:var(--h-muted);
     }
 
     .studioGrid2{
       display:grid;
       grid-template-columns:1fr 1fr;
-      gap:12px;
+      gap:10px;
     }
 
     .studioGrid3{
       display:grid;
       grid-template-columns:repeat(3, 1fr);
-      gap:12px;
+      gap:10px;
     }
 
     .field{
       display:flex;
       flex-direction:column;
-      gap:6px;
+      gap:5px;
       min-width:0;
     }
 
     .field label{
-      font-size:11px;
+      font-size:10px;
       color:var(--h-muted);
       font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.02em;
     }
 
     .field input,
@@ -368,26 +440,29 @@
     .field textarea{
       width:100%;
       min-width:0;
+      padding:8px 10px;
+      font-size:12px;
+      border-radius:10px;
     }
 
     .field textarea{
       resize:vertical;
-      min-height:92px;
+      min-height:74px;
     }
 
     .helperText{
-      font-size:11px;
+      font-size:10px;
       color:var(--h-muted);
       line-height:1.35;
     }
 
     .hostPreview{
       border:1px dashed var(--h-border);
-      border-radius:12px;
-      padding:10px 12px;
+      border-radius:10px;
+      padding:9px 10px;
       background:rgba(15,23,42,0.02);
       font-size:12px;
-      line-height:1.45;
+      line-height:1.4;
     }
 
     .hostPreview strong{
@@ -401,41 +476,41 @@
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      padding:10px 12px;
+      padding:9px 10px;
       border:1px solid var(--h-border-2);
-      border-radius:12px;
+      border-radius:10px;
       background:rgba(15,23,42,0.02);
       margin-bottom:10px;
     }
 
     .toggleRow input[type="checkbox"]{
-      width:18px;
-      height:18px;
+      width:16px;
+      height:16px;
       margin:0;
       accent-color:var(--h-accent);
     }
 
     .repeatBlock{
       border:1px solid var(--h-border-2);
-      border-radius:14px;
-      padding:12px;
+      border-radius:12px;
+      padding:10px;
       background:rgba(15,23,42,0.02);
-      margin-top:12px;
+      margin-top:10px;
     }
 
     .repeatChoice{
       display:flex;
-      gap:16px;
+      gap:14px;
       flex-wrap:wrap;
       align-items:center;
-      margin-bottom:12px;
+      margin-bottom:10px;
     }
 
     .repeatChoice label{
       display:flex;
-      gap:8px;
+      gap:7px;
       align-items:center;
-      font-size:13px;
+      font-size:12px;
       font-weight:700;
       color:var(--h-text);
     }
@@ -443,9 +518,9 @@
     .scheduleTableWrap{
       overflow:auto;
       border:1px solid var(--h-border-2);
-      border-radius:14px;
+      border-radius:12px;
       background:#fff;
-      margin-top:10px;
+      margin-top:8px;
     }
 
     .scheduleTable{
@@ -455,15 +530,15 @@
 
     .scheduleTable th,
     .scheduleTable td{
-      padding:10px;
+      padding:8px;
       border-bottom:1px solid rgba(15,23,42,0.06);
-      font-size:13px;
+      font-size:12px;
       vertical-align:middle;
     }
 
     .scheduleTable th{
       text-align:left;
-      font-size:11px;
+      font-size:10px;
       text-transform:uppercase;
       color:var(--h-muted);
       background:rgba(15,23,42,0.02);
@@ -473,39 +548,41 @@
     .scheduleTable input{
       width:100%;
       min-width:0;
+      padding:7px 8px;
+      font-size:12px;
     }
 
     .previewList{
       display:grid;
-      gap:8px;
-      margin-top:10px;
+      gap:6px;
+      margin-top:8px;
     }
 
     .previewLine{
       display:flex;
       justify-content:space-between;
       gap:12px;
-      padding:10px 12px;
-      border-radius:12px;
+      padding:8px 10px;
+      border-radius:10px;
       border:1px solid var(--h-border-2);
-      background:rgba(255,255,255,0.92);
-      font-size:12px;
+      background:rgba(255,255,255,0.94);
+      font-size:11px;
       font-weight:700;
     }
 
     .productGroup{
       border:1px solid var(--h-border-2);
-      border-radius:14px;
+      border-radius:12px;
       overflow:hidden;
-      margin-bottom:12px;
+      margin-bottom:10px;
       background:#fff;
     }
 
     .productGroupHead{
-      padding:12px 14px;
+      padding:10px 12px;
       background:rgba(15,23,42,0.03);
       border-bottom:1px solid var(--h-border-2);
-      font-size:12px;
+      font-size:11px;
       text-transform:uppercase;
       letter-spacing:.02em;
       font-weight:900;
@@ -519,29 +596,31 @@
 
     .assignmentTable th,
     .assignmentTable td{
-      padding:10px 10px;
+      padding:8px 8px;
       border-bottom:1px solid rgba(15,23,42,0.06);
       vertical-align:middle;
-      font-size:13px;
+      font-size:12px;
     }
 
     .assignmentTable th{
       text-align:left;
-      font-size:11px;
+      font-size:10px;
       text-transform:uppercase;
       color:var(--h-muted);
       background:rgba(15,23,42,0.02);
     }
 
     .assignmentTable td input[type="checkbox"]{
-      width:16px;
-      height:16px;
+      width:15px;
+      height:15px;
       accent-color:var(--h-accent);
     }
 
     .assignmentTable td input[type="number"]{
-      min-width:84px;
+      min-width:70px;
       width:100%;
+      padding:7px 8px;
+      font-size:12px;
     }
 
     .productName{
@@ -551,7 +630,7 @@
     .subMeta{
       display:block;
       margin-top:4px;
-      font-size:11px;
+      font-size:10px;
       color:var(--h-muted);
     }
 
@@ -559,9 +638,9 @@
       display:inline-flex;
       align-items:center;
       gap:6px;
-      padding:4px 8px;
+      padding:4px 7px;
       border-radius:999px;
-      font-size:11px;
+      font-size:10px;
       font-weight:800;
       white-space:nowrap;
     }
@@ -581,22 +660,22 @@
     .reviewGrid{
       display:grid;
       grid-template-columns:1fr 1fr;
-      gap:12px;
+      gap:10px;
     }
 
     .summaryBlock{
       display:grid;
-      gap:8px;
-      margin-top:10px;
+      gap:7px;
+      margin-top:8px;
     }
 
     .summaryItem{
       display:flex;
       justify-content:space-between;
-      gap:12px;
+      gap:10px;
       align-items:flex-start;
       font-size:12px;
-      line-height:1.4;
+      line-height:1.35;
     }
 
     .summaryItem .label{
@@ -612,8 +691,8 @@
 
     .readinessList{
       display:grid;
-      gap:8px;
-      margin-top:10px;
+      gap:7px;
+      margin-top:8px;
     }
 
     .readinessItem{
@@ -621,18 +700,18 @@
       align-items:flex-start;
       gap:8px;
       font-size:12px;
-      line-height:1.4;
+      line-height:1.35;
     }
 
     .readinessMark{
-      width:18px;
-      min-width:18px;
-      height:18px;
+      width:17px;
+      min-width:17px;
+      height:17px;
       border-radius:999px;
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      font-size:11px;
+      font-size:10px;
       font-weight:900;
       margin-top:1px;
     }
@@ -651,11 +730,11 @@
 
     .shareLink{
       border:1px solid var(--h-border-2);
-      border-radius:12px;
-      padding:10px 12px;
+      border-radius:10px;
+      padding:9px 10px;
       background:rgba(15,23,42,0.02);
       font-size:12px;
-      line-height:1.4;
+      line-height:1.35;
       word-break:break-all;
     }
 
@@ -663,18 +742,18 @@
       display:grid;
       place-items:center;
       border:1px solid var(--h-border-2);
-      border-radius:14px;
+      border-radius:12px;
       padding:10px;
       background:#fff;
-      min-height:150px;
-      margin-top:10px;
+      min-height:136px;
+      margin-top:8px;
     }
 
     .stageFooter{
       display:flex;
       justify-content:space-between;
       gap:12px;
-      margin-top:14px;
+      margin-top:12px;
       flex-wrap:wrap;
       position:sticky;
       bottom:12px;
@@ -688,6 +767,14 @@
       gap:8px;
       flex-wrap:wrap;
       align-items:center;
+    }
+
+    .stageFooter .btnGhost,
+    .stageFooter .btnAccent{
+      min-height:34px;
+      font-size:12px;
+      padding:0 12px;
+      border-radius:10px;
     }
 
     .modalBackdrop{
@@ -748,7 +835,10 @@
     }
 
     @media (max-width:1180px){
-      .browserToolbar,
+      .browserToolbar{
+        grid-template-columns:1fr 1fr;
+      }
+
       .studioGrid2,
       .reviewGrid{
         grid-template-columns:1fr;
@@ -779,6 +869,10 @@
       .stageFooterRight{
         width:100%;
       }
+
+      .workspaceInner{
+        max-width:none;
+      }
     }
   </style>
 </head>
@@ -801,7 +895,7 @@
       </div>
     </div>
 
-    <div class="studioStack">
+    <div class="studioPage">
       <div class="card studioCard">
         <div class="row space" style="margin-bottom:10px;">
           <div>
@@ -832,589 +926,598 @@
           <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
         </div>
 
-        <div class="dropBand" id="dropBand"></div>
-      </div>
-
-      <div class="stageBar">
-        <div class="stageBarTop">
-          <div>
-            <div class="sectionTitle" id="stageBarDropName">No drop selected</div>
-            <div class="stageBarMeta" id="stageBarMeta">Select a drop to begin</div>
-          </div>
-          <div class="saveStateInline" id="saveStateInline">All changes saved</div>
-        </div>
-
-        <div class="stagePills">
-          <button class="stagePill active" data-stage="basics" type="button">
-            <span class="stageIcon" id="icon-basics">1</span>
-            <span>Basics</span>
-          </button>
-          <button class="stagePill" data-stage="timing" type="button">
-            <span class="stageIcon" id="icon-timing">2</span>
-            <span>Timing & Ops</span>
-          </button>
-          <button class="stagePill" data-stage="menu" type="button">
-            <span class="stageIcon" id="icon-menu">3</span>
-            <span>Menu</span>
-          </button>
-          <button class="stagePill" data-stage="commercials" type="button">
-            <span class="stageIcon" id="icon-commercials">4</span>
-            <span>Commercials</span>
-          </button>
-          <button class="stagePill" data-stage="review" type="button">
-            <span class="stageIcon" id="icon-review">5</span>
-            <span>Review</span>
-          </button>
+        <div class="dropBandWrap">
+          <div class="dropBand" id="dropBand"></div>
         </div>
       </div>
 
-      <div class="card workspaceCard">
-        <div class="workspaceHeader">
-          <div>
-            <h3 class="sectionTitle" id="workspaceTitle">Basics</h3>
-            <p class="sectionSub" id="workspaceSub">Define what the drop is</p>
+      <div class="stageShell">
+        <div class="stageBar">
+          <div class="stageBarTop">
+            <div>
+              <div class="sectionTitle" id="stageBarDropName">No drop selected</div>
+              <div class="stageBarMeta" id="stageBarMeta">Select a drop to begin</div>
+            </div>
+            <div class="saveStateInline" id="saveStateInline">All changes saved</div>
           </div>
 
-          <div class="workspaceHeaderActions">
-            <button class="btnGhost hidden" id="openBoardBtn" type="button">Open Service Board</button>
-            <button class="btnGhost" id="previewOrderPageBtn" type="button">Preview Ordering Page</button>
-          </div>
-        </div>
-
-        <div class="inlineSuccess" id="inlineSuccess"></div>
-        <div class="errorBox" id="errorBox"></div>
-
-        <!-- STAGE 1 -->
-        <div class="stagePane active" id="pane-basics">
-          <div class="stageSection">
-            <h4 class="stageSectionTitle">Basics</h4>
-            <p class="stageSectionSub">Create the identity of the drop before moving into scheduling and menu setup.</p>
-
-            <div class="studioGrid2">
-              <div class="field">
-                <label for="dropName">Drop Name</label>
-                <input id="dropName" type="text" placeholder="Friday Pizza Night" />
-              </div>
-
-              <div class="field">
-                <label for="dropSlug">Drop Link Name</label>
-                <input id="dropSlug" type="text" placeholder="friday-pizza-night" />
-                <div class="helperText">Used in the customer ordering URL for this drop.</div>
-              </div>
-
-              <div class="field">
-                <label for="dropType">Drop Type</label>
-                <select id="dropType">
-                  <option value="neighbourhood">Neighbourhood</option>
-                  <option value="community">Community</option>
-                  <option value="event">Event</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="dropStatus">Status</label>
-                <select id="dropStatus">
-                  <option value="draft">Draft</option>
-                  <option value="scheduled">Scheduled</option>
-                  <option value="live">Live</option>
-                  <option value="closed">Closed</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                  <option value="archived">Archived</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="hostSelect">Host</label>
-                <select id="hostSelect">
-                  <option value="">No host selected</option>
-                </select>
-                <div class="helperText" id="hostHelperText">Optional for neighbourhood drops. Required for community drops.</div>
-              </div>
-
-              <div class="field">
-                <label>Selected Host</label>
-                <div class="hostPreview" id="hostPreview">
-                  <strong>No host selected</strong>
-                  Add a host for community or hosted drops.
-                </div>
-              </div>
-
-              <div class="field" style="grid-column:1 / -1;">
-                <label for="notesInternal">Internal Notes</label>
-                <textarea id="notesInternal" placeholder="Any internal operational notes for this drop"></textarea>
-              </div>
-            </div>
-
-            <div style="margin-top:12px;">
-              <button class="btnGhost" id="openHostModalBtn" type="button">+ Create Host</button>
-            </div>
+          <div class="stagePills">
+            <button class="stagePill active" data-stage="basics" type="button">
+              <span class="stageIcon" id="icon-basics">1</span>
+              <span>Basics</span>
+            </button>
+            <button class="stagePill" data-stage="timing" type="button">
+              <span class="stageIcon" id="icon-timing">2</span>
+              <span>Timing &amp; Ops</span>
+            </button>
+            <button class="stagePill" data-stage="menu" type="button">
+              <span class="stageIcon" id="icon-menu">3</span>
+              <span>Menu</span>
+            </button>
+            <button class="stagePill" data-stage="commercials" type="button">
+              <span class="stageIcon" id="icon-commercials">4</span>
+              <span>Commercials</span>
+            </button>
+            <button class="stagePill" data-stage="review" type="button">
+              <span class="stageIcon" id="icon-review">5</span>
+              <span>Review</span>
+            </button>
           </div>
         </div>
 
-        <!-- STAGE 2 -->
-        <div class="stagePane" id="pane-timing">
-          <div class="stageSection">
-            <h4 class="stageSectionTitle">Fulfilment</h4>
-            <p class="stageSectionSub">Define when the drop happens.</p>
-
-            <div class="studioGrid3">
-              <div class="field">
-                <label for="deliveryDate">Drop Date</label>
-                <input id="deliveryDate" type="date" />
-              </div>
-
-              <div class="field">
-                <label for="deliveryStartTime">From</label>
-                <input id="deliveryStartTime" type="time" />
-              </div>
-
-              <div class="field">
-                <label for="deliveryEndTime">To</label>
-                <input id="deliveryEndTime" type="time" />
-              </div>
-            </div>
-          </div>
-
-          <div class="stageSection">
-            <h4 class="stageSectionTitle">Order Window</h4>
-            <p class="stageSectionSub">Define when customers can place orders.</p>
-
-            <div class="studioGrid2">
-              <div class="field">
-                <label for="opensAtDate">Open for Orders</label>
-                <div class="studioGrid2" style="gap:8px;">
-                  <input id="opensAtDate" type="date" />
-                  <input id="opensAtTime" type="time" />
-                </div>
-              </div>
-
-              <div class="field">
-                <label for="closesAtDate">Close Orders</label>
-                <div class="studioGrid2" style="gap:8px;">
-                  <input id="closesAtDate" type="date" />
-                  <input id="closesAtTime" type="time" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="stageSection">
-            <h4 class="stageSectionTitle">Repeat Pattern</h4>
-            <p class="stageSectionSub">Set the drop as one-off or recurring.</p>
-
-            <div class="repeatChoice">
-              <label><input type="radio" name="repeatPattern" value="one_off" checked /> One-off drop</label>
-              <label><input type="radio" name="repeatPattern" value="recurring" /> Recurring</label>
-            </div>
-
-            <div class="repeatBlock hidden" id="recurringBlock">
-              <div class="row space" style="margin-bottom:10px;">
-                <div>
-                  <h4 class="stageSectionTitle" style="font-size:14px; margin:0;">Recurring Schedule</h4>
-                  <p class="stageSectionSub" style="margin:4px 0 0;">Add one or more weekly schedule lines.</p>
-                </div>
-                <button class="btnGhost" id="addScheduleRowBtn" type="button">+ Add another day</button>
-              </div>
-
-              <div class="scheduleTableWrap">
-                <table class="scheduleTable">
-                  <thead>
-                    <tr>
-                      <th>Day</th>
-                      <th>From</th>
-                      <th>To</th>
-                      <th>Orders Close</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody id="scheduleRowsBody"></tbody>
-                </table>
-              </div>
-
-              <div class="studioGrid2" style="margin-top:12px;">
-                <div class="field">
-                  <label for="seriesStartDate">Series Start Date</label>
-                  <input id="seriesStartDate" type="date" />
-                </div>
-
-                <div class="field">
-                  <label for="ordersOpenRule">Orders Open</label>
-                  <select id="ordersOpenRule">
-                    <option value="immediately">Immediately</option>
-                    <option value="days_before">X days before drop</option>
-                    <option value="fixed_start">Fixed start date</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="studioGrid3" id="ordersOpenRuleFields" style="margin-top:12px;">
-                <div class="field hidden" id="ordersOpenDaysBeforeField">
-                  <label for="ordersOpenDaysBefore">Days Before Drop</label>
-                  <input id="ordersOpenDaysBefore" type="number" min="0" step="1" value="3" />
-                </div>
-
-                <div class="field hidden" id="seriesFixedOpenDateField">
-                  <label for="seriesFixedOpenDate">Fixed Open Date</label>
-                  <input id="seriesFixedOpenDate" type="date" />
-                </div>
-
-                <div class="field hidden" id="seriesFixedOpenTimeField">
-                  <label for="seriesFixedOpenTime">Fixed Open Time</label>
-                  <input id="seriesFixedOpenTime" type="time" />
-                </div>
-              </div>
-
-              <div class="studioGrid2" style="margin-top:12px;">
-                <div class="field">
-                  <label for="seriesEndMode">Series Ends By</label>
-                  <select id="seriesEndMode">
-                    <option value="end_date">End date</option>
-                    <option value="drop_count">Number of drops</option>
-                  </select>
-                </div>
-
-                <div class="field" id="seriesEndDateField">
-                  <label for="seriesEndDate">End Date</label>
-                  <input id="seriesEndDate" type="date" />
-                </div>
-
-                <div class="field hidden" id="seriesDropCountField">
-                  <label for="seriesDropCount">Number of Drops</label>
-                  <input id="seriesDropCount" type="number" min="1" step="1" value="8" />
-                </div>
-              </div>
-
-              <div style="margin-top:12px;">
-                <div class="helperText" id="seriesSummaryText">This will create a recurring series once implemented.</div>
-              </div>
-
-              <div class="previewList" id="seriesPreviewList"></div>
-            </div>
-          </div>
-
-          <div class="stageSection">
-            <h4 class="stageSectionTitle">Operations</h4>
-            <p class="stageSectionSub">Set capacity, fulfilment mode and delivery geography.</p>
-
-            <div class="studioGrid3">
-              <div class="field">
-                <label for="capacityCategory">Capacity Category</label>
-                <select id="capacityCategory">
-                  <option value="pizza">Pizza</option>
-                  <option value="side">Side</option>
-                  <option value="drink">Drink</option>
-                  <option value="sauce">Sauce</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="capacityTotal">Capacity Total</label>
-                <input id="capacityTotal" type="number" min="0" step="1" />
-              </div>
-
-              <div class="field">
-                <label for="fulfilmentMode">Fulfilment Mode</label>
-                <select id="fulfilmentMode">
-                  <option value="">Select mode</option>
-                  <option value="delivery">Delivery</option>
-                  <option value="collection">Collection</option>
-                  <option value="mixed">Mixed</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="centrePostcode">Centre Postcode</label>
-                <input id="centrePostcode" type="text" placeholder="RG10 0JP" />
-              </div>
-
-              <div class="field">
-                <label for="radiusKm">Radius (km)</label>
-                <input id="radiusKm" type="number" min="0" step="0.1" />
-              </div>
-            </div>
-          </div>
+        <div class="contextBar">
+          <div class="contextTitle" id="contextTitle">No drop selected</div>
+          <div class="contextMeta" id="contextMeta">Select a drop to view timing, menu and readiness.</div>
+          <div class="contextChips" id="contextChips"></div>
         </div>
+      </div>
 
-        <!-- STAGE 3 -->
-        <div class="stagePane" id="pane-menu">
-          <div class="stageSection">
-            <h4 class="stageSectionTitle">Menu</h4>
-            <p class="stageSectionSub">Choose which products are available in this drop.</p>
-
-            <div class="row space" style="margin-bottom:12px;">
-              <div class="helperText">Enable products, override prices and manage stock limits.</div>
-              <div class="row" style="gap:8px; flex-wrap:wrap;">
-                <button class="btnGhost" id="openProductModalBtn" type="button">+ Add Product</button>
-                <a href="drop-menu.html" class="utilityLink">Menu Library</a>
-              </div>
-            </div>
-
-            <div id="assignmentGroups"></div>
-          </div>
-        </div>
-
-        <!-- STAGE 4 -->
-        <div class="stagePane" id="pane-commercials">
-          <div class="stageSection">
-            <h4 class="stageSectionTitle">Community Contribution</h4>
-            <p class="stageSectionSub">Optional public-facing support for schools, clubs or causes.</p>
-
-            <div class="toggleRow">
+      <div class="workspaceOuter">
+        <div class="workspaceInner">
+          <div class="card workspaceCard">
+            <div class="workspaceHeader">
               <div>
-                <div style="font-weight:800;">Enable Community Contribution</div>
-                <div class="helperText">Shown to customers if configured.</div>
+                <h3 class="sectionTitle" id="workspaceTitle">Basics</h3>
+                <p class="sectionSub" id="workspaceSub">Define what the drop is</p>
               </div>
-              <input id="fundraisingEnabled" type="checkbox" />
-            </div>
 
-            <div id="fundraisingFields" class="hidden">
-              <div class="studioGrid2">
-                <div class="field">
-                  <label for="fundraisingModel">Contribution Model</label>
-                  <select id="fundraisingModel">
-                    <option value="">Select model</option>
-                    <option value="percentage">Percentage of sales</option>
-                    <option value="per_order">Fixed amount per order</option>
-                  </select>
-                </div>
-
-                <div class="field hidden" id="fundraisingPercentageField">
-                  <label for="fundraisingPercentage">Percentage</label>
-                  <input id="fundraisingPercentage" type="number" min="0" step="0.01" placeholder="5" />
-                </div>
-
-                <div class="field hidden" id="fundraisingPerOrderField">
-                  <label for="fundraisingPerOrderPence">Amount per Order (pence)</label>
-                  <input id="fundraisingPerOrderPence" type="number" min="0" step="1" placeholder="100" />
-                </div>
-
-                <div class="field" style="grid-column:1 / -1;">
-                  <label for="fundraisingDisplayText">Customer-facing Text</label>
-                  <input id="fundraisingDisplayText" type="text" placeholder="£1 from every order supports Ruscombe Cricket Club" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="stageSection">
-            <h4 class="stageSectionTitle">Commercial Host Share</h4>
-            <p class="stageSectionSub">Optional commercial settlement for pubs, venues or hosts.</p>
-
-            <div class="toggleRow">
-              <div>
-                <div style="font-weight:800;">Enable Host Share</div>
-                <div class="helperText">Separate from community contribution.</div>
-              </div>
-              <input id="hostShareEnabled" type="checkbox" />
-            </div>
-
-            <div id="hostShareFields" class="hidden">
-              <div class="studioGrid2">
-                <div class="field">
-                  <label for="hostShareModel">Host Share Model</label>
-                  <select id="hostShareModel">
-                    <option value="">Select model</option>
-                    <option value="percentage">Percentage of sales</option>
-                    <option value="per_order">Fixed amount per order</option>
-                    <option value="fixed">Fixed amount for drop</option>
-                  </select>
-                </div>
-
-                <div class="field hidden" id="hostSharePercentageField">
-                  <label for="hostSharePercentage">Percentage</label>
-                  <input id="hostSharePercentage" type="number" min="0" step="0.01" placeholder="10" />
-                </div>
-
-                <div class="field hidden" id="hostSharePerOrderField">
-                  <label for="hostSharePerOrderPence">Amount per Order (pence)</label>
-                  <input id="hostSharePerOrderPence" type="number" min="0" step="1" placeholder="150" />
-                </div>
-
-                <div class="field hidden" id="hostShareFixedField">
-                  <label for="hostShareFixedPence">Fixed Amount (pence)</label>
-                  <input id="hostShareFixedPence" type="number" min="0" step="1" placeholder="7500" />
-                </div>
-
-                <div class="field">
-                  <label for="hostShareCustomerVisible">Customer Visible?</label>
-                  <select id="hostShareCustomerVisible">
-                    <option value="false">No</option>
-                    <option value="true">Yes</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- STAGE 5 -->
-        <div class="stagePane" id="pane-review">
-          <div class="reviewGrid">
-            <div class="stageSection">
-              <h4 class="stageSectionTitle">Drop Summary</h4>
-              <p class="stageSectionSub">Review what will go live.</p>
-              <div class="summaryBlock" id="reviewSummary"></div>
-            </div>
-
-            <div class="stageSection">
-              <h4 class="stageSectionTitle">Readiness</h4>
-              <p class="stageSectionSub">Blocking issues and stage completion.</p>
-              <div class="readinessList" id="reviewReadiness"></div>
-            </div>
-          </div>
-
-          <div class="reviewGrid" style="margin-top:12px;">
-            <div class="stageSection">
-              <h4 class="stageSectionTitle">Share Link</h4>
-              <p class="stageSectionSub">Customer ordering page for this drop.</p>
-              <div class="shareLink" id="shareLinkPreview">No drop link yet.</div>
-              <div class="row" style="gap:8px; flex-wrap:wrap; margin-top:10px;">
-                <button class="btnGhost" id="copyLinkBtn" type="button">Copy Link</button>
-                <button class="btnGhost" id="downloadQrBtn" type="button">Download QR</button>
-              </div>
-              <div class="qrWrap" id="qrWrap">
-                <canvas id="qrCanvas"></canvas>
+              <div class="workspaceHeaderActions">
+                <button class="btnGhost hidden" id="openBoardBtn" type="button">Open Service Board</button>
+                <button class="btnGhost" id="previewOrderPageBtn" type="button">Preview Ordering Page</button>
               </div>
             </div>
 
-            <div class="stageSection">
-              <h4 class="stageSectionTitle">Review & Publish</h4>
-              <p class="stageSectionSub">Final actions for this drop.</p>
-              <div class="helperText" id="publishHelpText">Resolve blocking issues to publish this drop.</div>
-              <div style="margin-top:12px; display:grid; gap:8px;">
-                <button class="btnAccent" id="publishBtn" type="button">Publish Drop</button>
-                <button class="btnGhost" id="cancelDropBtn" type="button">Cancel Drop</button>
-                <button class="btnGhost" id="archiveDropBtn" type="button">Archive Drop</button>
+            <div class="inlineSuccess" id="inlineSuccess"></div>
+            <div class="errorBox" id="errorBox"></div>
+
+            <div class="stagePane active" id="pane-basics">
+              <div class="stageSection">
+                <h4 class="stageSectionTitle">Basics</h4>
+                <p class="stageSectionSub">Create the identity of the drop before moving into scheduling and menu setup.</p>
+
+                <div class="studioGrid2">
+                  <div class="field">
+                    <label for="dropName">Drop Name</label>
+                    <input id="dropName" type="text" placeholder="Friday Pizza Night" />
+                  </div>
+
+                  <div class="field">
+                    <label for="dropSlug">Drop Link Name</label>
+                    <input id="dropSlug" type="text" placeholder="friday-pizza-night" />
+                    <div class="helperText">Used in the customer ordering URL for this drop.</div>
+                  </div>
+
+                  <div class="field">
+                    <label for="dropType">Drop Type</label>
+                    <select id="dropType">
+                      <option value="neighbourhood">Neighbourhood</option>
+                      <option value="community">Community</option>
+                      <option value="event">Event</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label for="dropStatus">Status</label>
+                    <select id="dropStatus">
+                      <option value="draft">Draft</option>
+                      <option value="scheduled">Scheduled</option>
+                      <option value="live">Live</option>
+                      <option value="closed">Closed</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label for="hostSelect">Host</label>
+                    <select id="hostSelect">
+                      <option value="">No host selected</option>
+                    </select>
+                    <div class="helperText" id="hostHelperText">Optional for neighbourhood drops. Required for community drops.</div>
+                  </div>
+
+                  <div class="field">
+                    <label>Selected Host</label>
+                    <div class="hostPreview" id="hostPreview">
+                      <strong>No host selected</strong>
+                      Add a host for community or hosted drops.
+                    </div>
+                  </div>
+
+                  <div class="field" style="grid-column:1 / -1;">
+                    <label for="notesInternal">Internal Notes</label>
+                    <textarea id="notesInternal" placeholder="Any internal operational notes for this drop"></textarea>
+                  </div>
+                </div>
+
+                <div style="margin-top:10px;">
+                  <button class="btnGhost" id="openHostModalBtn" type="button">+ Create Host</button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div class="stageFooter">
-          <div class="stageFooterLeft">
-            <button class="btnGhost" id="backStageBtn" type="button">← Back</button>
-          </div>
+            <div class="stagePane" id="pane-timing">
+              <div class="stageSection">
+                <h4 class="stageSectionTitle">Fulfilment</h4>
+                <p class="stageSectionSub">Define when the drop happens.</p>
 
-          <div class="stageFooterRight">
-            <button class="btnGhost" id="saveDraftBtn" type="button">Save Draft</button>
-            <button class="btnAccent" id="continueStageBtn" type="button">Continue →</button>
+                <div class="studioGrid3">
+                  <div class="field">
+                    <label for="deliveryDate">Drop Date</label>
+                    <input id="deliveryDate" type="date" />
+                  </div>
+
+                  <div class="field">
+                    <label for="deliveryStartTime">From</label>
+                    <input id="deliveryStartTime" type="time" />
+                  </div>
+
+                  <div class="field">
+                    <label for="deliveryEndTime">To</label>
+                    <input id="deliveryEndTime" type="time" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="stageSection">
+                <h4 class="stageSectionTitle">Order Window</h4>
+                <p class="stageSectionSub">Define when customers can place orders.</p>
+
+                <div class="studioGrid2">
+                  <div class="field">
+                    <label for="opensAtDate">Open for Orders</label>
+                    <div class="studioGrid2" style="gap:8px;">
+                      <input id="opensAtDate" type="date" />
+                      <input id="opensAtTime" type="time" />
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label for="closesAtDate">Close Orders</label>
+                    <div class="studioGrid2" style="gap:8px;">
+                      <input id="closesAtDate" type="date" />
+                      <input id="closesAtTime" type="time" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="stageSection">
+                <h4 class="stageSectionTitle">Repeat Pattern</h4>
+                <p class="stageSectionSub">Set the drop as one-off or recurring.</p>
+
+                <div class="repeatChoice">
+                  <label><input type="radio" name="repeatPattern" value="one_off" checked /> One-off drop</label>
+                  <label><input type="radio" name="repeatPattern" value="recurring" /> Recurring</label>
+                </div>
+
+                <div class="repeatBlock hidden" id="recurringBlock">
+                  <div class="row space" style="margin-bottom:8px;">
+                    <div>
+                      <h4 class="stageSectionTitle" style="font-size:13px; margin:0;">Recurring Schedule</h4>
+                      <p class="stageSectionSub" style="margin:4px 0 0;">Add one or more weekly schedule lines.</p>
+                    </div>
+                    <button class="btnGhost" id="addScheduleRowBtn" type="button">+ Add another day</button>
+                  </div>
+
+                  <div class="scheduleTableWrap">
+                    <table class="scheduleTable">
+                      <thead>
+                        <tr>
+                          <th>Day</th>
+                          <th>From</th>
+                          <th>To</th>
+                          <th>Orders Close</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody id="scheduleRowsBody"></tbody>
+                    </table>
+                  </div>
+
+                  <div class="studioGrid2" style="margin-top:10px;">
+                    <div class="field">
+                      <label for="seriesStartDate">Series Start Date</label>
+                      <input id="seriesStartDate" type="date" />
+                    </div>
+
+                    <div class="field">
+                      <label for="ordersOpenRule">Orders Open</label>
+                      <select id="ordersOpenRule">
+                        <option value="immediately">Immediately</option>
+                        <option value="days_before">X days before drop</option>
+                        <option value="fixed_start">Fixed start date</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="studioGrid3" id="ordersOpenRuleFields" style="margin-top:10px;">
+                    <div class="field hidden" id="ordersOpenDaysBeforeField">
+                      <label for="ordersOpenDaysBefore">Days Before Drop</label>
+                      <input id="ordersOpenDaysBefore" type="number" min="0" step="1" value="3" />
+                    </div>
+
+                    <div class="field hidden" id="seriesFixedOpenDateField">
+                      <label for="seriesFixedOpenDate">Fixed Open Date</label>
+                      <input id="seriesFixedOpenDate" type="date" />
+                    </div>
+
+                    <div class="field hidden" id="seriesFixedOpenTimeField">
+                      <label for="seriesFixedOpenTime">Fixed Open Time</label>
+                      <input id="seriesFixedOpenTime" type="time" />
+                    </div>
+                  </div>
+
+                  <div class="studioGrid2" style="margin-top:10px;">
+                    <div class="field">
+                      <label for="seriesEndMode">Series Ends By</label>
+                      <select id="seriesEndMode">
+                        <option value="end_date">End date</option>
+                        <option value="drop_count">Number of drops</option>
+                      </select>
+                    </div>
+
+                    <div class="field" id="seriesEndDateField">
+                      <label for="seriesEndDate">End Date</label>
+                      <input id="seriesEndDate" type="date" />
+                    </div>
+
+                    <div class="field hidden" id="seriesDropCountField">
+                      <label for="seriesDropCount">Number of Drops</label>
+                      <input id="seriesDropCount" type="number" min="1" step="1" value="8" />
+                    </div>
+                  </div>
+
+                  <div style="margin-top:10px;">
+                    <div class="helperText" id="seriesSummaryText">This will create a recurring series once implemented.</div>
+                  </div>
+
+                  <div class="previewList" id="seriesPreviewList"></div>
+                </div>
+              </div>
+
+              <div class="stageSection">
+                <h4 class="stageSectionTitle">Operations</h4>
+                <p class="stageSectionSub">Set capacity, fulfilment mode and delivery geography.</p>
+
+                <div class="studioGrid3">
+                  <div class="field">
+                    <label for="capacityCategory">Capacity Category</label>
+                    <select id="capacityCategory">
+                      <option value="pizza">Pizza</option>
+                      <option value="side">Side</option>
+                      <option value="drink">Drink</option>
+                      <option value="sauce">Sauce</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label for="capacityTotal">Capacity Total</label>
+                    <input id="capacityTotal" type="number" min="0" step="1" />
+                  </div>
+
+                  <div class="field">
+                    <label for="fulfilmentMode">Fulfilment Mode</label>
+                    <select id="fulfilmentMode">
+                      <option value="">Select mode</option>
+                      <option value="delivery">Delivery</option>
+                      <option value="collection">Collection</option>
+                      <option value="mixed">Mixed</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label for="centrePostcode">Centre Postcode</label>
+                    <input id="centrePostcode" type="text" placeholder="RG10 0JP" />
+                  </div>
+
+                  <div class="field">
+                    <label for="radiusKm">Radius (km)</label>
+                    <input id="radiusKm" type="number" min="0" step="0.1" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="stagePane" id="pane-menu">
+              <div class="stageSection">
+                <h4 class="stageSectionTitle">Menu</h4>
+                <p class="stageSectionSub">Choose which products are available in this drop.</p>
+
+                <div class="row space" style="margin-bottom:10px;">
+                  <div class="helperText">Enable products, override prices and manage stock limits.</div>
+                  <div class="row" style="gap:8px; flex-wrap:wrap;">
+                    <button class="btnGhost" id="openProductModalBtn" type="button">+ Add Product</button>
+                    <a href="drop-menu.html" class="utilityLink">Menu Library</a>
+                  </div>
+                </div>
+
+                <div id="assignmentGroups"></div>
+              </div>
+            </div>
+
+            <div class="stagePane" id="pane-commercials">
+              <div class="stageSection">
+                <h4 class="stageSectionTitle">Community Contribution</h4>
+                <p class="stageSectionSub">Optional public-facing support for schools, clubs or causes.</p>
+
+                <div class="toggleRow">
+                  <div>
+                    <div style="font-weight:800;">Enable Community Contribution</div>
+                    <div class="helperText">Shown to customers if configured.</div>
+                  </div>
+                  <input id="fundraisingEnabled" type="checkbox" />
+                </div>
+
+                <div id="fundraisingFields" class="hidden">
+                  <div class="studioGrid2">
+                    <div class="field">
+                      <label for="fundraisingModel">Contribution Model</label>
+                      <select id="fundraisingModel">
+                        <option value="">Select model</option>
+                        <option value="percentage">Percentage of sales</option>
+                        <option value="per_order">Fixed amount per order</option>
+                      </select>
+                    </div>
+
+                    <div class="field hidden" id="fundraisingPercentageField">
+                      <label for="fundraisingPercentage">Percentage</label>
+                      <input id="fundraisingPercentage" type="number" min="0" step="0.01" placeholder="5" />
+                    </div>
+
+                    <div class="field hidden" id="fundraisingPerOrderField">
+                      <label for="fundraisingPerOrderPence">Amount per Order (pence)</label>
+                      <input id="fundraisingPerOrderPence" type="number" min="0" step="1" placeholder="100" />
+                    </div>
+
+                    <div class="field" style="grid-column:1 / -1;">
+                      <label for="fundraisingDisplayText">Customer-facing Text</label>
+                      <input id="fundraisingDisplayText" type="text" placeholder="£1 from every order supports Ruscombe Cricket Club" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="stageSection">
+                <h4 class="stageSectionTitle">Commercial Host Share</h4>
+                <p class="stageSectionSub">Optional commercial settlement for pubs, venues or hosts.</p>
+
+                <div class="toggleRow">
+                  <div>
+                    <div style="font-weight:800;">Enable Host Share</div>
+                    <div class="helperText">Separate from community contribution.</div>
+                  </div>
+                  <input id="hostShareEnabled" type="checkbox" />
+                </div>
+
+                <div id="hostShareFields" class="hidden">
+                  <div class="studioGrid2">
+                    <div class="field">
+                      <label for="hostShareModel">Host Share Model</label>
+                      <select id="hostShareModel">
+                        <option value="">Select model</option>
+                        <option value="percentage">Percentage of sales</option>
+                        <option value="per_order">Fixed amount per order</option>
+                        <option value="fixed">Fixed amount for drop</option>
+                      </select>
+                    </div>
+
+                    <div class="field hidden" id="hostSharePercentageField">
+                      <label for="hostSharePercentage">Percentage</label>
+                      <input id="hostSharePercentage" type="number" min="0" step="0.01" placeholder="10" />
+                    </div>
+
+                    <div class="field hidden" id="hostSharePerOrderField">
+                      <label for="hostSharePerOrderPence">Amount per Order (pence)</label>
+                      <input id="hostSharePerOrderPence" type="number" min="0" step="1" placeholder="150" />
+                    </div>
+
+                    <div class="field hidden" id="hostShareFixedField">
+                      <label for="hostShareFixedPence">Fixed Amount (pence)</label>
+                      <input id="hostShareFixedPence" type="number" min="0" step="1" placeholder="7500" />
+                    </div>
+
+                    <div class="field">
+                      <label for="hostShareCustomerVisible">Customer Visible?</label>
+                      <select id="hostShareCustomerVisible">
+                        <option value="false">No</option>
+                        <option value="true">Yes</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="stagePane" id="pane-review">
+              <div class="reviewGrid">
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Drop Summary</h4>
+                  <p class="stageSectionSub">Review what will go live.</p>
+                  <div class="summaryBlock" id="reviewSummary"></div>
+                </div>
+
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Readiness</h4>
+                  <p class="stageSectionSub">Blocking issues and stage completion.</p>
+                  <div class="readinessList" id="reviewReadiness"></div>
+                </div>
+              </div>
+
+              <div class="reviewGrid" style="margin-top:10px;">
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Share Link</h4>
+                  <p class="stageSectionSub">Customer ordering page for this drop.</p>
+                  <div class="shareLink" id="shareLinkPreview">No drop link yet.</div>
+                  <div class="row" style="gap:8px; flex-wrap:wrap; margin-top:8px;">
+                    <button class="btnGhost" id="copyLinkBtn" type="button">Copy Link</button>
+                    <button class="btnGhost" id="downloadQrBtn" type="button">Download QR</button>
+                  </div>
+                  <div class="qrWrap" id="qrWrap">
+                    <canvas id="qrCanvas"></canvas>
+                  </div>
+                </div>
+
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Review &amp; Publish</h4>
+                  <p class="stageSectionSub">Final actions for this drop.</p>
+                  <div class="helperText" id="publishHelpText">Resolve blocking issues to publish this drop.</div>
+                  <div style="margin-top:10px; display:grid; gap:8px;">
+                    <button class="btnAccent" id="publishBtn" type="button">Publish Drop</button>
+                    <button class="btnGhost" id="cancelDropBtn" type="button">Cancel Drop</button>
+                    <button class="btnGhost" id="archiveDropBtn" type="button">Archive Drop</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="stageFooter">
+              <div class="stageFooterLeft">
+                <button class="btnGhost" id="backStageBtn" type="button">← Back</button>
+              </div>
+
+              <div class="stageFooterRight">
+                <button class="btnGhost" id="saveDraftBtn" type="button">Save Draft</button>
+                <button class="btnAccent" id="continueStageBtn" type="button">Continue →</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- HOST MODAL -->
-  <div class="modalBackdrop" id="hostModal">
-    <div class="modalCard">
-      <div class="modalHead">
-        <div>
-          <h3 class="sectionTitle">Create Host</h3>
-          <p class="sectionSub">Add a new club, school, pub, venue or private host</p>
-        </div>
-        <button class="btnGhost" id="closeHostModalBtn" type="button">Close</button>
-      </div>
-
-      <div class="studioGrid2">
-        <div class="field">
-          <label for="newHostName">Host Name</label>
-          <input id="newHostName" type="text" placeholder="Ruscombe Cricket Club" />
+    <!-- HOST MODAL -->
+    <div class="modalBackdrop" id="hostModal">
+      <div class="modalCard">
+        <div class="modalHead">
+          <div>
+            <h3 class="sectionTitle">Create Host</h3>
+            <p class="sectionSub">Add a new club, school, pub, venue or private host</p>
+          </div>
+          <button class="btnGhost" id="closeHostModalBtn" type="button">Close</button>
         </div>
 
-        <div class="field">
-          <label for="newHostType">Host Type</label>
-          <select id="newHostType">
-            <option value="club">Club</option>
-            <option value="school">School</option>
-            <option value="pub">Pub</option>
-            <option value="venue">Venue</option>
-            <option value="private_host">Private host</option>
-            <option value="other">Other</option>
-          </select>
+        <div class="studioGrid2">
+          <div class="field">
+            <label for="newHostName">Host Name</label>
+            <input id="newHostName" type="text" placeholder="Ruscombe Cricket Club" />
+          </div>
+
+          <div class="field">
+            <label for="newHostType">Host Type</label>
+            <select id="newHostType">
+              <option value="club">Club</option>
+              <option value="school">School</option>
+              <option value="pub">Pub</option>
+              <option value="venue">Venue</option>
+              <option value="private_host">Private host</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="newHostPostcode">Postcode</label>
+            <input id="newHostPostcode" type="text" placeholder="RG10 0JP" />
+          </div>
+
+          <div class="field">
+            <label for="newHostAddress">Address Summary</label>
+            <input id="newHostAddress" type="text" placeholder="Ruscombe, Berkshire" />
+          </div>
+
+          <div class="field" style="grid-column:1 / -1;">
+            <label for="newHostNotes">Internal Notes</label>
+            <textarea id="newHostNotes" placeholder="Regular hosting opportunity"></textarea>
+          </div>
         </div>
 
-        <div class="field">
-          <label for="newHostPostcode">Postcode</label>
-          <input id="newHostPostcode" type="text" placeholder="RG10 0JP" />
+        <div class="modalMessage" id="hostModalMessage"></div>
+
+        <div class="modalActions">
+          <button class="btnGhost" id="cancelHostBtn" type="button">Cancel</button>
+          <button class="btnAccent" id="saveHostBtn" type="button">Create Host</button>
         </div>
-
-        <div class="field">
-          <label for="newHostAddress">Address Summary</label>
-          <input id="newHostAddress" type="text" placeholder="Ruscombe, Berkshire" />
-        </div>
-
-        <div class="field" style="grid-column:1 / -1;">
-          <label for="newHostNotes">Internal Notes</label>
-          <textarea id="newHostNotes" placeholder="Regular hosting opportunity"></textarea>
-        </div>
-      </div>
-
-      <div class="modalMessage" id="hostModalMessage"></div>
-
-      <div class="modalActions">
-        <button class="btnGhost" id="cancelHostBtn" type="button">Cancel</button>
-        <button class="btnAccent" id="saveHostBtn" type="button">Create Host</button>
       </div>
     </div>
-  </div>
 
-  <!-- PRODUCT MODAL -->
-  <div class="modalBackdrop" id="productModal">
-    <div class="modalCard">
-      <div class="modalHead">
-        <div>
-          <h3 class="sectionTitle">Create Product</h3>
-          <p class="sectionSub">Add a new item to the vendor menu and assign it to this drop</p>
-        </div>
-        <button class="btnGhost" id="closeProductModalBtn" type="button">Close</button>
-      </div>
-
-      <div class="studioGrid2">
-        <div class="field">
-          <label for="newProductName">Product Name</label>
-          <input id="newProductName" type="text" placeholder="Margherita" />
+    <!-- PRODUCT MODAL -->
+    <div class="modalBackdrop" id="productModal">
+      <div class="modalCard">
+        <div class="modalHead">
+          <div>
+            <h3 class="sectionTitle">Create Product</h3>
+            <p class="sectionSub">Add a new item to the vendor menu and assign it to this drop</p>
+          </div>
+          <button class="btnGhost" id="closeProductModalBtn" type="button">Close</button>
         </div>
 
-        <div class="field">
-          <label for="newProductCategory">Category</label>
-          <select id="newProductCategory">
-            <option value="pizza">Pizza</option>
-            <option value="side">Side</option>
-            <option value="drink">Drink</option>
-            <option value="sauce">Sauce</option>
-          </select>
+        <div class="studioGrid2">
+          <div class="field">
+            <label for="newProductName">Product Name</label>
+            <input id="newProductName" type="text" placeholder="Margherita" />
+          </div>
+
+          <div class="field">
+            <label for="newProductCategory">Category</label>
+            <select id="newProductCategory">
+              <option value="pizza">Pizza</option>
+              <option value="side">Side</option>
+              <option value="drink">Drink</option>
+              <option value="sauce">Sauce</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="newProductPricePence">Base Price (pence)</label>
+            <input id="newProductPricePence" type="number" min="0" step="1" placeholder="1100" />
+          </div>
+
+          <div class="field">
+            <label for="newProductCapacityUnits">Capacity Units</label>
+            <input id="newProductCapacityUnits" type="number" min="0" step="0.1" value="1" />
+          </div>
+
+          <div class="field">
+            <label for="newProductSortOrder">Display Order</label>
+            <input id="newProductSortOrder" type="number" min="0" step="1" value="100" />
+          </div>
+
+          <div class="field">
+            <label for="newProductActive">Active</label>
+            <select id="newProductActive">
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
         </div>
 
-        <div class="field">
-          <label for="newProductPricePence">Base Price (pence)</label>
-          <input id="newProductPricePence" type="number" min="0" step="1" placeholder="1100" />
+        <div class="modalMessage" id="productModalMessage"></div>
+
+        <div class="modalActions">
+          <button class="btnGhost" id="cancelProductBtn" type="button">Cancel</button>
+          <button class="btnAccent" id="saveProductBtn" type="button">Create Product</button>
         </div>
-
-        <div class="field">
-          <label for="newProductCapacityUnits">Capacity Units</label>
-          <input id="newProductCapacityUnits" type="number" min="0" step="0.1" value="1" />
-        </div>
-
-        <div class="field">
-          <label for="newProductSortOrder">Display Order</label>
-          <input id="newProductSortOrder" type="number" min="0" step="1" value="100" />
-        </div>
-
-        <div class="field">
-          <label for="newProductActive">Active</label>
-          <select id="newProductActive">
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="modalMessage" id="productModalMessage"></div>
-
-      <div class="modalActions">
-        <button class="btnGhost" id="cancelProductBtn" type="button">Cancel</button>
-        <button class="btnAccent" id="saveProductBtn" type="button">Create Product</button>
       </div>
     </div>
   </div>
@@ -1610,26 +1713,11 @@
       function getStageStatus(stage) {
         if (!state.readiness || !state.drop) return "not_started";
 
-        if (stage === "basics") {
-          return state.readiness.basics_complete ? "complete" : "attention";
-        }
-
-        if (stage === "timing") {
-          return state.readiness.timing_complete ? "complete" : "attention";
-        }
-
-        if (stage === "menu") {
-          return (state.readiness.menu_complete && state.readiness.capacity_product_present) ? "complete" : "attention";
-        }
-
-        if (stage === "commercials") {
-          return state.readiness.commercials_valid ? "complete" : "attention";
-        }
-
-        if (stage === "review") {
-          return state.readiness.ready_to_publish ? "complete" : "attention";
-        }
-
+        if (stage === "basics") return state.readiness.basics_complete ? "complete" : "attention";
+        if (stage === "timing") return state.readiness.timing_complete ? "complete" : "attention";
+        if (stage === "menu") return (state.readiness.menu_complete && state.readiness.capacity_product_present) ? "complete" : "attention";
+        if (stage === "commercials") return state.readiness.commercials_valid ? "complete" : "attention";
+        if (stage === "review") return state.readiness.ready_to_publish ? "complete" : "attention";
         return "not_started";
       }
 
@@ -1657,6 +1745,35 @@
         });
       }
 
+      function renderContextBar() {
+        const title = byId("contextTitle");
+        const meta = byId("contextMeta");
+        const chips = byId("contextChips");
+
+        if (!state.drop || !state.selectedDropSummary) {
+          title.textContent = "No drop selected";
+          meta.textContent = "Select a drop to view timing, menu and readiness.";
+          chips.innerHTML = "";
+          return;
+        }
+
+        const host = state.hosts.find((h) => h.id === state.drop.host_id);
+        title.textContent = `${state.drop.name || "Untitled drop"} — ${state.drop.status || "draft"}`;
+
+        meta.textContent = [
+          state.drop.drop_type || "drop",
+          host ? host.name : "No host",
+          state.drop.delivery_start ? `${formatDateShort(state.drop.delivery_start)} ${formatTimeOnly(state.drop.delivery_start)}–${formatTimeOnly(state.drop.delivery_end)}` : "No fulfilment window"
+        ].filter(Boolean).join(" • ");
+
+        const enabledProducts = state.productAssignments.filter((p) => p.enabled).length;
+        chips.innerHTML = [
+          `<span class="miniChip">${Number(state.drop.capacity_units_total || 0)} ${escapeHtml(state.drop.capacity_category || "units")}</span>`,
+          `<span class="miniChip">${enabledProducts} products</span>`,
+          `<span class="miniChip">${Number(state.selectedDropSummary.order_count || 0)} orders</span>`
+        ].join("");
+      }
+
       function updateWorkspaceHeader() {
         const map = {
           basics: ["Basics", "Define what the drop is"],
@@ -1671,14 +1788,9 @@
         document.querySelectorAll(".stagePane").forEach((pane) => pane.classList.remove("active"));
         byId(`pane-${state.currentStage}`).classList.add("active");
 
-        const backBtn = byId("backStageBtn");
-        backBtn.classList.toggle("hidden", state.currentStage === "basics");
-
-        const continueBtn = byId("continueStageBtn");
-        continueBtn.textContent = state.currentStage === "review" ? "Stay on Review" : "Continue →";
-
-        const openBoardBtn = byId("openBoardBtn");
-        openBoardBtn.classList.toggle("hidden", !(state.drop && ["live", "closed"].includes(state.drop.status)));
+        byId("backStageBtn").classList.toggle("hidden", state.currentStage === "basics");
+        byId("continueStageBtn").textContent = state.currentStage === "review" ? "Stay on Review" : "Continue →";
+        byId("openBoardBtn").classList.toggle("hidden", !(state.drop && ["live", "closed"].includes(state.drop.status)));
       }
 
       async function loadVendorId() {
@@ -1732,9 +1844,7 @@
         });
 
         const exists = state.drops.some((d) => d.drop_id === state.selectedDropId);
-        if (!exists) {
-          state.selectedDropId = (state.drops[0] || {}).drop_id || null;
-        }
+        if (!exists) state.selectedDropId = (state.drops[0] || {}).drop_id || null;
       }
 
       async function loadSelectedDrop() {
@@ -1818,7 +1928,7 @@
         const drops = getFilteredDrops();
 
         if (!drops.length) {
-          band.innerHTML = `<div class="emptyState" style="min-width:320px;">No drops found.</div>`;
+          band.innerHTML = `<div class="emptyState" style="min-width:280px;">No drops found.</div>`;
           return;
         }
 
@@ -1830,24 +1940,26 @@
 
           return `
             <div class="dropCard ${active}" data-drop-id="${drop.drop_id}">
-              <div class="dropCardTop">
-                <div>
-                  <h4 class="dropCardTitle">${escapeHtml(drop.drop_name || "Untitled drop")}</h4>
-                  <p class="dropCardSub">${hostLine}</p>
+              <div>
+                <div class="dropCardTop">
+                  <div>
+                    <h4 class="dropCardTitle">${escapeHtml(drop.drop_name || "Untitled drop")}</h4>
+                    <p class="dropCardSub">${hostLine}</p>
+                  </div>
+                  <span class="miniChip ${escapeHtml(drop.status || "")}">${escapeHtml(drop.status || "—")}</span>
                 </div>
-                <span class="miniChip ${escapeHtml(drop.status || "")}">${escapeHtml(drop.status || "—")}</span>
-              </div>
 
-              <div class="dropCardMeta">${escapeHtml(formatDateShort(drop.delivery_start))} • ${escapeHtml(formatTimeOnly(drop.delivery_start))}–${escapeHtml(formatTimeOnly(drop.delivery_end))}</div>
+                <div class="dropCardMeta">${escapeHtml(formatDateShort(drop.delivery_start))}</div>
+                <div class="dropCardMeta">${escapeHtml(formatTimeOnly(drop.delivery_start))}–${escapeHtml(formatTimeOnly(drop.delivery_end))}</div>
 
-              <div class="dropCardStats">
-                <span class="miniChip">${Number(drop.capacity_units_used || 0)} / ${Number(drop.capacity_units_total || 0)} ${escapeHtml(drop.capacity_category || "units")}</span>
-                <span class="miniChip">${Number(drop.order_count || 0)} orders</span>
+                <div class="dropCardStats">
+                  <span class="miniChip">${Number(drop.capacity_units_used || 0)} / ${Number(drop.capacity_units_total || 0)} ${escapeHtml(drop.capacity_category || "units")}</span>
+                  <span class="miniChip">${Number(drop.order_count || 0)} orders</span>
+                </div>
               </div>
 
               <div class="dropCardActions">
                 <button class="btnSmall js-duplicate-drop" type="button" data-drop-id="${drop.drop_id}">Duplicate</button>
-                <button class="btnGhost js-archive-drop" type="button" data-drop-id="${drop.drop_id}">More</button>
               </div>
             </div>
           `;
@@ -1953,16 +2065,16 @@
               const countsTowardCapacity = row.category === (state.drop?.capacity_category || "pizza");
               return `
                 <tr data-product-id="${row.product_id}">
-                  <td style="width:72px;"><input class="js-assign-enabled" type="checkbox" ${row.enabled ? "checked" : ""} /></td>
+                  <td style="width:60px;"><input class="js-assign-enabled" type="checkbox" ${row.enabled ? "checked" : ""} /></td>
                   <td>
                     <span class="productName">${escapeHtml(row.name)}</span>
                     <span class="subMeta">${escapeHtml(row.category)}</span>
                   </td>
-                  <td style="width:110px;">${formatMoneyPence(row.base_price_pence)}</td>
-                  <td style="width:130px;"><input class="js-assign-override" type="number" min="0" step="1" value="${row.price_override_pence ?? ""}" placeholder="—" /></td>
-                  <td style="width:120px;"><input class="js-assign-stock-limit" type="number" min="0" step="1" value="${row.stock_limit ?? ""}" placeholder="∞" /></td>
-                  <td style="width:100px;">${row.stock_remaining == null ? "—" : row.stock_remaining}</td>
-                  <td style="width:170px;"><span class="capacityTag ${countsTowardCapacity ? "yes" : "no"}">${countsTowardCapacity ? "Counts toward capacity" : "Does not count"}</span></td>
+                  <td style="width:95px;">${formatMoneyPence(row.base_price_pence)}</td>
+                  <td style="width:110px;"><input class="js-assign-override" type="number" min="0" step="1" value="${row.price_override_pence ?? ""}" placeholder="—" /></td>
+                  <td style="width:100px;"><input class="js-assign-stock-limit" type="number" min="0" step="1" value="${row.stock_limit ?? ""}" placeholder="∞" /></td>
+                  <td style="width:80px;">${row.stock_remaining == null ? "—" : row.stock_remaining}</td>
+                  <td style="width:145px;"><span class="capacityTag ${countsTowardCapacity ? "yes" : "no"}">${countsTowardCapacity ? "Counts toward capacity" : "Does not count"}</span></td>
                 </tr>
               `;
             }).join("");
@@ -1978,8 +2090,8 @@
                       <th>Base Price</th>
                       <th>Drop Price</th>
                       <th>Stock Limit</th>
-                      <th>Remaining</th>
-                      <th>Capacity Impact</th>
+                      <th>Remain</th>
+                      <th>Capacity</th>
                     </tr>
                   </thead>
                   <tbody>${rows}</tbody>
@@ -2197,7 +2309,7 @@
 
         wrap.innerHTML = `<canvas id="qrCanvas"></canvas>`;
         const canvas = byId("qrCanvas");
-        window.QRCode.toCanvas(canvas, text, { width: 128, margin: 1 }, function (error) {
+        window.QRCode.toCanvas(canvas, text, { width: 120, margin: 1 }, function (error) {
           if (error) {
             console.error(error);
             wrap.innerHTML = `<div class="helperText">QR preview unavailable.</div>`;
@@ -2457,6 +2569,7 @@
         renderScheduleRows();
         renderSeriesPreview();
         renderStageBar();
+        renderContextBar();
         updateWorkspaceHeader();
         renderReview();
       }
@@ -2473,6 +2586,7 @@
         state.drop = { ...state.drop, ...readDropFromForm() };
         renderHostPreview();
         renderHostHelper();
+        renderContextBar();
         renderReview();
       }
 
@@ -2484,9 +2598,7 @@
 
       function goNextStage() {
         const idx = STAGES.indexOf(state.currentStage);
-        if (idx >= 0 && idx < STAGES.length - 1) {
-          openStage(STAGES[idx + 1]);
-        }
+        if (idx >= 0 && idx < STAGES.length - 1) openStage(STAGES[idx + 1]);
       }
 
       function goPrevStage() {
@@ -2508,6 +2620,7 @@
 
         markDirty();
         renderAssignments();
+        renderContextBar();
         renderReview();
       }
 
@@ -2839,7 +2952,7 @@
 
         document.body.addEventListener("click", async (e) => {
           const card = e.target.closest(".dropCard");
-          if (card && !e.target.closest(".js-duplicate-drop") && !e.target.closest(".js-archive-drop")) {
+          if (card && !e.target.closest(".js-duplicate-drop")) {
             state.selectedDropId = card.dataset.dropId;
             try {
               await loadSelectedDrop();
@@ -2860,19 +2973,6 @@
             } catch (err) {
               console.error(err);
               showError(err.message || "Unable to duplicate drop.");
-            }
-            return;
-          }
-
-          const more = e.target.closest(".js-archive-drop");
-          if (more) {
-            try {
-              await supabase.from("drops").update({ status: "archived" }).eq("id", more.dataset.dropId);
-              await refreshAll();
-              showInlineSuccess("Drop archived");
-            } catch (err) {
-              console.error(err);
-              showError(err.message || "Unable to archive drop.");
             }
           }
         });
@@ -2912,12 +3012,8 @@
 
       async function init() {
         try {
-          if (!window.supabase || !window.supabase.createClient) {
-            throw new Error("Supabase library failed to load.");
-          }
-          if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-            throw new Error("Missing Supabase config. Check /assets/config.js.");
-          }
+          if (!window.supabase || !window.supabase.createClient) throw new Error("Supabase library failed to load.");
+          if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error("Missing Supabase config. Check /assets/config.js.");
 
           supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
