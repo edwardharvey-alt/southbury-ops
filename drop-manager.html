@@ -18,6 +18,14 @@
       gap:14px;
     }
 
+    .studioCard,
+    .stageBar,
+    .contextBar,
+    .workspaceCard{
+      width:100%;
+      box-sizing:border-box;
+    }
+
     .studioCard{
       padding:14px 16px;
       overflow:hidden;
@@ -40,6 +48,7 @@
     }
 
     .dropBandWrap{
+      width:100%;
       overflow:hidden;
     }
 
@@ -54,10 +63,10 @@
     }
 
     .dropCard{
-      width:224px;
-      min-width:224px;
-      max-width:224px;
-      min-height:146px;
+      width:220px;
+      min-width:220px;
+      max-width:220px;
+      min-height:150px;
       border:1px solid var(--h-border-2);
       border-radius:14px;
       background:rgba(255,255,255,0.95);
@@ -105,7 +114,7 @@
     }
 
     .dropCardMeta{
-      margin-top:8px;
+      margin-top:7px;
       font-size:11px;
       color:var(--h-text);
       font-weight:700;
@@ -127,7 +136,7 @@
 
     .dropCardActions .btnSmall{
       width:100%;
-      min-height:28px;
+      min-height:30px;
       font-size:11px;
       padding:0 10px;
     }
@@ -180,6 +189,7 @@
       z-index:20;
       display:grid;
       gap:10px;
+      width:100%;
     }
 
     .stageBar{
@@ -236,50 +246,62 @@
     }
 
     .stagePills{
-      display:flex;
-      gap:8px;
-      overflow-x:auto;
-      padding-bottom:2px;
+      display:grid;
+      grid-template-columns:repeat(5, minmax(0, 1fr));
+      gap:10px;
+      width:100%;
     }
 
     .stagePill{
-      display:inline-flex;
+      min-width:0;
+      min-height:46px;
+      height:46px;
+      display:flex;
       align-items:center;
+      justify-content:center;
       gap:8px;
-      padding:8px 10px;
-      border-radius:13px;
+      padding:0 12px;
+      border-radius:14px;
       border:1px solid var(--h-border-2);
       background:rgba(15,23,42,0.02);
       color:var(--h-muted);
-      font-size:11px;
-      font-weight:800;
+      font-size:12px;
+      font-weight:850;
       cursor:pointer;
       white-space:nowrap;
-      flex:0 0 auto;
+      text-align:center;
+      box-shadow:none;
+      transition:all .15s ease;
+    }
+
+    .stagePill:hover{
+      transform:translateY(-1px);
+      box-shadow:0 6px 14px rgba(15,23,42,0.05);
     }
 
     .stagePill.active{
-      border-color:rgba(249,115,22,0.28);
-      background:linear-gradient(135deg, rgba(249,115,22,0.13), rgba(251,146,60,0.08));
+      border-color:rgba(249,115,22,0.34);
+      background:linear-gradient(135deg, rgba(249,115,22,0.18), rgba(251,146,60,0.10));
       color:var(--h-accent-ink);
+      box-shadow:0 8px 18px rgba(249,115,22,0.10);
     }
 
     .stagePill.complete{
-      border-color:rgba(22,163,74,0.18);
-      background:rgba(22,163,74,0.08);
+      border-color:rgba(22,163,74,0.20);
+      background:rgba(22,163,74,0.10);
       color:var(--h-good);
     }
 
     .stagePill.attention{
-      border-color:rgba(245,158,11,0.18);
-      background:rgba(245,158,11,0.10);
+      border-color:rgba(245,158,11,0.22);
+      background:rgba(245,158,11,0.12);
       color:#b45309;
     }
 
     .stageIcon{
-      width:16px;
-      min-width:16px;
-      height:16px;
+      width:18px;
+      min-width:18px;
+      height:18px;
       border-radius:999px;
       display:inline-flex;
       align-items:center;
@@ -323,13 +345,15 @@
     }
 
     .workspaceInner{
-      max-width:960px;
+      width:100%;
+      max-width:1200px;
       margin:0 auto;
       display:grid;
       gap:12px;
     }
 
     .workspaceCard{
+      width:100%;
       padding:14px 16px;
     }
 
@@ -351,7 +375,7 @@
 
     .workspaceHeaderActions .btnGhost,
     .workspaceHeaderActions .btnAccent{
-      min-height:30px;
+      min-height:32px;
       font-size:11px;
       padding:0 10px;
     }
@@ -386,6 +410,11 @@
 
     .stagePane.active{
       display:block;
+    }
+
+    .stagePaneInner{
+      max-width:920px;
+      margin:0 auto;
     }
 
     .stageSection{
@@ -771,7 +800,8 @@
 
     .stageFooter .btnGhost,
     .stageFooter .btnAccent{
-      min-height:34px;
+      min-height:36px;
+      height:36px;
       font-size:12px;
       padding:0 12px;
       border-radius:10px;
@@ -854,10 +884,15 @@
         grid-template-columns:1fr;
       }
 
-      .assignmentTable,
-      .scheduleTable{
-        display:block;
-        overflow:auto;
+      .stagePills{
+        grid-template-columns:repeat(5, 180px);
+        overflow-x:auto;
+        padding-bottom:2px;
+      }
+
+      .workspaceInner,
+      .stagePaneInner{
+        max-width:none;
       }
 
       .stageFooter{
@@ -868,10 +903,6 @@
       .stageFooterLeft,
       .stageFooterRight{
         width:100%;
-      }
-
-      .workspaceInner{
-        max-width:none;
       }
     }
   </style>
@@ -948,7 +979,7 @@
             </button>
             <button class="stagePill" data-stage="timing" type="button">
               <span class="stageIcon" id="icon-timing">2</span>
-              <span>Timing &amp; Ops</span>
+              <span>Timing</span>
             </button>
             <button class="stagePill" data-stage="menu" type="button">
               <span class="stageIcon" id="icon-menu">3</span>
@@ -991,359 +1022,367 @@
             <div class="errorBox" id="errorBox"></div>
 
             <div class="stagePane active" id="pane-basics">
-              <div class="stageSection">
-                <h4 class="stageSectionTitle">Basics</h4>
-                <p class="stageSectionSub">Create the identity of the drop before moving into scheduling and menu setup.</p>
+              <div class="stagePaneInner">
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Basics</h4>
+                  <p class="stageSectionSub">Create the identity of the drop before moving into scheduling and menu setup.</p>
 
-                <div class="studioGrid2">
-                  <div class="field">
-                    <label for="dropName">Drop Name</label>
-                    <input id="dropName" type="text" placeholder="Friday Pizza Night" />
-                  </div>
+                  <div class="studioGrid2">
+                    <div class="field">
+                      <label for="dropName">Drop Name</label>
+                      <input id="dropName" type="text" placeholder="Friday Pizza Night" />
+                    </div>
 
-                  <div class="field">
-                    <label for="dropSlug">Drop Link Name</label>
-                    <input id="dropSlug" type="text" placeholder="friday-pizza-night" />
-                    <div class="helperText">Used in the customer ordering URL for this drop.</div>
-                  </div>
+                    <div class="field">
+                      <label for="dropSlug">Drop Link Name</label>
+                      <input id="dropSlug" type="text" placeholder="friday-pizza-night" />
+                      <div class="helperText">Used in the customer ordering URL for this drop.</div>
+                    </div>
 
-                  <div class="field">
-                    <label for="dropType">Drop Type</label>
-                    <select id="dropType">
-                      <option value="neighbourhood">Neighbourhood</option>
-                      <option value="community">Community</option>
-                      <option value="event">Event</option>
-                    </select>
-                  </div>
+                    <div class="field">
+                      <label for="dropType">Drop Type</label>
+                      <select id="dropType">
+                        <option value="neighbourhood">Neighbourhood</option>
+                        <option value="community">Community</option>
+                        <option value="event">Event</option>
+                      </select>
+                    </div>
 
-                  <div class="field">
-                    <label for="dropStatus">Status</label>
-                    <select id="dropStatus">
-                      <option value="draft">Draft</option>
-                      <option value="scheduled">Scheduled</option>
-                      <option value="live">Live</option>
-                      <option value="closed">Closed</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                      <option value="archived">Archived</option>
-                    </select>
-                  </div>
+                    <div class="field">
+                      <label for="dropStatus">Status</label>
+                      <select id="dropStatus">
+                        <option value="draft">Draft</option>
+                        <option value="scheduled">Scheduled</option>
+                        <option value="live">Live</option>
+                        <option value="closed">Closed</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="archived">Archived</option>
+                      </select>
+                    </div>
 
-                  <div class="field">
-                    <label for="hostSelect">Host</label>
-                    <select id="hostSelect">
-                      <option value="">No host selected</option>
-                    </select>
-                    <div class="helperText" id="hostHelperText">Optional for neighbourhood drops. Required for community drops.</div>
-                  </div>
+                    <div class="field">
+                      <label for="hostSelect">Host</label>
+                      <select id="hostSelect">
+                        <option value="">No host selected</option>
+                      </select>
+                      <div class="helperText" id="hostHelperText">Optional for neighbourhood drops. Required for community drops.</div>
+                    </div>
 
-                  <div class="field">
-                    <label>Selected Host</label>
-                    <div class="hostPreview" id="hostPreview">
-                      <strong>No host selected</strong>
-                      Add a host for community or hosted drops.
+                    <div class="field">
+                      <label>Selected Host</label>
+                      <div class="hostPreview" id="hostPreview">
+                        <strong>No host selected</strong>
+                        Add a host for community or hosted drops.
+                      </div>
+                    </div>
+
+                    <div class="field" style="grid-column:1 / -1;">
+                      <label for="notesInternal">Internal Notes</label>
+                      <textarea id="notesInternal" placeholder="Any internal operational notes for this drop"></textarea>
                     </div>
                   </div>
 
-                  <div class="field" style="grid-column:1 / -1;">
-                    <label for="notesInternal">Internal Notes</label>
-                    <textarea id="notesInternal" placeholder="Any internal operational notes for this drop"></textarea>
+                  <div style="margin-top:10px;">
+                    <button class="btnGhost" id="openHostModalBtn" type="button">+ Create Host</button>
                   </div>
-                </div>
-
-                <div style="margin-top:10px;">
-                  <button class="btnGhost" id="openHostModalBtn" type="button">+ Create Host</button>
                 </div>
               </div>
             </div>
 
             <div class="stagePane" id="pane-timing">
-              <div class="stageSection">
-                <h4 class="stageSectionTitle">Fulfilment</h4>
-                <p class="stageSectionSub">Define when the drop happens.</p>
+              <div class="stagePaneInner">
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Fulfilment</h4>
+                  <p class="stageSectionSub">Define when the drop happens.</p>
 
-                <div class="studioGrid3">
-                  <div class="field">
-                    <label for="deliveryDate">Drop Date</label>
-                    <input id="deliveryDate" type="date" />
-                  </div>
-
-                  <div class="field">
-                    <label for="deliveryStartTime">From</label>
-                    <input id="deliveryStartTime" type="time" />
-                  </div>
-
-                  <div class="field">
-                    <label for="deliveryEndTime">To</label>
-                    <input id="deliveryEndTime" type="time" />
-                  </div>
-                </div>
-              </div>
-
-              <div class="stageSection">
-                <h4 class="stageSectionTitle">Order Window</h4>
-                <p class="stageSectionSub">Define when customers can place orders.</p>
-
-                <div class="studioGrid2">
-                  <div class="field">
-                    <label for="opensAtDate">Open for Orders</label>
-                    <div class="studioGrid2" style="gap:8px;">
-                      <input id="opensAtDate" type="date" />
-                      <input id="opensAtTime" type="time" />
-                    </div>
-                  </div>
-
-                  <div class="field">
-                    <label for="closesAtDate">Close Orders</label>
-                    <div class="studioGrid2" style="gap:8px;">
-                      <input id="closesAtDate" type="date" />
-                      <input id="closesAtTime" type="time" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="stageSection">
-                <h4 class="stageSectionTitle">Repeat Pattern</h4>
-                <p class="stageSectionSub">Set the drop as one-off or recurring.</p>
-
-                <div class="repeatChoice">
-                  <label><input type="radio" name="repeatPattern" value="one_off" checked /> One-off drop</label>
-                  <label><input type="radio" name="repeatPattern" value="recurring" /> Recurring</label>
-                </div>
-
-                <div class="repeatBlock hidden" id="recurringBlock">
-                  <div class="row space" style="margin-bottom:8px;">
-                    <div>
-                      <h4 class="stageSectionTitle" style="font-size:13px; margin:0;">Recurring Schedule</h4>
-                      <p class="stageSectionSub" style="margin:4px 0 0;">Add one or more weekly schedule lines.</p>
-                    </div>
-                    <button class="btnGhost" id="addScheduleRowBtn" type="button">+ Add another day</button>
-                  </div>
-
-                  <div class="scheduleTableWrap">
-                    <table class="scheduleTable">
-                      <thead>
-                        <tr>
-                          <th>Day</th>
-                          <th>From</th>
-                          <th>To</th>
-                          <th>Orders Close</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody id="scheduleRowsBody"></tbody>
-                    </table>
-                  </div>
-
-                  <div class="studioGrid2" style="margin-top:10px;">
+                  <div class="studioGrid3">
                     <div class="field">
-                      <label for="seriesStartDate">Series Start Date</label>
-                      <input id="seriesStartDate" type="date" />
+                      <label for="deliveryDate">Drop Date</label>
+                      <input id="deliveryDate" type="date" />
                     </div>
 
                     <div class="field">
-                      <label for="ordersOpenRule">Orders Open</label>
-                      <select id="ordersOpenRule">
-                        <option value="immediately">Immediately</option>
-                        <option value="days_before">X days before drop</option>
-                        <option value="fixed_start">Fixed start date</option>
+                      <label for="deliveryStartTime">From</label>
+                      <input id="deliveryStartTime" type="time" />
+                    </div>
+
+                    <div class="field">
+                      <label for="deliveryEndTime">To</label>
+                      <input id="deliveryEndTime" type="time" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Order Window</h4>
+                  <p class="stageSectionSub">Define when customers can place orders.</p>
+
+                  <div class="studioGrid2">
+                    <div class="field">
+                      <label for="opensAtDate">Open for Orders</label>
+                      <div class="studioGrid2" style="gap:8px;">
+                        <input id="opensAtDate" type="date" />
+                        <input id="opensAtTime" type="time" />
+                      </div>
+                    </div>
+
+                    <div class="field">
+                      <label for="closesAtDate">Close Orders</label>
+                      <div class="studioGrid2" style="gap:8px;">
+                        <input id="closesAtDate" type="date" />
+                        <input id="closesAtTime" type="time" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Repeat Pattern</h4>
+                  <p class="stageSectionSub">Set the drop as one-off or recurring.</p>
+
+                  <div class="repeatChoice">
+                    <label><input type="radio" name="repeatPattern" value="one_off" checked /> One-off drop</label>
+                    <label><input type="radio" name="repeatPattern" value="recurring" /> Recurring</label>
+                  </div>
+
+                  <div class="repeatBlock hidden" id="recurringBlock">
+                    <div class="row space" style="margin-bottom:8px;">
+                      <div>
+                        <h4 class="stageSectionTitle" style="font-size:13px; margin:0;">Recurring Schedule</h4>
+                        <p class="stageSectionSub" style="margin:4px 0 0;">Add one or more weekly schedule lines.</p>
+                      </div>
+                      <button class="btnGhost" id="addScheduleRowBtn" type="button">+ Add another day</button>
+                    </div>
+
+                    <div class="scheduleTableWrap">
+                      <table class="scheduleTable">
+                        <thead>
+                          <tr>
+                            <th>Day</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Orders Close</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody id="scheduleRowsBody"></tbody>
+                      </table>
+                    </div>
+
+                    <div class="studioGrid2" style="margin-top:10px;">
+                      <div class="field">
+                        <label for="seriesStartDate">Series Start Date</label>
+                        <input id="seriesStartDate" type="date" />
+                      </div>
+
+                      <div class="field">
+                        <label for="ordersOpenRule">Orders Open</label>
+                        <select id="ordersOpenRule">
+                          <option value="immediately">Immediately</option>
+                          <option value="days_before">X days before drop</option>
+                          <option value="fixed_start">Fixed start date</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="studioGrid3" id="ordersOpenRuleFields" style="margin-top:10px;">
+                      <div class="field hidden" id="ordersOpenDaysBeforeField">
+                        <label for="ordersOpenDaysBefore">Days Before Drop</label>
+                        <input id="ordersOpenDaysBefore" type="number" min="0" step="1" value="3" />
+                      </div>
+
+                      <div class="field hidden" id="seriesFixedOpenDateField">
+                        <label for="seriesFixedOpenDate">Fixed Open Date</label>
+                        <input id="seriesFixedOpenDate" type="date" />
+                      </div>
+
+                      <div class="field hidden" id="seriesFixedOpenTimeField">
+                        <label for="seriesFixedOpenTime">Fixed Open Time</label>
+                        <input id="seriesFixedOpenTime" type="time" />
+                      </div>
+                    </div>
+
+                    <div class="studioGrid2" style="margin-top:10px;">
+                      <div class="field">
+                        <label for="seriesEndMode">Series Ends By</label>
+                        <select id="seriesEndMode">
+                          <option value="end_date">End date</option>
+                          <option value="drop_count">Number of drops</option>
+                        </select>
+                      </div>
+
+                      <div class="field" id="seriesEndDateField">
+                        <label for="seriesEndDate">End Date</label>
+                        <input id="seriesEndDate" type="date" />
+                      </div>
+
+                      <div class="field hidden" id="seriesDropCountField">
+                        <label for="seriesDropCount">Number of Drops</label>
+                        <input id="seriesDropCount" type="number" min="1" step="1" value="8" />
+                      </div>
+                    </div>
+
+                    <div style="margin-top:10px;">
+                      <div class="helperText" id="seriesSummaryText">This will create a recurring series once implemented.</div>
+                    </div>
+
+                    <div class="previewList" id="seriesPreviewList"></div>
+                  </div>
+                </div>
+
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Operations</h4>
+                  <p class="stageSectionSub">Set capacity, fulfilment mode and delivery geography.</p>
+
+                  <div class="studioGrid3">
+                    <div class="field">
+                      <label for="capacityCategory">Capacity Category</label>
+                      <select id="capacityCategory">
+                        <option value="pizza">Pizza</option>
+                        <option value="side">Side</option>
+                        <option value="drink">Drink</option>
+                        <option value="sauce">Sauce</option>
                       </select>
                     </div>
-                  </div>
 
-                  <div class="studioGrid3" id="ordersOpenRuleFields" style="margin-top:10px;">
-                    <div class="field hidden" id="ordersOpenDaysBeforeField">
-                      <label for="ordersOpenDaysBefore">Days Before Drop</label>
-                      <input id="ordersOpenDaysBefore" type="number" min="0" step="1" value="3" />
-                    </div>
-
-                    <div class="field hidden" id="seriesFixedOpenDateField">
-                      <label for="seriesFixedOpenDate">Fixed Open Date</label>
-                      <input id="seriesFixedOpenDate" type="date" />
-                    </div>
-
-                    <div class="field hidden" id="seriesFixedOpenTimeField">
-                      <label for="seriesFixedOpenTime">Fixed Open Time</label>
-                      <input id="seriesFixedOpenTime" type="time" />
-                    </div>
-                  </div>
-
-                  <div class="studioGrid2" style="margin-top:10px;">
                     <div class="field">
-                      <label for="seriesEndMode">Series Ends By</label>
-                      <select id="seriesEndMode">
-                        <option value="end_date">End date</option>
-                        <option value="drop_count">Number of drops</option>
+                      <label for="capacityTotal">Capacity Total</label>
+                      <input id="capacityTotal" type="number" min="0" step="1" />
+                    </div>
+
+                    <div class="field">
+                      <label for="fulfilmentMode">Fulfilment Mode</label>
+                      <select id="fulfilmentMode">
+                        <option value="">Select mode</option>
+                        <option value="delivery">Delivery</option>
+                        <option value="collection">Collection</option>
+                        <option value="mixed">Mixed</option>
                       </select>
                     </div>
 
-                    <div class="field" id="seriesEndDateField">
-                      <label for="seriesEndDate">End Date</label>
-                      <input id="seriesEndDate" type="date" />
+                    <div class="field">
+                      <label for="centrePostcode">Centre Postcode</label>
+                      <input id="centrePostcode" type="text" placeholder="RG10 0JP" />
                     </div>
 
-                    <div class="field hidden" id="seriesDropCountField">
-                      <label for="seriesDropCount">Number of Drops</label>
-                      <input id="seriesDropCount" type="number" min="1" step="1" value="8" />
+                    <div class="field">
+                      <label for="radiusKm">Radius (km)</label>
+                      <input id="radiusKm" type="number" min="0" step="0.1" />
                     </div>
-                  </div>
-
-                  <div style="margin-top:10px;">
-                    <div class="helperText" id="seriesSummaryText">This will create a recurring series once implemented.</div>
-                  </div>
-
-                  <div class="previewList" id="seriesPreviewList"></div>
-                </div>
-              </div>
-
-              <div class="stageSection">
-                <h4 class="stageSectionTitle">Operations</h4>
-                <p class="stageSectionSub">Set capacity, fulfilment mode and delivery geography.</p>
-
-                <div class="studioGrid3">
-                  <div class="field">
-                    <label for="capacityCategory">Capacity Category</label>
-                    <select id="capacityCategory">
-                      <option value="pizza">Pizza</option>
-                      <option value="side">Side</option>
-                      <option value="drink">Drink</option>
-                      <option value="sauce">Sauce</option>
-                    </select>
-                  </div>
-
-                  <div class="field">
-                    <label for="capacityTotal">Capacity Total</label>
-                    <input id="capacityTotal" type="number" min="0" step="1" />
-                  </div>
-
-                  <div class="field">
-                    <label for="fulfilmentMode">Fulfilment Mode</label>
-                    <select id="fulfilmentMode">
-                      <option value="">Select mode</option>
-                      <option value="delivery">Delivery</option>
-                      <option value="collection">Collection</option>
-                      <option value="mixed">Mixed</option>
-                    </select>
-                  </div>
-
-                  <div class="field">
-                    <label for="centrePostcode">Centre Postcode</label>
-                    <input id="centrePostcode" type="text" placeholder="RG10 0JP" />
-                  </div>
-
-                  <div class="field">
-                    <label for="radiusKm">Radius (km)</label>
-                    <input id="radiusKm" type="number" min="0" step="0.1" />
                   </div>
                 </div>
               </div>
             </div>
 
             <div class="stagePane" id="pane-menu">
-              <div class="stageSection">
-                <h4 class="stageSectionTitle">Menu</h4>
-                <p class="stageSectionSub">Choose which products are available in this drop.</p>
+              <div class="stagePaneInner">
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Menu</h4>
+                  <p class="stageSectionSub">Choose which products are available in this drop.</p>
 
-                <div class="row space" style="margin-bottom:10px;">
-                  <div class="helperText">Enable products, override prices and manage stock limits.</div>
-                  <div class="row" style="gap:8px; flex-wrap:wrap;">
-                    <button class="btnGhost" id="openProductModalBtn" type="button">+ Add Product</button>
-                    <a href="drop-menu.html" class="utilityLink">Menu Library</a>
+                  <div class="row space" style="margin-bottom:10px;">
+                    <div class="helperText">Enable products, override prices and manage stock limits.</div>
+                    <div class="row" style="gap:8px; flex-wrap:wrap;">
+                      <button class="btnGhost" id="openProductModalBtn" type="button">+ Add Product</button>
+                      <a href="drop-menu.html" class="utilityLink">Menu Library</a>
+                    </div>
                   </div>
-                </div>
 
-                <div id="assignmentGroups"></div>
+                  <div id="assignmentGroups"></div>
+                </div>
               </div>
             </div>
 
             <div class="stagePane" id="pane-commercials">
-              <div class="stageSection">
-                <h4 class="stageSectionTitle">Community Contribution</h4>
-                <p class="stageSectionSub">Optional public-facing support for schools, clubs or causes.</p>
+              <div class="stagePaneInner">
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Community Contribution</h4>
+                  <p class="stageSectionSub">Optional public-facing support for schools, clubs or causes.</p>
 
-                <div class="toggleRow">
-                  <div>
-                    <div style="font-weight:800;">Enable Community Contribution</div>
-                    <div class="helperText">Shown to customers if configured.</div>
+                  <div class="toggleRow">
+                    <div>
+                      <div style="font-weight:800;">Enable Community Contribution</div>
+                      <div class="helperText">Shown to customers if configured.</div>
+                    </div>
+                    <input id="fundraisingEnabled" type="checkbox" />
                   </div>
-                  <input id="fundraisingEnabled" type="checkbox" />
+
+                  <div id="fundraisingFields" class="hidden">
+                    <div class="studioGrid2">
+                      <div class="field">
+                        <label for="fundraisingModel">Contribution Model</label>
+                        <select id="fundraisingModel">
+                          <option value="">Select model</option>
+                          <option value="percentage">Percentage of sales</option>
+                          <option value="per_order">Fixed amount per order</option>
+                        </select>
+                      </div>
+
+                      <div class="field hidden" id="fundraisingPercentageField">
+                        <label for="fundraisingPercentage">Percentage</label>
+                        <input id="fundraisingPercentage" type="number" min="0" step="0.01" placeholder="5" />
+                      </div>
+
+                      <div class="field hidden" id="fundraisingPerOrderField">
+                        <label for="fundraisingPerOrderPence">Amount per Order (pence)</label>
+                        <input id="fundraisingPerOrderPence" type="number" min="0" step="1" placeholder="100" />
+                      </div>
+
+                      <div class="field" style="grid-column:1 / -1;">
+                        <label for="fundraisingDisplayText">Customer-facing Text</label>
+                        <input id="fundraisingDisplayText" type="text" placeholder="£1 from every order supports Ruscombe Cricket Club" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div id="fundraisingFields" class="hidden">
-                  <div class="studioGrid2">
-                    <div class="field">
-                      <label for="fundraisingModel">Contribution Model</label>
-                      <select id="fundraisingModel">
-                        <option value="">Select model</option>
-                        <option value="percentage">Percentage of sales</option>
-                        <option value="per_order">Fixed amount per order</option>
-                      </select>
-                    </div>
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Commercial Host Share</h4>
+                  <p class="stageSectionSub">Optional commercial settlement for pubs, venues or hosts.</p>
 
-                    <div class="field hidden" id="fundraisingPercentageField">
-                      <label for="fundraisingPercentage">Percentage</label>
-                      <input id="fundraisingPercentage" type="number" min="0" step="0.01" placeholder="5" />
+                  <div class="toggleRow">
+                    <div>
+                      <div style="font-weight:800;">Enable Host Share</div>
+                      <div class="helperText">Separate from community contribution.</div>
                     </div>
-
-                    <div class="field hidden" id="fundraisingPerOrderField">
-                      <label for="fundraisingPerOrderPence">Amount per Order (pence)</label>
-                      <input id="fundraisingPerOrderPence" type="number" min="0" step="1" placeholder="100" />
-                    </div>
-
-                    <div class="field" style="grid-column:1 / -1;">
-                      <label for="fundraisingDisplayText">Customer-facing Text</label>
-                      <input id="fundraisingDisplayText" type="text" placeholder="£1 from every order supports Ruscombe Cricket Club" />
-                    </div>
+                    <input id="hostShareEnabled" type="checkbox" />
                   </div>
-                </div>
-              </div>
 
-              <div class="stageSection">
-                <h4 class="stageSectionTitle">Commercial Host Share</h4>
-                <p class="stageSectionSub">Optional commercial settlement for pubs, venues or hosts.</p>
+                  <div id="hostShareFields" class="hidden">
+                    <div class="studioGrid2">
+                      <div class="field">
+                        <label for="hostShareModel">Host Share Model</label>
+                        <select id="hostShareModel">
+                          <option value="">Select model</option>
+                          <option value="percentage">Percentage of sales</option>
+                          <option value="per_order">Fixed amount per order</option>
+                          <option value="fixed">Fixed amount for drop</option>
+                        </select>
+                      </div>
 
-                <div class="toggleRow">
-                  <div>
-                    <div style="font-weight:800;">Enable Host Share</div>
-                    <div class="helperText">Separate from community contribution.</div>
-                  </div>
-                  <input id="hostShareEnabled" type="checkbox" />
-                </div>
+                      <div class="field hidden" id="hostSharePercentageField">
+                        <label for="hostSharePercentage">Percentage</label>
+                        <input id="hostSharePercentage" type="number" min="0" step="0.01" placeholder="10" />
+                      </div>
 
-                <div id="hostShareFields" class="hidden">
-                  <div class="studioGrid2">
-                    <div class="field">
-                      <label for="hostShareModel">Host Share Model</label>
-                      <select id="hostShareModel">
-                        <option value="">Select model</option>
-                        <option value="percentage">Percentage of sales</option>
-                        <option value="per_order">Fixed amount per order</option>
-                        <option value="fixed">Fixed amount for drop</option>
-                      </select>
-                    </div>
+                      <div class="field hidden" id="hostSharePerOrderField">
+                        <label for="hostSharePerOrderPence">Amount per Order (pence)</label>
+                        <input id="hostSharePerOrderPence" type="number" min="0" step="1" placeholder="150" />
+                      </div>
 
-                    <div class="field hidden" id="hostSharePercentageField">
-                      <label for="hostSharePercentage">Percentage</label>
-                      <input id="hostSharePercentage" type="number" min="0" step="0.01" placeholder="10" />
-                    </div>
+                      <div class="field hidden" id="hostShareFixedField">
+                        <label for="hostShareFixedPence">Fixed Amount (pence)</label>
+                        <input id="hostShareFixedPence" type="number" min="0" step="1" placeholder="7500" />
+                      </div>
 
-                    <div class="field hidden" id="hostSharePerOrderField">
-                      <label for="hostSharePerOrderPence">Amount per Order (pence)</label>
-                      <input id="hostSharePerOrderPence" type="number" min="0" step="1" placeholder="150" />
-                    </div>
-
-                    <div class="field hidden" id="hostShareFixedField">
-                      <label for="hostShareFixedPence">Fixed Amount (pence)</label>
-                      <input id="hostShareFixedPence" type="number" min="0" step="1" placeholder="7500" />
-                    </div>
-
-                    <div class="field">
-                      <label for="hostShareCustomerVisible">Customer Visible?</label>
-                      <select id="hostShareCustomerVisible">
-                        <option value="false">No</option>
-                        <option value="true">Yes</option>
-                      </select>
+                      <div class="field">
+                        <label for="hostShareCustomerVisible">Customer Visible?</label>
+                        <select id="hostShareCustomerVisible">
+                          <option value="false">No</option>
+                          <option value="true">Yes</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1351,42 +1390,44 @@
             </div>
 
             <div class="stagePane" id="pane-review">
-              <div class="reviewGrid">
-                <div class="stageSection">
-                  <h4 class="stageSectionTitle">Drop Summary</h4>
-                  <p class="stageSectionSub">Review what will go live.</p>
-                  <div class="summaryBlock" id="reviewSummary"></div>
-                </div>
-
-                <div class="stageSection">
-                  <h4 class="stageSectionTitle">Readiness</h4>
-                  <p class="stageSectionSub">Blocking issues and stage completion.</p>
-                  <div class="readinessList" id="reviewReadiness"></div>
-                </div>
-              </div>
-
-              <div class="reviewGrid" style="margin-top:10px;">
-                <div class="stageSection">
-                  <h4 class="stageSectionTitle">Share Link</h4>
-                  <p class="stageSectionSub">Customer ordering page for this drop.</p>
-                  <div class="shareLink" id="shareLinkPreview">No drop link yet.</div>
-                  <div class="row" style="gap:8px; flex-wrap:wrap; margin-top:8px;">
-                    <button class="btnGhost" id="copyLinkBtn" type="button">Copy Link</button>
-                    <button class="btnGhost" id="downloadQrBtn" type="button">Download QR</button>
+              <div class="stagePaneInner">
+                <div class="reviewGrid">
+                  <div class="stageSection">
+                    <h4 class="stageSectionTitle">Drop Summary</h4>
+                    <p class="stageSectionSub">Review what will go live.</p>
+                    <div class="summaryBlock" id="reviewSummary"></div>
                   </div>
-                  <div class="qrWrap" id="qrWrap">
-                    <canvas id="qrCanvas"></canvas>
+
+                  <div class="stageSection">
+                    <h4 class="stageSectionTitle">Readiness</h4>
+                    <p class="stageSectionSub">Blocking issues and stage completion.</p>
+                    <div class="readinessList" id="reviewReadiness"></div>
                   </div>
                 </div>
 
-                <div class="stageSection">
-                  <h4 class="stageSectionTitle">Review &amp; Publish</h4>
-                  <p class="stageSectionSub">Final actions for this drop.</p>
-                  <div class="helperText" id="publishHelpText">Resolve blocking issues to publish this drop.</div>
-                  <div style="margin-top:10px; display:grid; gap:8px;">
-                    <button class="btnAccent" id="publishBtn" type="button">Publish Drop</button>
-                    <button class="btnGhost" id="cancelDropBtn" type="button">Cancel Drop</button>
-                    <button class="btnGhost" id="archiveDropBtn" type="button">Archive Drop</button>
+                <div class="reviewGrid" style="margin-top:10px;">
+                  <div class="stageSection">
+                    <h4 class="stageSectionTitle">Share Link</h4>
+                    <p class="stageSectionSub">Customer ordering page for this drop.</p>
+                    <div class="shareLink" id="shareLinkPreview">No drop link yet.</div>
+                    <div class="row" style="gap:8px; flex-wrap:wrap; margin-top:8px;">
+                      <button class="btnGhost" id="copyLinkBtn" type="button">Copy Link</button>
+                      <button class="btnGhost" id="downloadQrBtn" type="button">Download QR</button>
+                    </div>
+                    <div class="qrWrap" id="qrWrap">
+                      <canvas id="qrCanvas"></canvas>
+                    </div>
+                  </div>
+
+                  <div class="stageSection">
+                    <h4 class="stageSectionTitle">Review &amp; Publish</h4>
+                    <p class="stageSectionSub">Final actions for this drop.</p>
+                    <div class="helperText" id="publishHelpText">Resolve blocking issues to publish this drop.</div>
+                    <div style="margin-top:10px; display:grid; gap:8px;">
+                      <button class="btnAccent" id="publishBtn" type="button">Publish Drop</button>
+                      <button class="btnGhost" id="cancelDropBtn" type="button">Cancel Drop</button>
+                      <button class="btnGhost" id="archiveDropBtn" type="button">Archive Drop</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1405,118 +1446,116 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- HOST MODAL -->
-    <div class="modalBackdrop" id="hostModal">
-      <div class="modalCard">
-        <div class="modalHead">
-          <div>
-            <h3 class="sectionTitle">Create Host</h3>
-            <p class="sectionSub">Add a new club, school, pub, venue or private host</p>
-          </div>
-          <button class="btnGhost" id="closeHostModalBtn" type="button">Close</button>
-        </div>
-
-        <div class="studioGrid2">
-          <div class="field">
-            <label for="newHostName">Host Name</label>
-            <input id="newHostName" type="text" placeholder="Ruscombe Cricket Club" />
+      <div class="modalBackdrop" id="hostModal">
+        <div class="modalCard">
+          <div class="modalHead">
+            <div>
+              <h3 class="sectionTitle">Create Host</h3>
+              <p class="sectionSub">Add a new club, school, pub, venue or private host</p>
+            </div>
+            <button class="btnGhost" id="closeHostModalBtn" type="button">Close</button>
           </div>
 
-          <div class="field">
-            <label for="newHostType">Host Type</label>
-            <select id="newHostType">
-              <option value="club">Club</option>
-              <option value="school">School</option>
-              <option value="pub">Pub</option>
-              <option value="venue">Venue</option>
-              <option value="private_host">Private host</option>
-              <option value="other">Other</option>
-            </select>
+          <div class="studioGrid2">
+            <div class="field">
+              <label for="newHostName">Host Name</label>
+              <input id="newHostName" type="text" placeholder="Ruscombe Cricket Club" />
+            </div>
+
+            <div class="field">
+              <label for="newHostType">Host Type</label>
+              <select id="newHostType">
+                <option value="club">Club</option>
+                <option value="school">School</option>
+                <option value="pub">Pub</option>
+                <option value="venue">Venue</option>
+                <option value="private_host">Private host</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="newHostPostcode">Postcode</label>
+              <input id="newHostPostcode" type="text" placeholder="RG10 0JP" />
+            </div>
+
+            <div class="field">
+              <label for="newHostAddress">Address Summary</label>
+              <input id="newHostAddress" type="text" placeholder="Ruscombe, Berkshire" />
+            </div>
+
+            <div class="field" style="grid-column:1 / -1;">
+              <label for="newHostNotes">Internal Notes</label>
+              <textarea id="newHostNotes" placeholder="Regular hosting opportunity"></textarea>
+            </div>
           </div>
 
-          <div class="field">
-            <label for="newHostPostcode">Postcode</label>
-            <input id="newHostPostcode" type="text" placeholder="RG10 0JP" />
+          <div class="modalMessage" id="hostModalMessage"></div>
+
+          <div class="modalActions">
+            <button class="btnGhost" id="cancelHostBtn" type="button">Cancel</button>
+            <button class="btnAccent" id="saveHostBtn" type="button">Create Host</button>
           </div>
-
-          <div class="field">
-            <label for="newHostAddress">Address Summary</label>
-            <input id="newHostAddress" type="text" placeholder="Ruscombe, Berkshire" />
-          </div>
-
-          <div class="field" style="grid-column:1 / -1;">
-            <label for="newHostNotes">Internal Notes</label>
-            <textarea id="newHostNotes" placeholder="Regular hosting opportunity"></textarea>
-          </div>
-        </div>
-
-        <div class="modalMessage" id="hostModalMessage"></div>
-
-        <div class="modalActions">
-          <button class="btnGhost" id="cancelHostBtn" type="button">Cancel</button>
-          <button class="btnAccent" id="saveHostBtn" type="button">Create Host</button>
         </div>
       </div>
-    </div>
 
-    <!-- PRODUCT MODAL -->
-    <div class="modalBackdrop" id="productModal">
-      <div class="modalCard">
-        <div class="modalHead">
-          <div>
-            <h3 class="sectionTitle">Create Product</h3>
-            <p class="sectionSub">Add a new item to the vendor menu and assign it to this drop</p>
-          </div>
-          <button class="btnGhost" id="closeProductModalBtn" type="button">Close</button>
-        </div>
-
-        <div class="studioGrid2">
-          <div class="field">
-            <label for="newProductName">Product Name</label>
-            <input id="newProductName" type="text" placeholder="Margherita" />
+      <div class="modalBackdrop" id="productModal">
+        <div class="modalCard">
+          <div class="modalHead">
+            <div>
+              <h3 class="sectionTitle">Create Product</h3>
+              <p class="sectionSub">Add a new item to the vendor menu and assign it to this drop</p>
+            </div>
+            <button class="btnGhost" id="closeProductModalBtn" type="button">Close</button>
           </div>
 
-          <div class="field">
-            <label for="newProductCategory">Category</label>
-            <select id="newProductCategory">
-              <option value="pizza">Pizza</option>
-              <option value="side">Side</option>
-              <option value="drink">Drink</option>
-              <option value="sauce">Sauce</option>
-            </select>
+          <div class="studioGrid2">
+            <div class="field">
+              <label for="newProductName">Product Name</label>
+              <input id="newProductName" type="text" placeholder="Margherita" />
+            </div>
+
+            <div class="field">
+              <label for="newProductCategory">Category</label>
+              <select id="newProductCategory">
+                <option value="pizza">Pizza</option>
+                <option value="side">Side</option>
+                <option value="drink">Drink</option>
+                <option value="sauce">Sauce</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="newProductPricePence">Base Price (pence)</label>
+              <input id="newProductPricePence" type="number" min="0" step="1" placeholder="1100" />
+            </div>
+
+            <div class="field">
+              <label for="newProductCapacityUnits">Capacity Units</label>
+              <input id="newProductCapacityUnits" type="number" min="0" step="0.1" value="1" />
+            </div>
+
+            <div class="field">
+              <label for="newProductSortOrder">Display Order</label>
+              <input id="newProductSortOrder" type="number" min="0" step="1" value="100" />
+            </div>
+
+            <div class="field">
+              <label for="newProductActive">Active</label>
+              <select id="newProductActive">
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </div>
           </div>
 
-          <div class="field">
-            <label for="newProductPricePence">Base Price (pence)</label>
-            <input id="newProductPricePence" type="number" min="0" step="1" placeholder="1100" />
+          <div class="modalMessage" id="productModalMessage"></div>
+
+          <div class="modalActions">
+            <button class="btnGhost" id="cancelProductBtn" type="button">Cancel</button>
+            <button class="btnAccent" id="saveProductBtn" type="button">Create Product</button>
           </div>
-
-          <div class="field">
-            <label for="newProductCapacityUnits">Capacity Units</label>
-            <input id="newProductCapacityUnits" type="number" min="0" step="0.1" value="1" />
-          </div>
-
-          <div class="field">
-            <label for="newProductSortOrder">Display Order</label>
-            <input id="newProductSortOrder" type="number" min="0" step="1" value="100" />
-          </div>
-
-          <div class="field">
-            <label for="newProductActive">Active</label>
-            <select id="newProductActive">
-              <option value="true">Yes</option>
-              <option value="false">No</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="modalMessage" id="productModalMessage"></div>
-
-        <div class="modalActions">
-          <button class="btnGhost" id="cancelProductBtn" type="button">Cancel</button>
-          <button class="btnAccent" id="saveProductBtn" type="button">Create Product</button>
         </div>
       </div>
     </div>
