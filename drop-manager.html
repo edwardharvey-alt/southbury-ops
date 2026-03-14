@@ -1,4 +1,6 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Drop Studio</title>
@@ -6,7 +8,6 @@
   <link rel="stylesheet" href="/assets/hearth.css?v=18" />
   <script src="/assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 
   <style>
     .container > .headerBar,
@@ -39,7 +40,7 @@
 
     .browserToolbar{
       display:grid;
-      grid-template-columns:180px minmax(220px,1fr) 160px 160px 110px;
+      grid-template-columns:180px minmax(220px,1fr) minmax(220px,260px) 160px 110px;
       gap:10px;
       align-items:center;
       margin-bottom:10px;
@@ -60,6 +61,85 @@
       min-width:0;
       min-height:38px;
       height:38px;
+    }
+
+    .filterPopoverWrap{
+      position:relative;
+      width:100%;
+    }
+
+    .filterSummaryBtn{
+      width:100%;
+      min-height:38px;
+      height:38px;
+      border-radius:12px;
+      border:1px solid var(--h-border);
+      background:#fff;
+      padding:0 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      font-size:12px;
+      font-weight:700;
+      color:var(--h-text);
+      cursor:pointer;
+    }
+
+    .filterPopover{
+      position:absolute;
+      top:calc(100% + 8px);
+      left:0;
+      width:100%;
+      min-width:220px;
+      background:#fff;
+      border:1px solid var(--h-border);
+      border-radius:14px;
+      box-shadow:0 14px 30px rgba(15,23,42,0.10);
+      padding:10px;
+      z-index:40;
+      display:none;
+    }
+
+    .filterPopover.open{
+      display:block;
+    }
+
+    .filterQuickActions{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      margin-bottom:8px;
+    }
+
+    .filterQuickActions .btnGhost{
+      min-height:30px;
+      height:30px;
+      font-size:11px;
+      padding:0 10px;
+      width:auto;
+    }
+
+    .filterChecklist{
+      display:grid;
+      gap:6px;
+    }
+
+    .filterChecklist label{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:12px;
+      font-weight:700;
+      color:var(--h-text);
+      cursor:pointer;
+    }
+
+    .filterChecklist input[type="checkbox"]{
+      width:15px;
+      height:15px;
+      accent-color:var(--h-accent);
+      margin:0;
     }
 
     .dropBandWrap{
@@ -540,7 +620,8 @@
       margin-top:10px;
     }
 
-    .repeatChoice{
+    .repeatChoice,
+    .openChoice{
       display:flex;
       gap:14px;
       flex-wrap:wrap;
@@ -548,7 +629,8 @@
       margin-bottom:10px;
     }
 
-    .repeatChoice label{
+    .repeatChoice label,
+    .openChoice label{
       display:flex;
       gap:7px;
       align-items:center;
@@ -790,8 +872,16 @@
       border-radius:12px;
       padding:10px;
       background:#fff;
-      min-height:136px;
+      min-height:176px;
       margin-top:8px;
+      overflow:hidden;
+    }
+
+    .qrWrap img{
+      width:160px;
+      height:160px;
+      object-fit:contain;
+      display:block;
     }
 
     .stageFooter{
@@ -953,22 +1043,37 @@
         <div class="browserToolbar">
           <button class="btnAccent" id="newDropBtn" type="button">+ New Drop</button>
           <input id="dropSearch" type="text" placeholder="Search drops or hosts" />
-          <select id="statusFilter">
-            <option value="all">All statuses</option>
-            <option value="live">Live</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="draft">Draft</option>
-            <option value="closed">Closed</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="archived">Archived</option>
-          </select>
+
+          <div class="filterPopoverWrap">
+            <button class="filterSummaryBtn" id="statusFilterBtn" type="button">
+              <span id="statusFilterSummary">Live, Scheduled, Draft</span>
+              <span>▾</span>
+            </button>
+            <div class="filterPopover" id="statusFilterPopover">
+              <div class="filterQuickActions">
+                <button class="btnGhost" id="statusActiveOnlyBtn" type="button">Active only</button>
+                <button class="btnGhost" id="statusAllBtn" type="button">All</button>
+                <button class="btnGhost" id="statusClearBtn" type="button">Clear</button>
+              </div>
+              <div class="filterChecklist" id="statusFilterChecklist">
+                <label><input type="checkbox" value="live" checked /> Live</label>
+                <label><input type="checkbox" value="scheduled" checked /> Scheduled</label>
+                <label><input type="checkbox" value="draft" checked /> Draft</label>
+                <label><input type="checkbox" value="closed" /> Closed</label>
+                <label><input type="checkbox" value="completed" /> Completed</label>
+                <label><input type="checkbox" value="cancelled" /> Cancelled</label>
+                <label><input type="checkbox" value="archived" /> Archived</label>
+              </div>
+            </div>
+          </div>
+
           <select id="typeFilter">
             <option value="all">All types</option>
             <option value="neighbourhood">Neighbourhood</option>
             <option value="community">Community</option>
             <option value="event">Event</option>
           </select>
+
           <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
         </div>
 
@@ -1044,12 +1149,12 @@
                   <div class="studioGrid2">
                     <div class="field">
                       <label for="dropName">Drop Name</label>
-                      <input id="dropName" type="text" placeholder="Friday Pizza Night" />
+                      <input id="dropName" type="text" placeholder="Friday Drop" />
                     </div>
 
                     <div class="field">
                       <label for="dropSlug">Drop Link Name</label>
-                      <input id="dropSlug" type="text" placeholder="friday-pizza-night" />
+                      <input id="dropSlug" type="text" placeholder="friday-drop" />
                       <div class="helperText">Auto-generated from Drop Name. You can overwrite it if needed.</div>
                     </div>
 
@@ -1169,7 +1274,15 @@
                     </div>
                   </div>
 
-                  <div class="studioGrid2" style="margin-top:10px;">
+                  <div style="margin-top:12px;">
+                    <div class="helperText" style="margin-bottom:6px;">Order Opening</div>
+                    <div class="openChoice">
+                      <label><input type="radio" name="openPattern" value="immediate" checked /> Open immediately</label>
+                      <label><input type="radio" name="openPattern" value="scheduled" /> Schedule opening</label>
+                    </div>
+                  </div>
+
+                  <div class="studioGrid2 hidden" id="scheduledOpenFields" style="margin-top:10px;">
                     <div class="field">
                       <label for="opensAtDate">Open for Orders</label>
                       <div class="studioGrid2" style="gap:8px;">
@@ -1177,7 +1290,9 @@
                         <input id="opensAtTime" type="time" />
                       </div>
                     </div>
+                  </div>
 
+                  <div class="studioGrid2" style="margin-top:10px;">
                     <div class="field">
                       <label for="closesAtDate">Close Orders</label>
                       <div class="studioGrid2" style="gap:8px;">
@@ -1222,34 +1337,6 @@
                         <input id="seriesStartDate" type="date" />
                       </div>
 
-                      <div class="field">
-                        <label for="ordersOpenRule">Orders Open</label>
-                        <select id="ordersOpenRule">
-                          <option value="immediately">Immediately</option>
-                          <option value="days_before">X days before drop</option>
-                          <option value="fixed_start">Fixed start date</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div class="studioGrid3" id="ordersOpenRuleFields" style="margin-top:10px;">
-                      <div class="field hidden" id="ordersOpenDaysBeforeField">
-                        <label for="ordersOpenDaysBefore">Days Before Drop</label>
-                        <input id="ordersOpenDaysBefore" type="number" min="0" step="1" value="3" />
-                      </div>
-
-                      <div class="field hidden" id="seriesFixedOpenDateField">
-                        <label for="seriesFixedOpenDate">Fixed Open Date</label>
-                        <input id="seriesFixedOpenDate" type="date" />
-                      </div>
-
-                      <div class="field hidden" id="seriesFixedOpenTimeField">
-                        <label for="seriesFixedOpenTime">Fixed Open Time</label>
-                        <input id="seriesFixedOpenTime" type="time" />
-                      </div>
-                    </div>
-
-                    <div class="studioGrid2" style="margin-top:10px;">
                       <div class="field">
                         <label for="seriesEndMode">Series Ends By</label>
                         <select id="seriesEndMode">
@@ -1415,9 +1502,7 @@
                       <button class="btnGhost" id="copyLinkBtn" type="button">Copy Link</button>
                       <button class="btnGhost" id="downloadQrBtn" type="button">Download QR</button>
                     </div>
-                    <div class="qrWrap" id="qrWrap">
-                      <canvas id="qrCanvas"></canvas>
-                    </div>
+                    <div class="qrWrap" id="qrWrap"></div>
                   </div>
 
                   <div class="stageSection">
@@ -1559,6 +1644,7 @@
       const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
       const DEFAULT_VENDOR_SLUG = "southbury-farm-pizza";
       const STAGES = ["basics", "timing", "menu", "commercials", "review"];
+      const ACTIVE_DEFAULT_STATUSES = ["live", "scheduled", "draft"];
 
       let supabase = null;
       let successTimer = null;
@@ -1577,7 +1663,7 @@
         dropProductStock: [],
         productAssignments: [],
         search: "",
-        statusFilter: "all",
+        statusFilters: [...ACTIVE_DEFAULT_STATUSES],
         typeFilter: "all",
         saveState: "saved",
         currentStage: "basics",
@@ -1719,6 +1805,11 @@
         }
       }
 
+      function getQrImageUrl(text) {
+        if (!text) return "";
+        return "https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=" + encodeURIComponent(text);
+      }
+
       function getStatusPriority(status) {
         const s = String(status || "").toLowerCase();
         if (s === "live") return 1;
@@ -1857,6 +1948,20 @@
         byId("openBoardBtn").classList.toggle("hidden", !(state.drop && ["live", "closed"].includes(state.drop.status)));
       }
 
+      function updateStatusFilterSummary() {
+        const summary = byId("statusFilterSummary");
+        const selected = state.statusFilters;
+        if (!selected.length) {
+          summary.textContent = "No statuses";
+          return;
+        }
+        if (selected.length <= 3) {
+          summary.textContent = selected.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ");
+          return;
+        }
+        summary.textContent = `${selected.length} statuses`;
+      }
+
       async function loadVendorId() {
         const { data, error } = await supabase
           .from("vendors")
@@ -1971,8 +2076,9 @@
 
       function getFilteredDrops() {
         const search = state.search.trim().toLowerCase();
+        const selectedStatuses = state.statusFilters;
         return state.drops.filter((drop) => {
-          const statusOk = state.statusFilter === "all" || drop.status === state.statusFilter;
+          const statusOk = selectedStatuses.length ? selectedStatuses.includes(drop.status) : false;
           const typeOk = state.typeFilter === "all" || drop.drop_type === state.typeFilter;
           if (!statusOk || !typeOk) return false;
           if (!search) return true;
@@ -2088,6 +2194,11 @@
         byId("deliveryStartTime").value = formatTimeInput(d.delivery_start);
         byId("deliveryEndTime").value = formatTimeInput(d.delivery_end);
 
+        const openPattern = d.opens_at ? "scheduled" : "immediate";
+        document.querySelectorAll('input[name="openPattern"]').forEach((radio) => {
+          radio.checked = radio.value === openPattern;
+        });
+
         byId("opensAtDate").value = formatDateInput(d.opens_at);
         byId("opensAtTime").value = formatTimeInput(d.opens_at);
         byId("closesAtDate").value = formatDateInput(d.closes_at);
@@ -2183,19 +2294,22 @@
         const recurring = getRepeatPattern() === "recurring";
         byId("recurringBlock").classList.toggle("hidden", !recurring);
 
-        const openRule = byId("ordersOpenRule").value;
-        byId("ordersOpenDaysBeforeField").classList.toggle("hidden", openRule !== "days_before");
-        byId("seriesFixedOpenDateField").classList.toggle("hidden", openRule !== "fixed_start");
-        byId("seriesFixedOpenTimeField").classList.toggle("hidden", openRule !== "fixed_start");
-
         const endMode = byId("seriesEndMode").value;
         byId("seriesEndDateField").classList.toggle("hidden", endMode !== "end_date");
         byId("seriesDropCountField").classList.toggle("hidden", endMode !== "drop_count");
+
+        const openPattern = getOpenPattern();
+        byId("scheduledOpenFields").classList.toggle("hidden", openPattern !== "scheduled");
       }
 
       function getRepeatPattern() {
         const checked = document.querySelector('input[name="repeatPattern"]:checked');
         return checked ? checked.value : "one_off";
+      }
+
+      function getOpenPattern() {
+        const checked = document.querySelector('input[name="openPattern"]:checked');
+        return checked ? checked.value : "immediate";
       }
 
       function ensureScheduleRows() {
@@ -2322,7 +2436,7 @@
           ["Type", state.drop.drop_type || "—"],
           ["Host", host ? host.name : "No host"],
           ["Status", state.drop.status || "draft"],
-          ["Order Window", state.drop.opens_at && state.drop.closes_at ? `${formatDateShort(state.drop.opens_at)} ${formatTimeOnly(state.drop.opens_at)} → ${formatDateShort(state.drop.closes_at)} ${formatTimeOnly(state.drop.closes_at)}` : "Not set"],
+          ["Order Window", state.drop.opens_at && state.drop.closes_at ? `${formatDateShort(state.drop.opens_at)} ${formatTimeOnly(state.drop.opens_at)} → ${formatDateShort(state.drop.closes_at)} ${formatTimeOnly(state.drop.closes_at)}` : (state.drop.closes_at ? `Open immediately → ${formatDateShort(state.drop.closes_at)} ${formatTimeOnly(state.drop.closes_at)}` : "Not set")],
           ["Fulfilment", state.drop.delivery_start && state.drop.delivery_end ? `${formatDateShort(state.drop.delivery_start)} ${formatTimeOnly(state.drop.delivery_start)}–${formatTimeOnly(state.drop.delivery_end)}` : "Not set"],
           ["Capacity", `${Number(state.drop.capacity_units_total || 0)} ${state.drop.capacity_category || "units"}`],
           ["Products", `${enabledProducts} enabled`]
@@ -2352,8 +2466,16 @@
         share.textContent = shareUrl || "No drop link yet.";
         renderQrCode(shareUrl);
 
+        if (state.drop.status === "live") {
+          publishBtn.textContent = "Update Live Drop";
+        } else {
+          publishBtn.textContent = "Publish Drop";
+        }
+
         if (state.readiness.ready_to_publish) {
-          publishHelp.textContent = "This drop is ready to publish.";
+          publishHelp.textContent = state.drop.status === "live"
+            ? "This live drop can be updated."
+            : "This drop is ready to publish.";
           publishBtn.disabled = false;
         } else {
           publishHelp.textContent = "Resolve the highlighted issues before publishing.";
@@ -2367,23 +2489,17 @@
           wrap.innerHTML = `<div class="helperText">QR preview will appear once the drop link name is set.</div>`;
           return;
         }
-        if (!window.QRCode || typeof window.QRCode.toCanvas !== "function") {
-          wrap.innerHTML = `<div class="helperText">QR preview unavailable.</div>`;
-          return;
-        }
-
-        wrap.innerHTML = `<canvas id="qrCanvas"></canvas>`;
-        const canvas = byId("qrCanvas");
-        window.QRCode.toCanvas(canvas, text, { width: 132, margin: 1 }, function (error) {
-          if (error) {
-            console.error(error);
-            wrap.innerHTML = `<div class="helperText">QR preview unavailable.</div>`;
-          }
-        });
+        const qrUrl = getQrImageUrl(text);
+        wrap.innerHTML = `<img src="${escapeHtml(qrUrl)}" alt="QR code for drop link" />`;
       }
 
       function readDropFromForm() {
         const existing = state.drop || {};
+        const openPattern = getOpenPattern();
+        const opensAt = openPattern === "scheduled"
+          ? combineDateTime(byId("opensAtDate").value, byId("opensAtTime").value)
+          : null;
+
         return {
           ...existing,
           name: byId("dropName").value.trim(),
@@ -2401,7 +2517,7 @@
 
           delivery_start: combineDateTime(byId("deliveryDate").value, byId("deliveryStartTime").value),
           delivery_end: combineDateTime(byId("deliveryDate").value, byId("deliveryEndTime").value),
-          opens_at: combineDateTime(byId("opensAtDate").value, byId("opensAtTime").value),
+          opens_at: opensAt,
           closes_at: combineDateTime(byId("closesAtDate").value, byId("closesAtTime").value),
 
           fundraising_enabled: byId("fundraisingEnabled").checked,
@@ -2523,9 +2639,6 @@
         deliveryStart.setHours(19, 0, 0, 0);
         const deliveryEnd = new Date(deliveryStart);
         deliveryEnd.setHours(20, 0, 0, 0);
-        const opensAt = new Date(deliveryStart);
-        opensAt.setDate(opensAt.getDate() - 2);
-        opensAt.setHours(12, 0, 0, 0);
         const closesAt = new Date(deliveryStart);
         closesAt.setHours(18, 0, 0, 0);
 
@@ -2540,7 +2653,7 @@
           radius_km: null,
           capacity_units_total: 40,
           capacity_category: "pizza",
-          opens_at: opensAt.toISOString(),
+          opens_at: null,
           closes_at: closesAt.toISOString(),
           delivery_start: deliveryStart.toISOString(),
           delivery_end: deliveryEnd.toISOString(),
@@ -2631,6 +2744,7 @@
       }
 
       function renderEverything() {
+        updateStatusFilterSummary();
         renderDropBand();
         populateForm();
         renderAssignments();
@@ -2717,10 +2831,10 @@
       }
 
       function downloadQr() {
-        const canvas = byId("qrCanvas");
-        if (!canvas || typeof canvas.toDataURL !== "function") throw new Error("QR preview unavailable.");
+        const url = getQrImageUrl(getShareUrl());
+        if (!url) throw new Error("QR preview unavailable.");
         const link = document.createElement("a");
-        link.href = canvas.toDataURL("image/png");
+        link.href = url;
         link.download = `${(state.drop?.slug || "drop")}-qr.png`;
         link.click();
       }
@@ -2841,13 +2955,56 @@
           renderDropBand();
         });
 
-        byId("statusFilter").addEventListener("change", (e) => {
-          state.statusFilter = e.target.value || "all";
+        byId("typeFilter").addEventListener("change", (e) => {
+          state.typeFilter = e.target.value || "all";
           renderDropBand();
         });
 
-        byId("typeFilter").addEventListener("change", (e) => {
-          state.typeFilter = e.target.value || "all";
+        const statusFilterBtn = byId("statusFilterBtn");
+        const statusFilterPopover = byId("statusFilterPopover");
+
+        statusFilterBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          statusFilterPopover.classList.toggle("open");
+        });
+
+        document.addEventListener("click", (e) => {
+          if (!statusFilterPopover.contains(e.target) && e.target !== statusFilterBtn && !statusFilterBtn.contains(e.target)) {
+            statusFilterPopover.classList.remove("open");
+          }
+        });
+
+        byId("statusFilterChecklist").addEventListener("change", () => {
+          const selected = Array.from(byId("statusFilterChecklist").querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+          state.statusFilters = selected;
+          updateStatusFilterSummary();
+          renderDropBand();
+        });
+
+        byId("statusActiveOnlyBtn").addEventListener("click", () => {
+          state.statusFilters = [...ACTIVE_DEFAULT_STATUSES];
+          byId("statusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+            cb.checked = state.statusFilters.includes(cb.value);
+          });
+          updateStatusFilterSummary();
+          renderDropBand();
+        });
+
+        byId("statusAllBtn").addEventListener("click", () => {
+          state.statusFilters = ["live","scheduled","draft","closed","completed","cancelled","archived"];
+          byId("statusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+            cb.checked = true;
+          });
+          updateStatusFilterSummary();
+          renderDropBand();
+        });
+
+        byId("statusClearBtn").addEventListener("click", () => {
+          state.statusFilters = [];
+          byId("statusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+            cb.checked = false;
+          });
+          updateStatusFilterSummary();
           renderDropBand();
         });
 
@@ -2880,7 +3037,7 @@
           "opensAtDate","opensAtTime","closesAtDate","closesAtTime",
           "fundraisingEnabled","fundraisingModel","fundraisingPercentage","fundraisingPerOrderPence","fundraisingDisplayText",
           "hostShareEnabled","hostShareModel","hostSharePercentage","hostSharePerOrderPence","hostShareFixedPence","hostShareCustomerVisible",
-          "ordersOpenRule","ordersOpenDaysBefore","seriesStartDate","seriesFixedOpenDate","seriesFixedOpenTime","seriesEndMode","seriesEndDate","seriesDropCount"
+          "seriesStartDate","seriesEndMode","seriesEndDate","seriesDropCount"
         ].forEach((id) => {
           const el = byId(id);
           if (!el) return;
@@ -2901,6 +3058,13 @@
           renderConditionalFields();
           renderSeriesPreview();
           markDirty();
+        });
+
+        document.querySelectorAll('input[name="openPattern"]').forEach((radio) => {
+          radio.addEventListener("change", () => {
+            renderConditionalFields();
+            markDirty();
+          });
         });
 
         byId("dropName").addEventListener("input", () => {
@@ -2986,8 +3150,8 @@
         byId("publishBtn").addEventListener("click", async () => {
           try {
             await saveDrop(false);
-            await updateDropStatus("scheduled");
-            showInlineSuccess("Drop published to scheduled");
+            await updateDropStatus("live");
+            showInlineSuccess(state.drop?.status === "live" ? "Live drop updated" : "Drop is now live");
           } catch (err) {
             console.error(err);
             showError(err.message || "Unable to publish drop.");
@@ -3119,6 +3283,7 @@
           supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
           attachEvents();
+          updateStatusFilterSummary();
           await loadVendorId();
           await refreshAll();
         } catch (err) {
@@ -3131,4 +3296,4 @@
     })();
   </script>
 </body>
-</html>
+</html> 
