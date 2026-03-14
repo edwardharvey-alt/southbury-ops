@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -11,12 +9,17 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 
   <style>
+    .container > .headerBar,
+    .container > .studioPage{
+      width:100%;
+      max-width:none;
+    }
+
     .studioPage{
-      max-width:1200px;
-      margin:0 auto;
+      width:100% !important;
+      max-width:none !important;
       display:grid;
       gap:14px;
-      width:100%;
       box-sizing:border-box;
     }
 
@@ -24,7 +27,8 @@
     .stageBar,
     .contextBar,
     .workspaceCard{
-      width:100%;
+      width:100% !important;
+      max-width:none !important;
       box-sizing:border-box;
     }
 
@@ -35,7 +39,7 @@
 
     .browserToolbar{
       display:grid;
-      grid-template-columns:180px minmax(180px,1fr) 160px 160px 110px;
+      grid-template-columns:180px minmax(220px,1fr) 160px 160px 110px;
       gap:10px;
       align-items:center;
       margin-bottom:10px;
@@ -68,7 +72,7 @@
       width:220px;
       min-width:220px;
       max-width:220px;
-      min-height:150px;
+      min-height:152px;
       border:1px solid var(--h-border-2);
       border-radius:14px;
       background:rgba(255,255,255,0.95);
@@ -272,7 +276,6 @@
       cursor:pointer;
       white-space:nowrap;
       text-align:center;
-      box-shadow:none;
       transition:all .15s ease;
     }
 
@@ -319,19 +322,16 @@
       padding:10px 12px;
       background:rgba(255,255,255,0.96);
       box-shadow:0 6px 14px rgba(15,23,42,0.05);
-      display:grid;
-      gap:6px;
-    }
-
-    .contextTitle{
-      font-size:13px;
-      font-weight:850;
-      line-height:1.2;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      flex-wrap:wrap;
     }
 
     .contextMeta{
-      font-size:11px;
-      color:var(--h-muted);
+      font-size:12px;
+      color:var(--h-text);
       font-weight:700;
       line-height:1.35;
     }
@@ -342,14 +342,13 @@
       flex-wrap:wrap;
     }
 
-    .workspaceOuter{
-      width:100%;
+    .workspaceOuter,
+    .workspaceInner{
+      width:100% !important;
+      max-width:none !important;
     }
 
     .workspaceInner{
-      width:100%;
-      max-width:1200px;
-      margin:0 auto;
       display:grid;
       gap:12px;
     }
@@ -415,11 +414,14 @@
     }
 
     .stagePaneInner{
-      max-width:920px;
-      margin:0 auto;
+      width:100% !important;
+      max-width:none !important;
+      margin:0;
     }
 
     .stageSection{
+      width:100%;
+      box-sizing:border-box;
       border:1px solid var(--h-border-2);
       border-radius:14px;
       background:rgba(255,255,255,0.94);
@@ -500,10 +502,6 @@
       display:block;
       color:var(--h-text);
       margin-bottom:2px;
-    }
-
-    .createHostRow{
-      margin-top:8px;
     }
 
     .toggleRow{
@@ -606,6 +604,7 @@
     }
 
     .productGroup{
+      width:100%;
       border:1px solid var(--h-border-2);
       border-radius:12px;
       overflow:hidden;
@@ -625,7 +624,8 @@
     }
 
     .assignmentTable{
-      width:100%;
+      width:100% !important;
+      table-layout:fixed;
       border-collapse:collapse;
     }
 
@@ -635,6 +635,7 @@
       border-bottom:1px solid rgba(15,23,42,0.06);
       vertical-align:middle;
       font-size:12px;
+      box-sizing:border-box;
     }
 
     .assignmentTable th{
@@ -896,9 +897,8 @@
         padding-bottom:2px;
       }
 
-      .workspaceInner,
-      .stagePaneInner{
-        max-width:none;
+      .contextBar{
+        align-items:flex-start;
       }
 
       .stageFooter{
@@ -1003,8 +1003,7 @@
         </div>
 
         <div class="contextBar">
-          <div class="contextTitle" id="contextTitle">No drop selected</div>
-          <div class="contextMeta" id="contextMeta">Select a drop to view summary and progress.</div>
+          <div class="contextMeta" id="contextMeta">Select a drop to view context.</div>
           <div class="contextChips" id="contextChips"></div>
         </div>
       </div>
@@ -1015,7 +1014,7 @@
             <div class="workspaceHeader">
               <div>
                 <h3 class="sectionTitle" id="workspaceTitle">Basics</h3>
-                <p class="sectionSub" id="workspaceSub">Define the core setup of the drop</p>
+                <p class="sectionSub" id="workspaceSub">Define the core setup for this drop</p>
               </div>
 
               <div class="workspaceHeaderActions">
@@ -1030,6 +1029,9 @@
             <div class="stagePane active" id="pane-basics">
               <div class="stagePaneInner">
                 <div class="stageSection">
+                  <h4 class="stageSectionTitle">Identity</h4>
+                  <p class="stageSectionSub">Name the drop and define its type.</p>
+
                   <div class="studioGrid2">
                     <div class="field">
                       <label for="dropName">Drop Name</label>
@@ -1039,7 +1041,7 @@
                     <div class="field">
                       <label for="dropSlug">Drop Link Name</label>
                       <input id="dropSlug" type="text" placeholder="friday-pizza-night" />
-                      <div class="helperText">Auto-generated from drop name. You can overwrite it.</div>
+                      <div class="helperText">Auto-generated from Drop Name. You can overwrite it if needed.</div>
                     </div>
 
                     <div class="field">
@@ -1063,14 +1065,21 @@
                         <option value="archived">Archived</option>
                       </select>
                     </div>
+                  </div>
+                </div>
 
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Operating Setup</h4>
+                  <p class="stageSectionSub">Set host, geography, fulfilment mode and capacity.</p>
+
+                  <div class="studioGrid2">
                     <div class="field">
                       <label for="hostSelect">Host</label>
                       <select id="hostSelect">
                         <option value="">No host selected</option>
                       </select>
                       <div class="helperText" id="hostHelperText">Optional for neighbourhood drops. Required for community drops.</div>
-                      <div class="createHostRow">
+                      <div style="margin-top:8px;">
                         <button class="btnGhost" id="openHostModalBtn" type="button">+ Create Host</button>
                       </div>
                     </div>
@@ -1130,6 +1139,9 @@
             <div class="stagePane" id="pane-timing">
               <div class="stagePaneInner">
                 <div class="stageSection">
+                  <h4 class="stageSectionTitle">Timing</h4>
+                  <p class="stageSectionSub">Define fulfilment timing, ordering window and recurrence.</p>
+
                   <div class="studioGrid3">
                     <div class="field">
                       <label for="deliveryDate">Drop Date</label>
@@ -1146,10 +1158,8 @@
                       <input id="deliveryEndTime" type="time" />
                     </div>
                   </div>
-                </div>
 
-                <div class="stageSection">
-                  <div class="studioGrid2">
+                  <div class="studioGrid2" style="margin-top:10px;">
                     <div class="field">
                       <label for="opensAtDate">Open for Orders</label>
                       <div class="studioGrid2" style="gap:8px;">
@@ -1166,13 +1176,8 @@
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div class="stageSection">
-                  <h4 class="stageSectionTitle">Repeat Pattern</h4>
-                  <p class="stageSectionSub">Set the drop as one-off or recurring.</p>
-
-                  <div class="repeatChoice">
+                  <div class="repeatChoice" style="margin-top:12px;">
                     <label><input type="radio" name="repeatPattern" value="one_off" checked /> One-off drop</label>
                     <label><input type="radio" name="repeatPattern" value="recurring" /> Recurring</label>
                   </div>
@@ -1275,7 +1280,7 @@
                     </div>
                   </div>
 
-                  <div id="assignmentGroups"></div>
+                  <div id="assignmentGroups" style="width:100%;"></div>
                 </div>
               </div>
             </div>
@@ -1557,6 +1562,7 @@
 
       let supabase = null;
       let successTimer = null;
+      let manualSlugEdited = false;
 
       const state = {
         vendorId: null,
@@ -1575,8 +1581,7 @@
         typeFilter: "all",
         saveState: "saved",
         currentStage: "basics",
-        seriesRows: [],
-        slugManuallyEdited: false
+        seriesRows: []
       };
 
       function byId(id) {
@@ -1739,33 +1744,47 @@
       function getStageStatus(stage) {
         if (!state.readiness || !state.drop) return "not_started";
 
-        if (stage === state.currentStage) return "current";
+        if (stage === "basics") return state.readiness.basics_complete ? "complete" : "attention";
+        if (stage === "timing") return state.readiness.timing_complete ? "complete" : "attention";
+        if (stage === "menu") return (state.readiness.menu_complete && state.readiness.capacity_product_present) ? "complete" : "attention";
+        if (stage === "commercials") return state.readiness.commercials_valid ? "complete" : "attention";
+        if (stage === "review") return state.readiness.ready_to_publish ? "attention" : "not_started";
+        return "not_started";
+      }
+
+      function getStageVisualStatus(stage) {
+        if (!state.readiness || !state.drop) {
+          return stage === state.currentStage ? "active" : "neutral";
+        }
+
+        if (stage === state.currentStage) return "active";
+
+        const stageIndex = STAGES.indexOf(stage);
+        const currentIndex = STAGES.indexOf(state.currentStage);
+
+        if (stageIndex > currentIndex) return "neutral";
 
         if (stage === "basics") {
-          return state.readiness.basics_complete ? "complete" : "attention";
+          return state.readiness.basics_complete ? "complete" : "neutral";
         }
 
         if (stage === "timing") {
-          return state.readiness.basics_complete && state.readiness.timing_complete ? "complete" : "not_started";
+          return (currentIndex > stageIndex && state.readiness.timing_complete) ? "complete" : "neutral";
         }
 
         if (stage === "menu") {
-          return (state.readiness.menu_complete && state.readiness.capacity_product_present && state.readiness.timing_complete)
-            ? "complete"
-            : "not_started";
+          return (currentIndex > stageIndex && state.readiness.menu_complete && state.readiness.capacity_product_present) ? "complete" : "neutral";
         }
 
         if (stage === "commercials") {
-          return state.readiness.commercials_valid && state.readiness.menu_complete
-            ? "complete"
-            : "not_started";
+          return (currentIndex > stageIndex && state.readiness.commercials_valid) ? "complete" : "neutral";
         }
 
         if (stage === "review") {
-          return state.readiness.ready_to_publish ? "attention" : "not_started";
+          return state.readiness.ready_to_publish ? "attention" : "neutral";
         }
 
-        return "not_started";
+        return "neutral";
       }
 
       function renderStageBar() {
@@ -1778,35 +1797,32 @@
 
         document.querySelectorAll(".stagePill").forEach((pill) => {
           const stage = pill.dataset.stage;
-          const stageStatus = getStageStatus(stage);
+          const visualStatus = getStageVisualStatus(stage);
 
           pill.classList.remove("active", "complete", "attention");
-          if (stage === state.currentStage) pill.classList.add("active");
-          if (stageStatus === "complete") pill.classList.add("complete");
-          if (stageStatus === "attention") pill.classList.add("attention");
+
+          if (visualStatus === "active") pill.classList.add("active");
+          if (visualStatus === "complete") pill.classList.add("complete");
+          if (visualStatus === "attention") pill.classList.add("attention");
 
           const icon = byId(`icon-${stage}`);
-          if (stageStatus === "complete") icon.textContent = "✓";
-          else if (stage === state.currentStage) icon.textContent = String(STAGES.indexOf(stage) + 1);
-          else if (stageStatus === "attention") icon.textContent = "!";
+          if (visualStatus === "complete") icon.textContent = "✓";
+          else if (visualStatus === "attention") icon.textContent = "!";
           else icon.textContent = String(STAGES.indexOf(stage) + 1);
         });
       }
 
       function renderContextBar() {
-        const title = byId("contextTitle");
         const meta = byId("contextMeta");
         const chips = byId("contextChips");
 
         if (!state.drop || !state.selectedDropSummary) {
-          title.textContent = "No drop selected";
-          meta.textContent = "Select a drop to view summary and progress.";
+          meta.textContent = "Select a drop to view context.";
           chips.innerHTML = "";
           return;
         }
 
         const host = state.hosts.find((h) => h.id === state.drop.host_id);
-        title.textContent = `${state.drop.name || "Untitled drop"} — ${state.drop.status || "draft"}`;
 
         meta.textContent = [
           state.drop.drop_type || "drop",
@@ -1824,11 +1840,11 @@
 
       function updateWorkspaceHeader() {
         const map = {
-          basics: ["Basics", "Define the core setup of the drop"],
-          timing: ["Timing", "Set fulfilment and ordering windows"],
+          basics: ["Basics", "Define the core setup for this drop"],
+          timing: ["Timing", "Set fulfilment timing, ordering window and recurrence"],
           menu: ["Menu", "Choose what can be ordered"],
-          commercials: ["Commercials", "Optional economics and commercial setup"],
-          review: ["Review", "Check readiness and publish when ready"]
+          commercials: ["Commercials", "Optional economics and support settings"],
+          review: ["Review", "Check readiness, share and publish"]
         };
         byId("workspaceTitle").textContent = map[state.currentStage][0];
         byId("workspaceSub").textContent = map[state.currentStage][1];
@@ -1838,7 +1854,6 @@
 
         byId("backStageBtn").classList.toggle("hidden", state.currentStage === "basics");
         byId("continueStageBtn").classList.toggle("hidden", state.currentStage === "review");
-        byId("saveDraftBtn").classList.remove("hidden");
         byId("openBoardBtn").classList.toggle("hidden", !(state.drop && ["live", "closed"].includes(state.drop.status)));
       }
 
@@ -1927,7 +1942,7 @@
         state.dropProducts = dropProductsRes.data || [];
         state.dropProductStock = stockRes.data || [];
         state.productAssignments = buildProductAssignments();
-        state.slugManuallyEdited = false;
+        manualSlugEdited = false;
         setSaveState("saved");
       }
 
@@ -2063,6 +2078,12 @@
         byId("dropStatus").value = d.status || "draft";
         byId("notesInternal").value = d.notes_internal || "";
 
+        byId("fulfilmentMode").value = d.fulfilment_mode || "";
+        byId("centrePostcode").value = d.centre_postcode || "";
+        byId("radiusKm").value = d.radius_km ?? "";
+        byId("capacityCategory").value = d.capacity_category || "pizza";
+        byId("capacityTotal").value = Number(d.capacity_units_total || 0);
+
         byId("deliveryDate").value = formatDateInput(d.delivery_start);
         byId("deliveryStartTime").value = formatTimeInput(d.delivery_start);
         byId("deliveryEndTime").value = formatTimeInput(d.delivery_end);
@@ -2071,12 +2092,6 @@
         byId("opensAtTime").value = formatTimeInput(d.opens_at);
         byId("closesAtDate").value = formatDateInput(d.closes_at);
         byId("closesAtTime").value = formatTimeInput(d.closes_at);
-
-        byId("capacityCategory").value = d.capacity_category || "pizza";
-        byId("capacityTotal").value = Number(d.capacity_units_total || 0);
-        byId("fulfilmentMode").value = d.fulfilment_mode || "";
-        byId("centrePostcode").value = d.centre_postcode || "";
-        byId("radiusKm").value = d.radius_km ?? "";
 
         byId("fundraisingEnabled").checked = Boolean(d.fundraising_enabled);
         byId("fundraisingModel").value = d.fundraising_model || "";
@@ -2167,6 +2182,15 @@
 
         const recurring = getRepeatPattern() === "recurring";
         byId("recurringBlock").classList.toggle("hidden", !recurring);
+
+        const openRule = byId("ordersOpenRule").value;
+        byId("ordersOpenDaysBeforeField").classList.toggle("hidden", openRule !== "days_before");
+        byId("seriesFixedOpenDateField").classList.toggle("hidden", openRule !== "fixed_start");
+        byId("seriesFixedOpenTimeField").classList.toggle("hidden", openRule !== "fixed_start");
+
+        const endMode = byId("seriesEndMode").value;
+        byId("seriesEndDateField").classList.toggle("hidden", endMode !== "end_date");
+        byId("seriesDropCountField").classList.toggle("hidden", endMode !== "drop_count");
       }
 
       function getRepeatPattern() {
@@ -2358,12 +2382,10 @@
 
       function readDropFromForm() {
         const existing = state.drop || {};
-        const sanitizedSlug = slugify(byId("dropSlug").value.trim());
-
         return {
           ...existing,
           name: byId("dropName").value.trim(),
-          slug: sanitizedSlug,
+          slug: slugify(byId("dropSlug").value.trim()),
           drop_type: byId("dropType").value,
           status: byId("dropStatus").value,
           host_id: byId("hostSelect").value || null,
@@ -2413,13 +2435,11 @@
           name: dropData.name,
           drop_type: dropData.drop_type,
           status: dropData.status,
-
           fulfilment_mode: dropData.fulfilment_mode,
           centre_postcode: dropData.centre_postcode,
           radius_km: dropData.radius_km,
-          capacity_units_total: dropData.capacity_units_total,
           capacity_category: dropData.capacity_category,
-
+          capacity_units_total: dropData.capacity_units_total,
           opens_at: dropData.opens_at,
           closes_at: dropData.closes_at,
           delivery_start: dropData.delivery_start,
@@ -2468,6 +2488,7 @@
       async function saveDrop(showSuccess = true) {
         if (!state.selectedDropId || !state.drop) return;
 
+        byId("dropSlug").value = slugify(byId("dropSlug").value.trim());
         const dropData = readDropFromForm();
         if (!dropData.slug) throw new Error("Drop Link Name is required.");
 
@@ -2512,7 +2533,7 @@
           slug: `new-drop-${uidSuffix()}`,
           drop_type: "neighbourhood",
           status: "draft",
-          fulfilment_mode: "delivery",
+          fulfilment_mode: null,
           centre_postcode: null,
           radius_km: null,
           capacity_units_total: 40,
@@ -2840,23 +2861,6 @@
           pill.addEventListener("click", () => openStage(pill.dataset.stage));
         });
 
-        byId("dropName").addEventListener("input", () => {
-          if (!state.slugManuallyEdited) {
-            byId("dropSlug").value = slugify(byId("dropName").value);
-          }
-          markDirty();
-        });
-
-        byId("dropSlug").addEventListener("input", () => {
-          state.slugManuallyEdited = true;
-          byId("dropSlug").value = slugify(byId("dropSlug").value);
-          markDirty();
-        });
-
-        byId("dropSlug").addEventListener("blur", () => {
-          byId("dropSlug").value = slugify(byId("dropSlug").value);
-        });
-
         [
           "dropType","dropStatus","hostSelect","notesInternal",
           "fulfilmentMode","centrePostcode","radiusKm","capacityCategory","capacityTotal",
@@ -2878,6 +2882,24 @@
             renderSeriesPreview();
             markDirty();
           });
+        });
+
+        byId("dropName").addEventListener("input", () => {
+          if (!manualSlugEdited) {
+            byId("dropSlug").value = slugify(byId("dropName").value);
+          }
+          markDirty();
+        });
+
+        byId("dropSlug").addEventListener("input", () => {
+          manualSlugEdited = true;
+          byId("dropSlug").value = slugify(byId("dropSlug").value);
+          markDirty();
+        });
+
+        byId("dropSlug").addEventListener("blur", () => {
+          byId("dropSlug").value = slugify(byId("dropSlug").value);
+          markDirty();
         });
 
         document.querySelectorAll('input[name="repeatPattern"]').forEach((radio) => {
