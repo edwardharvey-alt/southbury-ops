@@ -5,1012 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Drop Studio</title>
 
-  <link rel="stylesheet" href="/assets/hearth.css?v=18" />
+  <link rel="stylesheet" href="/assets/hearth.css?v=19" />
   <script src="/assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <style>
-    .container > .headerBar,
-    .container > .studioPage{
-      width:100%;
-      max-width:none;
-    }
-
-    .studioPage{
-      width:100% !important;
-      max-width:none !important;
-      display:grid;
-      gap:14px;
-      box-sizing:border-box;
-    }
-
-    .studioCard,
-    .stageBar,
-    .contextBar,
-    .workspaceCard{
-      width:100% !important;
-      max-width:none !important;
-      box-sizing:border-box;
-    }
-
-    .studioCard{
-      padding:14px 16px;
-      overflow:hidden;
-    }
-
-    .browserToolbar{
-      display:grid;
-      grid-template-columns:180px minmax(220px,1fr) minmax(220px,260px) 160px 110px;
-      gap:10px;
-      align-items:center;
-      margin-bottom:10px;
-    }
-
-    .browserToolbar .btnAccent,
-    .browserToolbar .btnGhost{
-      min-height:38px;
-      height:38px;
-      padding:0 14px;
-      width:100%;
-      min-width:0;
-    }
-
-    .browserToolbar input,
-    .browserToolbar select{
-      width:100%;
-      min-width:0;
-      min-height:38px;
-      height:38px;
-    }
-
-    .filterPopoverWrap{
-      position:relative;
-      width:100%;
-    }
-
-    .filterSummaryBtn{
-      width:100%;
-      min-height:38px;
-      height:38px;
-      border-radius:12px;
-      border:1px solid var(--h-border);
-      background:#fff;
-      padding:0 12px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:8px;
-      font-size:12px;
-      font-weight:700;
-      color:var(--h-text);
-      cursor:pointer;
-    }
-
-    .filterPopover{
-      position:absolute;
-      top:calc(100% + 8px);
-      left:0;
-      width:100%;
-      min-width:220px;
-      background:#fff;
-      border:1px solid var(--h-border);
-      border-radius:14px;
-      box-shadow:0 14px 30px rgba(15,23,42,0.10);
-      padding:10px;
-      z-index:40;
-      display:none;
-    }
-
-    .filterPopover.open{
-      display:block;
-    }
-
-    .filterQuickActions{
-      display:flex;
-      gap:6px;
-      flex-wrap:wrap;
-      margin-bottom:8px;
-    }
-
-    .filterQuickActions .btnGhost{
-      min-height:30px;
-      height:30px;
-      font-size:11px;
-      padding:0 10px;
-      width:auto;
-    }
-
-    .filterChecklist{
-      display:grid;
-      gap:6px;
-    }
-
-    .filterChecklist label{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      font-size:12px;
-      font-weight:700;
-      color:var(--h-text);
-      cursor:pointer;
-    }
-
-    .filterChecklist input[type="checkbox"]{
-      width:15px;
-      height:15px;
-      accent-color:var(--h-accent);
-      margin:0;
-    }
-
-    .dropBandWrap{
-      width:100%;
-      overflow:hidden;
-    }
-
-    .dropBand{
-      display:flex;
-      gap:12px;
-      overflow-x:auto;
-      overflow-y:hidden;
-      padding:2px 2px 6px;
-      scroll-behavior:smooth;
-      align-items:stretch;
-    }
-
-    .dropCard{
-      width:220px;
-      min-width:220px;
-      max-width:220px;
-      min-height:152px;
-      border:1px solid var(--h-border-2);
-      border-radius:14px;
-      background:rgba(255,255,255,0.95);
-      padding:12px;
-      cursor:pointer;
-      transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease;
-      display:flex;
-      flex-direction:column;
-      justify-content:space-between;
-      flex:0 0 auto;
-    }
-
-    .dropCard:hover{
-      border-color:var(--h-border);
-      box-shadow:0 8px 18px rgba(15,23,42,0.06);
-      transform:translateY(-1px);
-    }
-
-    .dropCard.active{
-      border-color:rgba(249,115,22,0.35);
-      box-shadow:0 10px 22px rgba(249,115,22,0.10);
-      background:linear-gradient(135deg, rgba(249,115,22,0.07), rgba(251,146,60,0.04));
-    }
-
-    .dropCardTop{
-      display:flex;
-      justify-content:space-between;
-      gap:8px;
-      align-items:flex-start;
-      margin-bottom:6px;
-    }
-
-    .dropCardTitle{
-      font-size:13px;
-      font-weight:850;
-      line-height:1.25;
-      margin:0;
-    }
-
-    .dropCardSub{
-      margin:4px 0 0;
-      font-size:11px;
-      color:var(--h-muted);
-      line-height:1.35;
-    }
-
-    .dropCardMeta{
-      margin-top:7px;
-      font-size:11px;
-      color:var(--h-text);
-      font-weight:700;
-      line-height:1.35;
-    }
-
-    .dropCardStats{
-      display:flex;
-      flex-wrap:wrap;
-      gap:6px;
-      margin-top:10px;
-    }
-
-    .dropCardActions{
-      display:flex;
-      gap:6px;
-      margin-top:10px;
-    }
-
-    .dropCardActions .btnSmall{
-      width:100%;
-      min-height:30px;
-      font-size:11px;
-      padding:0 10px;
-    }
-
-    .miniChip{
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      padding:4px 7px;
-      border-radius:999px;
-      border:1px solid var(--h-border-2);
-      background:rgba(15,23,42,0.02);
-      font-size:10px;
-      color:var(--h-muted);
-      font-weight:800;
-      white-space:nowrap;
-      max-width:max-content;
-    }
-
-    .miniChip.live{
-      background:rgba(22,163,74,0.10);
-      border-color:rgba(22,163,74,0.18);
-      color:var(--h-good);
-    }
-
-    .miniChip.scheduled{
-      background:rgba(59,130,246,0.10);
-      border-color:rgba(59,130,246,0.18);
-      color:#1d4ed8;
-    }
-
-    .miniChip.draft{
-      background:rgba(245,158,11,0.10);
-      border-color:rgba(245,158,11,0.18);
-      color:#b45309;
-    }
-
-    .miniChip.closed,
-    .miniChip.completed,
-    .miniChip.archived,
-    .miniChip.cancelled{
-      background:rgba(15,23,42,0.05);
-      border-color:rgba(15,23,42,0.10);
-      color:var(--h-muted);
-    }
-
-    .stageShell{
-      position:sticky;
-      top:16px;
-      z-index:20;
-      display:grid;
-      gap:10px;
-      width:100%;
-    }
-
-    .stageBar{
-      border:1px solid var(--h-border);
-      border-radius:16px;
-      padding:12px 14px;
-      background:var(--h-surface);
-      box-shadow:0 10px 22px rgba(15,23,42,0.08);
-    }
-
-    .stageBarTop{
-      display:flex;
-      justify-content:space-between;
-      gap:14px;
-      align-items:flex-start;
-      flex-wrap:wrap;
-      margin-bottom:10px;
-    }
-
-    .stageBarMeta{
-      font-size:12px;
-      color:var(--h-muted);
-      font-weight:700;
-      margin-top:4px;
-    }
-
-    .saveStateInline{
-      font-size:12px;
-      font-weight:800;
-      color:var(--h-muted);
-      padding:7px 10px;
-      border-radius:999px;
-      border:1px solid var(--h-border-2);
-      background:rgba(15,23,42,0.02);
-      max-width:max-content;
-    }
-
-    .saveStateInline.saved{
-      color:var(--h-good);
-      background:#f0fdf4;
-      border-color:rgba(22,163,74,0.20);
-    }
-
-    .saveStateInline.saving{
-      color:#b45309;
-      background:#fff7ed;
-      border-color:rgba(245,158,11,0.20);
-    }
-
-    .saveStateInline.error{
-      color:#991b1b;
-      background:#fef2f2;
-      border-color:#fecaca;
-    }
-
-    .stagePills{
-      display:grid;
-      grid-template-columns:repeat(5, minmax(0, 1fr));
-      gap:10px;
-      width:100%;
-    }
-
-    .stagePill{
-      min-width:0;
-      min-height:46px;
-      height:46px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:8px;
-      padding:0 12px;
-      border-radius:14px;
-      border:1px solid var(--h-border-2);
-      background:rgba(15,23,42,0.02);
-      color:var(--h-muted);
-      font-size:12px;
-      font-weight:850;
-      cursor:pointer;
-      white-space:nowrap;
-      text-align:center;
-      transition:all .15s ease;
-    }
-
-    .stagePill:hover{
-      transform:translateY(-1px);
-      box-shadow:0 6px 14px rgba(15,23,42,0.05);
-    }
-
-    .stagePill.active{
-      border-color:rgba(249,115,22,0.34);
-      background:linear-gradient(135deg, rgba(249,115,22,0.18), rgba(251,146,60,0.10));
-      color:var(--h-accent-ink);
-      box-shadow:0 8px 18px rgba(249,115,22,0.10);
-    }
-
-    .stagePill.complete{
-      border-color:rgba(22,163,74,0.20);
-      background:rgba(22,163,74,0.10);
-      color:var(--h-good);
-    }
-
-    .stagePill.attention{
-      border-color:rgba(245,158,11,0.22);
-      background:rgba(245,158,11,0.12);
-      color:#b45309;
-    }
-
-    .stageIcon{
-      width:18px;
-      min-width:18px;
-      height:18px;
-      border-radius:999px;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      font-size:10px;
-      font-weight:900;
-      border:1px solid currentColor;
-    }
-
-    .contextBar{
-      border:1px solid var(--h-border-2);
-      border-radius:14px;
-      padding:10px 12px;
-      background:rgba(255,255,255,0.96);
-      box-shadow:0 6px 14px rgba(15,23,42,0.05);
-      display:flex;
-      justify-content:space-between;
-      gap:12px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-
-    .contextMeta{
-      font-size:12px;
-      color:var(--h-text);
-      font-weight:700;
-      line-height:1.35;
-    }
-
-    .contextChips{
-      display:flex;
-      gap:6px;
-      flex-wrap:wrap;
-    }
-
-    .workspaceOuter,
-    .workspaceInner{
-      width:100% !important;
-      max-width:none !important;
-    }
-
-    .workspaceInner{
-      display:grid;
-      gap:12px;
-    }
-
-    .workspaceCard{
-      width:100%;
-      padding:14px 16px;
-    }
-
-    .workspaceHeader{
-      display:flex;
-      justify-content:space-between;
-      gap:14px;
-      align-items:flex-start;
-      flex-wrap:wrap;
-      margin-bottom:12px;
-    }
-
-    .workspaceHeaderActions{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      align-items:center;
-    }
-
-    .workspaceHeaderActions .btnGhost,
-    .workspaceHeaderActions .btnAccent{
-      min-height:32px;
-      font-size:11px;
-      padding:0 10px;
-    }
-
-    .inlineSuccess{
-      margin-bottom:10px;
-      border:1px solid rgba(22,163,74,0.18);
-      border-radius:12px;
-      padding:10px 12px;
-      background:rgba(22,163,74,0.07);
-      color:var(--h-good);
-      font-size:12px;
-      font-weight:800;
-      display:none;
-    }
-
-    .errorBox{
-      display:none;
-      margin-bottom:10px;
-      padding:10px 12px;
-      border-radius:12px;
-      background:#fef2f2;
-      color:#991b1b;
-      border:1px solid #fecaca;
-      font-size:12px;
-      font-weight:700;
-    }
-
-    .stagePane{
-      display:none;
-    }
-
-    .stagePane.active{
-      display:block;
-    }
-
-    .stagePaneInner{
-      width:100% !important;
-      max-width:none !important;
-      margin:0;
-    }
-
-    .stageSection{
-      width:100%;
-      box-sizing:border-box;
-      border:1px solid var(--h-border-2);
-      border-radius:14px;
-      background:rgba(255,255,255,0.94);
-      padding:12px;
-      margin-bottom:10px;
-    }
-
-    .stageSectionTitle{
-      margin:0 0 4px;
-      font-size:14px;
-      font-weight:850;
-    }
-
-    .stageSectionSub{
-      margin:0 0 10px;
-      font-size:11px;
-      color:var(--h-muted);
-    }
-
-    .studioGrid2{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px;
-    }
-
-    .studioGrid3{
-      display:grid;
-      grid-template-columns:repeat(3, 1fr);
-      gap:10px;
-    }
-
-    .field{
-      display:flex;
-      flex-direction:column;
-      gap:5px;
-      min-width:0;
-    }
-
-    .field label{
-      font-size:10px;
-      color:var(--h-muted);
-      font-weight:700;
-      text-transform:uppercase;
-      letter-spacing:.02em;
-    }
-
-    .field input,
-    .field select,
-    .field textarea{
-      width:100%;
-      min-width:0;
-      padding:8px 10px;
-      font-size:12px;
-      border-radius:10px;
-    }
-
-    .field textarea{
-      resize:vertical;
-      min-height:74px;
-    }
-
-    .helperText{
-      font-size:10px;
-      color:var(--h-muted);
-      line-height:1.35;
-    }
-
-    .hostPreview{
-      border:1px dashed var(--h-border);
-      border-radius:10px;
-      padding:9px 10px;
-      background:rgba(15,23,42,0.02);
-      font-size:12px;
-      line-height:1.4;
-    }
-
-    .hostPreview strong{
-      display:block;
-      color:var(--h-text);
-      margin-bottom:2px;
-    }
-
-    .toggleRow{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      padding:9px 10px;
-      border:1px solid var(--h-border-2);
-      border-radius:10px;
-      background:rgba(15,23,42,0.02);
-      margin-bottom:10px;
-    }
-
-    .toggleRow input[type="checkbox"]{
-      width:16px;
-      height:16px;
-      margin:0;
-      accent-color:var(--h-accent);
-    }
-
-    .repeatBlock{
-      border:1px solid var(--h-border-2);
-      border-radius:12px;
-      padding:10px;
-      background:rgba(15,23,42,0.02);
-      margin-top:10px;
-    }
-
-    .repeatChoice,
-    .openChoice{
-      display:flex;
-      gap:14px;
-      flex-wrap:wrap;
-      align-items:center;
-      margin-bottom:10px;
-    }
-
-    .repeatChoice label,
-    .openChoice label{
-      display:flex;
-      gap:7px;
-      align-items:center;
-      font-size:12px;
-      font-weight:700;
-      color:var(--h-text);
-    }
-
-    .scheduleTableWrap{
-      overflow:auto;
-      border:1px solid var(--h-border-2);
-      border-radius:12px;
-      background:#fff;
-      margin-top:8px;
-    }
-
-    .scheduleTable{
-      width:100%;
-      border-collapse:collapse;
-    }
-
-    .scheduleTable th,
-    .scheduleTable td{
-      padding:8px;
-      border-bottom:1px solid rgba(15,23,42,0.06);
-      font-size:12px;
-      vertical-align:middle;
-    }
-
-    .scheduleTable th{
-      text-align:left;
-      font-size:10px;
-      text-transform:uppercase;
-      color:var(--h-muted);
-      background:rgba(15,23,42,0.02);
-    }
-
-    .scheduleTable select,
-    .scheduleTable input{
-      width:100%;
-      min-width:0;
-      padding:7px 8px;
-      font-size:12px;
-    }
-
-    .previewList{
-      display:grid;
-      gap:6px;
-      margin-top:8px;
-    }
-
-    .previewLine{
-      display:flex;
-      justify-content:space-between;
-      gap:12px;
-      padding:8px 10px;
-      border-radius:10px;
-      border:1px solid var(--h-border-2);
-      background:rgba(255,255,255,0.94);
-      font-size:11px;
-      font-weight:700;
-    }
-
-    .productGroup{
-      width:100%;
-      border:1px solid var(--h-border-2);
-      border-radius:12px;
-      overflow:hidden;
-      margin-bottom:10px;
-      background:#fff;
-    }
-
-    .productGroupHead{
-      padding:10px 12px;
-      background:rgba(15,23,42,0.03);
-      border-bottom:1px solid var(--h-border-2);
-      font-size:11px;
-      text-transform:uppercase;
-      letter-spacing:.02em;
-      font-weight:900;
-      color:var(--h-muted);
-    }
-
-    .assignmentTable{
-      width:100% !important;
-      table-layout:fixed;
-      border-collapse:collapse;
-    }
-
-    .assignmentTable th,
-    .assignmentTable td{
-      padding:8px 8px;
-      border-bottom:1px solid rgba(15,23,42,0.06);
-      vertical-align:middle;
-      font-size:12px;
-      box-sizing:border-box;
-    }
-
-    .assignmentTable th{
-      text-align:left;
-      font-size:10px;
-      text-transform:uppercase;
-      color:var(--h-muted);
-      background:rgba(15,23,42,0.02);
-    }
-
-    .assignmentTable td input[type="checkbox"]{
-      width:15px;
-      height:15px;
-      accent-color:var(--h-accent);
-    }
-
-    .assignmentTable td input[type="number"]{
-      min-width:70px;
-      width:100%;
-      padding:7px 8px;
-      font-size:12px;
-    }
-
-    .productName{
-      font-weight:800;
-    }
-
-    .subMeta{
-      display:block;
-      margin-top:4px;
-      font-size:10px;
-      color:var(--h-muted);
-    }
-
-    .capacityTag{
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      padding:4px 7px;
-      border-radius:999px;
-      font-size:10px;
-      font-weight:800;
-      white-space:nowrap;
-    }
-
-    .capacityTag.yes{
-      border:1px solid rgba(249,115,22,0.2);
-      color:var(--h-accent-ink);
-      background:rgba(249,115,22,0.10);
-    }
-
-    .capacityTag.no{
-      border:1px solid var(--h-border-2);
-      color:var(--h-muted);
-      background:rgba(15,23,42,0.02);
-    }
-
-    .reviewGrid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px;
-    }
-
-    .summaryBlock{
-      display:grid;
-      gap:7px;
-      margin-top:8px;
-    }
-
-    .summaryItem{
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      align-items:flex-start;
-      font-size:12px;
-      line-height:1.35;
-    }
-
-    .summaryItem .label{
-      color:var(--h-muted);
-      font-weight:700;
-    }
-
-    .summaryItem .value{
-      color:var(--h-text);
-      font-weight:800;
-      text-align:right;
-    }
-
-    .readinessList{
-      display:grid;
-      gap:7px;
-      margin-top:8px;
-    }
-
-    .readinessItem{
-      display:flex;
-      align-items:flex-start;
-      gap:8px;
-      font-size:12px;
-      line-height:1.35;
-    }
-
-    .readinessMark{
-      width:17px;
-      min-width:17px;
-      height:17px;
-      border-radius:999px;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      font-size:10px;
-      font-weight:900;
-      margin-top:1px;
-    }
-
-    .readinessItem.pass .readinessMark{
-      background:rgba(22,163,74,0.12);
-      color:var(--h-good);
-      border:1px solid rgba(22,163,74,0.2);
-    }
-
-    .readinessItem.fail .readinessMark{
-      background:rgba(245,158,11,0.12);
-      color:#b45309;
-      border:1px solid rgba(245,158,11,0.2);
-    }
-
-    .shareLink{
-      border:1px solid var(--h-border-2);
-      border-radius:10px;
-      padding:9px 10px;
-      background:rgba(15,23,42,0.02);
-      font-size:12px;
-      line-height:1.35;
-      word-break:break-all;
-    }
-
-    .qrWrap{
-      display:grid;
-      place-items:center;
-      border:1px solid var(--h-border-2);
-      border-radius:12px;
-      padding:10px;
-      background:#fff;
-      min-height:176px;
-      margin-top:8px;
-      overflow:hidden;
-    }
-
-    .qrWrap img{
-      width:160px;
-      height:160px;
-      object-fit:contain;
-      display:block;
-    }
-
-    .stageFooter{
-      display:flex;
-      justify-content:space-between;
-      gap:12px;
-      margin-top:12px;
-      flex-wrap:wrap;
-      position:sticky;
-      bottom:12px;
-      padding-top:8px;
-      background:linear-gradient(to top, var(--h-bg) 60%, rgba(247,247,251,0));
-    }
-
-    .stageFooterLeft,
-    .stageFooterRight{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      align-items:center;
-    }
-
-    .stageFooter .btnGhost,
-    .stageFooter .btnAccent{
-      min-height:36px;
-      height:36px;
-      font-size:12px;
-      padding:0 12px;
-      border-radius:10px;
-    }
-
-    .modalBackdrop{
-      position:fixed;
-      inset:0;
-      background:rgba(15,23,42,0.45);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      padding:20px;
-      z-index:50;
-    }
-
-    .modalBackdrop.open{
-      display:flex;
-    }
-
-    .modalCard{
-      width:min(680px, 100%);
-      max-height:90vh;
-      overflow:auto;
-      background:var(--h-surface);
-      border-radius:18px;
-      border:1px solid var(--h-border-2);
-      box-shadow:0 20px 44px rgba(15,23,42,0.18);
-      padding:18px;
-    }
-
-    .modalHead{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:12px;
-      margin-bottom:14px;
-    }
-
-    .modalActions{
-      display:flex;
-      justify-content:flex-end;
-      gap:8px;
-      margin-top:14px;
-      flex-wrap:wrap;
-    }
-
-    .modalMessage{
-      margin-top:10px;
-      border:1px solid var(--h-border-2);
-      border-radius:12px;
-      padding:10px 12px;
-      background:rgba(15,23,42,0.02);
-      font-size:12px;
-      color:var(--h-muted);
-      display:none;
-    }
-
-    .hidden{
-      display:none !important;
-    }
-
-    @media (max-width:1180px){
-      .browserToolbar{
-        grid-template-columns:1fr 1fr;
-      }
-
-      .studioGrid2,
-      .reviewGrid{
-        grid-template-columns:1fr;
-      }
-
-      .studioGrid3{
-        grid-template-columns:1fr;
-      }
-    }
-
-    @media (max-width:900px){
-      .browserToolbar{
-        grid-template-columns:1fr;
-      }
-
-      .stagePills{
-        grid-template-columns:repeat(5, 180px);
-        overflow-x:auto;
-        padding-bottom:2px;
-      }
-
-      .contextBar{
-        align-items:flex-start;
-      }
-
-      .stageFooter{
-        flex-direction:column;
-        align-items:stretch;
-      }
-
-      .stageFooterLeft,
-      .stageFooterRight{
-        width:100%;
-      }
-    }
-  </style>
 </head>
 <body>
   <div class="container">
@@ -1067,12 +64,23 @@
             </div>
           </div>
 
-          <select id="typeFilter">
-            <option value="all">All types</option>
-            <option value="neighbourhood">Neighbourhood</option>
-            <option value="community">Community</option>
-            <option value="event">Event</option>
-          </select>
+          <div class="filterPopoverWrap">
+            <button class="filterSummaryBtn" id="typeFilterBtn" type="button">
+              <span id="typeFilterSummary">All types</span>
+              <span>▾</span>
+            </button>
+            <div class="filterPopover" id="typeFilterPopover">
+              <div class="filterQuickActions">
+                <button class="btnGhost" id="typeAllBtn" type="button">All</button>
+                <button class="btnGhost" id="typeClearBtn" type="button">Clear</button>
+              </div>
+              <div class="filterChecklist" id="typeFilterChecklist">
+                <label><input type="checkbox" value="neighbourhood" checked /> Neighbourhood</label>
+                <label><input type="checkbox" value="community" checked /> Community</label>
+                <label><input type="checkbox" value="event" checked /> Event</label>
+              </div>
+            </div>
+          </div>
 
           <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
         </div>
@@ -1645,6 +653,7 @@
       const DEFAULT_VENDOR_SLUG = "southbury-farm-pizza";
       const STAGES = ["basics", "timing", "menu", "commercials", "review"];
       const ACTIVE_DEFAULT_STATUSES = ["live", "scheduled", "draft"];
+      const DEFAULT_TYPE_FILTERS = ["neighbourhood", "community", "event"];
 
       let supabase = null;
       let successTimer = null;
@@ -1664,7 +673,7 @@
         productAssignments: [],
         search: "",
         statusFilters: [...ACTIVE_DEFAULT_STATUSES],
-        typeFilter: "all",
+        typeFilters: [...DEFAULT_TYPE_FILTERS],
         saveState: "saved",
         currentStage: "basics",
         seriesRows: []
@@ -1789,6 +798,13 @@
         return date.toISOString();
       }
 
+      function getDayOfWeekFromDateInput(value) {
+        if (!value) return "4";
+        const d = new Date(`${value}T12:00:00`);
+        if (Number.isNaN(d.getTime())) return "4";
+        return String(d.getDay());
+      }
+
       function getSharePath() {
         const slug = (state.drop?.slug || "").trim();
         if (!slug) return "";
@@ -1834,7 +850,6 @@
 
       function getStageStatus(stage) {
         if (!state.readiness || !state.drop) return "not_started";
-
         if (stage === "basics") return state.readiness.basics_complete ? "complete" : "attention";
         if (stage === "timing") return state.readiness.timing_complete ? "complete" : "attention";
         if (stage === "menu") return (state.readiness.menu_complete && state.readiness.capacity_product_present) ? "complete" : "attention";
@@ -1847,34 +862,17 @@
         if (!state.readiness || !state.drop) {
           return stage === state.currentStage ? "active" : "neutral";
         }
-
         if (stage === state.currentStage) return "active";
 
         const stageIndex = STAGES.indexOf(stage);
         const currentIndex = STAGES.indexOf(state.currentStage);
 
         if (stageIndex > currentIndex) return "neutral";
-
-        if (stage === "basics") {
-          return state.readiness.basics_complete ? "complete" : "neutral";
-        }
-
-        if (stage === "timing") {
-          return (currentIndex > stageIndex && state.readiness.timing_complete) ? "complete" : "neutral";
-        }
-
-        if (stage === "menu") {
-          return (currentIndex > stageIndex && state.readiness.menu_complete && state.readiness.capacity_product_present) ? "complete" : "neutral";
-        }
-
-        if (stage === "commercials") {
-          return (currentIndex > stageIndex && state.readiness.commercials_valid) ? "complete" : "neutral";
-        }
-
-        if (stage === "review") {
-          return state.readiness.ready_to_publish ? "attention" : "neutral";
-        }
-
+        if (stage === "basics") return state.readiness.basics_complete ? "complete" : "neutral";
+        if (stage === "timing") return (currentIndex > stageIndex && state.readiness.timing_complete) ? "complete" : "neutral";
+        if (stage === "menu") return (currentIndex > stageIndex && state.readiness.menu_complete && state.readiness.capacity_product_present) ? "complete" : "neutral";
+        if (stage === "commercials") return (currentIndex > stageIndex && state.readiness.commercials_valid) ? "complete" : "neutral";
+        if (stage === "review") return state.readiness.ready_to_publish ? "attention" : "neutral";
         return "neutral";
       }
 
@@ -1891,7 +889,6 @@
           const visualStatus = getStageVisualStatus(stage);
 
           pill.classList.remove("active", "complete", "attention");
-
           if (visualStatus === "active") pill.classList.add("active");
           if (visualStatus === "complete") pill.classList.add("complete");
           if (visualStatus === "attention") pill.classList.add("attention");
@@ -1960,6 +957,24 @@
           return;
         }
         summary.textContent = `${selected.length} statuses`;
+      }
+
+      function updateTypeFilterSummary() {
+        const summary = byId("typeFilterSummary");
+        const selected = state.typeFilters;
+        if (selected.length === DEFAULT_TYPE_FILTERS.length) {
+          summary.textContent = "All types";
+          return;
+        }
+        if (!selected.length) {
+          summary.textContent = "No types";
+          return;
+        }
+        if (selected.length <= 2) {
+          summary.textContent = selected.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ");
+          return;
+        }
+        summary.textContent = `${selected.length} types`;
       }
 
       async function loadVendorId() {
@@ -2077,9 +1092,11 @@
       function getFilteredDrops() {
         const search = state.search.trim().toLowerCase();
         const selectedStatuses = state.statusFilters;
+        const selectedTypes = state.typeFilters;
+
         return state.drops.filter((drop) => {
           const statusOk = selectedStatuses.length ? selectedStatuses.includes(drop.status) : false;
-          const typeOk = state.typeFilter === "all" || drop.drop_type === state.typeFilter;
+          const typeOk = selectedTypes.length ? selectedTypes.includes(drop.drop_type) : false;
           if (!statusOk || !typeOk) return false;
           if (!search) return true;
 
@@ -2315,7 +1332,13 @@
       function ensureScheduleRows() {
         if (!state.seriesRows.length) {
           state.seriesRows = [
-            { id: uidSuffix(), day_of_week: "4", fulfilment_start: "19:00", fulfilment_end: "20:00", order_close_time: "18:00" }
+            {
+              id: uidSuffix(),
+              day_of_week: getDayOfWeekFromDateInput(byId("deliveryDate")?.value),
+              fulfilment_start: "19:00",
+              fulfilment_end: "20:00",
+              order_close_time: "18:00"
+            }
           ];
         }
       }
@@ -2466,11 +1489,7 @@
         share.textContent = shareUrl || "No drop link yet.";
         renderQrCode(shareUrl);
 
-        if (state.drop.status === "live") {
-          publishBtn.textContent = "Update Live Drop";
-        } else {
-          publishBtn.textContent = "Publish Drop";
-        }
+        publishBtn.textContent = state.drop.status === "live" ? "Update Live Drop" : "Publish Drop";
 
         if (state.readiness.ready_to_publish) {
           publishHelp.textContent = state.drop.status === "live"
@@ -2745,6 +1764,7 @@
 
       function renderEverything() {
         updateStatusFilterSummary();
+        updateTypeFilterSummary();
         renderDropBand();
         populateForm();
         renderAssignments();
@@ -2770,6 +1790,17 @@
         const seriesStartDate = byId("seriesStartDate");
         if (repeatPattern === "recurring" && seriesStartDate && deliveryDate && !seriesStartDate.value) {
           seriesStartDate.value = deliveryDate;
+        }
+      }
+
+      function ensureSeriesDayMatchesDropDateIfDefault() {
+        const deliveryDate = byId("deliveryDate")?.value;
+        if (!deliveryDate || !state.seriesRows.length) return;
+        if (getRepeatPattern() !== "recurring") return;
+
+        if (state.seriesRows.length === 1) {
+          state.seriesRows[0].day_of_week = getDayOfWeekFromDateInput(deliveryDate);
+          renderScheduleRows();
         }
       }
 
@@ -2955,22 +1986,29 @@
           renderDropBand();
         });
 
-        byId("typeFilter").addEventListener("change", (e) => {
-          state.typeFilter = e.target.value || "all";
-          renderDropBand();
-        });
-
         const statusFilterBtn = byId("statusFilterBtn");
         const statusFilterPopover = byId("statusFilterPopover");
+        const typeFilterBtn = byId("typeFilterBtn");
+        const typeFilterPopover = byId("typeFilterPopover");
 
         statusFilterBtn.addEventListener("click", (e) => {
           e.stopPropagation();
+          typeFilterPopover.classList.remove("open");
           statusFilterPopover.classList.toggle("open");
+        });
+
+        typeFilterBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          statusFilterPopover.classList.remove("open");
+          typeFilterPopover.classList.toggle("open");
         });
 
         document.addEventListener("click", (e) => {
           if (!statusFilterPopover.contains(e.target) && e.target !== statusFilterBtn && !statusFilterBtn.contains(e.target)) {
             statusFilterPopover.classList.remove("open");
+          }
+          if (!typeFilterPopover.contains(e.target) && e.target !== typeFilterBtn && !typeFilterBtn.contains(e.target)) {
+            typeFilterPopover.classList.remove("open");
           }
         });
 
@@ -3005,6 +2043,31 @@
             cb.checked = false;
           });
           updateStatusFilterSummary();
+          renderDropBand();
+        });
+
+        byId("typeFilterChecklist").addEventListener("change", () => {
+          const selected = Array.from(byId("typeFilterChecklist").querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+          state.typeFilters = selected;
+          updateTypeFilterSummary();
+          renderDropBand();
+        });
+
+        byId("typeAllBtn").addEventListener("click", () => {
+          state.typeFilters = [...DEFAULT_TYPE_FILTERS];
+          byId("typeFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+            cb.checked = true;
+          });
+          updateTypeFilterSummary();
+          renderDropBand();
+        });
+
+        byId("typeClearBtn").addEventListener("click", () => {
+          state.typeFilters = [];
+          byId("typeFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+            cb.checked = false;
+          });
+          updateTypeFilterSummary();
           renderDropBand();
         });
 
@@ -3055,6 +2118,7 @@
 
         byId("deliveryDate").addEventListener("change", () => {
           ensureRecurringStartDateFromDropDate();
+          ensureSeriesDayMatchesDropDateIfDefault();
           renderConditionalFields();
           renderSeriesPreview();
           markDirty();
@@ -3088,6 +2152,7 @@
         document.querySelectorAll('input[name="repeatPattern"]').forEach((radio) => {
           radio.addEventListener("change", () => {
             ensureRecurringStartDateFromDropDate();
+            ensureSeriesDayMatchesDropDateIfDefault();
             renderConditionalFields();
             renderSeriesPreview();
             markDirty();
@@ -3095,7 +2160,13 @@
         });
 
         byId("addScheduleRowBtn").addEventListener("click", () => {
-          state.seriesRows.push({ id: uidSuffix(), day_of_week: "6", fulfilment_start: "19:00", fulfilment_end: "20:00", order_close_time: "18:00" });
+          state.seriesRows.push({
+            id: uidSuffix(),
+            day_of_week: getDayOfWeekFromDateInput(byId("deliveryDate")?.value),
+            fulfilment_start: "19:00",
+            fulfilment_end: "20:00",
+            order_close_time: "18:00"
+          });
           renderScheduleRows();
           renderSeriesPreview();
           markDirty();
@@ -3284,6 +2355,7 @@
 
           attachEvents();
           updateStatusFilterSummary();
+          updateTypeFilterSummary();
           await loadVendorId();
           await refreshAll();
         } catch (err) {
@@ -3296,4 +2368,4 @@
     })();
   </script>
 </body>
-</html> 
+</html>
