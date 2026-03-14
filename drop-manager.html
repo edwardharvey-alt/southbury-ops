@@ -1,4 +1,4 @@
-<head>
+
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Drop Studio</title>
@@ -46,11 +46,20 @@
     }
 
     .browserToolbar .btnAccent,
-    .browserToolbar .btnGhost,
+    .browserToolbar .btnGhost{
+      min-height:38px;
+      height:38px;
+      padding:0 14px;
+      width:100%;
+      min-width:0;
+    }
+
     .browserToolbar input,
     .browserToolbar select{
       width:100%;
       min-width:0;
+      min-height:38px;
+      height:38px;
     }
 
     .dropBandWrap{
@@ -1064,6 +1073,7 @@
                         <option value="cancelled">Cancelled</option>
                         <option value="archived">Archived</option>
                       </select>
+                      <div class="helperText">Starts as Draft during setup. Status can be changed later when the drop is ready.</div>
                     </div>
                   </div>
                 </div>
@@ -1322,7 +1332,7 @@
 
                       <div class="field" style="grid-column:1 / -1;">
                         <label for="fundraisingDisplayText">Customer-facing Text</label>
-                        <input id="fundraisingDisplayText" type="text" placeholder="£1 from every order supports Ruscombe Cricket Club" />
+                        <input id="fundraisingDisplayText" type="text" placeholder="£1 from every order supports a local cause" />
                       </div>
                     </div>
                   </div>
@@ -1330,7 +1340,7 @@
 
                 <div class="stageSection">
                   <h4 class="stageSectionTitle">Commercial Host Share</h4>
-                  <p class="stageSectionSub">Optional commercial settlement for pubs, venues or hosts.</p>
+                  <p class="stageSectionSub">Optional commercial settlement for venues or hosts.</p>
 
                   <div class="toggleRow">
                     <div>
@@ -1451,7 +1461,7 @@
           <div class="studioGrid2">
             <div class="field">
               <label for="newHostName">Host Name</label>
-              <input id="newHostName" type="text" placeholder="Ruscombe Cricket Club" />
+              <input id="newHostName" type="text" placeholder="Community Venue" />
             </div>
 
             <div class="field">
@@ -1473,7 +1483,7 @@
 
             <div class="field">
               <label for="newHostAddress">Address Summary</label>
-              <input id="newHostAddress" type="text" placeholder="Ruscombe, Berkshire" />
+              <input id="newHostAddress" type="text" placeholder="Berkshire" />
             </div>
 
             <div class="field" style="grid-column:1 / -1;">
@@ -1504,7 +1514,7 @@
           <div class="studioGrid2">
             <div class="field">
               <label for="newProductName">Product Name</label>
-              <input id="newProductName" type="text" placeholder="Margherita" />
+              <input id="newProductName" type="text" placeholder="Core Product" />
             </div>
 
             <div class="field">
@@ -1520,16 +1530,6 @@
             <div class="field">
               <label for="newProductPricePence">Base Price (pence)</label>
               <input id="newProductPricePence" type="number" min="0" step="1" placeholder="1100" />
-            </div>
-
-            <div class="field">
-              <label for="newProductCapacityUnits">Capacity Units</label>
-              <input id="newProductCapacityUnits" type="number" min="0" step="0.1" value="1" />
-            </div>
-
-            <div class="field">
-              <label for="newProductSortOrder">Display Order</label>
-              <input id="newProductSortOrder" type="number" min="0" step="1" value="100" />
             </div>
 
             <div class="field">
@@ -2310,6 +2310,7 @@
           summary.innerHTML = `<div class="emptyState">No drop selected.</div>`;
           readiness.innerHTML = `<div class="emptyState">No drop selected.</div>`;
           share.textContent = "No drop link yet.";
+          renderQrCode("");
           return;
         }
 
@@ -2336,7 +2337,7 @@
           { ok: state.readiness.basics_complete, label: "Basics complete" },
           { ok: state.readiness.timing_complete, label: "Timing complete" },
           { ok: state.readiness.menu_complete, label: "At least one product enabled" },
-          { ok: state.readiness.capacity_product_present, label: "Capacity-driving product present" },
+          { ok: state.readiness.capacity_product_present, label: "At least one enabled item counts toward capacity" },
           { ok: state.readiness.commercials_valid, label: "Commercials configured correctly" }
         ];
 
@@ -2347,8 +2348,9 @@
           </div>
         `).join("");
 
-        share.textContent = getShareUrl() || "No drop link yet.";
-        renderQrCode(getShareUrl());
+        const shareUrl = getShareUrl();
+        share.textContent = shareUrl || "No drop link yet.";
+        renderQrCode(shareUrl);
 
         if (state.readiness.ready_to_publish) {
           publishHelp.textContent = "This drop is ready to publish.";
@@ -2362,7 +2364,7 @@
       function renderQrCode(text) {
         const wrap = byId("qrWrap");
         if (!text) {
-          wrap.innerHTML = `<div class="helperText">QR preview unavailable until a drop link name is set.</div>`;
+          wrap.innerHTML = `<div class="helperText">QR preview will appear once the drop link name is set.</div>`;
           return;
         }
         if (!window.QRCode || typeof window.QRCode.toCanvas !== "function") {
@@ -2372,7 +2374,7 @@
 
         wrap.innerHTML = `<canvas id="qrCanvas"></canvas>`;
         const canvas = byId("qrCanvas");
-        window.QRCode.toCanvas(canvas, text, { width: 120, margin: 1 }, function (error) {
+        window.QRCode.toCanvas(canvas, text, { width: 132, margin: 1 }, function (error) {
           if (error) {
             console.error(error);
             wrap.innerHTML = `<div class="helperText">QR preview unavailable.</div>`;
@@ -2648,7 +2650,17 @@
         renderEverything();
       }
 
+      function ensureRecurringStartDateFromDropDate() {
+        const repeatPattern = getRepeatPattern();
+        const deliveryDate = byId("deliveryDate")?.value;
+        const seriesStartDate = byId("seriesStartDate");
+        if (repeatPattern === "recurring" && seriesStartDate && deliveryDate && !seriesStartDate.value) {
+          seriesStartDate.value = deliveryDate;
+        }
+      }
+
       function markDirty() {
+        ensureRecurringStartDateFromDropDate();
         setSaveState("default", "Unsaved changes");
         state.drop = { ...state.drop, ...readDropFromForm() };
         renderHostPreview();
@@ -2793,8 +2805,8 @@
           name,
           category: byId("newProductCategory").value,
           price_pence: Number(byId("newProductPricePence").value || 0),
-          capacity_units: Number(byId("newProductCapacityUnits").value || 1),
-          sort_order: Number(byId("newProductSortOrder").value || 100),
+          capacity_units: 1,
+          sort_order: 100,
           is_active: byId("newProductActive").value === "true"
         };
 
@@ -2864,7 +2876,7 @@
         [
           "dropType","dropStatus","hostSelect","notesInternal",
           "fulfilmentMode","centrePostcode","radiusKm","capacityCategory","capacityTotal",
-          "deliveryDate","deliveryStartTime","deliveryEndTime",
+          "deliveryStartTime","deliveryEndTime",
           "opensAtDate","opensAtTime","closesAtDate","closesAtTime",
           "fundraisingEnabled","fundraisingModel","fundraisingPercentage","fundraisingPerOrderPence","fundraisingDisplayText",
           "hostShareEnabled","hostShareModel","hostSharePercentage","hostSharePerOrderPence","hostShareFixedPence","hostShareCustomerVisible",
@@ -2882,6 +2894,13 @@
             renderSeriesPreview();
             markDirty();
           });
+        });
+
+        byId("deliveryDate").addEventListener("change", () => {
+          ensureRecurringStartDateFromDropDate();
+          renderConditionalFields();
+          renderSeriesPreview();
+          markDirty();
         });
 
         byId("dropName").addEventListener("input", () => {
@@ -2904,6 +2923,7 @@
 
         document.querySelectorAll('input[name="repeatPattern"]').forEach((radio) => {
           radio.addEventListener("change", () => {
+            ensureRecurringStartDateFromDropDate();
             renderConditionalFields();
             renderSeriesPreview();
             markDirty();
