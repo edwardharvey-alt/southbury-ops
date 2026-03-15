@@ -1959,3 +1959,82 @@ tbody td{
     width:100%;
   }
 }
+/* ======================================
+   SERVICE BOARD FILTERS
+   ====================================== */
+
+.boardShell{
+  position:relative;
+  z-index:1;
+}
+
+.dropHero{
+  position:relative;
+  overflow:visible;
+  z-index:20;
+}
+
+.execBar{
+  overflow:visible;
+}
+
+.serviceBoardFilters{
+  display:grid;
+  grid-template-columns:minmax(320px, 1.5fr) minmax(240px, 1fr) minmax(180px, 0.85fr);
+  gap:10px;
+  align-items:end;
+  width:100%;
+}
+
+.serviceBoardFilters > div{
+  min-width:0;
+}
+
+.serviceBoardFilters select{
+  width:100%;
+  min-width:0;
+}
+
+.boardFilterPopoverWrap{
+  position:relative;
+  width:100%;
+  z-index:60;
+}
+
+.boardFilterPopoverWrap .filterSummaryBtn{
+  width:100%;
+}
+
+.boardFilterPopoverWrap .filterPopover{
+  position:absolute;
+  top:calc(100% + 8px);
+  left:0;
+  width:100%;
+  min-width:240px;
+  max-height:280px;
+  overflow:auto;
+  z-index:120;
+}
+
+.boardFilterHint{
+  margin-top:6px;
+  font-size:10px;
+  line-height:1.35;
+  color:var(--h-muted);
+}
+
+@media (max-width:1100px){
+  .serviceBoardFilters{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .serviceBoardFilters > div:first-child{
+    grid-column:1 / -1;
+  }
+}
+
+@media (max-width:760px){
+  .serviceBoardFilters{
+    grid-template-columns:1fr;
+  }
+}
