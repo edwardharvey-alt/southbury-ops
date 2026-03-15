@@ -43,39 +43,50 @@
         </div>
 
         <div class="execBar" style="margin-top:0;">
-          <div class="execLeft">
-            <div style="display:grid; gap:10px;">
-              <div class="serviceBoardFilters" style="display:grid; grid-template-columns:minmax(260px,1fr) 180px 180px; gap:10px; align-items:end;">
-                <div>
-                  <label for="dropSelect">Selected drop</label>
-                  <select id="dropSelect">
-                    <option value="">Loading drops…</option>
-                  </select>
-                </div>
+          <div class="execLeft" style="flex:1 1 860px; min-width:0;">
+            <div class="serviceBoardFilters">
+              <div>
+                <label for="dropSelect">Selected drop</label>
+                <select id="dropSelect">
+                  <option value="">Loading drops…</option>
+                </select>
+                <div class="boardFilterHint" id="dropFilterResultText">Loading drops…</div>
+              </div>
 
-                <div>
-                  <label for="boardStatusFilter">Status filter</label>
-                  <select id="boardStatusFilter">
-                    <option value="all">All statuses</option>
-                    <option value="live" selected>Live</option>
-                    <option value="scheduled">Scheduled</option>
-                    <option value="draft">Draft</option>
-                    <option value="closed">Closed</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="archived">Archived</option>
-                  </select>
-                </div>
+              <div class="boardFilterPopoverWrap">
+                <label>Status filter</label>
+                <button class="filterSummaryBtn" id="boardStatusFilterBtn" type="button">
+                  <span id="boardStatusFilterSummary">Live, Scheduled, Draft</span>
+                  <span>▾</span>
+                </button>
 
-                <div>
-                  <label for="boardTypeFilter">Drop type</label>
-                  <select id="boardTypeFilter">
-                    <option value="all">All types</option>
-                    <option value="neighbourhood">Neighbourhood</option>
-                    <option value="community">Community</option>
-                    <option value="event">Event</option>
-                  </select>
+                <div class="filterPopover" id="boardStatusFilterPopover">
+                  <div class="filterQuickActions">
+                    <button class="btnGhost" id="boardStatusActiveBtn" type="button">Active only</button>
+                    <button class="btnGhost" id="boardStatusAllBtn" type="button">All</button>
+                    <button class="btnGhost" id="boardStatusClearBtn" type="button">Clear</button>
+                  </div>
+
+                  <div class="filterChecklist" id="boardStatusFilterChecklist">
+                    <label><input type="checkbox" value="live" checked /> Live</label>
+                    <label><input type="checkbox" value="scheduled" checked /> Scheduled</label>
+                    <label><input type="checkbox" value="draft" checked /> Draft</label>
+                    <label><input type="checkbox" value="closed" /> Closed</label>
+                    <label><input type="checkbox" value="completed" /> Completed</label>
+                    <label><input type="checkbox" value="cancelled" /> Cancelled</label>
+                    <label><input type="checkbox" value="archived" /> Archived</label>
+                  </div>
                 </div>
+              </div>
+
+              <div>
+                <label for="boardTypeFilter">Drop type</label>
+                <select id="boardTypeFilter">
+                  <option value="all">All types</option>
+                  <option value="neighbourhood">Neighbourhood</option>
+                  <option value="community">Community</option>
+                  <option value="event">Event</option>
+                </select>
               </div>
             </div>
           </div>
@@ -293,6 +304,8 @@
       const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
 
       const STATUS_ORDER = ["placed", "confirmed", "baking", "ready", "delivered"];
+      const ACTIVE_DEFAULT_STATUSES = ["live", "scheduled", "draft"];
+      const ALL_DROP_STATUSES = ["live", "scheduled", "draft", "closed", "completed", "cancelled", "archived"];
 
       let supabase = null;
 
@@ -309,7 +322,7 @@
         tableSearch: "",
         ordersPanelOpen: false,
         summaryPanelOpen: true,
-        boardStatusFilter: "live",
+        boardStatusFilters: [...ACTIVE_DEFAULT_STATUSES],
         boardTypeFilter: "all"
       };
 
@@ -391,6 +404,11 @@
         return String(status || "").toLowerCase();
       }
 
+      function titleCase(value) {
+        const text = String(value || "");
+        return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
+      }
+
       function getCapacityLabel(count = 1) {
         const raw = String(state.drop?.capacity_category || "unit").trim().toLowerCase();
         return `${count} ${raw}`;
@@ -448,10 +466,31 @@
         });
       }
 
+      function updateBoardStatusFilterSummary() {
+        const summary = byId("boardStatusFilterSummary");
+        const selected = state.boardStatusFilters;
+
+        if (!selected.length) {
+          summary.textContent = "No statuses";
+          return;
+        }
+
+        if (selected.length <= 3) {
+          summary.textContent = selected.map(titleCase).join(", ");
+          return;
+        }
+
+        summary.textContent = `${selected.length} statuses`;
+      }
+
       function getFilteredDrops() {
         return state.drops.filter((drop) => {
-          const statusOk = state.boardStatusFilter === "all" || normaliseStatus(drop.status) === state.boardStatusFilter;
+          const statusOk = state.boardStatusFilters.length
+            ? state.boardStatusFilters.includes(normaliseStatus(drop.status))
+            : false;
+
           const typeOk = state.boardTypeFilter === "all" || drop.drop_type === state.boardTypeFilter;
+
           return statusOk && typeOk;
         });
       }
@@ -460,7 +499,6 @@
         state.filteredDrops = getFilteredDrops();
 
         const selectedStillVisible = state.filteredDrops.some((drop) => drop.id === state.selectedDropId);
-
         if (selectedStillVisible) return;
 
         const liveMatch = state.filteredDrops.find((d) => normaliseStatus(d.status) === "live");
@@ -476,18 +514,20 @@
           opt.value = "";
           opt.textContent = "No drops match current filters";
           select.appendChild(opt);
+          byId("dropFilterResultText").textContent = "0 drops match current filters";
           return;
         }
 
         state.filteredDrops.forEach((drop) => {
           const opt = document.createElement("option");
           opt.value = drop.id;
-          const typeLabel = drop.drop_type ? ` • ${drop.drop_type}` : "";
-          const statusLabel = drop.status ? ` • ${drop.status}` : "";
-          opt.textContent = `${drop.name}${typeLabel}${statusLabel}`;
+          opt.textContent = `${drop.name} • ${drop.drop_type || "drop"} • ${normaliseStatus(drop.status)}`;
           if (drop.id === state.selectedDropId) opt.selected = true;
           select.appendChild(opt);
         });
+
+        const count = state.filteredDrops.length;
+        byId("dropFilterResultText").textContent = `${count} drop${count === 1 ? "" : "s"} match current filters`;
       }
 
       function renderHeader() {
@@ -922,6 +962,7 @@
       }
 
       function renderEverything() {
+        updateBoardStatusFilterSummary();
         renderDropSelect();
         renderHeader();
         renderQueue();
@@ -942,25 +983,79 @@
       }
 
       async function applyBoardFilters() {
+        state.expandedOrders.clear();
         ensureSelectedDropStillValid();
         await refreshData();
       }
 
       function attachEvents() {
-        byId("dropSelect").addEventListener("change", async function (e) {
-          state.selectedDropId = e.target.value || null;
-          state.expandedOrders.clear();
-          try {
-            await refreshData();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to refresh selected drop.");
+        const boardStatusFilterBtn = byId("boardStatusFilterBtn");
+        const boardStatusFilterPopover = byId("boardStatusFilterPopover");
+
+        boardStatusFilterBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          boardStatusFilterPopover.classList.toggle("open");
+        });
+
+        document.addEventListener("click", function (e) {
+          if (
+            !boardStatusFilterPopover.contains(e.target) &&
+            e.target !== boardStatusFilterBtn &&
+            !boardStatusFilterBtn.contains(e.target)
+          ) {
+            boardStatusFilterPopover.classList.remove("open");
           }
         });
 
-        byId("boardStatusFilter").addEventListener("change", async function (e) {
-          state.boardStatusFilter = e.target.value || "all";
-          state.expandedOrders.clear();
+        byId("boardStatusFilterChecklist").addEventListener("change", async function () {
+          const selected = Array.from(
+            byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]:checked')
+          ).map((cb) => cb.value);
+
+          state.boardStatusFilters = selected;
+
+          try {
+            await applyBoardFilters();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to apply status filter.");
+          }
+        });
+
+        byId("boardStatusActiveBtn").addEventListener("click", async function () {
+          state.boardStatusFilters = [...ACTIVE_DEFAULT_STATUSES];
+          byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+            cb.checked = state.boardStatusFilters.includes(cb.value);
+          });
+
+          try {
+            await applyBoardFilters();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to apply status filter.");
+          }
+        });
+
+        byId("boardStatusAllBtn").addEventListener("click", async function () {
+          state.boardStatusFilters = [...ALL_DROP_STATUSES];
+          byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+            cb.checked = true;
+          });
+
+          try {
+            await applyBoardFilters();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to apply status filter.");
+          }
+        });
+
+        byId("boardStatusClearBtn").addEventListener("click", async function () {
+          state.boardStatusFilters = [];
+          byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+            cb.checked = false;
+          });
+
           try {
             await applyBoardFilters();
           } catch (err) {
@@ -971,12 +1066,22 @@
 
         byId("boardTypeFilter").addEventListener("change", async function (e) {
           state.boardTypeFilter = e.target.value || "all";
-          state.expandedOrders.clear();
           try {
             await applyBoardFilters();
           } catch (err) {
             console.error(err);
             showError(err.message || "Unable to apply type filter.");
+          }
+        });
+
+        byId("dropSelect").addEventListener("change", async function (e) {
+          state.selectedDropId = e.target.value || null;
+          state.expandedOrders.clear();
+          try {
+            await refreshData();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to refresh selected drop.");
           }
         });
 
