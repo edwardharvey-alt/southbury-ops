@@ -216,9 +216,9 @@ select{ min-width:320px; }
 
 .execBar{
   display:grid;
-  grid-template-columns:minmax(280px, 1.4fr) minmax(220px, 1fr) minmax(180px, 0.9fr) auto;
+  grid-template-columns:minmax(280px,1.45fr) minmax(240px,1fr) minmax(180px,0.9fr) auto;
   gap:12px;
-  align-items:end;
+  align-items:start;
   margin-top:12px;
   padding:12px;
   border:1px solid var(--h-border-2);
@@ -240,7 +240,9 @@ select{ min-width:320px; }
 
 .execField label{
   display:block;
+  min-height:14px;
   font-size:11px;
+  line-height:14px;
   color:var(--h-muted);
   margin:0;
 }
@@ -250,9 +252,10 @@ select{ min-width:320px; }
 .execField .filterSummaryBtn{
   width:100%;
   min-width:0;
-  min-height:40px;
   height:40px;
-   box-sizing: border-box;
+  min-height:40px;
+  box-sizing:border-box;
+  margin:0;
 }
 
 .execRight{
@@ -261,26 +264,29 @@ select{ min-width:320px; }
   justify-content:flex-end;
   gap:10px;
   flex-wrap:nowrap;
+  min-height:58px;
 }
 
 .execRight .utilityLink,
 .execRight .btnGhost,
 .execRight .btnAccent{
-  min-height:40px;
   height:40px;
+  min-height:40px;
   padding:0 14px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-   box-sizing: border-box;
+  box-sizing:border-box;
+  margin:0;
+  border-radius:12px;
 }
 
 .execRight .utilityLink{
   border:1px solid transparent;
-   font-family: var(--sans);
-   font-size:13px;
-   font-weight:400;
-   line-height:1;
+  font-family:var(--sans);
+  font-size:12px;
+  font-weight:700;
+  line-height:1;
 }
 
 .utilityLink{
@@ -2059,6 +2065,7 @@ tbody td{
 @media (max-width:1100px){
   .execBar{
     grid-template-columns:1fr 1fr;
+    align-items:start;
   }
 
   .serviceBoardFilters > div:first-child{
@@ -2068,18 +2075,21 @@ tbody td{
   .execRight{
     grid-column:1 / -1;
     justify-content:flex-end;
+    min-height:auto;
   }
 }
 
 @media (max-width:760px){
   .execBar{
     grid-template-columns:1fr;
+    align-items:start;
   }
 
   .execRight{
     grid-column:auto;
     justify-content:flex-start;
     flex-wrap:wrap;
+    min-height:auto;
   }
 
   .execRight .utilityLink,
