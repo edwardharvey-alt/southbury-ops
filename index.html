@@ -44,11 +44,39 @@
 
         <div class="execBar" style="margin-top:0;">
           <div class="execLeft">
-            <div>
-              <label for="dropSelect">Selected drop</label>
-              <select id="dropSelect">
-                <option value="">Loading drops…</option>
-              </select>
+            <div style="display:grid; gap:10px;">
+              <div class="serviceBoardFilters" style="display:grid; grid-template-columns:minmax(260px,1fr) 180px 180px; gap:10px; align-items:end;">
+                <div>
+                  <label for="dropSelect">Selected drop</label>
+                  <select id="dropSelect">
+                    <option value="">Loading drops…</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="boardStatusFilter">Status filter</label>
+                  <select id="boardStatusFilter">
+                    <option value="all">All statuses</option>
+                    <option value="live" selected>Live</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="draft">Draft</option>
+                    <option value="closed">Closed</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="boardTypeFilter">Drop type</label>
+                  <select id="boardTypeFilter">
+                    <option value="all">All types</option>
+                    <option value="neighbourhood">Neighbourhood</option>
+                    <option value="community">Community</option>
+                    <option value="event">Event</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -270,6 +298,7 @@
 
       const state = {
         drops: [],
+        filteredDrops: [],
         selectedDropId: null,
         drop: null,
         capacity: null,
@@ -279,7 +308,9 @@
         tableStatusFilter: "all",
         tableSearch: "",
         ordersPanelOpen: false,
-        summaryPanelOpen: true
+        summaryPanelOpen: true,
+        boardStatusFilter: "live",
+        boardTypeFilter: "all"
       };
 
       function byId(id) {
@@ -417,22 +448,43 @@
         });
       }
 
+      function getFilteredDrops() {
+        return state.drops.filter((drop) => {
+          const statusOk = state.boardStatusFilter === "all" || normaliseStatus(drop.status) === state.boardStatusFilter;
+          const typeOk = state.boardTypeFilter === "all" || drop.drop_type === state.boardTypeFilter;
+          return statusOk && typeOk;
+        });
+      }
+
+      function ensureSelectedDropStillValid() {
+        state.filteredDrops = getFilteredDrops();
+
+        const selectedStillVisible = state.filteredDrops.some((drop) => drop.id === state.selectedDropId);
+
+        if (selectedStillVisible) return;
+
+        const liveMatch = state.filteredDrops.find((d) => normaliseStatus(d.status) === "live");
+        state.selectedDropId = (liveMatch || state.filteredDrops[0] || {}).id || null;
+      }
+
       function renderDropSelect() {
         const select = byId("dropSelect");
         select.innerHTML = "";
 
-        if (!state.drops.length) {
+        if (!state.filteredDrops.length) {
           const opt = document.createElement("option");
           opt.value = "";
-          opt.textContent = "No drops found";
+          opt.textContent = "No drops match current filters";
           select.appendChild(opt);
           return;
         }
 
-        state.drops.forEach((drop) => {
+        state.filteredDrops.forEach((drop) => {
           const opt = document.createElement("option");
           opt.value = drop.id;
-          opt.textContent = drop.name;
+          const typeLabel = drop.drop_type ? ` • ${drop.drop_type}` : "";
+          const statusLabel = drop.status ? ` • ${drop.status}` : "";
+          opt.textContent = `${drop.name}${typeLabel}${statusLabel}`;
           if (drop.id === state.selectedDropId) opt.selected = true;
           select.appendChild(opt);
         });
@@ -791,6 +843,7 @@
           ? saved
           : ((state.drops.find((d) => d.status === "live") || state.drops[0] || {}).id || null);
 
+        ensureSelectedDropStillValid();
         renderDropSelect();
       }
 
@@ -869,6 +922,7 @@
       }
 
       function renderEverything() {
+        renderDropSelect();
         renderHeader();
         renderQueue();
         renderWorkflowCounts();
@@ -881,8 +935,15 @@
 
       async function refreshData() {
         showError("");
+        ensureSelectedDropStillValid();
+        renderDropSelect();
         await loadSelectedDropData();
         renderEverything();
+      }
+
+      async function applyBoardFilters() {
+        ensureSelectedDropStillValid();
+        await refreshData();
       }
 
       function attachEvents() {
@@ -897,8 +958,31 @@
           }
         });
 
+        byId("boardStatusFilter").addEventListener("change", async function (e) {
+          state.boardStatusFilter = e.target.value || "all";
+          state.expandedOrders.clear();
+          try {
+            await applyBoardFilters();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to apply status filter.");
+          }
+        });
+
+        byId("boardTypeFilter").addEventListener("change", async function (e) {
+          state.boardTypeFilter = e.target.value || "all";
+          state.expandedOrders.clear();
+          try {
+            await applyBoardFilters();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to apply type filter.");
+          }
+        });
+
         byId("refreshBtn").addEventListener("click", async function () {
           try {
+            await loadDrops();
             await refreshData();
           } catch (err) {
             console.error(err);
