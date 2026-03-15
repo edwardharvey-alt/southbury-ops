@@ -215,37 +215,66 @@ select, input, textarea{
 select{ min-width:320px; }
 
 .execBar{
-  display:flex;
-  align-items:flex-end;
-  justify-content:space-between;
+  display:grid;
+  grid-template-columns:minmax(280px, 1.4fr) minmax(220px, 1fr) minmax(180px, 0.9fr) auto;
   gap:12px;
+  align-items:end;
   margin-top:12px;
   padding:12px;
   border:1px solid var(--h-border-2);
   border-radius:var(--r-lg);
   background:rgba(15,23,42,0.01);
-  flex-wrap:wrap;
+  overflow:visible;
 }
 
 .execLeft{
-  display:flex;
-  align-items:flex-end;
-  gap:10px;
-  flex-wrap:wrap;
+  display:contents;
 }
 
-.execLeft label{
+.execField{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-width:0;
+}
+
+.execField label{
   display:block;
   font-size:11px;
   color:var(--h-muted);
-  margin-bottom:4px;
+  margin:0;
+}
+
+.execField select,
+.execField input,
+.execField .filterSummaryBtn{
+  width:100%;
+  min-width:0;
+  min-height:38px;
+  height:38px;
 }
 
 .execRight{
   display:flex;
-  align-items:center;
+  align-items:flex-end;
+  justify-content:flex-end;
   gap:10px;
-  flex-wrap:wrap;
+  flex-wrap:nowrap;
+}
+
+.execRight .utilityLink,
+.execRight .btnGhost,
+.execRight .btnAccent{
+  min-height:38px;
+  height:38px;
+  padding:0 14px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.execRight .utilityLink{
+  border:1px solid transparent;
 }
 
 .utilityLink{
@@ -1979,11 +2008,7 @@ tbody td{
 }
 
 .serviceBoardFilters{
-  display:grid;
-  grid-template-columns:minmax(320px, 1.5fr) minmax(240px, 1fr) minmax(180px, 0.85fr);
-  gap:10px;
-  align-items:end;
-  width:100%;
+  display:contents;
 }
 
 .serviceBoardFilters > div{
@@ -2024,17 +2049,34 @@ tbody td{
 }
 
 @media (max-width:1100px){
-  .serviceBoardFilters{
+  .execBar{
     grid-template-columns:1fr 1fr;
   }
 
   .serviceBoardFilters > div:first-child{
     grid-column:1 / -1;
   }
+
+  .execRight{
+    grid-column:1 / -1;
+    justify-content:flex-end;
+  }
 }
 
 @media (max-width:760px){
-  .serviceBoardFilters{
+  .execBar{
     grid-template-columns:1fr;
+  }
+
+  .execRight{
+    grid-column:auto;
+    justify-content:flex-start;
+    flex-wrap:wrap;
+  }
+
+  .execRight .utilityLink,
+  .execRight .btnGhost,
+  .execRight .btnAccent{
+    width:auto;
   }
 }
