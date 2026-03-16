@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Menu Library</title>
 
-  <link rel="stylesheet" href="/assets/hearth.css?v=20" />
+  <link rel="stylesheet" href="/assets/hearth.css?v=22" />
   <script src="/assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -16,7 +16,7 @@
         <div class="brandMark">H</div>
         <div>
           <div class="brandTitle">Hearth — Menu Library</div>
-          <div class="brandSubtitle">Catalogue management for products, bundles and categories</div>
+          <div class="brandSubtitle">Manage products, bundles and categories</div>
         </div>
       </div>
 
@@ -33,7 +33,7 @@
         <div class="row space" style="margin-bottom:10px;">
           <div>
             <h3 class="sectionTitle">Catalogue</h3>
-            <p class="sectionSub">Manage reusable products, bundles and vendor-defined categories</p>
+            <p class="sectionSub">Manage reusable products, bundles and categories</p>
           </div>
         </div>
 
@@ -100,7 +100,6 @@
               <option value="sold_desc">Sort: Best selling</option>
               <option value="revenue_desc">Sort: Revenue</option>
               <option value="last_sold_desc">Sort: Last sold</option>
-              <option value="sort_order">Sort: Library order</option>
             </select>
           </div>
 
@@ -131,8 +130,8 @@
         <div class="stageBar">
           <div class="stageBarTop">
             <div>
-              <div class="sectionTitle">Catalogue workspace</div>
-              <div class="stageBarMeta" id="catalogueMeta">Products, bundles and categories for this vendor</div>
+              <div class="sectionTitle">Workspace</div>
+              <div class="stageBarMeta">Choose what you want to manage below</div>
             </div>
             <div class="saveStateInline saved" id="catalogueSaveState">All changes saved</div>
           </div>
@@ -154,7 +153,7 @@
         </div>
 
         <div class="contextBar">
-          <div class="contextMeta" id="selectionMeta">Select an item to edit its details.</div>
+          <div class="contextMeta" id="selectionMeta">Select an item from the list to view and edit it.</div>
           <div class="contextChips" id="selectionChips"></div>
         </div>
       </div>
@@ -165,7 +164,7 @@
             <div class="workspaceHeader">
               <div>
                 <h3 class="sectionTitle" id="workspaceTitle">Products</h3>
-                <p class="sectionSub" id="workspaceSub">Manage atomic sellable items and their operational attributes</p>
+                <p class="sectionSub" id="workspaceSub">Manage individual menu items and their pricing</p>
               </div>
 
               <div class="workspaceHeaderActions">
@@ -188,10 +187,10 @@
                         <th style="width:10%;">Type</th>
                         <th style="width:14%;">Category</th>
                         <th style="width:10%;">Price</th>
-                        <th style="width:8%;">Cap.</th>
+                        <th style="width:10%;">Capacity</th>
                         <th style="width:9%;">Active</th>
                         <th style="width:8%;">Sold</th>
-                        <th style="width:13%;">Revenue</th>
+                        <th style="width:11%;">Revenue</th>
                       </tr>
                     </thead>
                     <tbody id="libraryTableBody">
@@ -209,8 +208,8 @@
                     <div class="stageSection">
                       <div class="row space" style="margin-bottom:10px;">
                         <div>
-                          <h4 class="stageSectionTitle">Product details</h4>
-                          <p class="stageSectionSub">Edit core product fields and operational settings</p>
+                          <h4 class="stageSectionTitle">Selected product</h4>
+                          <p class="stageSectionSub">Select a product from the list to edit it</p>
                         </div>
                         <div class="row" style="gap:8px; flex-wrap:wrap;">
                           <button class="btnGhost" id="duplicateProductBtn" type="button">Duplicate</button>
@@ -231,7 +230,7 @@
 
                         <div class="field" style="grid-column:1 / -1;">
                           <label for="productDescription">Description</label>
-                          <textarea id="productDescription" placeholder="Optional customer-facing description"></textarea>
+                          <textarea id="productDescription" placeholder="Optional description shown in ordering later"></textarea>
                         </div>
 
                         <div class="field">
@@ -240,13 +239,9 @@
                         </div>
 
                         <div class="field">
-                          <label for="productCapacityUnits">Capacity Units</label>
+                          <label for="productCapacityUnits">Capacity Impact</label>
                           <input id="productCapacityUnits" type="number" min="0" step="0.01" />
-                        </div>
-
-                        <div class="field">
-                          <label for="productSortOrder">Sort Order</label>
-                          <input id="productSortOrder" type="number" min="0" step="1" />
+                          <div class="helperText">How much of a drop’s available capacity this item uses. Use 1 for a main item, 0 for add-ons.</div>
                         </div>
 
                         <div class="field">
@@ -265,7 +260,7 @@
 
                     <div class="stageSection">
                       <h4 class="stageSectionTitle">Performance snapshot</h4>
-                      <p class="stageSectionSub">Lightweight signals for quick catalogue decisions</p>
+                      <p class="stageSectionSub">Quick signals to help decide what to keep, improve or remove</p>
 
                       <div class="summaryBlock" id="productAnalyticsBlock">
                         <div class="summaryItem"><span class="label">Sold</span><span class="value">—</span></div>
@@ -283,8 +278,8 @@
                     <div class="stageSection">
                       <div class="row space" style="margin-bottom:10px;">
                         <div>
-                          <h4 class="stageSectionTitle">Bundle details</h4>
-                          <p class="stageSectionSub">Reusable combinations, offers and configurable menu items</p>
+                          <h4 class="stageSectionTitle">Selected bundle</h4>
+                          <p class="stageSectionSub">Create optional combinations, offers and meal deals</p>
                         </div>
                         <div class="row" style="gap:8px; flex-wrap:wrap;">
                           <button class="btnGhost" id="duplicateBundleBtn" type="button">Duplicate</button>
@@ -301,6 +296,7 @@
                         <div class="field">
                           <label for="bundleCategory">Category</label>
                           <select id="bundleCategory"></select>
+                          <div class="helperText">Optional. Use this if you want bundles grouped in the menu.</div>
                         </div>
 
                         <div class="field" style="grid-column:1 / -1;">
@@ -314,13 +310,9 @@
                         </div>
 
                         <div class="field">
-                          <label for="bundleCapacityUnits">Capacity Units</label>
+                          <label for="bundleCapacityUnits">Capacity Impact</label>
                           <input id="bundleCapacityUnits" type="number" min="0" step="0.01" />
-                        </div>
-
-                        <div class="field">
-                          <label for="bundleSortOrder">Sort Order</label>
-                          <input id="bundleSortOrder" type="number" min="0" step="1" />
+                          <div class="helperText">How much capacity the whole bundle uses when ordered.</div>
                         </div>
 
                         <div class="field">
@@ -340,27 +332,29 @@
                     <div class="stageSection">
                       <div class="row space" style="margin-bottom:10px;">
                         <div>
-                          <h4 class="stageSectionTitle">Bundle lines</h4>
-                          <p class="stageSectionSub">Fixed items, category choices and curated choice sets</p>
+                          <h4 class="stageSectionTitle">What’s included</h4>
+                          <p class="stageSectionSub">Each bundle can include specific items or customer choices. Select one below to edit it.</p>
                         </div>
-                        <button class="btnGhost" id="newBundleLineBtn" type="button">+ Add line</button>
+                        <button class="btnGhost" id="newBundleLineBtn" type="button">+ Add included item</button>
                       </div>
 
                       <div class="tableWrap">
                         <table class="tableTight">
                           <thead>
                             <tr>
-                              <th style="width:24%;">Label</th>
-                              <th style="width:16%;">Type</th>
-                              <th style="width:24%;">Rule</th>
+                              <th style="width:24%;">Name</th>
+                              <th style="width:18%;">Type</th>
+                              <th style="width:24%;">Customer chooses</th>
                               <th style="width:10%;">Qty</th>
                               <th style="width:12%;">Choices</th>
-                              <th style="width:14%;">Capacity</th>
+                              <th style="width:12%;">Drives capacity</th>
                             </tr>
                           </thead>
                           <tbody id="bundleLinesBody">
                             <tr>
-                              <td colspan="6" class="muted">Select a bundle to view its lines.</td>
+                              <td colspan="6">
+                                <div class="emptyState menuMiniEmpty">Select a bundle to view what’s included.</div>
+                              </td>
                             </tr>
                           </tbody>
                         </table>
@@ -370,29 +364,24 @@
                     <div class="stageSection" id="bundleLineEditorSection">
                       <div class="row space" style="margin-bottom:10px;">
                         <div>
-                          <h4 class="stageSectionTitle">Line editor</h4>
-                          <p class="stageSectionSub">Create or amend the selected bundle line</p>
+                          <h4 class="stageSectionTitle">Edit included item</h4>
+                          <p class="stageSectionSub">Select an included item above to edit it, or click “Add included item” to create a new one.</p>
                         </div>
-                        <button class="btnGhost" id="deleteBundleLineBtn" type="button">Delete line</button>
+                        <button class="btnGhost" id="deleteBundleLineBtn" type="button">Delete item</button>
                       </div>
 
                       <div class="studioGrid2">
                         <div class="field">
-                          <label for="bundleLineLabel">Label</label>
-                          <input id="bundleLineLabel" type="text" placeholder="Choose your drink" />
-                        </div>
-
-                        <div class="field">
-                          <label for="bundleLineType">Line Type</label>
+                          <label for="bundleLineType">Included Item Type</label>
                           <select id="bundleLineType">
-                            <option value="fixed_product">Fixed product</option>
-                            <option value="category_choice">Category choice</option>
-                            <option value="choice_set">Choice set</option>
+                            <option value="fixed_product">Specific item</option>
+                            <option value="category_choice">Choose from a category</option>
+                            <option value="choice_set">Choose from a selected list</option>
                           </select>
                         </div>
 
                         <div class="field lineMode lineModeFixed">
-                          <label for="bundleLineProduct">Fixed Product</label>
+                          <label for="bundleLineProduct">Specific Item</label>
                           <select id="bundleLineProduct"></select>
                         </div>
 
@@ -402,8 +391,14 @@
                         </div>
 
                         <div class="field lineMode lineModeChoiceSet hidden" style="grid-column:1 / -1;">
-                          <label>Allowed Products</label>
+                          <label>Allowed Items</label>
                           <div class="choiceSetPanel" id="bundleLineChoiceSetList"></div>
+                        </div>
+
+                        <div class="field" style="grid-column:1 / -1;">
+                          <label for="bundleLineLabel">Customer-facing Label</label>
+                          <input id="bundleLineLabel" type="text" placeholder="Optional for specific items, useful for choices e.g. Choose your drink" />
+                          <div class="helperText">For a specific item, this can be left blank and the item name will be used.</div>
                         </div>
 
                         <div class="field">
@@ -412,17 +407,12 @@
                         </div>
 
                         <div class="field">
-                          <label for="bundleLineSortOrder">Sort Order</label>
-                          <input id="bundleLineSortOrder" type="number" min="0" step="1" />
-                        </div>
-
-                        <div class="field">
-                          <label for="bundleLineMinChoices">Min Choices</label>
+                          <label for="bundleLineMinChoices">Minimum Choices</label>
                           <input id="bundleLineMinChoices" type="number" min="0" step="1" />
                         </div>
 
                         <div class="field">
-                          <label for="bundleLineMaxChoices">Max Choices</label>
+                          <label for="bundleLineMaxChoices">Maximum Choices</label>
                           <input id="bundleLineMaxChoices" type="number" min="0" step="1" />
                         </div>
 
@@ -440,17 +430,18 @@
                             <option value="false">No</option>
                             <option value="true">Yes</option>
                           </select>
+                          <div class="helperText">Use this when this included item determines the bundle’s operational load.</div>
                         </div>
                       </div>
 
                       <div class="menuEditorActions">
-                        <button class="btnAccent" id="saveBundleLineBtn" type="button">Save Line</button>
+                        <button class="btnAccent" id="saveBundleLineBtn" type="button">Save Included Item</button>
                       </div>
                     </div>
 
                     <div class="stageSection">
                       <h4 class="stageSectionTitle">Performance snapshot</h4>
-                      <p class="stageSectionSub">Lightweight bundle signals</p>
+                      <p class="stageSectionSub">Quick signals for bundle performance</p>
 
                       <div class="summaryBlock" id="bundleAnalyticsBlock">
                         <div class="summaryItem"><span class="label">Sold</span><span class="value">—</span></div>
@@ -468,8 +459,8 @@
                     <div class="stageSection">
                       <div class="row space" style="margin-bottom:10px;">
                         <div>
-                          <h4 class="stageSectionTitle">Category details</h4>
-                          <p class="stageSectionSub">Vendor-defined groupings used by products and bundles</p>
+                          <h4 class="stageSectionTitle">Selected category</h4>
+                          <p class="stageSectionSub">Select a category from the list to edit it</p>
                         </div>
                         <button class="btnGhost" id="toggleCategoryActiveBtn" type="button">Deactivate</button>
                       </div>
@@ -483,11 +474,6 @@
                         <div class="field">
                           <label for="categorySlug">Slug</label>
                           <input id="categorySlug" type="text" placeholder="sides" />
-                        </div>
-
-                        <div class="field">
-                          <label for="categorySortOrder">Sort Order</label>
-                          <input id="categorySortOrder" type="number" min="0" step="1" />
                         </div>
 
                         <div class="field">
@@ -506,7 +492,7 @@
 
                     <div class="stageSection">
                       <h4 class="stageSectionTitle">Category usage</h4>
-                      <p class="stageSectionSub">Quick reference on how the category is being used</p>
+                      <p class="stageSectionSub">A quick view of where this category is being used</p>
 
                       <div class="summaryBlock" id="categoryUsageBlock">
                         <div class="summaryItem"><span class="label">Products</span><span class="value">—</span></div>
@@ -523,8 +509,8 @@
           <div class="card pad" style="margin-top:14px;">
             <div class="row space">
               <div>
-                <h3 class="sectionTitle">Quick usage notes</h3>
-                <p class="sectionSub">Menu Library is now the catalogue source of truth. Drop Studio should increasingly assign from here rather than creating products inline.</p>
+                <h3 class="sectionTitle">Quick note</h3>
+                <p class="sectionSub">Menu Library is now the main place to manage the catalogue. Drop Studio can stay focused on setting up individual drops.</p>
               </div>
             </div>
           </div>
@@ -536,7 +522,7 @@
           <div class="modalHead">
             <div>
               <h3 class="sectionTitle">Create Product</h3>
-              <p class="sectionSub">Add a new atomic sellable item</p>
+              <p class="sectionSub">Add a new individual menu item</p>
             </div>
             <button class="btnGhost" id="closeNewProductModalBtn" type="button">Close</button>
           </div>
@@ -563,13 +549,8 @@
             </div>
 
             <div class="field">
-              <label for="newProductCapacityUnits">Capacity Units</label>
+              <label for="newProductCapacityUnits">Capacity Impact</label>
               <input id="newProductCapacityUnits" type="number" min="0" step="0.01" value="0" />
-            </div>
-
-            <div class="field">
-              <label for="newProductSortOrder">Sort Order</label>
-              <input id="newProductSortOrder" type="number" min="0" step="1" value="100" />
             </div>
 
             <div class="field">
@@ -595,7 +576,7 @@
           <div class="modalHead">
             <div>
               <h3 class="sectionTitle">Create Bundle</h3>
-              <p class="sectionSub">Add a reusable bundle, deal or configurable menu item</p>
+              <p class="sectionSub">Add a new optional combination, offer or meal deal</p>
             </div>
             <button class="btnGhost" id="closeNewBundleModalBtn" type="button">Close</button>
           </div>
@@ -609,6 +590,7 @@
             <div class="field">
               <label for="newBundleCategory">Category</label>
               <select id="newBundleCategory"></select>
+              <div class="helperText">Optional.</div>
             </div>
 
             <div class="field" style="grid-column:1 / -1;">
@@ -622,13 +604,8 @@
             </div>
 
             <div class="field">
-              <label for="newBundleCapacityUnits">Capacity Units</label>
+              <label for="newBundleCapacityUnits">Capacity Impact</label>
               <input id="newBundleCapacityUnits" type="number" min="0" step="0.01" value="0" />
-            </div>
-
-            <div class="field">
-              <label for="newBundleSortOrder">Sort Order</label>
-              <input id="newBundleSortOrder" type="number" min="0" step="1" value="100" />
             </div>
 
             <div class="field">
@@ -654,7 +631,7 @@
           <div class="modalHead">
             <div>
               <h3 class="sectionTitle">Create Category</h3>
-              <p class="sectionSub">Add a vendor-defined category for products and bundles</p>
+              <p class="sectionSub">Add a new grouping for products and bundles</p>
             </div>
             <button class="btnGhost" id="closeNewCategoryModalBtn" type="button">Close</button>
           </div>
@@ -668,11 +645,6 @@
             <div class="field">
               <label for="newCategorySlug">Slug</label>
               <input id="newCategorySlug" type="text" placeholder="sides" />
-            </div>
-
-            <div class="field">
-              <label for="newCategorySortOrder">Sort Order</label>
-              <input id="newCategorySortOrder" type="number" min="0" step="1" value="100" />
             </div>
 
             <div class="field">
@@ -735,15 +707,6 @@
     return document.getElementById(id);
   }
 
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
-  }
-
   function showError(message) {
     const el = byId("errorBox");
     if (!message) {
@@ -784,6 +747,15 @@
     }
   }
 
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
   function formatMoneyPence(pence) {
     return new Intl.NumberFormat("en-GB", {
       style: "currency",
@@ -812,10 +784,6 @@
       .replace(/-{2,}/g, "-");
   }
 
-  function uidSuffix() {
-    return Math.random().toString(36).slice(2, 7);
-  }
-
   function titleCase(value) {
     const text = String(value || "");
     return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
@@ -827,19 +795,6 @@
     if (a > b) return "↑ Rising";
     if (a < b) return "↓ Declining";
     return "→ Stable";
-  }
-
-  function getCurrentSelection() {
-    if (state.currentTab === "products") {
-      return state.products.find((p) => p.id === state.selectedProductId) || null;
-    }
-    if (state.currentTab === "bundles") {
-      return state.bundles.find((b) => b.id === state.selectedBundleId) || null;
-    }
-    if (state.currentTab === "categories") {
-      return state.categories.find((c) => c.id === state.selectedCategoryId) || null;
-    }
-    return null;
   }
 
   function getProductAnalytics(productId) {
@@ -880,18 +835,14 @@
       bundlesRes,
       menuItemsRes,
       productAnalyticsRes,
-      bundleAnalyticsRes,
-      bundleLinesRes,
-      choiceOptionsRes
+      bundleAnalyticsRes
     ] = await Promise.all([
       supabase.from("categories").select("*").eq("vendor_id", state.vendorId).order("sort_order", { ascending: true }).order("name", { ascending: true }),
       supabase.from("v_products_enriched").select("*").eq("vendor_id", state.vendorId).order("sort_order", { ascending: true }).order("name", { ascending: true }),
       supabase.from("v_bundles_enriched").select("*").eq("vendor_id", state.vendorId).order("sort_order", { ascending: true }).order("name", { ascending: true }),
       supabase.from("v_menu_library_items").select("*").eq("vendor_id", state.vendorId),
       supabase.from("v_product_analytics").select("*").eq("vendor_id", state.vendorId),
-      supabase.from("v_bundle_analytics").select("*").eq("vendor_id", state.vendorId),
-      supabase.from("v_bundle_lines_enriched").select("*").in("bundle_id", ["00000000-0000-0000-0000-000000000000"]),
-      supabase.from("v_bundle_line_choice_products_enriched").select("*").in("bundle_line_id", ["00000000-0000-0000-0000-000000000000"])
+      supabase.from("v_bundle_analytics").select("*").eq("vendor_id", state.vendorId)
     ]);
 
     if (categoriesRes.error) throw categoriesRes.error;
@@ -920,6 +871,7 @@
     }
 
     const bundleIds = state.bundles.map((b) => b.id);
+
     const { data: bundleLines, error: linesError } = await supabase
       .from("v_bundle_lines_enriched")
       .select("*")
@@ -1034,7 +986,6 @@
         category_name: p.category_name,
         price_pence: p.price_pence,
         capacity_units: p.capacity_units,
-        sort_order: p.sort_order,
         is_active: p.is_active,
         analytics: getProductAnalytics(p.id)
       }));
@@ -1048,7 +999,6 @@
         category_name: b.category_name,
         price_pence: b.price_pence,
         capacity_units: b.capacity_units,
-        sort_order: b.sort_order,
         is_active: b.is_active,
         analytics: getBundleAnalytics(b.id)
       }));
@@ -1062,7 +1012,6 @@
         category_name: c.name,
         price_pence: null,
         capacity_units: null,
-        sort_order: c.sort_order,
         is_active: c.is_active,
         analytics: null
       }));
@@ -1112,8 +1061,6 @@
           return Number(b.analytics?.revenue_pence || 0) - Number(a.analytics?.revenue_pence || 0);
         case "last_sold_desc":
           return new Date(b.analytics?.last_sold_at || 0) - new Date(a.analytics?.last_sold_at || 0);
-        case "sort_order":
-          return Number(a.sort_order || 0) - Number(b.sort_order || 0) || a.name.localeCompare(b.name);
         case "type_then_name":
         default:
           return a.item_type.localeCompare(b.item_type) || a.name.localeCompare(b.name);
@@ -1140,7 +1087,7 @@
 
     body.innerHTML = rows.map((row) => {
       const analytics = row.analytics || {};
-      const activeClass =
+      const active =
         row.item_type === "product" && row.item_id === state.selectedProductId
           ? "active"
           : row.item_type === "bundle" && row.item_id === state.selectedBundleId
@@ -1150,7 +1097,7 @@
           : "";
 
       return `
-        <tr class="menuLibraryRow ${activeClass}" data-item-type="${row.item_type}" data-item-id="${row.item_id}">
+        <tr class="menuLibraryRow ${active}" data-item-type="${row.item_type}" data-item-id="${row.item_id}">
           <td>
             <div class="productName">${escapeHtml(row.name)}</div>
             <div class="subMeta">${escapeHtml(row.description || "No description")}</div>
@@ -1169,9 +1116,9 @@
 
   function renderWorkspaceHeader() {
     const titleMap = {
-      products: ["Products", "Manage atomic sellable items and their operational attributes"],
-      bundles: ["Bundles", "Manage reusable bundles, deals and configurable combinations"],
-      categories: ["Categories", "Manage vendor-defined categories used across the catalogue"]
+      products: ["Products", "Manage individual menu items and their pricing"],
+      bundles: ["Bundles", "Build optional combinations and meal deals"],
+      categories: ["Categories", "Organise products and bundles into groups"]
     };
 
     byId("workspaceTitle").textContent = titleMap[state.currentTab][0];
@@ -1188,15 +1135,14 @@
   function renderSelectionContext() {
     const meta = byId("selectionMeta");
     const chips = byId("selectionChips");
-    const current = getCurrentSelection();
-
-    if (!current) {
-      meta.textContent = "Select an item to edit its details.";
-      chips.innerHTML = "";
-      return;
-    }
 
     if (state.currentTab === "products") {
+      const current = state.products.find((p) => p.id === state.selectedProductId);
+      if (!current) {
+        meta.textContent = "Select a product from the list to edit it.";
+        chips.innerHTML = "";
+        return;
+      }
       const analytics = getProductAnalytics(current.id);
       meta.textContent = `${current.name} • ${current.category_name || "No category"} • ${current.is_active ? "active" : "inactive"}`;
       chips.innerHTML = [
@@ -1204,31 +1150,48 @@
         `<span class="miniChip">${current.capacity_units} capacity</span>`,
         `<span class="miniChip">${Number(analytics?.units_sold || 0)} sold</span>`
       ].join("");
-    } else if (state.currentTab === "bundles") {
+      return;
+    }
+
+    if (state.currentTab === "bundles") {
+      const current = state.bundles.find((b) => b.id === state.selectedBundleId);
+      if (!current) {
+        meta.textContent = "Select a bundle from the list to edit it.";
+        chips.innerHTML = "";
+        return;
+      }
       const analytics = getBundleAnalytics(current.id);
       const lineCount = getBundleLines(current.id).length;
+      meta.textContent = `${current.name} • ${current.category_name || "No category"} • ${current.is_active ? "active" : "inactive"}`;
       chips.innerHTML = [
         `<span class="miniChip">${formatMoneyPence(current.price_pence)}</span>`,
         `<span class="miniChip">${current.capacity_units} capacity</span>`,
-        `<span class="miniChip">${lineCount} lines</span>`,
+        `<span class="miniChip">${lineCount} included item${lineCount === 1 ? "" : "s"}</span>`,
         `<span class="miniChip">${Number(analytics?.units_sold || 0)} sold</span>`
       ].join("");
-      meta.textContent = `${current.name} • ${current.category_name || "No category"} • ${current.is_active ? "active" : "inactive"}`;
-    } else {
-      const productCount = state.products.filter((p) => p.category_id === current.id).length;
-      const bundleCount = state.bundles.filter((b) => b.category_id === current.id).length;
-      meta.textContent = `${current.name} • ${current.is_active ? "active" : "inactive"}`;
-      chips.innerHTML = [
-        `<span class="miniChip">${productCount} products</span>`,
-        `<span class="miniChip">${bundleCount} bundles</span>`
-      ].join("");
+      return;
     }
+
+    const current = state.categories.find((c) => c.id === state.selectedCategoryId);
+    if (!current) {
+      meta.textContent = "Select a category from the list to edit it.";
+      chips.innerHTML = "";
+      return;
+    }
+
+    const productCount = state.products.filter((p) => p.category_id === current.id).length;
+    const bundleCount = state.bundles.filter((b) => b.category_id === current.id).length;
+    meta.textContent = `${current.name} • ${current.is_active ? "active" : "inactive"}`;
+    chips.innerHTML = [
+      `<span class="miniChip">${productCount} products</span>`,
+      `<span class="miniChip">${bundleCount} bundles</span>`
+    ].join("");
   }
 
-  function populateCategorySelect(selectId, includeBlank = true) {
+  function populateCategorySelect(selectId, includeBlank = true, blankLabel = "No category") {
     const select = byId(selectId);
     const options = [
-      includeBlank ? `<option value="">No category</option>` : "",
+      includeBlank ? `<option value="">${blankLabel}</option>` : "",
       ...state.categories.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`)
     ].join("");
     select.innerHTML = options;
@@ -1237,10 +1200,21 @@
   function populateProductSelect(selectId, includeBlank = true) {
     const select = byId(selectId);
     const options = [
-      includeBlank ? `<option value="">Select product</option>` : "",
+      includeBlank ? `<option value="">Select item</option>` : "",
       ...state.products.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`)
     ].join("");
     select.innerHTML = options;
+  }
+
+  function renderAnalyticsBlock(targetId, analytics) {
+    const block = byId(targetId);
+    block.innerHTML = `
+      <div class="summaryItem"><span class="label">Sold</span><span class="value">${Number(analytics?.units_sold || 0)}</span></div>
+      <div class="summaryItem"><span class="label">Revenue</span><span class="value">${formatMoneyPence(analytics?.revenue_pence || 0)}</span></div>
+      <div class="summaryItem"><span class="label">Drops used</span><span class="value">${Number(analytics?.drops_used || 0)}</span></div>
+      <div class="summaryItem"><span class="label">Last sold</span><span class="value">${formatDateShort(analytics?.last_sold_at)}</span></div>
+      <div class="summaryItem"><span class="label">Trend</span><span class="value">${getTrendLabel(analytics?.sold_last_30d, analytics?.sold_prev_30d)}</span></div>
+    `;
   }
 
   function renderProductEditor() {
@@ -1253,9 +1227,9 @@
       byId("productCategory").value = "";
       byId("productPricePence").value = "";
       byId("productCapacityUnits").value = "";
-      byId("productSortOrder").value = "";
       byId("productIsActive").value = "true";
       byId("toggleProductActiveBtn").textContent = "Deactivate";
+      renderAnalyticsBlock("productAnalyticsBlock", null);
       return;
     }
 
@@ -1264,83 +1238,10 @@
     byId("productCategory").value = product.category_id || "";
     byId("productPricePence").value = Number(product.price_pence || 0);
     byId("productCapacityUnits").value = product.capacity_units ?? 0;
-    byId("productSortOrder").value = Number(product.sort_order || 100);
     byId("productIsActive").value = String(Boolean(product.is_active));
     byId("toggleProductActiveBtn").textContent = product.is_active ? "Deactivate" : "Activate";
 
-    const analytics = getProductAnalytics(product.id);
-    renderAnalyticsBlock("productAnalyticsBlock", analytics);
-  }
-
-  function renderBundleEditor() {
-    populateCategorySelect("bundleCategory");
-    populateCategorySelect("bundleLineCategory");
-    populateProductSelect("bundleLineProduct");
-
-    const bundle = state.bundles.find((b) => b.id === state.selectedBundleId);
-
-    if (!bundle) {
-      byId("bundleName").value = "";
-      byId("bundleDescription").value = "";
-      byId("bundleCategory").value = "";
-      byId("bundlePricePence").value = "";
-      byId("bundleCapacityUnits").value = "";
-      byId("bundleSortOrder").value = "";
-      byId("bundleIsActive").value = "true";
-      byId("toggleBundleActiveBtn").textContent = "Deactivate";
-      byId("bundleLinesBody").innerHTML = `<tr><td colspan="6" class="muted">No bundle selected.</td></tr>`;
-      renderAnalyticsBlock("bundleAnalyticsBlock", null);
-      renderBundleLineEditor();
-      return;
-    }
-
-    byId("bundleName").value = bundle.name || "";
-    byId("bundleDescription").value = bundle.description || "";
-    byId("bundleCategory").value = bundle.category_id || "";
-    byId("bundlePricePence").value = Number(bundle.price_pence || 0);
-    byId("bundleCapacityUnits").value = bundle.capacity_units ?? 0;
-    byId("bundleSortOrder").value = Number(bundle.sort_order || 100);
-    byId("bundleIsActive").value = String(Boolean(bundle.is_active));
-    byId("toggleBundleActiveBtn").textContent = bundle.is_active ? "Deactivate" : "Activate";
-
-    const lines = getBundleLines(bundle.id);
-    const body = byId("bundleLinesBody");
-
-    if (!lines.length) {
-      body.innerHTML = `<tr><td colspan="6" class="muted">No lines defined for this bundle yet.</td></tr>`;
-    } else {
-      body.innerHTML = lines.map((line) => {
-        const active = line.id === state.selectedBundleLineId ? "active" : "";
-        let rule = "—";
-        let choices = "—";
-
-        if (line.line_type === "fixed_product") {
-          rule = line.product_name || "No product";
-          choices = "Fixed";
-        } else if (line.line_type === "category_choice") {
-          rule = line.category_name || "No category";
-          choices = `${line.min_choices}–${line.max_choices}`;
-        } else if (line.line_type === "choice_set") {
-          const optionCount = getChoiceSetOptions(line.id).length;
-          rule = `${optionCount} allowed products`;
-          choices = `${line.min_choices}–${line.max_choices}`;
-        }
-
-        return `
-          <tr class="menuLibraryRow ${active}" data-bundle-line-id="${line.id}">
-            <td>${escapeHtml(line.label)}</td>
-            <td>${escapeHtml(line.line_type)}</td>
-            <td>${escapeHtml(rule)}</td>
-            <td>${escapeHtml(String(line.quantity || 1))}</td>
-            <td>${escapeHtml(String(choices))}</td>
-            <td>${line.drives_capacity ? '<span class="capacityTag yes">Yes</span>' : '<span class="capacityTag no">No</span>'}</td>
-          </tr>
-        `;
-      }).join("");
-    }
-
-    renderAnalyticsBlock("bundleAnalyticsBlock", getBundleAnalytics(bundle.id));
-    renderBundleLineEditor();
+    renderAnalyticsBlock("productAnalyticsBlock", getProductAnalytics(product.id));
   }
 
   function renderChoiceSetChecklist(selectedIds = []) {
@@ -1359,6 +1260,13 @@
     `).join("");
   }
 
+  function updateBundleLineMode() {
+    const type = byId("bundleLineType").value;
+    document.querySelectorAll(".lineModeFixed").forEach((x) => x.classList.toggle("hidden", type !== "fixed_product"));
+    document.querySelectorAll(".lineModeCategory").forEach((x) => x.classList.toggle("hidden", type !== "category_choice"));
+    document.querySelectorAll(".lineModeChoiceSet").forEach((x) => x.classList.toggle("hidden", type !== "choice_set"));
+  }
+
   function renderBundleLineEditor() {
     const line = state.bundleLines.find((l) => l.id === state.selectedBundleLineId) || null;
 
@@ -1366,12 +1274,11 @@
     if (!state.selectedBundleId) return;
 
     if (!line) {
-      byId("bundleLineLabel").value = "";
       byId("bundleLineType").value = "fixed_product";
       byId("bundleLineProduct").value = "";
       byId("bundleLineCategory").value = "";
+      byId("bundleLineLabel").value = "";
       byId("bundleLineQty").value = 1;
-      byId("bundleLineSortOrder").value = 100;
       byId("bundleLineMinChoices").value = 1;
       byId("bundleLineMaxChoices").value = 1;
       byId("bundleLineRequired").value = "true";
@@ -1381,12 +1288,11 @@
       return;
     }
 
-    byId("bundleLineLabel").value = line.label || "";
     byId("bundleLineType").value = line.line_type || "fixed_product";
     byId("bundleLineProduct").value = line.product_id || "";
     byId("bundleLineCategory").value = line.category_id || "";
+    byId("bundleLineLabel").value = line.label || "";
     byId("bundleLineQty").value = Number(line.quantity || 1);
-    byId("bundleLineSortOrder").value = Number(line.sort_order || 100);
     byId("bundleLineMinChoices").value = Number(line.min_choices || 1);
     byId("bundleLineMaxChoices").value = Number(line.max_choices || 1);
     byId("bundleLineRequired").value = String(Boolean(line.is_required));
@@ -1397,11 +1303,82 @@
     updateBundleLineMode();
   }
 
-  function updateBundleLineMode() {
-    const type = byId("bundleLineType").value;
-    document.querySelectorAll(".lineModeFixed").forEach((x) => x.classList.toggle("hidden", type !== "fixed_product"));
-    document.querySelectorAll(".lineModeCategory").forEach((x) => x.classList.toggle("hidden", type !== "category_choice"));
-    document.querySelectorAll(".lineModeChoiceSet").forEach((x) => x.classList.toggle("hidden", type !== "choice_set"));
+  function renderBundleEditor() {
+    populateCategorySelect("bundleCategory", true, "No category");
+    populateCategorySelect("bundleLineCategory", true, "Select category");
+    populateProductSelect("bundleLineProduct");
+
+    const bundle = state.bundles.find((b) => b.id === state.selectedBundleId);
+
+    if (!bundle) {
+      byId("bundleName").value = "";
+      byId("bundleDescription").value = "";
+      byId("bundleCategory").value = "";
+      byId("bundlePricePence").value = "";
+      byId("bundleCapacityUnits").value = "";
+      byId("bundleIsActive").value = "true";
+      byId("toggleBundleActiveBtn").textContent = "Deactivate";
+      byId("bundleLinesBody").innerHTML = `<tr><td colspan="6"><div class="emptyState menuMiniEmpty">No bundle selected.</div></td></tr>`;
+      renderAnalyticsBlock("bundleAnalyticsBlock", null);
+      renderBundleLineEditor();
+      return;
+    }
+
+    byId("bundleName").value = bundle.name || "";
+    byId("bundleDescription").value = bundle.description || "";
+    byId("bundleCategory").value = bundle.category_id || "";
+    byId("bundlePricePence").value = Number(bundle.price_pence || 0);
+    byId("bundleCapacityUnits").value = bundle.capacity_units ?? 0;
+    byId("bundleIsActive").value = String(Boolean(bundle.is_active));
+    byId("toggleBundleActiveBtn").textContent = bundle.is_active ? "Deactivate" : "Activate";
+
+    const lines = getBundleLines(bundle.id);
+    const body = byId("bundleLinesBody");
+
+    if (!lines.length) {
+      body.innerHTML = `<tr><td colspan="6"><div class="emptyState menuMiniEmpty">No included items added yet. Use “Add included item” to build this bundle.</div></td></tr>`;
+    } else {
+      body.innerHTML = lines.map((line) => {
+        const active = line.id === state.selectedBundleLineId ? "active" : "";
+        let selection = "—";
+        let choices = "—";
+        let displayName = line.label || "Included item";
+
+        if (line.line_type === "fixed_product") {
+          selection = line.product_name || "No item";
+          choices = "Fixed";
+          if (!line.label) displayName = line.product_name || "Specific item";
+        } else if (line.line_type === "category_choice") {
+          selection = line.category_name || "No category";
+          choices = `${line.min_choices}–${line.max_choices}`;
+          if (!line.label) displayName = "Choose from category";
+        } else if (line.line_type === "choice_set") {
+          const optionCount = getChoiceSetOptions(line.id).length;
+          selection = `${optionCount} selected items`;
+          choices = `${line.min_choices}–${line.max_choices}`;
+          if (!line.label) displayName = "Choose from selected list";
+        }
+
+        const typeLabel =
+          line.line_type === "fixed_product" ? "Specific item" :
+          line.line_type === "category_choice" ? "Choose from category" :
+          "Choose from selected list";
+
+        return `
+          <tr class="menuLibraryRow ${active}" data-bundle-line-id="${line.id}">
+            <td>${escapeHtml(displayName)}</td>
+            <td>${escapeHtml(typeLabel)}</td>
+            <td>${escapeHtml(selection)}</td>
+            <td>${escapeHtml(String(line.quantity || 1))}</td>
+            <td>${escapeHtml(String(choices))}</td>
+            <td>${line.drives_capacity ? '<span class="capacityTag yes">Yes</span>' : '<span class="capacityTag no">No</span>'}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    renderAnalyticsBlock("bundleAnalyticsBlock", getBundleAnalytics(bundle.id));
+    renderBundleLineEditor();
   }
 
   function renderCategoryEditor() {
@@ -1409,7 +1386,6 @@
     if (!category) {
       byId("categoryName").value = "";
       byId("categorySlug").value = "";
-      byId("categorySortOrder").value = "";
       byId("categoryIsActive").value = "true";
       byId("toggleCategoryActiveBtn").textContent = "Deactivate";
       byId("categoryUsageBlock").innerHTML = `
@@ -1422,7 +1398,6 @@
 
     byId("categoryName").value = category.name || "";
     byId("categorySlug").value = category.slug || "";
-    byId("categorySortOrder").value = Number(category.sort_order || 100);
     byId("categoryIsActive").value = String(Boolean(category.is_active));
     byId("toggleCategoryActiveBtn").textContent = category.is_active ? "Deactivate" : "Activate";
 
@@ -1433,17 +1408,6 @@
       <div class="summaryItem"><span class="label">Products</span><span class="value">${productCount}</span></div>
       <div class="summaryItem"><span class="label">Bundles</span><span class="value">${bundleCount}</span></div>
       <div class="summaryItem"><span class="label">Status</span><span class="value">${category.is_active ? "Active" : "Inactive"}</span></div>
-    `;
-  }
-
-  function renderAnalyticsBlock(targetId, analytics) {
-    const block = byId(targetId);
-    block.innerHTML = `
-      <div class="summaryItem"><span class="label">Sold</span><span class="value">${Number(analytics?.units_sold || 0)}</span></div>
-      <div class="summaryItem"><span class="label">Revenue</span><span class="value">${formatMoneyPence(analytics?.revenue_pence || 0)}</span></div>
-      <div class="summaryItem"><span class="label">Drops used</span><span class="value">${Number(analytics?.drops_used || 0)}</span></div>
-      <div class="summaryItem"><span class="label">Last sold</span><span class="value">${formatDateShort(analytics?.last_sold_at)}</span></div>
-      <div class="summaryItem"><span class="label">Trend</span><span class="value">${getTrendLabel(analytics?.sold_last_30d, analytics?.sold_prev_30d)}</span></div>
     `;
   }
 
@@ -1466,6 +1430,26 @@
     setSaveState("saved");
   }
 
+  function openModal(id) {
+    byId(id).classList.add("open");
+  }
+
+  function closeModal(id) {
+    byId(id).classList.remove("open");
+  }
+
+  function showModalMessage(id, message, isError = false) {
+    const el = byId(id);
+    if (!message) {
+      el.style.display = "none";
+      el.textContent = "";
+      return;
+    }
+    el.style.display = "block";
+    el.textContent = message;
+    el.style.color = isError ? "#991b1b" : "var(--h-good)";
+  }
+
   async function createCategory() {
     const name = byId("newCategoryName").value.trim();
     const slug = slugify(byId("newCategorySlug").value.trim() || name);
@@ -1477,7 +1461,7 @@
       vendor_id: state.vendorId,
       name,
       slug,
-      sort_order: Number(byId("newCategorySortOrder").value || 100),
+      sort_order: 100,
       is_active: byId("newCategoryActive").value === "true"
     };
 
@@ -1501,15 +1485,17 @@
     const name = byId("newProductName").value.trim();
     if (!name) throw new Error("Product Name is required.");
 
+    const categoryId = byId("newProductCategory").value || null;
+
     const payload = {
       vendor_id: state.vendorId,
       name,
       description: byId("newProductDescription").value.trim() || null,
-      category_id: byId("newProductCategory").value || null,
-      category: state.categories.find((c) => c.id === (byId("newProductCategory").value || null))?.name || "uncategorised",
+      category_id: categoryId,
+      category: state.categories.find((c) => c.id === categoryId)?.name || "uncategorised",
       price_pence: Number(byId("newProductPricePence").value || 0),
       capacity_units: Number(byId("newProductCapacityUnits").value || 0),
-      sort_order: Number(byId("newProductSortOrder").value || 100),
+      sort_order: 100,
       is_active: byId("newProductActive").value === "true"
     };
 
@@ -1540,7 +1526,7 @@
       category_id: byId("newBundleCategory").value || null,
       price_pence: Number(byId("newBundlePricePence").value || 0),
       capacity_units: Number(byId("newBundleCapacityUnits").value || 0),
-      sort_order: Number(byId("newBundleSortOrder").value || 100),
+      sort_order: 100,
       is_active: byId("newBundleActive").value === "true"
     };
 
@@ -1574,7 +1560,7 @@
       category: state.categories.find((c) => c.id === categoryId)?.name || product.legacy_category || "uncategorised",
       price_pence: Number(byId("productPricePence").value || 0),
       capacity_units: Number(byId("productCapacityUnits").value || 0),
-      sort_order: Number(byId("productSortOrder").value || 100),
+      sort_order: product.sort_order ?? 100,
       is_active: byId("productIsActive").value === "true"
     };
 
@@ -1606,7 +1592,7 @@
       category_id: byId("bundleCategory").value || null,
       price_pence: Number(byId("bundlePricePence").value || 0),
       capacity_units: Number(byId("bundleCapacityUnits").value || 0),
-      sort_order: Number(byId("bundleSortOrder").value || 100),
+      sort_order: bundle.sort_order ?? 100,
       is_active: byId("bundleIsActive").value === "true"
     };
 
@@ -1635,7 +1621,7 @@
     const payload = {
       name: byId("categoryName").value.trim(),
       slug: slugify(byId("categorySlug").value.trim() || byId("categoryName").value.trim()),
-      sort_order: Number(byId("categorySortOrder").value || 100),
+      sort_order: category.sort_order ?? 100,
       is_active: byId("categoryIsActive").value === "true"
     };
 
@@ -1668,7 +1654,7 @@
       category: product.legacy_category || product.category_name || "uncategorised",
       price_pence: product.price_pence,
       capacity_units: product.capacity_units,
-      sort_order: product.sort_order,
+      sort_order: product.sort_order ?? 100,
       is_active: false
     };
 
@@ -1698,7 +1684,7 @@
         category_id: bundle.category_id,
         price_pence: bundle.price_pence,
         capacity_units: bundle.capacity_units,
-        sort_order: bundle.sort_order,
+        sort_order: bundle.sort_order ?? 100,
         is_active: false
       })
       .select("*")
@@ -1797,28 +1783,71 @@
     showInlineSuccess(`Category ${category.is_active ? "deactivated" : "activated"}`);
   }
 
+  async function syncChoiceSetOptions(bundleLineId) {
+    const selectedIds = Array.from(
+      byId("bundleLineChoiceSetList").querySelectorAll('input[type="checkbox"]:checked')
+    ).map((cb) => cb.value);
+
+    await supabase.from("bundle_line_choice_products").delete().eq("bundle_line_id", bundleLineId);
+
+    if (!selectedIds.length) return;
+
+    const rows = selectedIds.map((productId, index) => ({
+      bundle_line_id: bundleLineId,
+      product_id: productId,
+      sort_order: (index + 1) * 10
+    }));
+
+    const { error } = await supabase
+      .from("bundle_line_choice_products")
+      .insert(rows);
+
+    if (error) throw error;
+  }
+
   async function saveBundleLine() {
     const bundleId = state.selectedBundleId;
     if (!bundleId) throw new Error("No bundle selected.");
 
     const lineType = byId("bundleLineType").value;
+    const productId = lineType === "fixed_product" ? (byId("bundleLineProduct").value || null) : null;
+    const categoryId = lineType === "category_choice" ? (byId("bundleLineCategory").value || null) : null;
+    let label = byId("bundleLineLabel").value.trim();
+
+    if (lineType === "fixed_product" && !productId) {
+      throw new Error("Select a specific item.");
+    }
+    if (lineType === "category_choice" && !categoryId) {
+      throw new Error("Select a category.");
+    }
+
+    if (!label && lineType === "fixed_product") {
+      const selectedProduct = state.products.find((p) => p.id === productId);
+      label = selectedProduct?.name || "";
+    }
+
+    if (!label) {
+      label =
+        lineType === "category_choice" ? "Choose an item" :
+        lineType === "choice_set" ? "Choose from selected items" :
+        "Included item";
+    }
+
+    const existingLine = state.bundleLines.find((l) => l.id === state.selectedBundleLineId);
+
     const payload = {
       bundle_id: bundleId,
-      label: byId("bundleLineLabel").value.trim(),
+      label,
       line_type: lineType,
-      product_id: lineType === "fixed_product" ? (byId("bundleLineProduct").value || null) : null,
-      category_id: lineType === "category_choice" ? (byId("bundleLineCategory").value || null) : null,
+      product_id: productId,
+      category_id: categoryId,
       quantity: Number(byId("bundleLineQty").value || 1),
       min_choices: Number(byId("bundleLineMinChoices").value || 1),
       max_choices: Number(byId("bundleLineMaxChoices").value || 1),
       is_required: byId("bundleLineRequired").value === "true",
       drives_capacity: byId("bundleLineDrivesCapacity").value === "true",
-      sort_order: Number(byId("bundleLineSortOrder").value || 100)
+      sort_order: existingLine?.sort_order ?? 100
     };
-
-    if (!payload.label) throw new Error("Line label is required.");
-    if (lineType === "fixed_product" && !payload.product_id) throw new Error("Select a fixed product.");
-    if (lineType === "category_choice" && !payload.category_id) throw new Error("Select a category.");
 
     setSaveState("saving");
 
@@ -1860,33 +1889,11 @@
     }
 
     await refreshAll();
-    showInlineSuccess("Bundle line saved");
-  }
-
-  async function syncChoiceSetOptions(bundleLineId) {
-    const selectedIds = Array.from(
-      byId("bundleLineChoiceSetList").querySelectorAll('input[type="checkbox"]:checked')
-    ).map((cb) => cb.value);
-
-    await supabase.from("bundle_line_choice_products").delete().eq("bundle_line_id", bundleLineId);
-
-    if (!selectedIds.length) return;
-
-    const rows = selectedIds.map((productId, index) => ({
-      bundle_line_id: bundleLineId,
-      product_id: productId,
-      sort_order: (index + 1) * 10
-    }));
-
-    const { error } = await supabase
-      .from("bundle_line_choice_products")
-      .insert(rows);
-
-    if (error) throw error;
+    showInlineSuccess("Included item saved");
   }
 
   async function deleteBundleLine() {
-    if (!state.selectedBundleLineId) throw new Error("No bundle line selected.");
+    if (!state.selectedBundleLineId) throw new Error("No included item selected.");
 
     const { error } = await supabase
       .from("bundle_lines")
@@ -1897,27 +1904,7 @@
 
     state.selectedBundleLineId = null;
     await refreshAll();
-    showInlineSuccess("Bundle line deleted");
-  }
-
-  function openModal(id) {
-    byId(id).classList.add("open");
-  }
-
-  function closeModal(id) {
-    byId(id).classList.remove("open");
-  }
-
-  function showModalMessage(id, message, isError = false) {
-    const el = byId(id);
-    if (!message) {
-      el.style.display = "none";
-      el.textContent = "";
-      return;
-    }
-    el.style.display = "block";
-    el.textContent = message;
-    el.style.color = isError ? "#991b1b" : "var(--h-good)";
+    showInlineSuccess("Included item deleted");
   }
 
   function attachEvents() {
@@ -1982,7 +1969,6 @@
       state.selectedTypes = Array.from(
         byId("libraryTypeChecklist").querySelectorAll('input[type="checkbox"]:checked')
       ).map((cb) => cb.value);
-
       renderFilterSummaries();
       renderLibraryTable();
     });
@@ -2009,7 +1995,6 @@
       state.selectedCategoryIds = Array.from(
         byId("libraryCategoryChecklist").querySelectorAll('input[type="checkbox"]:checked')
       ).map((cb) => cb.value);
-
       renderFilterSummaries();
       renderLibraryTable();
     });
@@ -2063,7 +2048,6 @@
       state.selectedStatuses = Array.from(
         byId("libraryStatusChecklist").querySelectorAll('input[type="checkbox"]:checked')
       ).map((cb) => cb.value);
-
       renderFilterSummaries();
       renderLibraryTable();
     });
@@ -2119,7 +2103,7 @@
     });
 
     byId("newBundleBtn").addEventListener("click", () => {
-      populateCategorySelect("newBundleCategory");
+      populateCategorySelect("newBundleCategory", true, "No category");
       showModalMessage("newBundleModalMessage", "");
       openModal("newBundleModal");
     });
@@ -2151,6 +2135,7 @@
         byId("newCategorySlug").value = slugify(byId("newCategoryName").value);
       }
     });
+
     byId("newCategorySlug").addEventListener("input", () => {
       byId("newCategorySlug").dataset.manual = "true";
       byId("newCategorySlug").value = slugify(byId("newCategorySlug").value);
@@ -2161,6 +2146,18 @@
     });
 
     byId("bundleLineType").addEventListener("change", updateBundleLineMode);
+
+    byId("bundleLineProduct").addEventListener("change", () => {
+      if (byId("bundleLineType").value !== "fixed_product") return;
+      const currentLabel = byId("bundleLineLabel").value.trim();
+      if (currentLabel) return;
+
+      const productId = byId("bundleLineProduct").value;
+      const product = state.products.find((p) => p.id === productId);
+      if (product) {
+        byId("bundleLineLabel").value = product.name;
+      }
+    });
 
     byId("createProductConfirmBtn").addEventListener("click", async () => {
       try {
@@ -2271,7 +2268,7 @@
         await saveBundleLine();
       } catch (err) {
         console.error(err);
-        showError(err.message || "Unable to save bundle line.");
+        showError(err.message || "Unable to save included item.");
       }
     });
 
@@ -2280,7 +2277,7 @@
         await deleteBundleLine();
       } catch (err) {
         console.error(err);
-        showError(err.message || "Unable to delete bundle line.");
+        showError(err.message || "Unable to delete included item.");
       }
     });
   }
