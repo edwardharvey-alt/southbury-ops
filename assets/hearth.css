@@ -2110,49 +2110,16 @@ tbody td{
 }
 
 /* ======================================
-   MENU LIBRARY
+   MENU LIBRARY POLISH 2
    ====================================== */
 
-.menuPage{
-  width:100%;
-  display:grid;
-  gap:14px;
+.menuTabs .stagePill{
+  min-height:52px;
+  height:52px;
 }
 
-.menuToolbar{
-  grid-template-columns:minmax(260px,1.3fr) minmax(180px,220px) minmax(220px,260px) minmax(180px,220px) minmax(180px,220px) 110px;
-}
-
-.catalogueStats{
-  display:grid;
-  grid-template-columns:repeat(4, 1fr);
-  gap:10px;
-  margin-top:12px;
-}
-
-.menuTabs{
-  grid-template-columns:repeat(3, minmax(0, 1fr));
-}
-
-.menuWorkspaceCard{
-  overflow:visible;
-}
-
-.menuWorkspaceGrid{
-  display:grid;
-  grid-template-columns:minmax(0, 1.15fr) minmax(360px, 0.85fr);
-  gap:14px;
-  align-items:start;
-}
-
-.menuLibraryPane,
-.menuEditorPane{
-  min-width:0;
-}
-
-.menuLibraryTableWrap{
-  max-height:920px;
-  overflow:auto;
+.menuTabs .stagePill span:last-child{
+  font-size:13px;
 }
 
 .menuLibraryRow{
@@ -2166,25 +2133,12 @@ tbody td{
 
 .menuLibraryRow.active{
   background:linear-gradient(135deg, rgba(249,115,22,0.10), rgba(251,146,60,0.05));
+  box-shadow:inset 3px 0 0 rgba(249,115,22,0.8);
 }
 
-.menuEditorActions{
-  display:flex;
-  justify-content:flex-end;
-  gap:8px;
-  margin-top:12px;
-  flex-wrap:wrap;
-}
-
-.choiceSetPanel{
-  border:1px solid var(--h-border-2);
-  border-radius:12px;
-  background:#fff;
-  padding:10px;
-  display:grid;
-  gap:8px;
-  max-height:220px;
-  overflow:auto;
+.menuMiniEmpty{
+  padding:14px;
+  font-size:12px;
 }
 
 .choiceSetOption{
@@ -2211,32 +2165,9 @@ tbody td{
   margin-top:2px;
 }
 
-@media (max-width:1260px){
-  .menuToolbar{
-    grid-template-columns:1fr 1fr 1fr;
-  }
-
-  .catalogueStats{
-    grid-template-columns:repeat(2, 1fr);
-  }
-
-  .menuWorkspaceGrid{
-    grid-template-columns:1fr;
-  }
-}
-
-@media (max-width:760px){
-  .menuToolbar{
-    grid-template-columns:1fr;
-  }
-
-  .catalogueStats{
-    grid-template-columns:1fr 1fr;
-  }
-}
-
-@media (max-width:560px){
-  .catalogueStats{
-    grid-template-columns:1fr;
-  }
+#bundleLineEditorSection .helperText,
+#pane-products .helperText,
+#pane-bundles .helperText,
+#pane-categories .helperText{
+  margin-top:4px;
 }
