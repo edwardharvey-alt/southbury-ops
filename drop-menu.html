@@ -1708,7 +1708,7 @@
           max_choices: line.max_choices,
           is_required: line.is_required,
           drives_capacity: line.drives_capacity,
-          sort_order: line.sort_order
+          sort_order: line.sort_order ?? 100
         })
         .select("*")
         .single();
@@ -1721,7 +1721,7 @@
           const rows = options.map((opt) => ({
             bundle_line_id: insertedLine.id,
             product_id: opt.product_id,
-            sort_order: opt.sort_order
+            sort_order: opt.sort_order ?? 100
           }));
 
           const { error: optionsError } = await supabase
@@ -1817,6 +1817,7 @@
     if (lineType === "fixed_product" && !productId) {
       throw new Error("Select a specific item.");
     }
+
     if (lineType === "category_choice" && !categoryId) {
       throw new Error("Select a category.");
     }
@@ -2148,14 +2149,14 @@
     byId("bundleLineType").addEventListener("change", updateBundleLineMode);
 
     byId("bundleLineProduct").addEventListener("change", () => {
-      if (byId("bundleLineType").value !== "fixed_product") return;
+      const type = byId("bundleLineType").value;
       const currentLabel = byId("bundleLineLabel").value.trim();
+      if (type !== "fixed_product") return;
       if (currentLabel) return;
 
-      const productId = byId("bundleLineProduct").value;
-      const product = state.products.find((p) => p.id === productId);
-      if (product) {
-        byId("bundleLineLabel").value = product.name;
+      const selectedProduct = state.products.find((p) => p.id === byId("bundleLineProduct").value);
+      if (selectedProduct) {
+        byId("bundleLineLabel").value = selectedProduct.name;
       }
     });
 
