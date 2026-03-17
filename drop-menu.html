@@ -160,8 +160,8 @@
 
               <div class="menuHeaderActions">
                 <button class="btnGhost" id="newCategoryBtn" type="button">+ New Category</button>
-                <button class="btnGhost" id="newBundleBtn" type="button">+ New Bundle</button>
                 <button class="btnAccent isPrimaryAction" id="newProductBtn" type="button">+ New Product</button>
+                <button class="btnGhost" id="newBundleBtn" type="button">+ New Bundle</button>
               </div>
             </div>
 
@@ -172,18 +172,7 @@
               <div class="menuPaneLeft">
                 <div class="tableWrap menuTableWrap">
                   <table class="tableTight">
-                    <thead>
-                      <tr>
-                        <th style="width:28%;">Name</th>
-                        <th style="width:10%;">Type</th>
-                        <th style="width:14%;">Category</th>
-                        <th style="width:10%;">Price</th>
-                        <th style="width:10%;">Capacity</th>
-                        <th style="width:9%;">Active</th>
-                        <th style="width:8%;">Sold</th>
-                        <th style="width:11%;">Revenue</th>
-                      </tr>
-                    </thead>
+                    <thead id="libraryTableHead"></thead>
                     <tbody id="libraryTableBody">
                       <tr>
                         <td colspan="8" class="muted">Loading catalogue…</td>
@@ -993,13 +982,10 @@
             item_type: "category",
             item_id: c.id,
             name: c.name,
-            description: "",
-            category_id: c.id,
-            category_name: c.name,
-            price_pence: null,
-            capacity_units: null,
+            slug: c.slug,
             is_active: c.is_active,
-            analytics: null
+            product_count: state.products.filter((p) => p.category_id === c.id).length,
+            bundle_count: state.bundles.filter((b) => b.category_id === c.id).length
           }));
         }
 
@@ -1011,12 +997,14 @@
             (!row.is_active && state.selectedStatuses.includes("inactive"));
           if (!statusOk) return false;
 
-          if (state.selectedCategoryIds.length && row.item_type !== "category" && row.category_id && !state.selectedCategoryIds.includes(row.category_id)) {
-            return false;
-          }
-
-          if (state.selectedCategoryIds.length && row.item_type === "category" && !state.selectedCategoryIds.includes(row.item_id)) {
-            return false;
+          if (state.currentTab !== "categories") {
+            if (state.selectedCategoryIds.length && row.category_id && !state.selectedCategoryIds.includes(row.category_id)) {
+              return false;
+            }
+          } else {
+            if (state.selectedCategoryIds.length && !state.selectedCategoryIds.includes(row.item_id)) {
+              return false;
+            }
           }
 
           if (!search) return true;
@@ -1024,6 +1012,7 @@
           const haystack = [
             row.name || "",
             row.description || "",
+            row.slug || "",
             row.category_name || "",
             row.item_type || ""
           ].join(" ").toLowerCase();
@@ -1036,7 +1025,7 @@
             case "name":
               return a.name.localeCompare(b.name);
             case "category_then_name":
-              return (a.category_name || "").localeCompare(b.category_name || "") || a.name.localeCompare(b.name);
+              return (a.category_name || a.name || "").localeCompare(b.category_name || b.name || "") || a.name.localeCompare(b.name);
             case "price_desc":
               return Number(b.price_pence || 0) - Number(a.price_pence || 0);
             case "price_asc":
@@ -1056,13 +1045,39 @@
       }
 
       function renderLibraryTable() {
+        const head = byId("libraryTableHead");
         const body = byId("libraryTableBody");
         const rows = getFilteredRowsForCurrentTab();
+
+        if (state.currentTab === "categories") {
+          head.innerHTML = `
+            <tr>
+              <th style="width:36%;">Name</th>
+              <th style="width:24%;">Slug</th>
+              <th style="width:12%;">Status</th>
+              <th style="width:14%;">Products</th>
+              <th style="width:14%;">Bundles</th>
+            </tr>
+          `;
+        } else {
+          head.innerHTML = `
+            <tr>
+              <th style="width:28%;">Name</th>
+              <th style="width:10%;">Type</th>
+              <th style="width:14%;">Category</th>
+              <th style="width:10%;">Price</th>
+              <th style="width:10%;">Capacity</th>
+              <th style="width:9%;">Active</th>
+              <th style="width:8%;">Sold</th>
+              <th style="width:11%;">Revenue</th>
+            </tr>
+          `;
+        }
 
         if (!rows.length) {
           body.innerHTML = `
             <tr>
-              <td colspan="8">
+              <td colspan="${state.currentTab === "categories" ? 5 : 8}">
                 <div class="emptyState">No matching catalogue items found.</div>
               </td>
             </tr>
@@ -1070,12 +1085,29 @@
           return;
         }
 
+        if (state.currentTab === "categories") {
+          body.innerHTML = rows.map((row) => {
+            const active = row.item_id === state.selectedCategoryId ? "active" : "";
+            return `
+              <tr class="menuLibraryRow ${active}" data-item-type="category" data-item-id="${row.item_id}">
+                <td>
+                  <div class="productName">${escapeHtml(row.name)}</div>
+                </td>
+                <td>${escapeHtml(row.slug || "—")}</td>
+                <td><span class="badgeStatus ${row.is_active ? "ready" : "delivered"}">${row.is_active ? "active" : "inactive"}</span></td>
+                <td>${escapeHtml(String(row.product_count || 0))}</td>
+                <td>${escapeHtml(String(row.bundle_count || 0))}</td>
+              </tr>
+            `;
+          }).join("");
+          return;
+        }
+
         body.innerHTML = rows.map((row) => {
           const analytics = row.analytics || {};
           const active =
             row.item_type === "product" && row.item_id === state.selectedProductId ? "active" :
-            row.item_type === "bundle" && row.item_id === state.selectedBundleId ? "active" :
-            row.item_type === "category" && row.item_id === state.selectedCategoryId ? "active" : "";
+            row.item_type === "bundle" && row.item_id === state.selectedBundleId ? "active" : "";
 
           return `
             <tr class="menuLibraryRow ${active}" data-item-type="${row.item_type}" data-item-id="${row.item_id}">
@@ -1089,7 +1121,7 @@
               <td>${row.capacity_units == null ? "—" : escapeHtml(String(row.capacity_units))}</td>
               <td><span class="badgeStatus ${row.is_active ? "ready" : "delivered"}">${row.is_active ? "active" : "inactive"}</span></td>
               <td>${escapeHtml(String(analytics.units_sold || 0))}</td>
-              <td>${row.item_type === "category" ? "—" : formatMoneyPence(analytics.revenue_pence || 0)}</td>
+              <td>${formatMoneyPence(analytics.revenue_pence || 0)}</td>
             </tr>
           `;
         }).join("");
