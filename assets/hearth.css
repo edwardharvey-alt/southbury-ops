@@ -2110,20 +2110,21 @@ tbody td{
 }
 
 /* ======================================
-   MENU LIBRARY
+   MENU LIBRARY — FINAL POLISH OVERRIDES
+   Add at end of hearth.css
    ====================================== */
 
 .menuPage{
+  width:100%;
   display:grid;
   gap:14px;
 }
 
 .menuToolbar{
   display:grid;
-  grid-template-columns:minmax(260px,1.7fr) minmax(150px,0.9fr) minmax(170px,1fr) minmax(170px,1fr) minmax(170px,1fr) 110px;
+  grid-template-columns:minmax(220px,1.4fr) minmax(150px,0.9fr) minmax(170px,1fr) minmax(160px,0.9fr) minmax(170px,0.9fr) 100px;
   gap:10px;
   align-items:center;
-  margin-top:12px;
 }
 
 .menuToolbar > *{
@@ -2136,8 +2137,8 @@ tbody td{
 .menuToolbar .btnGhost{
   width:100%;
   min-width:0;
-  height:40px;
-  min-height:40px;
+  height:38px;
+  min-height:38px;
   box-sizing:border-box;
 }
 
@@ -2150,11 +2151,6 @@ tbody td{
 
 .menuStats .heroTile{
   min-width:0;
-  min-height:84px;
-}
-
-.menuStats .heroValue{
-  white-space:nowrap;
 }
 
 .workspaceTabs{
@@ -2162,21 +2158,36 @@ tbody td{
   grid-template-columns:repeat(3, minmax(0, 1fr));
   gap:10px;
   width:100%;
-  margin-top:10px;
 }
 
 .workspaceTabs .stagePill{
   width:100%;
   min-width:0;
-  min-height:48px;
-  height:48px;
   justify-content:center;
-  text-align:center;
+}
+
+.menuHeaderActions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.menuHeaderActions .btnAccent,
+.menuHeaderActions .btnGhost{
+  min-height:34px;
+  height:34px;
+  padding:0 12px;
+  font-size:12px;
+}
+
+.menuHeaderActions .isPrimaryAction{
+  box-shadow:0 8px 18px rgba(249,115,22,0.10);
 }
 
 .menuWorkspaceGrid{
   display:grid;
-  grid-template-columns:minmax(460px,1.08fr) minmax(360px,0.92fr);
+  grid-template-columns:minmax(0, 1.02fr) minmax(340px, 0.98fr);
   gap:14px;
   align-items:start;
 }
@@ -2191,105 +2202,68 @@ tbody td{
 }
 
 .menuTableWrap table{
-  min-width:860px;
+  table-layout:fixed;
+  width:100%;
+}
+
+.menuTableWrap thead th,
+.menuTableWrap tbody td{
+  padding:8px 9px;
+}
+
+.menuTableWrap thead th{
+  font-size:10px;
+}
+
+.menuTableWrap tbody td{
+  font-size:12px;
 }
 
 .menuLibraryRow{
   cursor:pointer;
-  transition:background .12s ease, box-shadow .12s ease;
+  transition:background .15s ease, box-shadow .15s ease;
 }
 
 .menuLibraryRow:hover{
-  background:rgba(15,23,42,0.02);
+  background:rgba(15,23,42,0.025);
 }
 
 .menuLibraryRow.active{
-  background:linear-gradient(135deg, rgba(249,115,22,0.10), rgba(251,146,60,0.05));
-  box-shadow:inset 3px 0 0 rgba(249,115,22,0.78);
+  background:linear-gradient(135deg, rgba(249,115,22,0.08), rgba(251,146,60,0.04));
+  box-shadow:inset 3px 0 0 rgba(249,115,22,0.6);
 }
 
-.menuHeaderActions{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  align-items:center;
+.menuLibraryRow .productName{
+  font-size:13px;
+  line-height:1.2;
 }
 
-.menuHeaderActions .btnGhost,
-.menuHeaderActions .btnAccent{
-  min-height:36px;
-  height:36px;
-  padding:0 12px;
-  font-size:12px;
-}
-
-.menuHeaderActions .isPrimaryAction{
-  border-color:rgba(249,115,22,0.28);
-  background:linear-gradient(135deg, rgba(249,115,22,0.15), rgba(251,146,60,0.08));
-  color:var(--h-accent-ink);
+.menuLibraryRow .subMeta{
+  margin-top:3px;
+  font-size:10px;
+  line-height:1.25;
 }
 
 .selectionSummaryBar{
   display:flex;
   justify-content:space-between;
-  gap:12px;
   align-items:center;
+  gap:10px;
   flex-wrap:wrap;
   margin-bottom:10px;
-  font-size:12px;
-  font-weight:700;
+  padding:8px 0 2px;
+}
+
+.selectionSummaryBar > div:first-child{
+  font-size:13px;
+  font-weight:850;
   color:var(--h-text);
 }
 
 .selectionSummaryMetrics{
   display:flex;
-  gap:8px;
+  gap:6px;
   flex-wrap:wrap;
-}
-
-.bundleEditorNotice{
-  margin-top:8px;
-  padding:10px 12px;
-  border:1px solid rgba(249,115,22,0.18);
-  border-radius:12px;
-  background:rgba(249,115,22,0.07);
-  color:var(--h-accent-ink);
-  font-size:12px;
-  font-weight:700;
-  display:none;
-}
-
-.bundleEditorNotice.show{
-  display:block;
-}
-
-.choiceSetPanel{
-  display:grid;
-  gap:8px;
-}
-
-.choiceSetOption{
-  display:grid;
-  grid-template-columns:18px 1fr;
-  gap:8px;
-  align-items:start;
-  padding:8px 10px;
-  border:1px solid var(--h-border-2);
-  border-radius:10px;
-  background:rgba(15,23,42,0.02);
-  cursor:pointer;
-}
-
-.choiceSetOption input[type="checkbox"]{
-  width:15px;
-  height:15px;
-  margin-top:2px;
-  accent-color:var(--h-accent);
-}
-
-.choiceSetOption .subMeta{
-  grid-column:2;
-  margin-top:2px;
 }
 
 .menuEditorActions{
@@ -2299,25 +2273,125 @@ tbody td{
   margin-top:12px;
 }
 
+.menuEditorActions .btnAccent,
+.menuEditorActions .btnGhost{
+  min-height:34px;
+  height:34px;
+  padding:0 12px;
+  font-size:12px;
+}
+
 .menuSectionHint{
-  margin-top:8px;
   font-size:11px;
   color:var(--h-muted);
   line-height:1.4;
 }
 
-.lineMode.hidden{
-  display:none !important;
+.bundleEditorNotice{
+  display:none;
+  margin-top:10px;
+  border:1px solid rgba(249,115,22,0.2);
+  border-radius:12px;
+  padding:9px 10px;
+  background:rgba(249,115,22,0.08);
+  color:var(--h-accent-ink);
+  font-size:11px;
+  font-weight:800;
+}
+
+.bundleEditorNotice.show{
+  display:block;
+}
+
+.choiceSetPanel{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:8px;
+  border:1px solid var(--h-border-2);
+  border-radius:12px;
+  padding:10px;
+  background:rgba(15,23,42,0.02);
+}
+
+.choiceSetOption{
+  display:grid;
+  grid-template-columns:16px 1fr;
+  gap:8px;
+  align-items:start;
+  padding:7px 8px;
+  border:1px solid var(--h-border-2);
+  border-radius:10px;
+  background:#fff;
+  cursor:pointer;
+}
+
+.choiceSetOption input{
+  margin:2px 0 0;
+  width:14px;
+  height:14px;
+  accent-color:var(--h-accent);
+}
+
+.choiceSetOption .subMeta{
+  grid-column:2;
+  margin-top:2px;
 }
 
 .menuMiniEmpty{
-  padding:12px;
+  padding:14px;
   font-size:12px;
 }
 
-@media (max-width:1320px){
+#pane-categories .tableTight th:nth-child(1){ width:44%; }
+#pane-categories .tableTight th:nth-child(2){ width:18%; }
+#pane-categories .tableTight th:nth-child(3){ width:19%; }
+#pane-categories .tableTight th:nth-child(4){ width:19%; }
+
+#pane-products .tableTight th:nth-child(1),
+#pane-bundles .tableTight th:nth-child(1){ width:25%; }
+
+#pane-products .tableTight th:nth-child(2),
+#pane-bundles .tableTight th:nth-child(2){ width:9%; }
+
+#pane-products .tableTight th:nth-child(3),
+#pane-bundles .tableTight th:nth-child(3){ width:13%; }
+
+#pane-products .tableTight th:nth-child(4),
+#pane-bundles .tableTight th:nth-child(4){ width:9%; }
+
+#pane-products .tableTight th:nth-child(5),
+#pane-bundles .tableTight th:nth-child(5){ width:9%; }
+
+#pane-products .tableTight th:nth-child(6),
+#pane-bundles .tableTight th:nth-child(6){ width:10%; }
+
+#pane-products .tableTight th:nth-child(7),
+#pane-bundles .tableTight th:nth-child(7){ width:9%; }
+
+#pane-products .tableTight th:nth-child(8),
+#pane-bundles .tableTight th:nth-child(8){ width:12%; }
+
+#pane-products .badgeStatus,
+#pane-bundles .badgeStatus,
+#pane-categories .badgeStatus{
+  padding:5px 9px;
+  font-size:11px;
+}
+
+#pane-products .miniChip,
+#pane-bundles .miniChip{
+  padding:3px 7px;
+  font-size:10px;
+}
+
+@media (max-width:1260px){
   .menuToolbar{
-    grid-template-columns:repeat(3, minmax(0, 1fr));
+    grid-template-columns:minmax(220px,1fr) repeat(4, minmax(150px,0.7fr));
+  }
+
+  .menuToolbar > button{
+    grid-column:1 / -1;
+    width:max-content;
   }
 
   .menuWorkspaceGrid{
@@ -2330,21 +2404,25 @@ tbody td{
     grid-template-columns:repeat(2, minmax(0, 1fr));
   }
 
+  .choiceSetPanel{
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width:760px){
   .menuToolbar{
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:1fr;
   }
 
   .workspaceTabs{
     grid-template-columns:1fr;
   }
-}
 
-@media (max-width:640px){
-  .menuToolbar{
-    grid-template-columns:1fr;
+  .selectionSummaryBar{
+    align-items:flex-start;
   }
 
-  .menuStats{
-    grid-template-columns:1fr;
+  .menuHeaderActions{
+    width:100%;
   }
 }
