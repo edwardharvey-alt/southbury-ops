@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Menu Library</title>
 
-  <link rel="stylesheet" href="/assets/hearth.css?v=24" />
+  <link rel="stylesheet" href="/assets/hearth.css?v=25" />
   <script src="/assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -51,9 +51,9 @@
                 <button class="btnGhost" id="libraryTypeClearBtn" type="button">Clear</button>
               </div>
               <div class="filterChecklist" id="libraryTypeChecklist">
+                <label><input type="checkbox" value="category" checked /> Categories</label>
                 <label><input type="checkbox" value="product" checked /> Products</label>
                 <label><input type="checkbox" value="bundle" checked /> Bundles</label>
-                <label><input type="checkbox" value="category" checked /> Categories</label>
               </div>
             </div>
           </div>
@@ -137,9 +137,9 @@
           </div>
 
           <div class="workspaceTabs">
-            <button class="stagePill active" data-tab="products" type="button">Products</button>
+            <button class="stagePill active" data-tab="categories" type="button">Categories</button>
+            <button class="stagePill" data-tab="products" type="button">Products</button>
             <button class="stagePill" data-tab="bundles" type="button">Bundles</button>
-            <button class="stagePill" data-tab="categories" type="button">Categories</button>
           </div>
         </div>
 
@@ -154,13 +154,13 @@
           <div class="card workspaceCard">
             <div class="workspaceHeader">
               <div>
-                <h3 class="sectionTitle" id="workspaceTitle">Products</h3>
-                <p class="sectionSub" id="workspaceSub">Manage individual menu items and their pricing</p>
+                <h3 class="sectionTitle" id="workspaceTitle">Categories</h3>
+                <p class="sectionSub" id="workspaceSub">Organise products and bundles into groups</p>
               </div>
 
               <div class="menuHeaderActions">
-                <button class="btnGhost" id="newCategoryBtn" type="button">+ New Category</button>
-                <button class="btnAccent isPrimaryAction" id="newProductBtn" type="button">+ New Product</button>
+                <button class="btnAccent isPrimaryAction" id="newCategoryBtn" type="button">+ New Category</button>
+                <button class="btnGhost" id="newProductBtn" type="button">+ New Product</button>
                 <button class="btnGhost" id="newBundleBtn" type="button">+ New Bundle</button>
               </div>
             </div>
@@ -183,7 +183,54 @@
               </div>
 
               <div class="menuPaneRight">
-                <div class="stagePane active" id="pane-products">
+                <div class="stagePane active" id="pane-categories">
+                  <div class="selectionSummaryBar">
+                    <div id="categorySelectionLabel">No category selected</div>
+                    <div class="selectionSummaryMetrics" id="categorySelectionMetrics"></div>
+                  </div>
+
+                  <div class="stageSection">
+                    <div class="row space" style="margin-bottom:10px;">
+                      <div>
+                        <h4 class="stageSectionTitle">Selected category</h4>
+                        <p class="stageSectionSub">Select a category from the list to edit it</p>
+                      </div>
+                      <button class="btnGhost" id="toggleCategoryActiveBtn" type="button">Deactivate</button>
+                    </div>
+
+                    <div class="studioGrid2">
+                      <div class="field">
+                        <label for="categoryName">Category Name</label>
+                        <input id="categoryName" type="text" placeholder="Sides" />
+                      </div>
+
+                      <div class="field">
+                        <label for="categoryIsActive">Active</label>
+                        <select id="categoryIsActive">
+                          <option value="true">Yes</option>
+                          <option value="false">No</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="menuEditorActions">
+                      <button class="btnAccent" id="saveCategoryBtn" type="button">Save Category</button>
+                    </div>
+                  </div>
+
+                  <div class="stageSection">
+                    <h4 class="stageSectionTitle">Category usage</h4>
+                    <p class="stageSectionSub">A quick view of where this category is being used</p>
+
+                    <div class="summaryBlock" id="categoryUsageBlock">
+                      <div class="summaryItem"><span class="label">Products</span><span class="value">—</span></div>
+                      <div class="summaryItem"><span class="label">Bundles</span><span class="value">—</span></div>
+                      <div class="summaryItem"><span class="label">Status</span><span class="value">—</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="stagePane" id="pane-products">
                   <div class="selectionSummaryBar">
                     <div id="productSelectionLabel">No product selected</div>
                     <div class="selectionSummaryMetrics" id="productSelectionMetrics"></div>
@@ -442,58 +489,40 @@
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
 
-                <div class="stagePane" id="pane-categories">
-                  <div class="selectionSummaryBar">
-                    <div id="categorySelectionLabel">No category selected</div>
-                    <div class="selectionSummaryMetrics" id="categorySelectionMetrics"></div>
-                  </div>
-
-                  <div class="stageSection">
-                    <div class="row space" style="margin-bottom:10px;">
-                      <div>
-                        <h4 class="stageSectionTitle">Selected category</h4>
-                        <p class="stageSectionSub">Select a category from the list to edit it</p>
-                      </div>
-                      <button class="btnGhost" id="toggleCategoryActiveBtn" type="button">Deactivate</button>
-                    </div>
-
-                    <div class="studioGrid2">
-                      <div class="field">
-                        <label for="categoryName">Category Name</label>
-                        <input id="categoryName" type="text" placeholder="Sides" />
-                      </div>
-
-                      <div class="field">
-                        <label for="categorySlug">Slug</label>
-                        <input id="categorySlug" type="text" placeholder="sides" />
-                      </div>
-
-                      <div class="field">
-                        <label for="categoryIsActive">Active</label>
-                        <select id="categoryIsActive">
-                          <option value="true">Yes</option>
-                          <option value="false">No</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div class="menuEditorActions">
-                      <button class="btnAccent" id="saveCategoryBtn" type="button">Save Category</button>
-                    </div>
-                  </div>
-
-                  <div class="stageSection">
-                    <h4 class="stageSectionTitle">Category usage</h4>
-                    <p class="stageSectionSub">A quick view of where this category is being used</p>
-
-                    <div class="summaryBlock" id="categoryUsageBlock">
-                      <div class="summaryItem"><span class="label">Products</span><span class="value">—</span></div>
-                      <div class="summaryItem"><span class="label">Bundles</span><span class="value">—</span></div>
-                      <div class="summaryItem"><span class="label">Status</span><span class="value">—</span></div>
-                    </div>
-                  </div>
+          <div class="modalBackdrop" id="newCategoryModal">
+            <div class="modalCard">
+              <div class="modalHead">
+                <div>
+                  <h3 class="sectionTitle">Create Category</h3>
+                  <p class="sectionSub">Add a new grouping for products and bundles</p>
                 </div>
+                <button class="btnGhost" id="closeNewCategoryModalBtn" type="button">Close</button>
+              </div>
+
+              <div class="studioGrid2">
+                <div class="field">
+                  <label for="newCategoryName">Category Name</label>
+                  <input id="newCategoryName" type="text" placeholder="Sides" />
+                </div>
+
+                <div class="field">
+                  <label for="newCategoryActive">Active</label>
+                  <select id="newCategoryActive">
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="modalMessage" id="newCategoryModalMessage"></div>
+
+              <div class="modalActions">
+                <button class="btnGhost" id="cancelNewCategoryBtn" type="button">Cancel</button>
+                <button class="btnAccent" id="createCategoryConfirmBtn" type="button">Create Category</button>
               </div>
             </div>
           </div>
@@ -607,45 +636,6 @@
             </div>
           </div>
 
-          <div class="modalBackdrop" id="newCategoryModal">
-            <div class="modalCard">
-              <div class="modalHead">
-                <div>
-                  <h3 class="sectionTitle">Create Category</h3>
-                  <p class="sectionSub">Add a new grouping for products and bundles</p>
-                </div>
-                <button class="btnGhost" id="closeNewCategoryModalBtn" type="button">Close</button>
-              </div>
-
-              <div class="studioGrid2">
-                <div class="field">
-                  <label for="newCategoryName">Category Name</label>
-                  <input id="newCategoryName" type="text" placeholder="Sides" />
-                </div>
-
-                <div class="field">
-                  <label for="newCategorySlug">Slug</label>
-                  <input id="newCategorySlug" type="text" placeholder="sides" />
-                </div>
-
-                <div class="field">
-                  <label for="newCategoryActive">Active</label>
-                  <select id="newCategoryActive">
-                    <option value="true">Yes</option>
-                    <option value="false">No</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="modalMessage" id="newCategoryModalMessage"></div>
-
-              <div class="modalActions">
-                <button class="btnGhost" id="cancelNewCategoryBtn" type="button">Cancel</button>
-                <button class="btnAccent" id="createCategoryConfirmBtn" type="button">Create Category</button>
-              </div>
-            </div>
-          </div>
-
         </div>
       </div>
     </div>
@@ -663,8 +653,8 @@
 
       const state = {
         vendorId: null,
-        currentTab: "products",
-        selectedTypes: ["product", "bundle", "category"],
+        currentTab: "categories",
+        selectedTypes: ["category", "product", "bundle"],
         selectedStatuses: ["active", "inactive"],
         selectedCategoryIds: [],
         search: "",
@@ -859,6 +849,12 @@
       }
 
       function ensureSelectionsStillValid() {
+        if (!state.selectedCategoryId && state.categories.length) {
+          state.selectedCategoryId = state.categories[0].id;
+        } else if (state.selectedCategoryId && !state.categories.some((c) => c.id === state.selectedCategoryId)) {
+          state.selectedCategoryId = state.categories[0]?.id || null;
+        }
+
         if (!state.selectedProductId && state.products.length) {
           state.selectedProductId = state.products[0].id;
         } else if (state.selectedProductId && !state.products.some((p) => p.id === state.selectedProductId)) {
@@ -869,12 +865,6 @@
           state.selectedBundleId = state.bundles[0].id;
         } else if (state.selectedBundleId && !state.bundles.some((b) => b.id === state.selectedBundleId)) {
           state.selectedBundleId = state.bundles[0]?.id || null;
-        }
-
-        if (!state.selectedCategoryId && state.categories.length) {
-          state.selectedCategoryId = state.categories[0].id;
-        } else if (state.selectedCategoryId && !state.categories.some((c) => c.id === state.selectedCategoryId)) {
-          state.selectedCategoryId = state.categories[0]?.id || null;
         }
 
         const lines = getBundleLines(state.selectedBundleId);
@@ -951,7 +941,16 @@
         const search = state.search.trim().toLowerCase();
 
         let rows = [];
-        if (state.currentTab === "products") {
+        if (state.currentTab === "categories") {
+          rows = state.categories.map((c) => ({
+            item_type: "category",
+            item_id: c.id,
+            name: c.name,
+            is_active: c.is_active,
+            product_count: state.products.filter((p) => p.category_id === c.id).length,
+            bundle_count: state.bundles.filter((b) => b.category_id === c.id).length
+          }));
+        } else if (state.currentTab === "products") {
           rows = state.products.map((p) => ({
             item_type: "product",
             item_id: p.id,
@@ -964,7 +963,7 @@
             is_active: p.is_active,
             analytics: getProductAnalytics(p.id)
           }));
-        } else if (state.currentTab === "bundles") {
+        } else {
           rows = state.bundles.map((b) => ({
             item_type: "bundle",
             item_id: b.id,
@@ -976,16 +975,6 @@
             capacity_units: b.capacity_units,
             is_active: b.is_active,
             analytics: getBundleAnalytics(b.id)
-          }));
-        } else {
-          rows = state.categories.map((c) => ({
-            item_type: "category",
-            item_id: c.id,
-            name: c.name,
-            slug: c.slug,
-            is_active: c.is_active,
-            product_count: state.products.filter((p) => p.category_id === c.id).length,
-            bundle_count: state.bundles.filter((b) => b.category_id === c.id).length
           }));
         }
 
@@ -1012,7 +1001,6 @@
           const haystack = [
             row.name || "",
             row.description || "",
-            row.slug || "",
             row.category_name || "",
             row.item_type || ""
           ].join(" ").toLowerCase();
@@ -1052,24 +1040,23 @@
         if (state.currentTab === "categories") {
           head.innerHTML = `
             <tr>
-              <th style="width:36%;">Name</th>
-              <th style="width:24%;">Slug</th>
-              <th style="width:12%;">Status</th>
-              <th style="width:14%;">Products</th>
-              <th style="width:14%;">Bundles</th>
+              <th style="width:44%;">Name</th>
+              <th style="width:18%;">Status</th>
+              <th style="width:19%;">Products</th>
+              <th style="width:19%;">Bundles</th>
             </tr>
           `;
         } else {
           head.innerHTML = `
             <tr>
-              <th style="width:28%;">Name</th>
-              <th style="width:10%;">Type</th>
-              <th style="width:14%;">Category</th>
-              <th style="width:10%;">Price</th>
-              <th style="width:10%;">Capacity</th>
-              <th style="width:9%;">Active</th>
-              <th style="width:8%;">Sold</th>
-              <th style="width:11%;">Revenue</th>
+              <th style="width:25%;">Name</th>
+              <th style="width:9%;">Type</th>
+              <th style="width:13%;">Category</th>
+              <th style="width:9%;">Price</th>
+              <th style="width:9%;">Capacity</th>
+              <th style="width:10%;">Active</th>
+              <th style="width:9%;">Sold</th>
+              <th style="width:12%;">Revenue</th>
             </tr>
           `;
         }
@@ -1077,7 +1064,7 @@
         if (!rows.length) {
           body.innerHTML = `
             <tr>
-              <td colspan="${state.currentTab === "categories" ? 5 : 8}">
+              <td colspan="${state.currentTab === "categories" ? 4 : 8}">
                 <div class="emptyState">No matching catalogue items found.</div>
               </td>
             </tr>
@@ -1093,7 +1080,6 @@
                 <td>
                   <div class="productName">${escapeHtml(row.name)}</div>
                 </td>
-                <td>${escapeHtml(row.slug || "—")}</td>
                 <td><span class="badgeStatus ${row.is_active ? "ready" : "delivered"}">${row.is_active ? "active" : "inactive"}</span></td>
                 <td>${escapeHtml(String(row.product_count || 0))}</td>
                 <td>${escapeHtml(String(row.bundle_count || 0))}</td>
@@ -1129,18 +1115,18 @@
 
       function renderPrimaryActionState() {
         const newCategoryBtn = byId("newCategoryBtn");
-        const newBundleBtn = byId("newBundleBtn");
         const newProductBtn = byId("newProductBtn");
+        const newBundleBtn = byId("newBundleBtn");
 
-        [newCategoryBtn, newBundleBtn, newProductBtn].forEach((btn) => {
+        [newCategoryBtn, newProductBtn, newBundleBtn].forEach((btn) => {
           btn.classList.remove("btnAccent", "isPrimaryAction");
           btn.classList.add("btnGhost");
         });
 
         const activeBtn =
+          state.currentTab === "categories" ? newCategoryBtn :
           state.currentTab === "products" ? newProductBtn :
-          state.currentTab === "bundles" ? newBundleBtn :
-          newCategoryBtn;
+          newBundleBtn;
 
         activeBtn.classList.remove("btnGhost");
         activeBtn.classList.add("btnAccent", "isPrimaryAction");
@@ -1148,9 +1134,9 @@
 
       function renderWorkspaceHeader() {
         const titleMap = {
+          categories: ["Categories", "Organise products and bundles into groups"],
           products: ["Products", "Manage individual menu items and their pricing"],
-          bundles: ["Bundles", "Build optional combinations and meal deals"],
-          categories: ["Categories", "Organise products and bundles into groups"]
+          bundles: ["Bundles", "Build optional combinations and meal deals"]
         };
 
         byId("workspaceTitle").textContent = titleMap[state.currentTab][0];
@@ -1170,6 +1156,25 @@
         const meta = byId("selectionMeta");
         const chips = byId("selectionChips");
 
+        if (state.currentTab === "categories") {
+          const current = state.categories.find((c) => c.id === state.selectedCategoryId);
+          if (!current) {
+            meta.textContent = "Select a category from the list to edit it.";
+            chips.innerHTML = "";
+            return;
+          }
+
+          const productCount = state.products.filter((p) => p.category_id === current.id).length;
+          const bundleCount = state.bundles.filter((b) => b.category_id === current.id).length;
+
+          meta.textContent = `${current.name} • ${current.is_active ? "active" : "inactive"}`;
+          chips.innerHTML = [
+            `<span class="miniChip">${productCount} products</span>`,
+            `<span class="miniChip">${bundleCount} bundles</span>`
+          ].join("");
+          return;
+        }
+
         if (state.currentTab === "products") {
           const current = state.products.find((p) => p.id === state.selectedProductId);
           const analytics = current ? getProductAnalytics(current.id) : null;
@@ -1188,40 +1193,21 @@
           return;
         }
 
-        if (state.currentTab === "bundles") {
-          const current = state.bundles.find((b) => b.id === state.selectedBundleId);
-          const analytics = current ? getBundleAnalytics(current.id) : null;
-          const lineCount = current ? getBundleLines(current.id).length : 0;
-          if (!current) {
-            meta.textContent = "Select a bundle from the list to edit it.";
-            chips.innerHTML = "";
-            return;
-          }
-
-          meta.textContent = `${current.name} • ${current.category_name || "No category"} • ${current.is_active ? "active" : "inactive"}`;
-          chips.innerHTML = [
-            `<span class="miniChip">${formatMoneyPence(current.price_pence)}</span>`,
-            `<span class="miniChip">${current.capacity_units} capacity</span>`,
-            `<span class="miniChip">${lineCount} included item${lineCount === 1 ? "" : "s"}</span>`,
-            `<span class="miniChip">${Number(analytics?.units_sold || 0)} sold</span>`
-          ].join("");
-          return;
-        }
-
-        const current = state.categories.find((c) => c.id === state.selectedCategoryId);
+        const current = state.bundles.find((b) => b.id === state.selectedBundleId);
+        const analytics = current ? getBundleAnalytics(current.id) : null;
+        const lineCount = current ? getBundleLines(current.id).length : 0;
         if (!current) {
-          meta.textContent = "Select a category from the list to edit it.";
+          meta.textContent = "Select a bundle from the list to edit it.";
           chips.innerHTML = "";
           return;
         }
 
-        const productCount = state.products.filter((p) => p.category_id === current.id).length;
-        const bundleCount = state.bundles.filter((b) => b.category_id === current.id).length;
-
-        meta.textContent = `${current.name} • ${current.is_active ? "active" : "inactive"}`;
+        meta.textContent = `${current.name} • ${current.category_name || "No category"} • ${current.is_active ? "active" : "inactive"}`;
         chips.innerHTML = [
-          `<span class="miniChip">${productCount} products</span>`,
-          `<span class="miniChip">${bundleCount} bundles</span>`
+          `<span class="miniChip">${formatMoneyPence(current.price_pence)}</span>`,
+          `<span class="miniChip">${current.capacity_units} capacity</span>`,
+          `<span class="miniChip">${lineCount} included item${lineCount === 1 ? "" : "s"}</span>`,
+          `<span class="miniChip">${Number(analytics?.units_sold || 0)} sold</span>`
         ].join("");
       }
 
@@ -1254,41 +1240,40 @@
         `;
       }
 
-      function renderProductEditor() {
-        populateCategorySelect("productCategory");
-        const product = state.products.find((p) => p.id === state.selectedProductId);
-        const analytics = product ? getProductAnalytics(product.id) : null;
-
-        if (!product) {
-          byId("productName").value = "";
-          byId("productDescription").value = "";
-          byId("productCategory").value = "";
-          byId("productPricePence").value = "";
-          byId("productCapacityUnits").value = "";
-          byId("productIsActive").value = "true";
-          byId("toggleProductActiveBtn").textContent = "Deactivate";
-          byId("productSelectionLabel").textContent = "No product selected";
-          byId("productSelectionMetrics").innerHTML = "";
-          renderAnalyticsBlock("productAnalyticsBlock", null);
+      function renderCategoryEditor() {
+        const category = state.categories.find((c) => c.id === state.selectedCategoryId);
+        if (!category) {
+          byId("categoryName").value = "";
+          byId("categoryIsActive").value = "true";
+          byId("toggleCategoryActiveBtn").textContent = "Deactivate";
+          byId("categorySelectionLabel").textContent = "No category selected";
+          byId("categorySelectionMetrics").innerHTML = "";
+          byId("categoryUsageBlock").innerHTML = `
+            <div class="summaryItem"><span class="label">Products</span><span class="value">—</span></div>
+            <div class="summaryItem"><span class="label">Bundles</span><span class="value">—</span></div>
+            <div class="summaryItem"><span class="label">Status</span><span class="value">—</span></div>
+          `;
           return;
         }
 
-        byId("productName").value = product.name || "";
-        byId("productDescription").value = product.description || "";
-        byId("productCategory").value = product.category_id || "";
-        byId("productPricePence").value = Number(product.price_pence || 0);
-        byId("productCapacityUnits").value = product.capacity_units ?? 0;
-        byId("productIsActive").value = String(Boolean(product.is_active));
-        byId("toggleProductActiveBtn").textContent = product.is_active ? "Deactivate" : "Activate";
+        byId("categoryName").value = category.name || "";
+        byId("categoryIsActive").value = String(Boolean(category.is_active));
+        byId("toggleCategoryActiveBtn").textContent = category.is_active ? "Deactivate" : "Activate";
 
-        byId("productSelectionLabel").textContent = `${product.name} • ${product.category_name || "No category"} • ${product.is_active ? "active" : "inactive"}`;
-        byId("productSelectionMetrics").innerHTML = [
-          `<span class="miniChip">${formatMoneyPence(product.price_pence)}</span>`,
-          `<span class="miniChip">${product.capacity_units} capacity</span>`,
-          `<span class="miniChip">${Number(analytics?.units_sold || 0)} sold</span>`
+        const productCount = state.products.filter((p) => p.category_id === category.id).length;
+        const bundleCount = state.bundles.filter((b) => b.category_id === category.id).length;
+
+        byId("categorySelectionLabel").textContent = `${category.name} • ${category.is_active ? "active" : "inactive"}`;
+        byId("categorySelectionMetrics").innerHTML = [
+          `<span class="miniChip">${productCount} products</span>`,
+          `<span class="miniChip">${bundleCount} bundles</span>`
         ].join("");
 
-        renderAnalyticsBlock("productAnalyticsBlock", analytics);
+        byId("categoryUsageBlock").innerHTML = `
+          <div class="summaryItem"><span class="label">Products</span><span class="value">${productCount}</span></div>
+          <div class="summaryItem"><span class="label">Bundles</span><span class="value">${bundleCount}</span></div>
+          <div class="summaryItem"><span class="label">Status</span><span class="value">${category.is_active ? "Active" : "Inactive"}</span></div>
+        `;
       }
 
       function renderChoiceSetChecklist(selectedIds = []) {
@@ -1447,42 +1432,41 @@
         renderBundleLineEditor();
       }
 
-      function renderCategoryEditor() {
-        const category = state.categories.find((c) => c.id === state.selectedCategoryId);
-        if (!category) {
-          byId("categoryName").value = "";
-          byId("categorySlug").value = "";
-          byId("categoryIsActive").value = "true";
-          byId("toggleCategoryActiveBtn").textContent = "Deactivate";
-          byId("categorySelectionLabel").textContent = "No category selected";
-          byId("categorySelectionMetrics").innerHTML = "";
-          byId("categoryUsageBlock").innerHTML = `
-            <div class="summaryItem"><span class="label">Products</span><span class="value">—</span></div>
-            <div class="summaryItem"><span class="label">Bundles</span><span class="value">—</span></div>
-            <div class="summaryItem"><span class="label">Status</span><span class="value">—</span></div>
-          `;
+      function renderProductEditor() {
+        populateCategorySelect("productCategory");
+        const product = state.products.find((p) => p.id === state.selectedProductId);
+        const analytics = product ? getProductAnalytics(product.id) : null;
+
+        if (!product) {
+          byId("productName").value = "";
+          byId("productDescription").value = "";
+          byId("productCategory").value = "";
+          byId("productPricePence").value = "";
+          byId("productCapacityUnits").value = "";
+          byId("productIsActive").value = "true";
+          byId("toggleProductActiveBtn").textContent = "Deactivate";
+          byId("productSelectionLabel").textContent = "No product selected";
+          byId("productSelectionMetrics").innerHTML = "";
+          renderAnalyticsBlock("productAnalyticsBlock", null);
           return;
         }
 
-        byId("categoryName").value = category.name || "";
-        byId("categorySlug").value = category.slug || "";
-        byId("categoryIsActive").value = String(Boolean(category.is_active));
-        byId("toggleCategoryActiveBtn").textContent = category.is_active ? "Deactivate" : "Activate";
+        byId("productName").value = product.name || "";
+        byId("productDescription").value = product.description || "";
+        byId("productCategory").value = product.category_id || "";
+        byId("productPricePence").value = Number(product.price_pence || 0);
+        byId("productCapacityUnits").value = product.capacity_units ?? 0;
+        byId("productIsActive").value = String(Boolean(product.is_active));
+        byId("toggleProductActiveBtn").textContent = product.is_active ? "Deactivate" : "Activate";
 
-        const productCount = state.products.filter((p) => p.category_id === category.id).length;
-        const bundleCount = state.bundles.filter((b) => b.category_id === category.id).length;
-
-        byId("categorySelectionLabel").textContent = `${category.name} • ${category.is_active ? "active" : "inactive"}`;
-        byId("categorySelectionMetrics").innerHTML = [
-          `<span class="miniChip">${productCount} products</span>`,
-          `<span class="miniChip">${bundleCount} bundles</span>`
+        byId("productSelectionLabel").textContent = `${product.name} • ${product.category_name || "No category"} • ${product.is_active ? "active" : "inactive"}`;
+        byId("productSelectionMetrics").innerHTML = [
+          `<span class="miniChip">${formatMoneyPence(product.price_pence)}</span>`,
+          `<span class="miniChip">${product.capacity_units} capacity</span>`,
+          `<span class="miniChip">${Number(analytics?.units_sold || 0)} sold</span>`
         ].join("");
 
-        byId("categoryUsageBlock").innerHTML = `
-          <div class="summaryItem"><span class="label">Products</span><span class="value">${productCount}</span></div>
-          <div class="summaryItem"><span class="label">Bundles</span><span class="value">${bundleCount}</span></div>
-          <div class="summaryItem"><span class="label">Status</span><span class="value">${category.is_active ? "Active" : "Inactive"}</span></div>
-        `;
+        renderAnalyticsBlock("productAnalyticsBlock", analytics);
       }
 
       function renderEverything() {
@@ -1492,9 +1476,9 @@
         renderWorkspaceHeader();
         renderLibraryTable();
         renderSelectionContext();
+        renderCategoryEditor();
         renderProductEditor();
         renderBundleEditor();
-        renderCategoryEditor();
       }
 
       async function refreshAll() {
@@ -1526,7 +1510,7 @@
 
       async function createCategory() {
         const name = byId("newCategoryName").value.trim();
-        const slug = slugify(byId("newCategorySlug").value.trim() || name);
+        const slug = slugify(name);
 
         if (!name) throw new Error("Category Name is required.");
         if (!slug) throw new Error("Category slug is required.");
@@ -1604,6 +1588,32 @@
         showInlineSuccess("Bundle created");
       }
 
+      async function saveCurrentCategory() {
+        const category = state.categories.find((c) => c.id === state.selectedCategoryId);
+        if (!category) throw new Error("No category selected.");
+
+        setSaveState("saving");
+
+        const payload = {
+          name: byId("categoryName").value.trim(),
+          slug: slugify(byId("categoryName").value.trim()),
+          sort_order: category.sort_order ?? 100,
+          is_active: byId("categoryIsActive").value === "true"
+        };
+
+        if (!payload.name) throw new Error("Category Name is required.");
+        if (!payload.slug) throw new Error("Category slug is required.");
+
+        const { error } = await supabase.from("categories").update(payload).eq("id", category.id);
+        if (error) {
+          setSaveState("error", error.message || "Save failed");
+          throw error;
+        }
+
+        await refreshAll();
+        showInlineSuccess("Category saved");
+      }
+
       async function saveCurrentProduct() {
         const product = state.products.find((p) => p.id === state.selectedProductId);
         if (!product) throw new Error("No product selected.");
@@ -1660,32 +1670,6 @@
 
         await refreshAll();
         showInlineSuccess("Bundle saved");
-      }
-
-      async function saveCurrentCategory() {
-        const category = state.categories.find((c) => c.id === state.selectedCategoryId);
-        if (!category) throw new Error("No category selected.");
-
-        setSaveState("saving");
-
-        const payload = {
-          name: byId("categoryName").value.trim(),
-          slug: slugify(byId("categorySlug").value.trim() || byId("categoryName").value.trim()),
-          sort_order: category.sort_order ?? 100,
-          is_active: byId("categoryIsActive").value === "true"
-        };
-
-        if (!payload.name) throw new Error("Category Name is required.");
-        if (!payload.slug) throw new Error("Slug is required.");
-
-        const { error } = await supabase.from("categories").update(payload).eq("id", category.id);
-        if (error) {
-          setSaveState("error", error.message || "Save failed");
-          throw error;
-        }
-
-        await refreshAll();
-        showInlineSuccess("Category saved");
       }
 
       async function duplicateCurrentProduct() {
@@ -1775,6 +1759,15 @@
         showInlineSuccess("Bundle duplicated");
       }
 
+      async function toggleCategoryActive() {
+        const category = state.categories.find((c) => c.id === state.selectedCategoryId);
+        if (!category) throw new Error("No category selected.");
+        const { error } = await supabase.from("categories").update({ is_active: !category.is_active }).eq("id", category.id);
+        if (error) throw error;
+        await refreshAll();
+        showInlineSuccess(`Category ${category.is_active ? "deactivated" : "activated"}`);
+      }
+
       async function toggleProductActive() {
         const product = state.products.find((p) => p.id === state.selectedProductId);
         if (!product) throw new Error("No product selected.");
@@ -1791,15 +1784,6 @@
         if (error) throw error;
         await refreshAll();
         showInlineSuccess(`Bundle ${bundle.is_active ? "deactivated" : "activated"}`);
-      }
-
-      async function toggleCategoryActive() {
-        const category = state.categories.find((c) => c.id === state.selectedCategoryId);
-        if (!category) throw new Error("No category selected.");
-        const { error } = await supabase.from("categories").update({ is_active: !category.is_active }).eq("id", category.id);
-        if (error) throw error;
-        await refreshAll();
-        showInlineSuccess(`Category ${category.is_active ? "deactivated" : "activated"}`);
       }
 
       async function syncChoiceSetOptions(bundleLineId) {
@@ -1980,7 +1964,7 @@
         });
 
         byId("libraryTypeAllBtn").addEventListener("click", () => {
-          state.selectedTypes = ["product", "bundle", "category"];
+          state.selectedTypes = ["category", "product", "bundle"];
           byId("libraryTypeChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = true; });
           renderFilterSummaries();
           renderLibraryTable();
@@ -2054,15 +2038,15 @@
           const itemType = row.dataset.itemType;
           const itemId = row.dataset.itemId;
 
-          if (itemType === "product") {
+          if (itemType === "category") {
+            state.currentTab = "categories";
+            state.selectedCategoryId = itemId;
+          } else if (itemType === "product") {
             state.currentTab = "products";
             state.selectedProductId = itemId;
           } else if (itemType === "bundle") {
             state.currentTab = "bundles";
             state.selectedBundleId = itemId;
-          } else if (itemType === "category") {
-            state.currentTab = "categories";
-            state.selectedCategoryId = itemId;
           }
 
           renderEverything();
@@ -2085,6 +2069,11 @@
           }
         });
 
+        byId("newCategoryBtn").addEventListener("click", () => {
+          showModalMessage("newCategoryModalMessage", "");
+          openModal("newCategoryModal");
+        });
+
         byId("newProductBtn").addEventListener("click", () => {
           populateCategorySelect("newProductCategory");
           showModalMessage("newProductModalMessage", "");
@@ -2097,41 +2086,21 @@
           openModal("newBundleModal");
         });
 
-        byId("newCategoryBtn").addEventListener("click", () => {
-          showModalMessage("newCategoryModalMessage", "");
-          openModal("newCategoryModal");
-        });
-
+        byId("closeNewCategoryModalBtn").addEventListener("click", () => closeModal("newCategoryModal"));
+        byId("cancelNewCategoryBtn").addEventListener("click", () => closeModal("newCategoryModal"));
         byId("closeNewProductModalBtn").addEventListener("click", () => closeModal("newProductModal"));
         byId("cancelNewProductBtn").addEventListener("click", () => closeModal("newProductModal"));
         byId("closeNewBundleModalBtn").addEventListener("click", () => closeModal("newBundleModal"));
         byId("cancelNewBundleBtn").addEventListener("click", () => closeModal("newBundleModal"));
-        byId("closeNewCategoryModalBtn").addEventListener("click", () => closeModal("newCategoryModal"));
-        byId("cancelNewCategoryBtn").addEventListener("click", () => closeModal("newCategoryModal"));
 
+        byId("newCategoryModal").addEventListener("click", (e) => {
+          if (e.target === byId("newCategoryModal")) closeModal("newCategoryModal");
+        });
         byId("newProductModal").addEventListener("click", (e) => {
           if (e.target === byId("newProductModal")) closeModal("newProductModal");
         });
         byId("newBundleModal").addEventListener("click", (e) => {
           if (e.target === byId("newBundleModal")) closeModal("newBundleModal");
-        });
-        byId("newCategoryModal").addEventListener("click", (e) => {
-          if (e.target === byId("newCategoryModal")) closeModal("newCategoryModal");
-        });
-
-        byId("newCategoryName").addEventListener("input", () => {
-          if (!byId("newCategorySlug").dataset.manual) {
-            byId("newCategorySlug").value = slugify(byId("newCategoryName").value);
-          }
-        });
-
-        byId("newCategorySlug").addEventListener("input", () => {
-          byId("newCategorySlug").dataset.manual = "true";
-          byId("newCategorySlug").value = slugify(byId("newCategorySlug").value);
-        });
-
-        byId("categoryName").addEventListener("input", () => {
-          byId("categorySlug").value = slugify(byId("categoryName").value);
         });
 
         byId("bundleLineType").addEventListener("change", updateBundleLineMode);
@@ -2142,6 +2111,15 @@
           const productId = byId("bundleLineProduct").value;
           const product = state.products.find((p) => p.id === productId);
           if (product) byId("bundleLineLabel").value = product.name;
+        });
+
+        byId("createCategoryConfirmBtn").addEventListener("click", async () => {
+          try {
+            await createCategory();
+          } catch (err) {
+            console.error(err);
+            showModalMessage("newCategoryModalMessage", err.message || "Unable to create category.", true);
+          }
         });
 
         byId("createProductConfirmBtn").addEventListener("click", async () => {
@@ -2162,12 +2140,12 @@
           }
         });
 
-        byId("createCategoryConfirmBtn").addEventListener("click", async () => {
+        byId("saveCategoryBtn").addEventListener("click", async () => {
           try {
-            await createCategory();
+            await saveCurrentCategory();
           } catch (err) {
             console.error(err);
-            showModalMessage("newCategoryModalMessage", err.message || "Unable to create category.", true);
+            showError(err.message || "Unable to save category.");
           }
         });
 
@@ -2189,15 +2167,6 @@
           }
         });
 
-        byId("saveCategoryBtn").addEventListener("click", async () => {
-          try {
-            await saveCurrentCategory();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to save category.");
-          }
-        });
-
         byId("duplicateProductBtn").addEventListener("click", async () => {
           try {
             await duplicateCurrentProduct();
@@ -2216,6 +2185,15 @@
           }
         });
 
+        byId("toggleCategoryActiveBtn").addEventListener("click", async () => {
+          try {
+            await toggleCategoryActive();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to update category status.");
+          }
+        });
+
         byId("toggleProductActiveBtn").addEventListener("click", async () => {
           try {
             await toggleProductActive();
@@ -2231,15 +2209,6 @@
           } catch (err) {
             console.error(err);
             showError(err.message || "Unable to update bundle status.");
-          }
-        });
-
-        byId("toggleCategoryActiveBtn").addEventListener("click", async () => {
-          try {
-            await toggleCategoryActive();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to update category status.");
           }
         });
 
