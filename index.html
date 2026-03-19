@@ -296,921 +296,950 @@
   </div>
 
   <script>
-    (function () {
-      const CONFIG = window.HEARTH_CONFIG || {};
-      const SUPABASE_URL = CONFIG.SUPABASE_URL;
-      const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
+  (function () {
+    const CONFIG = window.HEARTH_CONFIG || {};
+    const SUPABASE_URL = CONFIG.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
 
-      const STATUS_ORDER = ["placed", "confirmed", "baking", "ready", "delivered"];
-      const ACTIVE_DEFAULT_STATUSES = ["live", "scheduled", "draft"];
-      const ALL_DROP_STATUSES = ["live", "scheduled", "draft", "closed", "completed", "cancelled", "archived"];
+    const STATUS_ORDER = ["placed", "confirmed", "baking", "ready", "delivered"];
+    const ACTIVE_DEFAULT_STATUSES = ["live", "scheduled", "draft"];
+    const ALL_DROP_STATUSES = ["live", "scheduled", "draft", "closed", "completed", "cancelled", "archived"];
 
-      let supabase = null;
+    let supabase = null;
 
-      const state = {
-        drops: [],
-        filteredDrops: [],
-        selectedDropId: null,
-        drop: null,
-        dropSummary: null,
-        ordersSummary: [],
-        itemDetails: [],
-        expandedOrders: new Set(),
-        tableStatusFilter: "all",
-        tableSearch: "",
-        ordersPanelOpen: false,
-        summaryPanelOpen: true,
-        boardStatusFilters: [...ACTIVE_DEFAULT_STATUSES],
-        boardTypeFilter: "all"
-      };
+    const state = {
+      drops: [],
+      filteredDrops: [],
+      selectedDropId: null,
+      drop: null,
+      dropSummary: null,
+      ordersSummary: [],
+      itemDetails: [],
+      expandedOrders: new Set(),
+      tableStatusFilter: "all",
+      tableSearch: "",
+      ordersPanelOpen: false,
+      summaryPanelOpen: true,
+      boardStatusFilters: [...ACTIVE_DEFAULT_STATUSES],
+      boardTypeFilter: "all"
+    };
 
-      function byId(id) {
-        return document.getElementById(id);
+    function byId(id) {
+      return document.getElementById(id);
+    }
+
+    function showError(message) {
+      const el = byId("errorBox");
+      if (!message) {
+        el.style.display = "none";
+        el.textContent = "";
+        return;
       }
+      el.style.display = "block";
+      el.textContent = message;
+    }
 
-      function showError(message) {
-        const el = byId("errorBox");
-        if (!message) {
-          el.style.display = "none";
-          el.textContent = "";
-          return;
-        }
-        el.style.display = "block";
-        el.textContent = message;
-      }
+    function formatMoneyPence(pence) {
+      return new Intl.NumberFormat("en-GB", {
+        style: "currency",
+        currency: "GBP",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }).format((Number(pence || 0)) / 100);
+    }
 
-      function formatMoneyPence(pence) {
-        return new Intl.NumberFormat("en-GB", {
-          style: "currency",
-          currency: "GBP",
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 2
-        }).format((Number(pence || 0)) / 100);
-      }
+    function formatShortTime(value) {
+      if (!value) return "—";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "—";
+      return d.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
 
-      function formatShortTime(value) {
-        if (!value) return "—";
-        const d = new Date(value);
-        if (Number.isNaN(d.getTime())) return "—";
-        return d.toLocaleTimeString("en-GB", {
+    function formatDropMeta(drop) {
+      if (!drop) return "Select a drop to view live order flow.";
+
+      const parts = [];
+
+      if (drop.drop_type) parts.push(drop.drop_type);
+
+      if (drop.delivery_start && drop.delivery_end) {
+        const start = new Date(drop.delivery_start).toLocaleString("en-GB", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
           hour: "2-digit",
           minute: "2-digit"
         });
-      }
-
-      function formatDropMeta(drop) {
-        if (!drop) return "Select a drop to view live order flow.";
-
-        const parts = [];
-
-        if (drop.drop_type) parts.push(drop.drop_type);
-
-        if (drop.delivery_start && drop.delivery_end) {
-          const start = new Date(drop.delivery_start).toLocaleString("en-GB", {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit"
-          });
-          const end = new Date(drop.delivery_end).toLocaleTimeString("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit"
-          });
-          parts.push(`${start}–${end}`);
-        }
-
-        if (drop.closes_at) {
-          const cutoff = new Date(drop.closes_at).toLocaleString("en-GB", {
-            day: "numeric",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit"
-          });
-          parts.push(`Orders close ${cutoff}`);
-        }
-
-        return parts.join(" • ");
-      }
-
-      function statusDotClass(status) {
-        if (status === "live") return "dot live";
-        if (status === "draft") return "dot draft";
-        return "dot closed";
-      }
-
-      function normaliseStatus(status) {
-        return String(status || "").toLowerCase();
-      }
-
-      function titleCase(value) {
-        const text = String(value || "");
-        return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
-      }
-
-      function getCapacityLabel(count = 1) {
-        const raw = String(state.dropSummary?.capacity_category || state.drop?.capacity_category || "unit").trim().toLowerCase();
-        return `${count} ${raw}`;
-      }
-
-      function getNextStatus(status) {
-        const idx = STATUS_ORDER.indexOf(status);
-        if (idx < 0 || idx >= STATUS_ORDER.length - 1) return null;
-        return STATUS_ORDER[idx + 1];
-      }
-
-      function getPrevStatus(status) {
-        const idx = STATUS_ORDER.indexOf(status);
-        if (idx <= 0) return null;
-        return STATUS_ORDER[idx - 1];
-      }
-
-      function getActionLabelForNextStatus(nextStatus) {
-        if (nextStatus === "confirmed") return "Confirm ▶";
-        if (nextStatus === "baking") return "Bake ▶";
-        if (nextStatus === "ready") return "Ready ▶";
-        if (nextStatus === "delivered") return "Deliver ▶";
-        return "Next ▶";
-      }
-
-      function getBackLabel() {
-        return "◀ Back";
-      }
-
-      function getItemName(row) {
-        return row.item_name || row.product_name || row.selected_product_name || row.name || "Item";
-      }
-
-      function getItemCategory(row) {
-        return row.item_category || row.product_category || row.category_name || row.category || null;
-      }
-
-      function getItemQty(row) {
-        return Number(row.capacity_qty ?? row.expanded_qty ?? row.qty ?? row.quantity ?? 0);
-      }
-
-      function groupItemDetailsByOrder(items) {
-        const map = new Map();
-        items.forEach((row) => {
-          if (!map.has(row.order_id)) map.set(row.order_id, []);
-          map.get(row.order_id).push(row);
+        const end = new Date(drop.delivery_end).toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit"
         });
-        return map;
+        parts.push(`${start}–${end}`);
       }
 
-      function buildOrderModels() {
-        const itemsByOrder = groupItemDetailsByOrder(state.itemDetails);
-
-        return state.ordersSummary.map((order) => {
-          const lines = (itemsByOrder.get(order.order_id) || []).map((line) => ({
-            ...line,
-            _item_name: getItemName(line),
-            _item_category: getItemCategory(line),
-            _item_qty: getItemQty(line)
-          }));
-
-          const grouped = { capacity: [], extras: [] };
-          const capacityCategory = state.dropSummary?.capacity_category || state.drop?.capacity_category;
-
-          lines.forEach((line) => {
-            if (capacityCategory && line._item_category === capacityCategory) {
-              grouped.capacity.push(line);
-            } else {
-              grouped.extras.push(line);
-            }
-          });
-
-          return { ...order, lines, grouped };
+      if (drop.closes_at) {
+        const cutoff = new Date(drop.closes_at).toLocaleString("en-GB", {
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit"
         });
+        parts.push(`Orders close ${cutoff}`);
       }
 
-      function updateBoardStatusFilterSummary() {
-        const summary = byId("boardStatusFilterSummary");
-        const selected = state.boardStatusFilters;
+      return parts.join(" • ");
+    }
 
-        if (!selected.length) {
-          summary.textContent = "No statuses";
-          return;
-        }
+    function statusDotClass(status) {
+      if (status === "live") return "dot live";
+      if (status === "draft") return "dot draft";
+      return "dot closed";
+    }
 
-        if (selected.length <= 3) {
-          summary.textContent = selected.map(titleCase).join(", ");
-          return;
-        }
+    function normaliseStatus(status) {
+      return String(status || "").toLowerCase();
+    }
 
-        summary.textContent = `${selected.length} statuses`;
-      }
+    function titleCase(value) {
+      const text = String(value || "");
+      return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
+    }
 
-      function getFilteredDrops() {
-        return state.drops.filter((drop) => {
-          const statusOk = state.boardStatusFilters.length
-            ? state.boardStatusFilters.includes(normaliseStatus(drop.status))
-            : false;
+    function prettifySlug(value) {
+      const text = String(value || "").trim();
+      if (!text) return "";
+      return text
+        .split(/[-_\s]+/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+    }
 
-          const typeOk = state.boardTypeFilter === "all" || drop.drop_type === state.boardTypeFilter;
+    function getCapacityCategoryKey() {
+      return String(state.dropSummary?.capacity_category || state.drop?.capacity_category || "").trim().toLowerCase();
+    }
 
-          return statusOk && typeOk;
-        });
-      }
+    function getCapacityCategoryLabel() {
+      const explicitName =
+        state.dropSummary?.capacity_category_name ||
+        state.drop?.capacity_category_name ||
+        "";
 
-      function ensureSelectedDropStillValid() {
-        state.filteredDrops = getFilteredDrops();
+      if (explicitName) return String(explicitName).trim();
 
-        const selectedStillVisible = state.filteredDrops.some((drop) => drop.drop_id === state.selectedDropId);
-        if (selectedStillVisible) return;
+      const key = getCapacityCategoryKey();
+      return key ? prettifySlug(key) : "Unit";
+    }
 
-        const liveMatch = state.filteredDrops.find((d) => normaliseStatus(d.status) === "live");
-        state.selectedDropId = (liveMatch || state.filteredDrops[0] || {}).drop_id || null;
-      }
+    function getCapacityLabel(count = 1) {
+      return `${count} ${getCapacityCategoryLabel()}`;
+    }
 
-      function renderDropSelect() {
-        const select = byId("dropSelect");
-        select.innerHTML = "";
+    function getNextStatus(status) {
+      const idx = STATUS_ORDER.indexOf(status);
+      if (idx < 0 || idx >= STATUS_ORDER.length - 1) return null;
+      return STATUS_ORDER[idx + 1];
+    }
 
-        if (!state.filteredDrops.length) {
-          const opt = document.createElement("option");
-          opt.value = "";
-          opt.textContent = "No drops match current filters";
-          select.appendChild(opt);
-          byId("dropFilterResultText").textContent = "0 drops match current filters";
-          return;
-        }
+    function getPrevStatus(status) {
+      const idx = STATUS_ORDER.indexOf(status);
+      if (idx <= 0) return null;
+      return STATUS_ORDER[idx - 1];
+    }
 
-        state.filteredDrops.forEach((drop) => {
-          const opt = document.createElement("option");
-          opt.value = drop.drop_id;
-          opt.textContent = `${drop.drop_name} • ${drop.drop_type || "drop"} • ${normaliseStatus(drop.status)}`;
-          if (drop.drop_id === state.selectedDropId) opt.selected = true;
-          select.appendChild(opt);
-        });
+    function getActionLabelForNextStatus(nextStatus) {
+      if (nextStatus === "confirmed") return "Confirm ▶";
+      if (nextStatus === "baking") return "Bake ▶";
+      if (nextStatus === "ready") return "Ready ▶";
+      if (nextStatus === "delivered") return "Deliver ▶";
+      return "Next ▶";
+    }
 
-        const count = state.filteredDrops.length;
-        byId("dropFilterResultText").textContent = `${count} drop${count === 1 ? "" : "s"} match current filters`;
-      }
+    function getBackLabel() {
+      return "◀ Back";
+    }
 
-      function renderHeader() {
-        const drop = state.drop;
-        const summary = state.dropSummary;
+    function getItemName(row) {
+      return row.item_name || row.product_name || row.selected_product_name || row.name || "Item";
+    }
 
-        if (!drop || !summary) {
-          byId("dropName").textContent = "No drop selected";
-          byId("dropMeta").textContent = "Select a drop to view live order flow.";
-          byId("dropStatusText").textContent = "—";
-          byId("dropStatusDot").className = "dot";
-          byId("kpiOrders").textContent = "0";
-          byId("kpiCategory").textContent = "—";
-          byId("kpiCapacityTotal").textContent = "0";
-          byId("kpiCapacityUsed").textContent = "0";
-          byId("kpiCapacityRemaining").textContent = "0";
-          byId("kpiRevenue").textContent = "£0";
-          byId("capacityCopyLeft").textContent = "0 / 0 units";
-          byId("capacityCopyRight").textContent = "0% full";
-          byId("capacityFill").style.width = "0%";
-          return;
-        }
+    function getItemCategory(row) {
+      return row.item_category || row.product_category || row.category_name || row.category || null;
+    }
 
-        const used = Number(summary.capacity_units_used || 0);
-        const total = Number(summary.capacity_units_total || 0);
-        const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
-        const revenuePence = state.ordersSummary.reduce((sum, row) => sum + Number(row.total_price_pence || 0), 0);
+    function getItemQty(row) {
+      return Number(row.capacity_qty ?? row.expanded_qty ?? row.qty ?? row.quantity ?? 0);
+    }
 
-        byId("dropName").textContent = summary.drop_name || drop.name || "Unnamed drop";
-        byId("dropMeta").textContent = formatDropMeta(summary);
-        byId("dropStatusText").textContent = normaliseStatus(summary.status || drop.status || "draft");
-        byId("dropStatusDot").className = statusDotClass(normaliseStatus(summary.status || drop.status));
-        byId("kpiOrders").textContent = String(state.ordersSummary.length);
-        byId("kpiCategory").textContent = summary.capacity_category || "—";
-        byId("kpiCapacityTotal").textContent = String(total);
-        byId("kpiCapacityUsed").textContent = String(used);
-        byId("kpiCapacityRemaining").textContent = String(summary.capacity_units_remaining || 0);
-        byId("kpiRevenue").textContent = formatMoneyPence(revenuePence);
-        byId("capacityCopyLeft").textContent = `${used} / ${total} ${summary.capacity_category || "units"}`;
-        byId("capacityCopyRight").textContent = `${pct}% full`;
-        byId("capacityFill").style.width = `${pct}%`;
-        byId("capacitySummaryTitle").textContent = `${String(summary.capacity_category || "Capacity").replace(/^./, c => c.toUpperCase())} items`;
-      }
+    function groupItemDetailsByOrder(items) {
+      const map = new Map();
+      items.forEach((row) => {
+        if (!map.has(row.order_id)) map.set(row.order_id, []);
+        map.get(row.order_id).push(row);
+      });
+      return map;
+    }
 
-      function renderQueue() {
-        const queueGrid = byId("queueGrid");
-        queueGrid.innerHTML = "";
+    function buildOrderModels() {
+      const itemsByOrder = groupItemDetailsByOrder(state.itemDetails);
 
-        if (!state.dropSummary) {
-          queueGrid.innerHTML = '<div class="emptyState">No drop selected.</div>';
-          return;
-        }
+      return state.ordersSummary.map((order) => {
+        const lines = (itemsByOrder.get(order.order_id) || []).map((line) => ({
+          ...line,
+          _item_name: getItemName(line),
+          _item_category: getItemCategory(line),
+          _item_qty: getItemQty(line)
+        }));
 
-        const capacityCategory = state.dropSummary.capacity_category;
+        const grouped = { capacity: [], extras: [] };
+        const capacityCategoryKey = getCapacityCategoryKey();
 
-        const relevant = state.itemDetails.filter((row) =>
-          normaliseStatus(row.status) === "confirmed" &&
-          getItemCategory(row) === capacityCategory
-        );
-
-        const counts = new Map();
-        relevant.forEach((row) => {
-          const name = getItemName(row);
-          const qty = getItemQty(row);
-          counts.set(name, (counts.get(name) || 0) + qty);
-        });
-
-        const ordered = [...counts.entries()].sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]));
-
-        if (!ordered.length) {
-          queueGrid.innerHTML = `<div class="emptyState">No confirmed ${capacityCategory} items waiting.</div>`;
-          return;
-        }
-
-        ordered.forEach(([name, qty]) => {
-          const div = document.createElement("div");
-          div.className = "queueItem";
-          div.innerHTML = `
-            <span>${name}</span>
-            <span class="queueQty">×${qty}</span>
-          `;
-          queueGrid.appendChild(div);
-        });
-      }
-
-      function renderWorkflowCounts() {
-        const counts = {
-          placed: 0,
-          confirmed: 0,
-          baking: 0,
-          ready: 0,
-          delivered: 0
-        };
-
-        state.ordersSummary.forEach((order) => {
-          const status = normaliseStatus(order.status);
-          if (Object.prototype.hasOwnProperty.call(counts, status)) counts[status] += 1;
-        });
-
-        byId("countPlaced").textContent = counts.placed;
-        byId("countConfirmed").textContent = counts.confirmed;
-        byId("countBaking").textContent = counts.baking;
-        byId("countReady").textContent = counts.ready;
-        byId("countDelivered").textContent = counts.delivered;
-
-        byId("badgePlaced").textContent = counts.placed;
-        byId("badgeConfirmed").textContent = counts.confirmed;
-        byId("badgeBaking").textContent = counts.baking;
-        byId("badgeReady").textContent = counts.ready;
-        byId("badgeDelivered").textContent = counts.delivered;
-      }
-
-      function renderSummaryList(targetId, entries) {
-        const el = byId(targetId);
-        el.innerHTML = "";
-
-        if (!entries.length) {
-          el.innerHTML = `<div class="compactMuted">No items.</div>`;
-          return;
-        }
-
-        entries.forEach(([name, qty]) => {
-          const div = document.createElement("div");
-          div.className = "summaryLine";
-          div.innerHTML = `
-            <span>${name}</span>
-            <span class="qty">×${qty}</span>
-          `;
-          el.appendChild(div);
-        });
-      }
-
-      function renderConsolidatedView() {
-        const capacityMap = new Map();
-        const otherMap = new Map();
-        const capacityCategory = state.dropSummary?.capacity_category;
-
-        state.itemDetails.forEach((line) => {
-          const name = getItemName(line);
-          const qty = getItemQty(line);
-          const category = getItemCategory(line);
-
-          if (capacityCategory && category === capacityCategory) {
-            capacityMap.set(name, (capacityMap.get(name) || 0) + qty);
+        lines.forEach((line) => {
+          const lineCategoryKey = String(line._item_category || "").trim().toLowerCase();
+          if (capacityCategoryKey && lineCategoryKey === capacityCategoryKey) {
+            grouped.capacity.push(line);
           } else {
-            otherMap.set(name, (otherMap.get(name) || 0) + qty);
+            grouped.extras.push(line);
           }
         });
 
-        const sortEntries = (map) => [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+        return { ...order, lines, grouped };
+      });
+    }
 
-        renderSummaryList("summaryCapacityList", sortEntries(capacityMap));
-        renderSummaryList("summaryOtherList", sortEntries(otherMap));
+    function updateBoardStatusFilterSummary() {
+      const summary = byId("boardStatusFilterSummary");
+      const selected = state.boardStatusFilters;
+
+      if (!selected.length) {
+        summary.textContent = "No statuses";
+        return;
       }
 
-      function renderItemsBlock(lines, emptyText) {
-        if (!lines.length) {
-          return `<div class="compactMuted">${emptyText}</div>`;
-        }
-        return `
-          <div class="itemsBlock">
-            ${lines.map((line) => `<div class="itemsLine">${line._item_name} ×${line._item_qty}</div>`).join("")}
-          </div>
+      if (selected.length <= 3) {
+        summary.textContent = selected.map(titleCase).join(", ");
+        return;
+      }
+
+      summary.textContent = `${selected.length} statuses`;
+    }
+
+    function getFilteredDrops() {
+      return state.drops.filter((drop) => {
+        const statusOk = state.boardStatusFilters.length
+          ? state.boardStatusFilters.includes(normaliseStatus(drop.status))
+          : false;
+
+        const typeOk = state.boardTypeFilter === "all" || drop.drop_type === state.boardTypeFilter;
+
+        return statusOk && typeOk;
+      });
+    }
+
+    function ensureSelectedDropStillValid() {
+      state.filteredDrops = getFilteredDrops();
+
+      const selectedStillVisible = state.filteredDrops.some((drop) => drop.drop_id === state.selectedDropId);
+      if (selectedStillVisible) return;
+
+      const liveMatch = state.filteredDrops.find((d) => normaliseStatus(d.status) === "live");
+      state.selectedDropId = (liveMatch || state.filteredDrops[0] || {}).drop_id || null;
+    }
+
+    function renderDropSelect() {
+      const select = byId("dropSelect");
+      select.innerHTML = "";
+
+      if (!state.filteredDrops.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No drops match current filters";
+        select.appendChild(opt);
+        byId("dropFilterResultText").textContent = "0 drops match current filters";
+        return;
+      }
+
+      state.filteredDrops.forEach((drop) => {
+        const opt = document.createElement("option");
+        opt.value = drop.drop_id;
+        opt.textContent = `${drop.drop_name} • ${drop.drop_type || "drop"} • ${normaliseStatus(drop.status)}`;
+        if (drop.drop_id === state.selectedDropId) opt.selected = true;
+        select.appendChild(opt);
+      });
+
+      const count = state.filteredDrops.length;
+      byId("dropFilterResultText").textContent = `${count} drop${count === 1 ? "" : "s"} match current filters`;
+    }
+
+    function renderHeader() {
+      const drop = state.drop;
+      const summary = state.dropSummary;
+
+      if (!drop || !summary) {
+        byId("dropName").textContent = "No drop selected";
+        byId("dropMeta").textContent = "Select a drop to view live order flow.";
+        byId("dropStatusText").textContent = "—";
+        byId("dropStatusDot").className = "dot";
+        byId("kpiOrders").textContent = "0";
+        byId("kpiCategory").textContent = "—";
+        byId("kpiCapacityTotal").textContent = "0";
+        byId("kpiCapacityUsed").textContent = "0";
+        byId("kpiCapacityRemaining").textContent = "0";
+        byId("kpiRevenue").textContent = "£0";
+        byId("capacityCopyLeft").textContent = "0 / 0 units";
+        byId("capacityCopyRight").textContent = "0% full";
+        byId("capacityFill").style.width = "0%";
+        return;
+      }
+
+      const used = Number(summary.capacity_units_used || 0);
+      const total = Number(summary.capacity_units_total || 0);
+      const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+      const revenuePence = state.ordersSummary.reduce((sum, row) => sum + Number(row.total_price_pence || 0), 0);
+      const capacityLabel = getCapacityCategoryLabel();
+
+      byId("dropName").textContent = summary.drop_name || drop.name || "Unnamed drop";
+      byId("dropMeta").textContent = formatDropMeta(summary);
+      byId("dropStatusText").textContent = normaliseStatus(summary.status || drop.status || "draft");
+      byId("dropStatusDot").className = statusDotClass(normaliseStatus(summary.status || drop.status));
+      byId("kpiOrders").textContent = String(state.ordersSummary.length);
+      byId("kpiCategory").textContent = capacityLabel || "—";
+      byId("kpiCapacityTotal").textContent = String(total);
+      byId("kpiCapacityUsed").textContent = String(used);
+      byId("kpiCapacityRemaining").textContent = String(summary.capacity_units_remaining || 0);
+      byId("kpiRevenue").textContent = formatMoneyPence(revenuePence);
+      byId("capacityCopyLeft").textContent = `${used} / ${total} ${capacityLabel || "units"}`;
+      byId("capacityCopyRight").textContent = `${pct}% full`;
+      byId("capacityFill").style.width = `${pct}%`;
+      byId("capacitySummaryTitle").textContent = `${capacityLabel || "Capacity"} items`;
+    }
+
+    function renderQueue() {
+      const queueGrid = byId("queueGrid");
+      queueGrid.innerHTML = "";
+
+      if (!state.dropSummary) {
+        queueGrid.innerHTML = '<div class="emptyState">No drop selected.</div>';
+        return;
+      }
+
+      const capacityCategoryKey = getCapacityCategoryKey();
+      const capacityCategoryLabel = getCapacityCategoryLabel();
+
+      const relevant = state.itemDetails.filter((row) =>
+        normaliseStatus(row.status) === "confirmed" &&
+        String(getItemCategory(row) || "").trim().toLowerCase() === capacityCategoryKey
+      );
+
+      const counts = new Map();
+      relevant.forEach((row) => {
+        const name = getItemName(row);
+        const qty = getItemQty(row);
+        counts.set(name, (counts.get(name) || 0) + qty);
+      });
+
+      const ordered = [...counts.entries()].sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]));
+
+      if (!ordered.length) {
+        queueGrid.innerHTML = `<div class="emptyState">No confirmed ${capacityCategoryLabel} items waiting.</div>`;
+        return;
+      }
+
+      ordered.forEach(([name, qty]) => {
+        const div = document.createElement("div");
+        div.className = "queueItem";
+        div.innerHTML = `
+          <span>${name}</span>
+          <span class="queueQty">×${qty}</span>
         `;
+        queueGrid.appendChild(div);
+      });
+    }
+
+    function renderWorkflowCounts() {
+      const counts = {
+        placed: 0,
+        confirmed: 0,
+        baking: 0,
+        ready: 0,
+        delivered: 0
+      };
+
+      state.ordersSummary.forEach((order) => {
+        const status = normaliseStatus(order.status);
+        if (Object.prototype.hasOwnProperty.call(counts, status)) counts[status] += 1;
+      });
+
+      byId("countPlaced").textContent = counts.placed;
+      byId("countConfirmed").textContent = counts.confirmed;
+      byId("countBaking").textContent = counts.baking;
+      byId("countReady").textContent = counts.ready;
+      byId("countDelivered").textContent = counts.delivered;
+
+      byId("badgePlaced").textContent = counts.placed;
+      byId("badgeConfirmed").textContent = counts.confirmed;
+      byId("badgeBaking").textContent = counts.baking;
+      byId("badgeReady").textContent = counts.ready;
+      byId("badgeDelivered").textContent = counts.delivered;
+    }
+
+    function renderSummaryList(targetId, entries) {
+      const el = byId(targetId);
+      el.innerHTML = "";
+
+      if (!entries.length) {
+        el.innerHTML = `<div class="compactMuted">No items.</div>`;
+        return;
       }
 
-      function getFilteredOrderModels() {
-        const models = buildOrderModels();
-        const search = state.tableSearch.trim().toLowerCase();
+      entries.forEach(([name, qty]) => {
+        const div = document.createElement("div");
+        div.className = "summaryLine";
+        div.innerHTML = `
+          <span>${name}</span>
+          <span class="qty">×${qty}</span>
+        `;
+        el.appendChild(div);
+      });
+    }
 
-        return models.filter((order) => {
-          const statusOk =
-            state.tableStatusFilter === "all" ||
-            normaliseStatus(order.status) === state.tableStatusFilter;
+    function renderConsolidatedView() {
+      const capacityMap = new Map();
+      const otherMap = new Map();
+      const capacityCategoryKey = getCapacityCategoryKey();
 
-          if (!statusOk) return false;
+      state.itemDetails.forEach((line) => {
+        const name = getItemName(line);
+        const qty = getItemQty(line);
+        const categoryKey = String(getItemCategory(line) || "").trim().toLowerCase();
 
-          if (!search) return true;
-
-          const haystack = [
-            order.customer_name || "",
-            ...order.lines.map((l) => l._item_name || "")
-          ].join(" ").toLowerCase();
-
-          return haystack.includes(search);
-        });
-      }
-
-      function renderAllOrders() {
-        const body = byId("allOrdersBody");
-        body.innerHTML = "";
-
-        const models = getFilteredOrderModels();
-
-        if (!models.length) {
-          body.innerHTML = `
-            <tr>
-              <td colspan="7">
-                <div class="emptyState">No matching orders for this filter.</div>
-              </td>
-            </tr>
-          `;
-          return;
+        if (capacityCategoryKey && categoryKey === capacityCategoryKey) {
+          capacityMap.set(name, (capacityMap.get(name) || 0) + qty);
+        } else {
+          otherMap.set(name, (otherMap.get(name) || 0) + qty);
         }
+      });
 
-        models.forEach((order) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td class="mono">${formatShortTime(order.created_at)}</td>
-            <td>${order.customer_name || "—"}</td>
-            <td>${Number(order.capacity_units_in_order || 0)}</td>
-            <td><span class="badgeStatus ${normaliseStatus(order.status)}">${normaliseStatus(order.status)}</span></td>
-            <td>${formatMoneyPence(order.total_price_pence)}</td>
-            <td class="tableItems">
-              ${renderItemsBlock(order.grouped.capacity, "None")}
+      const sortEntries = (map) => [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+      renderSummaryList("summaryCapacityList", sortEntries(capacityMap));
+      renderSummaryList("summaryOtherList", sortEntries(otherMap));
+    }
+
+    function renderItemsBlock(lines, emptyText) {
+      if (!lines.length) {
+        return `<div class="compactMuted">${emptyText}</div>`;
+      }
+      return `
+        <div class="itemsBlock">
+          ${lines.map((line) => `<div class="itemsLine">${line._item_name} ×${line._item_qty}</div>`).join("")}
+        </div>
+      `;
+    }
+
+    function getFilteredOrderModels() {
+      const models = buildOrderModels();
+      const search = state.tableSearch.trim().toLowerCase();
+
+      return models.filter((order) => {
+        const statusOk =
+          state.tableStatusFilter === "all" ||
+          normaliseStatus(order.status) === state.tableStatusFilter;
+
+        if (!statusOk) return false;
+
+        if (!search) return true;
+
+        const haystack = [
+          order.customer_name || "",
+          ...order.lines.map((l) => l._item_name || "")
+        ].join(" ").toLowerCase();
+
+        return haystack.includes(search);
+      });
+    }
+
+    function renderAllOrders() {
+      const body = byId("allOrdersBody");
+      body.innerHTML = "";
+
+      const models = getFilteredOrderModels();
+
+      if (!models.length) {
+        body.innerHTML = `
+          <tr>
+            <td colspan="7">
+              <div class="emptyState">No matching orders for this filter.</div>
             </td>
-            <td class="tableItems">
-              ${renderItemsBlock(order.grouped.extras, "None")}
-            </td>
-          `;
-          body.appendChild(tr);
-        });
+          </tr>
+        `;
+        return;
       }
 
-      function renderCompactBlock(title, lines) {
-        if (!lines.length) {
-          return `
-            <div class="lineBlock">
-              <div class="lineBlockTitle">${title}</div>
-              <div class="compactMuted">None</div>
-            </div>
-          `;
-        }
+      models.forEach((order) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="mono">${formatShortTime(order.created_at)}</td>
+          <td>${order.customer_name || "—"}</td>
+          <td>${Number(order.capacity_units_in_order || 0)}</td>
+          <td><span class="badgeStatus ${normaliseStatus(order.status)}">${normaliseStatus(order.status)}</span></td>
+          <td>${formatMoneyPence(order.total_price_pence)}</td>
+          <td class="tableItems">
+            ${renderItemsBlock(order.grouped.capacity, "None")}
+          </td>
+          <td class="tableItems">
+            ${renderItemsBlock(order.grouped.extras, "None")}
+          </td>
+        `;
+        body.appendChild(tr);
+      });
+    }
 
-        const html = lines.map((line) => `
-          <div class="compactLine">
-            <span>${line._item_name}</span>
-            <span>×${line._item_qty}</span>
-          </div>
-        `).join("");
-
+    function renderCompactBlock(title, lines) {
+      if (!lines.length) {
         return `
           <div class="lineBlock">
             <div class="lineBlockTitle">${title}</div>
-            <div class="compactList">${html}</div>
+            <div class="compactMuted">None</div>
           </div>
         `;
       }
 
-      function renderActionRow(orderId, status, unitsLabel) {
-        const prev = getPrevStatus(status);
-        const next = getNextStatus(status);
+      const html = lines.map((line) => `
+        <div class="compactLine">
+          <span>${line._item_name}</span>
+          <span>×${line._item_qty}</span>
+        </div>
+      `).join("");
 
-        return `
-          <div class="cardActions cardActionsInline">
-            ${prev
-              ? `<button class="btnGhost js-prev actionBtn actionBtnEdge" type="button" data-id="${orderId}" data-status="${prev}">${getBackLabel()}</button>`
-              : `<div class="btnPlaceholder actionBtn actionBtnEdge"></div>`
-            }
+      return `
+        <div class="lineBlock">
+          <div class="lineBlockTitle">${title}</div>
+          <div class="compactList">${html}</div>
+        </div>
+      `;
+    }
 
-            <span class="metaChip actionQty">${unitsLabel}</span>
+    function renderActionRow(orderId, status, unitsLabel) {
+      const prev = getPrevStatus(status);
+      const next = getNextStatus(status);
 
-            <button class="btnSmall js-toggle-details actionBtn actionBtnDetail" type="button" data-id="${orderId}">Details</button>
-
-            ${next
-              ? `<button class="btnAccent js-next actionBtn actionBtnEdge" type="button" data-id="${orderId}" data-status="${next}">${getActionLabelForNextStatus(next)}</button>`
-              : `<div class="btnPlaceholder actionBtn actionBtnEdge"></div>`
-            }
-          </div>
-        `;
-      }
-
-      function renderOrderCard(order) {
-        const isExpanded = state.expandedOrders.has(order.order_id);
-        const unitsLabel = getCapacityLabel(Number(order.capacity_units_in_order || 0));
-
-        const wrapper = document.createElement("div");
-        wrapper.className = "orderCard";
-        wrapper.innerHTML = `
-          <div class="orderCardInner">
-            <div class="orderCardTop">
-              <div class="orderHeaderLeft">
-                <div class="orderId">Order #${String(order.order_id).slice(0, 8)}</div>
-                <div class="orderCustomer">${order.customer_name || "Customer"}</div>
-              </div>
-              <div class="timeChip">${formatShortTime(order.created_at)}</div>
-            </div>
-
-            ${renderActionRow(order.order_id, normaliseStatus(order.status), unitsLabel)}
-
-            <div class="detailsWrap ${isExpanded ? "open" : ""}">
-              <div class="detailsScroller">
-                ${renderCompactBlock(String(state.dropSummary?.capacity_category || "Capacity items").toUpperCase(), order.grouped.capacity)}
-                ${renderCompactBlock("OTHER ITEMS", order.grouped.extras)}
-              </div>
-            </div>
-          </div>
-        `;
-        return wrapper;
-      }
-
-      function renderBoard() {
-        const cols = {
-          placed: byId("colPlaced"),
-          confirmed: byId("colConfirmed"),
-          baking: byId("colBaking"),
-          ready: byId("colReady"),
-          delivered: byId("colDelivered")
-        };
-
-        Object.values(cols).forEach((col) => {
-          col.innerHTML = "";
-        });
-
-        const models = buildOrderModels();
-
-        STATUS_ORDER.forEach((status) => {
-          const matches = models.filter((order) => normaliseStatus(order.status) === status);
-
-          if (!matches.length) {
-            cols[status].innerHTML = `<div class="emptyState">No ${status} orders.</div>`;
-            return;
+      return `
+        <div class="cardActions cardActionsInline">
+          ${prev
+            ? `<button class="btnGhost js-prev actionBtn actionBtnEdge" type="button" data-id="${orderId}" data-status="${prev}">${getBackLabel()}</button>`
+            : `<div class="btnPlaceholder actionBtn actionBtnEdge"></div>`
           }
 
-          matches.forEach((order) => {
-            cols[status].appendChild(renderOrderCard(order));
-          });
-        });
-      }
+          <span class="metaChip actionQty">${unitsLabel}</span>
 
-      function renderOrdersPanelState() {
-        const body = byId("ordersPanelBody");
-        const btn = byId("toggleOrdersPanel");
+          <button class="btnSmall js-toggle-details actionBtn actionBtnDetail" type="button" data-id="${orderId}">Details</button>
 
-        body.classList.toggle("hidden", !state.ordersPanelOpen);
-        btn.textContent = state.ordersPanelOpen ? "Hide" : "Show";
-      }
+          ${next
+            ? `<button class="btnAccent js-next actionBtn actionBtnEdge" type="button" data-id="${orderId}" data-status="${next}">${getActionLabelForNextStatus(next)}</button>`
+            : `<div class="btnPlaceholder actionBtn actionBtnEdge"></div>`
+          }
+        </div>
+      `;
+    }
 
-      function renderSummaryPanelState() {
-        const body = byId("summaryPanelBody");
-        const btn = byId("toggleSummaryPanel");
+    function renderOrderCard(order) {
+      const isExpanded = state.expandedOrders.has(order.order_id);
+      const unitsLabel = getCapacityLabel(Number(order.capacity_units_in_order || 0));
+      const capacityTitle = String(getCapacityCategoryLabel() || "Capacity items").toUpperCase();
 
-        body.style.display = state.summaryPanelOpen ? "block" : "none";
-        btn.textContent = state.summaryPanelOpen ? "Hide" : "Show";
-      }
+      const wrapper = document.createElement("div");
+      wrapper.className = "orderCard";
+      wrapper.innerHTML = `
+        <div class="orderCardInner">
+          <div class="orderCardTop">
+            <div class="orderHeaderLeft">
+              <div class="orderId">Order #${String(order.order_id).slice(0, 8)}</div>
+              <div class="orderCustomer">${order.customer_name || "Customer"}</div>
+            </div>
+            <div class="timeChip">${formatShortTime(order.created_at)}</div>
+          </div>
 
-      async function loadDrops() {
-        const { data, error } = await supabase
-          .from("v_drop_summary")
-          .select("*")
-          .order("delivery_start", { ascending: false });
+          ${renderActionRow(order.order_id, normaliseStatus(order.status), unitsLabel)}
 
-        if (error) throw error;
+          <div class="detailsWrap ${isExpanded ? "open" : ""}">
+            <div class="detailsScroller">
+              ${renderCompactBlock(capacityTitle, order.grouped.capacity)}
+              ${renderCompactBlock("OTHER ITEMS", order.grouped.extras)}
+            </div>
+          </div>
+        </div>
+      `;
+      return wrapper;
+    }
 
-        state.drops = data || [];
+    function renderBoard() {
+      const cols = {
+        placed: byId("colPlaced"),
+        confirmed: byId("colConfirmed"),
+        baking: byId("colBaking"),
+        ready: byId("colReady"),
+        delivered: byId("colDelivered")
+      };
 
-        const saved = localStorage.getItem("hearth:selectedDropId");
-        const savedExists = state.drops.some((d) => d.drop_id === saved);
+      Object.values(cols).forEach((col) => {
+        col.innerHTML = "";
+      });
 
-        state.selectedDropId = savedExists
-          ? saved
-          : ((state.drops.find((d) => d.status === "live") || state.drops[0] || {}).drop_id || null);
+      const models = buildOrderModels();
 
-        ensureSelectedDropStillValid();
-        renderDropSelect();
-      }
+      STATUS_ORDER.forEach((status) => {
+        const matches = models.filter((order) => normaliseStatus(order.status) === status);
 
-      async function loadExpandedOrderDetails(dropId) {
-        const expanded = await supabase
-          .from("v_order_item_detail_expanded")
-          .select("*")
-          .eq("drop_id", dropId)
-          .order("created_at", { ascending: true });
-
-        if (!expanded.error) return expanded.data || [];
-
-        const legacy = await supabase
-          .from("v_order_item_detail")
-          .select("*")
-          .eq("drop_id", dropId)
-          .order("created_at", { ascending: true });
-
-        if (legacy.error) throw legacy.error;
-        return legacy.data || [];
-      }
-
-      async function loadSelectedDropData() {
-        if (!state.selectedDropId) {
-          state.drop = null;
-          state.dropSummary = null;
-          state.ordersSummary = [];
-          state.itemDetails = [];
+        if (!matches.length) {
+          cols[status].innerHTML = `<div class="emptyState">No ${status} orders.</div>`;
           return;
         }
 
-        localStorage.setItem("hearth:selectedDropId", state.selectedDropId);
+        matches.forEach((order) => {
+          cols[status].appendChild(renderOrderCard(order));
+        });
+      });
+    }
 
-        const [dropRes, summaryRes, ordersRes, items] = await Promise.all([
-          supabase.from("drops").select("*").eq("id", state.selectedDropId).single(),
-          supabase.from("v_drop_summary").select("*").eq("drop_id", state.selectedDropId).single(),
-          supabase.from("v_drop_orders_summary").select("*").eq("drop_id", state.selectedDropId).order("created_at", { ascending: true }),
-          loadExpandedOrderDetails(state.selectedDropId)
-        ]);
+    function renderOrdersPanelState() {
+      const body = byId("ordersPanelBody");
+      const btn = byId("toggleOrdersPanel");
 
-        if (dropRes.error) throw dropRes.error;
-        if (summaryRes.error) throw summaryRes.error;
-        if (ordersRes.error) throw ordersRes.error;
+      body.classList.toggle("hidden", !state.ordersPanelOpen);
+      btn.textContent = state.ordersPanelOpen ? "Hide" : "Show";
+    }
 
-        state.drop = dropRes.data;
-        state.dropSummary = summaryRes.data;
-        state.ordersSummary = ordersRes.data || [];
-        state.itemDetails = items || [];
+    function renderSummaryPanelState() {
+      const body = byId("summaryPanelBody");
+      const btn = byId("toggleSummaryPanel");
+
+      body.style.display = state.summaryPanelOpen ? "block" : "none";
+      btn.textContent = state.summaryPanelOpen ? "Hide" : "Show";
+    }
+
+    async function loadDrops() {
+      const { data, error } = await supabase
+        .from("v_drop_summary")
+        .select("*")
+        .order("delivery_start", { ascending: false });
+
+      if (error) throw error;
+
+      state.drops = data || [];
+
+      const saved = localStorage.getItem("hearth:selectedDropId");
+      const savedExists = state.drops.some((d) => d.drop_id === saved);
+
+      state.selectedDropId = savedExists
+        ? saved
+        : ((state.drops.find((d) => d.status === "live") || state.drops[0] || {}).drop_id || null);
+
+      ensureSelectedDropStillValid();
+      renderDropSelect();
+    }
+
+    async function loadExpandedOrderDetails(dropId) {
+      const expanded = await supabase
+        .from("v_order_item_detail_expanded")
+        .select("*")
+        .eq("drop_id", dropId)
+        .order("created_at", { ascending: true });
+
+      if (!expanded.error) return expanded.data || [];
+
+      const legacy = await supabase
+        .from("v_order_item_detail")
+        .select("*")
+        .eq("drop_id", dropId)
+        .order("created_at", { ascending: true });
+
+      if (legacy.error) throw legacy.error;
+      return legacy.data || [];
+    }
+
+    async function loadSelectedDropData() {
+      if (!state.selectedDropId) {
+        state.drop = null;
+        state.dropSummary = null;
+        state.ordersSummary = [];
+        state.itemDetails = [];
+        return;
       }
 
-      async function writeStatusEvent(order, fromStatus, toStatus) {
-        const { error } = await supabase
-          .from("order_status_events")
-          .insert({
-            order_id: order.order_id,
-            drop_id: state.selectedDropId,
-            from_status: fromStatus,
-            to_status: toStatus,
-            event_type: "status_change",
-            actor: "service_board",
-            actor_type: "operator"
-          });
+      localStorage.setItem("hearth:selectedDropId", state.selectedDropId);
 
-        if (error) throw error;
+      const [dropRes, summaryRes, ordersRes, items] = await Promise.all([
+        supabase.from("drops").select("*").eq("id", state.selectedDropId).single(),
+        supabase.from("v_drop_summary").select("*").eq("drop_id", state.selectedDropId).single(),
+        supabase.from("v_drop_orders_summary").select("*").eq("drop_id", state.selectedDropId).order("created_at", { ascending: true }),
+        loadExpandedOrderDetails(state.selectedDropId)
+      ]);
+
+      if (dropRes.error) throw dropRes.error;
+      if (summaryRes.error) throw summaryRes.error;
+      if (ordersRes.error) throw ordersRes.error;
+
+      state.drop = dropRes.data;
+      state.dropSummary = summaryRes.data;
+      state.ordersSummary = ordersRes.data || [];
+      state.itemDetails = items || [];
+    }
+
+    async function writeStatusEvent(order, fromStatus, toStatus) {
+      const { error } = await supabase
+        .from("order_status_events")
+        .insert({
+          order_id: order.order_id,
+          drop_id: state.selectedDropId,
+          from_status: fromStatus,
+          to_status: toStatus,
+          event_type: "status_change",
+          actor: "service_board",
+          actor_type: "operator"
+        });
+
+      if (error) throw error;
+    }
+
+    async function updateOrderStatus(orderId, toStatus) {
+      showError("");
+
+      const order = state.ordersSummary.find((o) => o.order_id === orderId);
+      if (!order) throw new Error("Order not found in current state.");
+
+      const fromStatus = normaliseStatus(order.status);
+
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({ status: toStatus })
+        .eq("id", orderId);
+
+      if (updateError) throw updateError;
+
+      await writeStatusEvent(order, fromStatus, toStatus);
+      await refreshData();
+    }
+
+    function toggleDetails(orderId) {
+      if (state.expandedOrders.has(orderId)) {
+        state.expandedOrders.delete(orderId);
+      } else {
+        state.expandedOrders.add(orderId);
       }
+      renderBoard();
+    }
 
-      async function updateOrderStatus(orderId, toStatus) {
-        showError("");
+    function renderEverything() {
+      updateBoardStatusFilterSummary();
+      renderDropSelect();
+      renderHeader();
+      renderQueue();
+      renderWorkflowCounts();
+      renderConsolidatedView();
+      renderSummaryPanelState();
+      renderOrdersPanelState();
+      renderAllOrders();
+      renderBoard();
+    }
 
-        const order = state.ordersSummary.find((o) => o.order_id === orderId);
-        if (!order) throw new Error("Order not found in current state.");
+    async function refreshData() {
+      showError("");
+      ensureSelectedDropStillValid();
+      renderDropSelect();
+      await loadSelectedDropData();
+      renderEverything();
+    }
 
-        const fromStatus = normaliseStatus(order.status);
+    async function applyBoardFilters() {
+      state.expandedOrders.clear();
+      ensureSelectedDropStillValid();
+      await refreshData();
+    }
 
-        const { error: updateError } = await supabase
-          .from("orders")
-          .update({ status: toStatus })
-          .eq("id", orderId);
+    function attachEvents() {
+      const boardStatusFilterBtn = byId("boardStatusFilterBtn");
+      const boardStatusFilterPopover = byId("boardStatusFilterPopover");
 
-        if (updateError) throw updateError;
+      boardStatusFilterBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        boardStatusFilterPopover.classList.toggle("open");
+      });
 
-        await writeStatusEvent(order, fromStatus, toStatus);
-        await refreshData();
-      }
-
-      function toggleDetails(orderId) {
-        if (state.expandedOrders.has(orderId)) {
-          state.expandedOrders.delete(orderId);
-        } else {
-          state.expandedOrders.add(orderId);
+      document.addEventListener("click", function (e) {
+        if (
+          !boardStatusFilterPopover.contains(e.target) &&
+          e.target !== boardStatusFilterBtn &&
+          !boardStatusFilterBtn.contains(e.target)
+        ) {
+          boardStatusFilterPopover.classList.remove("open");
         }
-        renderBoard();
-      }
+      });
 
-      function renderEverything() {
-        updateBoardStatusFilterSummary();
-        renderDropSelect();
-        renderHeader();
-        renderQueue();
-        renderWorkflowCounts();
-        renderConsolidatedView();
-        renderSummaryPanelState();
-        renderOrdersPanelState();
-        renderAllOrders();
-        renderBoard();
-      }
+      byId("boardStatusFilterChecklist").addEventListener("change", async function () {
+        const selected = Array.from(
+          byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]:checked')
+        ).map((cb) => cb.value);
 
-      async function refreshData() {
-        showError("");
-        ensureSelectedDropStillValid();
-        renderDropSelect();
-        await loadSelectedDropData();
-        renderEverything();
-      }
+        state.boardStatusFilters = selected;
 
-      async function applyBoardFilters() {
-        state.expandedOrders.clear();
-        ensureSelectedDropStillValid();
-        await refreshData();
-      }
-
-      function attachEvents() {
-        const boardStatusFilterBtn = byId("boardStatusFilterBtn");
-        const boardStatusFilterPopover = byId("boardStatusFilterPopover");
-
-        boardStatusFilterBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          boardStatusFilterPopover.classList.toggle("open");
-        });
-
-        document.addEventListener("click", function (e) {
-          if (
-            !boardStatusFilterPopover.contains(e.target) &&
-            e.target !== boardStatusFilterBtn &&
-            !boardStatusFilterBtn.contains(e.target)
-          ) {
-            boardStatusFilterPopover.classList.remove("open");
-          }
-        });
-
-        byId("boardStatusFilterChecklist").addEventListener("change", async function () {
-          const selected = Array.from(
-            byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]:checked')
-          ).map((cb) => cb.value);
-
-          state.boardStatusFilters = selected;
-
-          try {
-            await applyBoardFilters();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to apply status filter.");
-          }
-        });
-
-        byId("boardStatusActiveBtn").addEventListener("click", async function () {
-          state.boardStatusFilters = [...ACTIVE_DEFAULT_STATUSES];
-          byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-            cb.checked = state.boardStatusFilters.includes(cb.value);
-          });
-
-          try {
-            await applyBoardFilters();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to apply status filter.");
-          }
-        });
-
-        byId("boardStatusAllBtn").addEventListener("click", async function () {
-          state.boardStatusFilters = [...ALL_DROP_STATUSES];
-          byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-            cb.checked = true;
-          });
-
-          try {
-            await applyBoardFilters();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to apply status filter.");
-          }
-        });
-
-        byId("boardStatusClearBtn").addEventListener("click", async function () {
-          state.boardStatusFilters = [];
-          byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-            cb.checked = false;
-          });
-
-          try {
-            await applyBoardFilters();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to apply status filter.");
-          }
-        });
-
-        byId("boardTypeFilter").addEventListener("change", async function (e) {
-          state.boardTypeFilter = e.target.value || "all";
-          try {
-            await applyBoardFilters();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to apply type filter.");
-          }
-        });
-
-        byId("dropSelect").addEventListener("change", async function (e) {
-          state.selectedDropId = e.target.value || null;
-          state.expandedOrders.clear();
-          try {
-            await refreshData();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to refresh selected drop.");
-          }
-        });
-
-        byId("refreshBtn").addEventListener("click", async function () {
-          try {
-            await loadDrops();
-            await refreshData();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to refresh Service Board.");
-          }
-        });
-
-        byId("toggleOrdersPanel").addEventListener("click", function () {
-          state.ordersPanelOpen = !state.ordersPanelOpen;
-          renderOrdersPanelState();
-        });
-
-        byId("toggleSummaryPanel").addEventListener("click", function () {
-          state.summaryPanelOpen = !state.summaryPanelOpen;
-          renderSummaryPanelState();
-        });
-
-        document.querySelectorAll(".filterChip").forEach((btn) => {
-          btn.addEventListener("click", function () {
-            state.tableStatusFilter = btn.dataset.statusFilter;
-            document.querySelectorAll(".filterChip").forEach((b) => {
-              b.classList.toggle("active", b === btn);
-            });
-            renderAllOrders();
-          });
-        });
-
-        byId("orderSearch").addEventListener("input", function (e) {
-          state.tableSearch = e.target.value || "";
-          renderAllOrders();
-        });
-
-        document.body.addEventListener("click", async function (e) {
-          const nextBtn = e.target.closest(".js-next");
-          const prevBtn = e.target.closest(".js-prev");
-          const toggleBtn = e.target.closest(".js-toggle-details");
-
-          if (toggleBtn) {
-            toggleDetails(toggleBtn.dataset.id);
-            return;
-          }
-
-          if (!nextBtn && !prevBtn) return;
-
-          try {
-            if (nextBtn) {
-              await updateOrderStatus(nextBtn.dataset.id, nextBtn.dataset.status);
-            } else if (prevBtn) {
-              await updateOrderStatus(prevBtn.dataset.id, prevBtn.dataset.status);
-            }
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Status update failed.");
-          }
-        });
-      }
-
-      async function init() {
         try {
-          if (!window.supabase || !window.supabase.createClient) {
-            throw new Error("Supabase library failed to load.");
-          }
+          await applyBoardFilters();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to apply status filter.");
+        }
+      });
 
-          if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-            throw new Error("Missing Supabase config. Check /assets/config.js and ensure window.HEARTH_CONFIG is set.");
-          }
+      byId("boardStatusActiveBtn").addEventListener("click", async function () {
+        state.boardStatusFilters = [...ACTIVE_DEFAULT_STATUSES];
+        byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+          cb.checked = state.boardStatusFilters.includes(cb.value);
+        });
 
-          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        try {
+          await applyBoardFilters();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to apply status filter.");
+        }
+      });
 
-          attachEvents();
+      byId("boardStatusAllBtn").addEventListener("click", async function () {
+        state.boardStatusFilters = [...ALL_DROP_STATUSES];
+        byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+          cb.checked = true;
+        });
+
+        try {
+          await applyBoardFilters();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to apply status filter.");
+        }
+      });
+
+      byId("boardStatusClearBtn").addEventListener("click", async function () {
+        state.boardStatusFilters = [];
+        byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+          cb.checked = false;
+        });
+
+        try {
+          await applyBoardFilters();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to apply status filter.");
+        }
+      });
+
+      byId("boardTypeFilter").addEventListener("change", async function (e) {
+        state.boardTypeFilter = e.target.value || "all";
+        try {
+          await applyBoardFilters();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to apply type filter.");
+        }
+      });
+
+      byId("dropSelect").addEventListener("change", async function (e) {
+        state.selectedDropId = e.target.value || null;
+        state.expandedOrders.clear();
+        try {
+          await refreshData();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to refresh selected drop.");
+        }
+      });
+
+      byId("refreshBtn").addEventListener("click", async function () {
+        try {
           await loadDrops();
           await refreshData();
         } catch (err) {
           console.error(err);
-          showError(err.message || "Unable to initialise Service Board.");
+          showError(err.message || "Unable to refresh Service Board.");
         }
-      }
+      });
 
-      init();
-    })();
-  </script>
+      byId("toggleOrdersPanel").addEventListener("click", function () {
+        state.ordersPanelOpen = !state.ordersPanelOpen;
+        renderOrdersPanelState();
+      });
+
+      byId("toggleSummaryPanel").addEventListener("click", function () {
+        state.summaryPanelOpen = !state.summaryPanelOpen;
+        renderSummaryPanelState();
+      });
+
+      document.querySelectorAll(".filterChip").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          state.tableStatusFilter = btn.dataset.statusFilter;
+          document.querySelectorAll(".filterChip").forEach((b) => {
+            b.classList.toggle("active", b === btn);
+          });
+          renderAllOrders();
+        });
+      });
+
+      byId("orderSearch").addEventListener("input", function (e) {
+        state.tableSearch = e.target.value || "";
+        renderAllOrders();
+      });
+
+      document.body.addEventListener("click", async function (e) {
+        const nextBtn = e.target.closest(".js-next");
+        const prevBtn = e.target.closest(".js-prev");
+        const toggleBtn = e.target.closest(".js-toggle-details");
+
+        if (toggleBtn) {
+          toggleDetails(toggleBtn.dataset.id);
+          return;
+        }
+
+        if (!nextBtn && !prevBtn) return;
+
+        try {
+          if (nextBtn) {
+            await updateOrderStatus(nextBtn.dataset.id, nextBtn.dataset.status);
+          } else if (prevBtn) {
+            await updateOrderStatus(prevBtn.dataset.id, prevBtn.dataset.status);
+          }
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Status update failed.");
+        }
+      });
+    }
+
+    async function init() {
+      try {
+        if (!window.supabase || !window.supabase.createClient) {
+          throw new Error("Supabase library failed to load.");
+        }
+
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+          throw new Error("Missing Supabase config. Check /assets/config.js and ensure window.HEARTH_CONFIG is set.");
+        }
+
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        attachEvents();
+        await loadDrops();
+        await refreshData();
+      } catch (err) {
+        console.error(err);
+        showError(err.message || "Unable to initialise Service Board.");
+      }
+    }
+
+    init();
+  })();
+</script>
 </body>
 </html>
