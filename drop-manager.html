@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Drop Studio</title>
 
-  <link rel="stylesheet" href="/assets/hearth.css?v=20" />
+  <link rel="stylesheet" href="/assets/hearth.css?v=21" />
   <script src="/assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -238,11 +238,9 @@
                     <div class="field">
                       <label for="capacityCategory">Capacity Category</label>
                       <select id="capacityCategory">
-                        <option value="pizza">Pizza</option>
-                        <option value="side">Side</option>
-                        <option value="drink">Drink</option>
-                        <option value="sauce">Sauce</option>
+                        <option value="">Loading categories…</option>
                       </select>
+                      <div class="helperText">Choose the category that defines operational capacity for this drop.</div>
                     </div>
 
                     <div class="field">
@@ -794,9 +792,80 @@
         return 8;
       }
 
+      function titleCase(value) {
+        const text = String(value || "");
+        return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
+      }
+
       function categoryNameFromId(categoryId) {
         const found = state.categories.find((c) => c.id === categoryId);
         return found?.name || "Uncategorised";
+      }
+
+      function getCategoryById(categoryId) {
+        return state.categories.find((c) => c.id === categoryId) || null;
+      }
+
+      function getCategoryBySlugOrName(value) {
+        const needle = String(value || "").trim().toLowerCase();
+        if (!needle) return null;
+        return state.categories.find((c) =>
+          String(c.slug || "").trim().toLowerCase() === needle ||
+          String(c.name || "").trim().toLowerCase() === needle
+        ) || null;
+      }
+
+      function getCapacityCategoryRecord(dropLike) {
+        if (!dropLike) return null;
+        if (dropLike.capacity_category_id) {
+          const byId = getCategoryById(dropLike.capacity_category_id);
+          if (byId) return byId;
+        }
+        return getCategoryBySlugOrName(dropLike.capacity_category);
+      }
+
+      function getCapacityCategoryLabel(dropLike) {
+        const category = getCapacityCategoryRecord(dropLike);
+        if (category?.name) return category.name;
+        return titleCase(dropLike?.capacity_category || "Units");
+      }
+
+      function getCapacityCategorySlugFromId(categoryId) {
+        const category = getCategoryById(categoryId);
+        if (!category) return null;
+        return category.slug || slugify(category.name || "");
+      }
+
+      function getDefaultCapacityCategory() {
+        return (
+          getCategoryBySlugOrName("pizza") ||
+          state.categories.find((c) => c.is_active) ||
+          state.categories[0] ||
+          null
+        );
+      }
+
+      function populateCapacityCategoryOptions(selectedCategoryId = null, fallbackCapacityCategory = null) {
+        const select = byId("capacityCategory");
+
+        if (!state.categories.length) {
+          select.innerHTML = `<option value="">No categories found</option>`;
+          return;
+        }
+
+        let selectedId = selectedCategoryId;
+        if (!selectedId && fallbackCapacityCategory) {
+          selectedId = getCategoryBySlugOrName(fallbackCapacityCategory)?.id || null;
+        }
+        if (!selectedId) {
+          selectedId = getDefaultCapacityCategory()?.id || null;
+        }
+
+        select.innerHTML = state.categories.map((category) => `
+          <option value="${category.id}" ${category.id === selectedId ? "selected" : ""}>
+            ${escapeHtml(category.name)}
+          </option>
+        `).join("");
       }
 
       function groupByCategory(items) {
@@ -811,11 +880,6 @@
 
       function getMenuItemKey(type, id) {
         return `${type}:${id}`;
-      }
-
-      function titleCase(value) {
-        const text = String(value || "");
-        return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
       }
 
       function getStageStatus(stage) {
@@ -882,6 +946,7 @@
 
         const host = state.hosts.find((h) => h.id === state.drop.host_id);
         const enabledCount = state.menuAssignments.filter((p) => p.enabled).length;
+        const capacityLabel = getCapacityCategoryLabel(state.drop);
 
         meta.textContent = [
           state.drop.drop_type || "drop",
@@ -890,7 +955,7 @@
         ].filter(Boolean).join(" • ");
 
         chips.innerHTML = [
-          `<span class="miniChip">${Number(state.drop.capacity_units_total || 0)} ${escapeHtml(state.drop.capacity_category || "units")}</span>`,
+          `<span class="miniChip">${Number(state.drop.capacity_units_total || 0)} ${escapeHtml(capacityLabel)}</span>`,
           `<span class="miniChip">${enabledCount} menu items</span>`,
           `<span class="miniChip">${Number(state.selectedDropSummary.order_count || 0)} orders</span>`
         ].join("");
@@ -973,6 +1038,7 @@
         const { data, error } = await supabase
           .from("categories")
           .select("*")
+          .eq("vendor_id", state.vendorId)
           .order("sort_order", { ascending: true, nullsFirst: false })
           .order("name", { ascending: true });
 
@@ -984,6 +1050,7 @@
         const { data, error } = await supabase
           .from("products")
           .select("*")
+          .eq("vendor_id", state.vendorId)
           .order("sort_order", { ascending: true, nullsFirst: false })
           .order("name", { ascending: true });
 
@@ -995,6 +1062,7 @@
         const { data, error } = await supabase
           .from("bundles")
           .select("*")
+          .eq("vendor_id", state.vendorId)
           .order("sort_order", { ascending: true, nullsFirst: false })
           .order("name", { ascending: true });
 
@@ -1209,7 +1277,7 @@
                 <div class="dropCardMeta">${escapeHtml(formatTimeOnly(drop.delivery_start))}–${escapeHtml(formatTimeOnly(drop.delivery_end))}</div>
 
                 <div class="dropCardStats">
-                  <span class="miniChip">${Number(drop.capacity_units_used || 0)} / ${Number(drop.capacity_units_total || 0)} ${escapeHtml(drop.capacity_category || "units")}</span>
+                  <span class="miniChip">${Number(drop.capacity_units_used || 0)} / ${Number(drop.capacity_units_total || 0)} ${escapeHtml(titleCase(drop.capacity_category || "units"))}</span>
                   <span class="miniChip">${Number(drop.order_count || 0)} orders</span>
                 </div>
               </div>
@@ -1272,7 +1340,7 @@
         byId("fulfilmentMode").value = d.fulfilment_mode || "";
         byId("centrePostcode").value = d.centre_postcode || "";
         byId("radiusKm").value = d.radius_km ?? "";
-        byId("capacityCategory").value = d.capacity_category || "pizza";
+        populateCapacityCategoryOptions(d.capacity_category_id, d.capacity_category);
         byId("capacityTotal").value = Number(d.capacity_units_total || 0);
 
         byId("deliveryDate").value = formatDateInput(d.delivery_start);
@@ -1539,6 +1607,7 @@
         const enabledItems = state.menuAssignments.filter((p) => p.enabled).length;
         const enabledBundles = state.menuAssignments.filter((p) => p.enabled && p.menu_item_type === "bundle").length;
         const enabledProducts = state.menuAssignments.filter((p) => p.enabled && p.menu_item_type === "product").length;
+        const capacityLabel = getCapacityCategoryLabel(state.drop);
 
         summary.innerHTML = [
           ["Drop", state.drop.name || "—"],
@@ -1547,7 +1616,7 @@
           ["Status", state.drop.status || "draft"],
           ["Order Window", state.drop.opens_at && state.drop.closes_at ? `${formatDateShort(state.drop.opens_at)} ${formatTimeOnly(state.drop.opens_at)} → ${formatDateShort(state.drop.closes_at)} ${formatTimeOnly(state.drop.closes_at)}` : (state.drop.closes_at ? `Open immediately → ${formatDateShort(state.drop.closes_at)} ${formatTimeOnly(state.drop.closes_at)}` : "Not set")],
           ["Fulfilment", state.drop.delivery_start && state.drop.delivery_end ? `${formatDateShort(state.drop.delivery_start)} ${formatTimeOnly(state.drop.delivery_start)}–${formatTimeOnly(state.drop.delivery_end)}` : "Not set"],
-          ["Capacity", `${Number(state.drop.capacity_units_total || 0)} ${state.drop.capacity_category || "units"}`],
+          ["Capacity", `${Number(state.drop.capacity_units_total || 0)} ${capacityLabel}`],
           ["Menu", `${enabledItems} enabled • ${enabledProducts} products • ${enabledBundles} bundles`]
         ].map(([label, value]) => `
           <div class="summaryItem">
@@ -1605,6 +1674,9 @@
           ? combineDateTime(byId("opensAtDate").value, byId("opensAtTime").value)
           : null;
 
+        const capacityCategoryId = byId("capacityCategory").value || null;
+        const capacityCategorySlug = getCapacityCategorySlugFromId(capacityCategoryId);
+
         return {
           ...existing,
           name: byId("dropName").value.trim(),
@@ -1617,7 +1689,8 @@
           fulfilment_mode: byId("fulfilmentMode").value || null,
           centre_postcode: byId("centrePostcode").value.trim() || null,
           radius_km: byId("radiusKm").value === "" ? null : Number(byId("radiusKm").value),
-          capacity_category: byId("capacityCategory").value,
+          capacity_category_id: capacityCategoryId,
+          capacity_category: capacityCategorySlug,
           capacity_units_total: Number(byId("capacityTotal").value || 0),
 
           delivery_start: combineDateTime(byId("deliveryDate").value, byId("deliveryStartTime").value),
@@ -1661,6 +1734,7 @@
           fulfilment_mode: dropData.fulfilment_mode,
           centre_postcode: dropData.centre_postcode,
           radius_km: dropData.radius_km,
+          capacity_category_id: dropData.capacity_category_id,
           capacity_category: dropData.capacity_category,
           capacity_units_total: dropData.capacity_units_total,
           opens_at: dropData.opens_at,
@@ -1717,6 +1791,7 @@
         byId("dropSlug").value = slugify(byId("dropSlug").value.trim());
         const dropData = readDropFromForm();
         if (!dropData.slug) throw new Error("Drop Link Name is required.");
+        if (!dropData.capacity_category_id || !dropData.capacity_category) throw new Error("Capacity Category is required.");
 
         setSaveState("saving");
 
@@ -1750,6 +1825,8 @@
         const closesAt = new Date(deliveryStart);
         closesAt.setHours(18, 0, 0, 0);
 
+        const defaultCapacityCategory = getDefaultCapacityCategory();
+
         const payload = {
           vendor_id: state.vendorId,
           name: "New Drop",
@@ -1759,8 +1836,9 @@
           fulfilment_mode: null,
           centre_postcode: null,
           radius_km: null,
+          capacity_category_id: defaultCapacityCategory?.id || null,
+          capacity_category: defaultCapacityCategory?.slug || "pizza",
           capacity_units_total: 40,
-          capacity_category: "pizza",
           opens_at: null,
           closes_at: closesAt.toISOString(),
           delivery_start: deliveryStart.toISOString(),
@@ -2081,7 +2159,7 @@
         });
 
         byId("statusAllBtn").addEventListener("click", () => {
-          state.statusFilters = ["live","scheduled","draft","closed","completed","cancelled","archived"];
+          state.statusFilters = ["live", "scheduled", "draft", "closed", "completed", "cancelled", "archived"];
           byId("statusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
             cb.checked = true;
           });
@@ -2146,13 +2224,13 @@
         });
 
         [
-          "dropType","dropStatus","hostSelect","notesInternal",
-          "fulfilmentMode","centrePostcode","radiusKm","capacityCategory","capacityTotal",
-          "deliveryStartTime","deliveryEndTime",
-          "opensAtDate","opensAtTime","closesAtDate","closesAtTime",
-          "fundraisingEnabled","fundraisingModel","fundraisingPercentage","fundraisingPerOrderPence","fundraisingDisplayText",
-          "hostShareEnabled","hostShareModel","hostSharePercentage","hostSharePerOrderPence","hostShareFixedPence","hostShareCustomerVisible",
-          "seriesStartDate","seriesEndMode","seriesEndDate","seriesDropCount"
+          "dropType", "dropStatus", "hostSelect", "notesInternal",
+          "fulfilmentMode", "centrePostcode", "radiusKm", "capacityCategory", "capacityTotal",
+          "deliveryStartTime", "deliveryEndTime",
+          "opensAtDate", "opensAtTime", "closesAtDate", "closesAtTime",
+          "fundraisingEnabled", "fundraisingModel", "fundraisingPercentage", "fundraisingPerOrderPence", "fundraisingDisplayText",
+          "hostShareEnabled", "hostShareModel", "hostSharePercentage", "hostSharePerOrderPence", "hostShareFixedPence", "hostShareCustomerVisible",
+          "seriesStartDate", "seriesEndMode", "seriesEndDate", "seriesDropCount"
         ].forEach((id) => {
           const el = byId(id);
           if (!el) return;
