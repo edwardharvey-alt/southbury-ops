@@ -606,6 +606,7 @@
       const STAGES = ["basics", "timing", "menu", "commercials", "review"];
       const ACTIVE_DEFAULT_STATUSES = ["live", "scheduled", "draft"];
       const DEFAULT_TYPE_FILTERS = ["neighbourhood", "community", "event"];
+      const LOCAL_TIMING_KEY_PREFIX = "hearth:dropStudioTiming:";
 
       let supabase = null;
       let successTimer = null;
@@ -752,11 +753,59 @@
         return date.toISOString();
       }
 
+      function timeMinusMinutes(timeStr, minutes) {
+        if (!timeStr) return "";
+        const [h, m] = String(timeStr).split(":").map(Number);
+        if (Number.isNaN(h) || Number.isNaN(m)) return "";
+        const total = (h * 60 + m - minutes + 1440) % 1440;
+        const hh = String(Math.floor(total / 60)).padStart(2, "0");
+        const mm = String(total % 60).padStart(2, "0");
+        return `${hh}:${mm}`;
+      }
+
+      function daysBefore(dateStr, days) {
+        if (!dateStr) return "";
+        const d = new Date(`${dateStr}T12:00:00`);
+        if (Number.isNaN(d.getTime())) return "";
+        d.setDate(d.getDate() - days);
+        return formatDateInput(d.toISOString());
+      }
+
       function getDayOfWeekFromDateInput(value) {
         if (!value) return "4";
         const d = new Date(`${value}T12:00:00`);
         if (Number.isNaN(d.getTime())) return "4";
         return String(d.getDay());
+      }
+
+      function getTimingStorageKey(dropId) {
+        return `${LOCAL_TIMING_KEY_PREFIX}${dropId}`;
+      }
+
+      function loadLocalTimingDraft(dropId) {
+        if (!dropId) return null;
+        try {
+          const raw = localStorage.getItem(getTimingStorageKey(dropId));
+          return raw ? JSON.parse(raw) : null;
+        } catch {
+          return null;
+        }
+      }
+
+      function saveLocalTimingDraft() {
+        if (!state.selectedDropId) return;
+        const payload = {
+          repeatPattern: getRepeatPattern(),
+          openPattern: getOpenPattern(),
+          seriesRows: state.seriesRows,
+          seriesStartDate: byId("seriesStartDate")?.value || "",
+          seriesEndMode: byId("seriesEndMode")?.value || "end_date",
+          seriesEndDate: byId("seriesEndDate")?.value || "",
+          seriesDropCount: byId("seriesDropCount")?.value || "8"
+        };
+        try {
+          localStorage.setItem(getTimingStorageKey(state.selectedDropId), JSON.stringify(payload));
+        } catch {}
       }
 
       function getSharePath() {
@@ -1097,6 +1146,7 @@
           state.dropMenuItems = [];
           state.dropMenuItemStock = [];
           state.menuAssignments = [];
+          state.seriesRows = [];
           return;
         }
 
@@ -1120,6 +1170,22 @@
         state.dropMenuItems = dropMenuItemsRes.data || [];
         state.dropMenuItemStock = stockRes.data || [];
         state.menuAssignments = buildMenuAssignments();
+
+        const localTiming = loadLocalTimingDraft(state.selectedDropId);
+        if (localTiming?.seriesRows?.length) {
+          state.seriesRows = localTiming.seriesRows;
+        } else {
+          state.seriesRows = [
+            {
+              id: uidSuffix(),
+              day_of_week: getDayOfWeekFromDateInput(formatDateInput(state.drop.delivery_start)),
+              fulfilment_start: formatTimeInput(state.drop.delivery_start) || "19:00",
+              fulfilment_end: formatTimeInput(state.drop.delivery_end) || "20:00",
+              order_close_time: formatTimeInput(state.drop.closes_at) || "18:00"
+            }
+          ];
+        }
+
         manualSlugEdited = false;
         setSaveState("saved");
       }
@@ -1327,6 +1393,38 @@
         else helper.textContent = "Optional for neighbourhood drops.";
       }
 
+      function applyTimingDefaults(fromDeliveryChange = false) {
+        const deliveryDate = byId("deliveryDate").value;
+        const deliveryStartTime = byId("deliveryStartTime").value;
+        const deliveryEndTime = byId("deliveryEndTime").value;
+
+        const closesAtDate = byId("closesAtDate");
+        const closesAtTime = byId("closesAtTime");
+        const opensAtDate = byId("opensAtDate");
+        const opensAtTime = byId("opensAtTime");
+
+        if (deliveryDate && (!closesAtDate.value || fromDeliveryChange)) {
+          closesAtDate.value = deliveryDate;
+        }
+
+        if (deliveryStartTime && (!closesAtTime.value || fromDeliveryChange)) {
+          closesAtTime.value = timeMinusMinutes(deliveryStartTime, 60);
+        }
+
+        if (!deliveryEndTime && deliveryStartTime) {
+          byId("deliveryEndTime").value = timeMinusMinutes(deliveryStartTime, -60);
+        }
+
+        if (deliveryDate && deliveryStartTime && getOpenPattern() === "scheduled") {
+          if (!opensAtDate.value || fromDeliveryChange) {
+            opensAtDate.value = daysBefore(deliveryDate, 7) || deliveryDate;
+          }
+          if (!opensAtTime.value) {
+            opensAtTime.value = "18:00";
+          }
+        }
+      }
+
       function populateForm() {
         const d = state.drop;
         if (!d) return;
@@ -1370,10 +1468,32 @@
         byId("hostShareFixedPence").value = d.host_share_fixed_pence ?? "";
         byId("hostShareCustomerVisible").value = String(Boolean(d.host_share_customer_visible));
 
+        const localTiming = loadLocalTimingDraft(state.selectedDropId);
+        if (localTiming) {
+          document.querySelectorAll('input[name="repeatPattern"]').forEach((radio) => {
+            radio.checked = radio.value === (localTiming.repeatPattern || "one_off");
+          });
+
+          document.querySelectorAll('input[name="openPattern"]').forEach((radio) => {
+            radio.checked = radio.value === (localTiming.openPattern || (d.opens_at ? "scheduled" : "immediate"));
+          });
+
+          byId("seriesStartDate").value = localTiming.seriesStartDate || "";
+          byId("seriesEndMode").value = localTiming.seriesEndMode || "end_date";
+          byId("seriesEndDate").value = localTiming.seriesEndDate || "";
+          byId("seriesDropCount").value = localTiming.seriesDropCount || "8";
+        } else {
+          byId("seriesStartDate").value = formatDateInput(d.delivery_start) || "";
+          byId("seriesEndMode").value = "end_date";
+          byId("seriesEndDate").value = "";
+          byId("seriesDropCount").value = "8";
+        }
+
         renderConditionalFields();
         renderHostOptions();
         renderHostPreview();
         renderHostHelper();
+        applyTimingDefaults(false);
       }
 
       function renderAssignments() {
@@ -1414,8 +1534,8 @@
                   <td style="width:85px;">${titleCase(row.menu_item_type)}</td>
                   <td style="width:110px;">${escapeHtml(row.category_name || "Uncategorised")}</td>
                   <td style="width:95px;">${formatMoneyPence(row.base_price_pence)}</td>
-                  <td style="width:110px;"><input class="js-assign-override" type="number" min="0" step="1" value="${row.price_override_pence ?? ""}" placeholder="—" /></td>
-                  <td style="width:100px;"><input class="js-assign-stock-limit" type="number" min="0" step="1" value="${row.stock_limit ?? ""}" placeholder="∞" /></td>
+                  <td style="width:110px;"><input class="js-assign-override" type="number" min="0" step="1" value="${row.price_override_pence ?? ""}" placeholder="—" ${row.enabled ? "" : "disabled"} /></td>
+                  <td style="width:100px;"><input class="js-assign-stock-limit" type="number" min="0" step="1" value="${row.stock_limit ?? ""}" placeholder="∞" ${row.enabled ? "" : "disabled"} /></td>
                   <td style="width:80px;">${row.stock_remaining == null ? "—" : row.stock_remaining}</td>
                   <td style="width:150px;"><span class="capacityTag ${Number(row.capacity_units || 0) > 0 ? "yes" : "no"}">${escapeHtml(capacityText)}</span></td>
                 </tr>
@@ -1487,9 +1607,9 @@
             {
               id: uidSuffix(),
               day_of_week: getDayOfWeekFromDateInput(byId("deliveryDate")?.value),
-              fulfilment_start: "19:00",
-              fulfilment_end: "20:00",
-              order_close_time: "18:00"
+              fulfilment_start: byId("deliveryStartTime")?.value || "19:00",
+              fulfilment_end: byId("deliveryEndTime")?.value || "20:00",
+              order_close_time: byId("closesAtTime")?.value || "18:00"
             }
           ];
         }
@@ -1617,7 +1737,8 @@
           ["Order Window", state.drop.opens_at && state.drop.closes_at ? `${formatDateShort(state.drop.opens_at)} ${formatTimeOnly(state.drop.opens_at)} → ${formatDateShort(state.drop.closes_at)} ${formatTimeOnly(state.drop.closes_at)}` : (state.drop.closes_at ? `Open immediately → ${formatDateShort(state.drop.closes_at)} ${formatTimeOnly(state.drop.closes_at)}` : "Not set")],
           ["Fulfilment", state.drop.delivery_start && state.drop.delivery_end ? `${formatDateShort(state.drop.delivery_start)} ${formatTimeOnly(state.drop.delivery_start)}–${formatTimeOnly(state.drop.delivery_end)}` : "Not set"],
           ["Capacity", `${Number(state.drop.capacity_units_total || 0)} ${capacityLabel}`],
-          ["Menu", `${enabledItems} enabled • ${enabledProducts} products • ${enabledBundles} bundles`]
+          ["Menu", `${enabledItems} enabled • ${enabledProducts} products • ${enabledBundles} bundles`],
+          ["Pattern", getRepeatPattern() === "recurring" ? "Recurring (editor preview)" : "One-off"]
         ].map(([label, value]) => `
           <div class="summaryItem">
             <span class="label">${escapeHtml(label)}</span>
@@ -1805,6 +1926,7 @@
 
           state.drop = { ...state.drop, ...dropData };
           await saveAssignments();
+          saveLocalTimingDraft();
           await loadDrops();
           await loadSelectedDrop();
           renderEverything();
@@ -1913,6 +2035,22 @@
           if (insertAssignmentsError) throw insertAssignmentsError;
         }
 
+        const sourceTiming = loadLocalTimingDraft(targetId);
+        if (sourceTiming) {
+          try {
+            localStorage.setItem(
+              getTimingStorageKey(insertedDrop.id),
+              JSON.stringify({
+                ...sourceTiming,
+                seriesRows: (sourceTiming.seriesRows || []).map((row) => ({
+                  ...row,
+                  id: uidSuffix()
+                }))
+              })
+            );
+          } catch {}
+        }
+
         state.selectedDropId = insertedDrop.id;
         state.currentStage = "basics";
         await refreshAll();
@@ -1970,6 +2108,15 @@
 
         if (state.seriesRows.length === 1) {
           state.seriesRows[0].day_of_week = getDayOfWeekFromDateInput(deliveryDate);
+          if (!state.seriesRows[0].fulfilment_start && byId("deliveryStartTime").value) {
+            state.seriesRows[0].fulfilment_start = byId("deliveryStartTime").value;
+          }
+          if (!state.seriesRows[0].fulfilment_end && byId("deliveryEndTime").value) {
+            state.seriesRows[0].fulfilment_end = byId("deliveryEndTime").value;
+          }
+          if (!state.seriesRows[0].order_close_time && byId("closesAtTime").value) {
+            state.seriesRows[0].order_close_time = byId("closesAtTime").value;
+          }
           renderScheduleRows();
         }
       }
@@ -1982,6 +2129,7 @@
         renderHostHelper();
         renderContextBar();
         renderReview();
+        saveLocalTimingDraft();
       }
 
       function openStage(stage) {
@@ -2006,11 +2154,17 @@
         if (!assignment) return;
 
         assignment.enabled = tr.querySelector(".js-assign-enabled").checked;
-        const overrideValue = tr.querySelector(".js-assign-override").value;
-        const stockLimitValue = tr.querySelector(".js-assign-stock-limit").value;
 
-        assignment.price_override_pence = overrideValue === "" ? null : Number(overrideValue);
-        assignment.stock_limit = stockLimitValue === "" ? null : Number(stockLimitValue);
+        if (!assignment.enabled) {
+          assignment.price_override_pence = null;
+          assignment.stock_limit = null;
+        } else {
+          const overrideValue = tr.querySelector(".js-assign-override").value;
+          const stockLimitValue = tr.querySelector(".js-assign-stock-limit").value;
+
+          assignment.price_override_pence = overrideValue === "" ? null : Number(overrideValue);
+          assignment.stock_limit = stockLimitValue === "" ? null : Number(stockLimitValue);
+        }
 
         markDirty();
         renderAssignments();
@@ -2226,7 +2380,6 @@
         [
           "dropType", "dropStatus", "hostSelect", "notesInternal",
           "fulfilmentMode", "centrePostcode", "radiusKm", "capacityCategory", "capacityTotal",
-          "deliveryStartTime", "deliveryEndTime",
           "opensAtDate", "opensAtTime", "closesAtDate", "closesAtTime",
           "fundraisingEnabled", "fundraisingModel", "fundraisingPercentage", "fundraisingPerOrderPence", "fundraisingDisplayText",
           "hostShareEnabled", "hostShareModel", "hostSharePercentage", "hostSharePerOrderPence", "hostShareFixedPence", "hostShareCustomerVisible",
@@ -2249,14 +2402,31 @@
         byId("deliveryDate").addEventListener("change", () => {
           ensureRecurringStartDateFromDropDate();
           ensureSeriesDayMatchesDropDateIfDefault();
+          applyTimingDefaults(true);
           renderConditionalFields();
+          renderScheduleRows();
+          renderSeriesPreview();
+          markDirty();
+        });
+
+        byId("deliveryStartTime").addEventListener("change", () => {
+          applyTimingDefaults(true);
+          renderScheduleRows();
+          renderSeriesPreview();
+          markDirty();
+        });
+
+        byId("deliveryEndTime").addEventListener("change", () => {
+          renderScheduleRows();
           renderSeriesPreview();
           markDirty();
         });
 
         document.querySelectorAll('input[name="openPattern"]').forEach((radio) => {
           radio.addEventListener("change", () => {
+            applyTimingDefaults(false);
             renderConditionalFields();
+            renderSeriesPreview();
             markDirty();
           });
         });
@@ -2284,6 +2454,7 @@
             ensureRecurringStartDateFromDropDate();
             ensureSeriesDayMatchesDropDateIfDefault();
             renderConditionalFields();
+            renderScheduleRows();
             renderSeriesPreview();
             markDirty();
           });
@@ -2293,9 +2464,9 @@
           state.seriesRows.push({
             id: uidSuffix(),
             day_of_week: getDayOfWeekFromDateInput(byId("deliveryDate")?.value),
-            fulfilment_start: "19:00",
-            fulfilment_end: "20:00",
-            order_close_time: "18:00"
+            fulfilment_start: byId("deliveryStartTime")?.value || "19:00",
+            fulfilment_end: byId("deliveryEndTime")?.value || "20:00",
+            order_close_time: byId("closesAtTime")?.value || "18:00"
           });
           renderScheduleRows();
           renderSeriesPreview();
@@ -2319,6 +2490,9 @@
           if (!btn) return;
           const tr = btn.closest("tr[data-row-id]");
           state.seriesRows = state.seriesRows.filter((r) => r.id !== tr.dataset.rowId);
+          if (!state.seriesRows.length && getRepeatPattern() === "recurring") {
+            ensureScheduleRows();
+          }
           renderScheduleRows();
           renderSeriesPreview();
           markDirty();
