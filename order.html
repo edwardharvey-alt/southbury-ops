@@ -1,0 +1,2485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hearth — Order</title>
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=26" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --order-brand-primary: var(--h-accent, #f97316);
+      --order-brand-secondary: var(--h-accent-2, #fb923c);
+      --order-brand-ink: var(--h-accent-ink, #7c2d12);
+      --order-brand-soft: rgba(249,115,22,0.10);
+      --order-brand-soft-2: rgba(249,115,22,0.06);
+      --order-hero-overlay: linear-gradient(180deg, rgba(15,23,42,0.18), rgba(15,23,42,0.38));
+    }
+
+    body.orderBody{
+      background:
+        radial-gradient(1200px 600px at 20% -10%, var(--order-brand-soft), rgba(249,115,22,0) 60%),
+        radial-gradient(900px 450px at 90% 0%, var(--order-brand-soft-2), rgba(251,146,60,0) 55%),
+        var(--h-bg);
+    }
+
+    .orderPage{
+      max-width: 860px;
+      margin: 0 auto 120px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .orderTopBar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 4px 0;
+    }
+
+    .orderTopBarLeft{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+
+    .vendorLogoMini{
+      width:38px;
+      height:38px;
+      border-radius:12px;
+      object-fit:cover;
+      background:#fff;
+      border:1px solid var(--h-border-2);
+      display:block;
+    }
+
+    .vendorIdentityMini{
+      min-width:0;
+    }
+
+    .vendorIdentityMini .eyebrow{
+      font-size:11px;
+      font-weight:800;
+      color:var(--h-muted);
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      line-height:1.1;
+    }
+
+    .vendorIdentityMini .name{
+      font-size:14px;
+      font-weight:900;
+      line-height:1.15;
+      margin-top:3px;
+      color:var(--h-text);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .heroOrderCard{
+      overflow:hidden;
+      position:relative;
+      padding:0;
+    }
+
+    .heroMedia{
+      position:relative;
+      min-height:240px;
+      background:
+        var(--order-hero-overlay),
+        linear-gradient(135deg, rgba(15,23,42,0.18), rgba(15,23,42,0.34)),
+        linear-gradient(135deg, var(--order-brand-primary), var(--order-brand-secondary));
+      color:#fff;
+    }
+
+    .heroMedia.hasImage{
+      background-size:cover;
+      background-position:center;
+    }
+
+    .heroInner{
+      position:relative;
+      z-index:2;
+      padding:18px 18px 16px;
+      min-height:240px;
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-end;
+      gap:12px;
+    }
+
+    .heroBrandRow{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .heroLogo{
+      width:58px;
+      height:58px;
+      border-radius:16px;
+      object-fit:cover;
+      background:#fff;
+      border:1px solid rgba(255,255,255,0.18);
+      box-shadow:0 8px 18px rgba(0,0,0,0.12);
+      display:block;
+    }
+
+    .heroVendorName{
+      font-size:26px;
+      line-height:1.02;
+      font-weight:950;
+      letter-spacing:-0.03em;
+      margin:0;
+    }
+
+    .heroTagline{
+      font-size:13px;
+      line-height:1.35;
+      color:rgba(255,255,255,0.88);
+      margin:4px 0 0;
+      max-width:560px;
+    }
+
+    .heroDropMeta{
+      display:grid;
+      gap:6px;
+    }
+
+    .heroDropTitle{
+      font-size:18px;
+      line-height:1.15;
+      font-weight:900;
+      margin:0;
+    }
+
+    .heroDropSub{
+      font-size:13px;
+      line-height:1.35;
+      color:rgba(255,255,255,0.88);
+      margin:0;
+    }
+
+    .heroChips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+
+    .heroChip{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      min-height:34px;
+      padding:0 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.14);
+      border:1px solid rgba(255,255,255,0.16);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      color:#fff;
+      font-size:12px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+
+    .heroChip.urgent{
+      background:rgba(255,255,255,0.20);
+      border-color:rgba(255,255,255,0.28);
+    }
+
+    .heroChip.low{
+      background:rgba(127, 29, 29, 0.24);
+      border-color:rgba(254, 202, 202, 0.28);
+    }
+
+    .heroBodyCard{
+      padding:14px 16px;
+      display:grid;
+      gap:12px;
+    }
+
+    .heroInfoGrid{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:10px;
+    }
+
+    .heroInfoTile{
+      border:1px solid var(--h-border-2);
+      border-radius:14px;
+      background:rgba(15,23,42,0.02);
+      padding:11px 12px;
+      min-width:0;
+    }
+
+    .heroInfoTile .label{
+      display:block;
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      color:var(--h-muted);
+      font-weight:800;
+      margin-bottom:6px;
+    }
+
+    .heroInfoTile .value{
+      display:block;
+      font-size:14px;
+      line-height:1.25;
+      font-weight:900;
+      color:var(--h-text);
+      word-break:break-word;
+    }
+
+    .sectionCard{
+      padding:14px 16px;
+      display:grid;
+      gap:12px;
+    }
+
+    .sectionCardHead{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .menuCategoryBlock{
+      display:grid;
+      gap:10px;
+    }
+
+    .menuCategoryHead{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-top:4px;
+    }
+
+    .menuCategoryTitle{
+      margin:0;
+      font-size:14px;
+      font-weight:950;
+      letter-spacing:-0.02em;
+      color:var(--h-text);
+    }
+
+    .menuCategorySub{
+      font-size:11px;
+      color:var(--h-muted);
+      font-weight:700;
+      white-space:nowrap;
+    }
+
+    .menuCardGrid{
+      display:grid;
+      gap:10px;
+    }
+
+    .menuItemCard{
+      border:1px solid var(--h-border-2);
+      border-radius:16px;
+      background:#fff;
+      padding:12px;
+      display:grid;
+      gap:10px;
+      box-shadow:0 1px 2px rgba(15,23,42,0.03);
+    }
+
+    .menuItemTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .menuItemName{
+      font-size:16px;
+      line-height:1.18;
+      font-weight:900;
+      margin:0;
+      color:var(--h-text);
+    }
+
+    .menuItemDesc{
+      margin:5px 0 0;
+      font-size:12px;
+      line-height:1.4;
+      color:var(--h-muted);
+    }
+
+    .menuItemMeta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-top:7px;
+    }
+
+    .menuPrice{
+      min-width:max-content;
+      font-size:18px;
+      line-height:1;
+      font-weight:950;
+      color:var(--h-text);
+      text-align:right;
+    }
+
+    .menuControls{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .stepper{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      border:1px solid var(--h-border);
+      border-radius:999px;
+      padding:4px;
+      background:#fff;
+      min-height:42px;
+    }
+
+    .stepper button{
+      width:32px;
+      height:32px;
+      min-width:32px;
+      border-radius:999px;
+      border:1px solid var(--h-border);
+      background:#fff;
+      color:var(--h-text);
+      font-size:16px;
+      font-weight:900;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .stepperValue{
+      min-width:28px;
+      text-align:center;
+      font-size:14px;
+      font-weight:900;
+      color:var(--h-text);
+    }
+
+    .brandBtn{
+      min-height:42px;
+      height:42px;
+      padding:0 14px;
+      border-radius:12px;
+      border:1px solid transparent;
+      background:linear-gradient(135deg, var(--order-brand-primary), var(--order-brand-secondary));
+      color:#fff;
+      font-family:var(--sans);
+      font-size:13px;
+      font-weight:900;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      box-shadow:0 10px 18px color-mix(in srgb, var(--order-brand-primary) 24%, transparent);
+    }
+
+    .brandBtn.secondary{
+      background:rgba(15,23,42,0.02);
+      border-color:var(--h-border);
+      color:var(--h-text);
+      box-shadow:none;
+    }
+
+    .brandBtn:disabled{
+      cursor:not-allowed;
+      opacity:.5;
+      box-shadow:none;
+    }
+
+    .basketBar{
+      position:fixed;
+      left:0;
+      right:0;
+      bottom:0;
+      z-index:70;
+      padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+      background:linear-gradient(to top, rgba(247,247,251,0.98), rgba(247,247,251,0.92));
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-top:1px solid rgba(15,23,42,0.08);
+      display:none;
+    }
+
+    .basketBar.show{
+      display:block;
+    }
+
+    .basketBarInner{
+      max-width:860px;
+      margin:0 auto;
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+
+    .basketSummaryBtn{
+      flex:1;
+      min-height:54px;
+      border-radius:16px;
+      border:1px solid rgba(15,23,42,0.08);
+      background:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      padding:0 14px;
+      font-family:var(--sans);
+      cursor:pointer;
+      box-shadow:0 10px 24px rgba(15,23,42,0.08);
+    }
+
+    .basketSummaryLeft{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-start;
+      min-width:0;
+    }
+
+    .basketSummaryTop{
+      font-size:13px;
+      font-weight:900;
+      color:var(--h-text);
+      line-height:1.15;
+    }
+
+    .basketSummarySub{
+      margin-top:4px;
+      font-size:11px;
+      color:var(--h-muted);
+      font-weight:700;
+      line-height:1.2;
+      text-align:left;
+    }
+
+    .basketSummaryPrice{
+      font-size:18px;
+      font-weight:950;
+      color:var(--h-text);
+      white-space:nowrap;
+    }
+
+    .basketBackdrop{
+      position:fixed;
+      inset:0;
+      z-index:80;
+      background:rgba(15,23,42,0.46);
+      display:none;
+      align-items:flex-end;
+      justify-content:center;
+      padding:0;
+    }
+
+    .basketBackdrop.open{
+      display:flex;
+    }
+
+    .basketSheet{
+      width:min(860px, 100%);
+      max-height:88vh;
+      overflow:auto;
+      background:#fff;
+      border-radius:22px 22px 0 0;
+      box-shadow:0 -8px 24px rgba(15,23,42,0.18);
+      padding:12px 14px calc(22px + env(safe-area-inset-bottom));
+      display:grid;
+      gap:14px;
+    }
+
+    .sheetHandle{
+      width:54px;
+      height:6px;
+      border-radius:999px;
+      background:rgba(15,23,42,0.16);
+      margin:4px auto 2px;
+    }
+
+    .basketHead{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .basketList{
+      display:grid;
+      gap:10px;
+    }
+
+    .basketItem{
+      border:1px solid var(--h-border-2);
+      border-radius:16px;
+      background:rgba(15,23,42,0.02);
+      padding:12px;
+      display:grid;
+      gap:10px;
+    }
+
+    .basketItemTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .basketItemName{
+      font-size:14px;
+      font-weight:900;
+      line-height:1.18;
+      color:var(--h-text);
+      margin:0;
+    }
+
+    .basketItemSub{
+      margin-top:4px;
+      font-size:11px;
+      color:var(--h-muted);
+      font-weight:700;
+      line-height:1.35;
+    }
+
+    .basketSelectionList{
+      display:grid;
+      gap:4px;
+      margin-top:2px;
+    }
+
+    .basketSelectionLine{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size:12px;
+      color:var(--h-text);
+      line-height:1.3;
+    }
+
+    .basketTotals{
+      border:1px solid var(--h-border-2);
+      border-radius:16px;
+      background:#fff;
+      padding:12px;
+      display:grid;
+      gap:8px;
+    }
+
+    .basketTotalLine{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      font-size:13px;
+      line-height:1.25;
+    }
+
+    .basketTotalLine strong{
+      font-size:16px;
+      font-weight:950;
+    }
+
+    .checkoutBlock{
+      display:grid;
+      gap:10px;
+    }
+
+    .checkoutGrid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+
+    .checkoutGrid .field{
+      min-width:0;
+    }
+
+    .checkoutChoice{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .choiceCard{
+      flex:1;
+      min-width:140px;
+      border:1px solid var(--h-border);
+      border-radius:14px;
+      background:#fff;
+      padding:10px 12px;
+      display:flex;
+      gap:8px;
+      align-items:flex-start;
+      cursor:pointer;
+    }
+
+    .choiceCard.active{
+      border-color: color-mix(in srgb, var(--order-brand-primary) 35%, white);
+      background: color-mix(in srgb, var(--order-brand-primary) 9%, white);
+      box-shadow:0 6px 14px color-mix(in srgb, var(--order-brand-primary) 12%, transparent);
+    }
+
+    .choiceCard input{
+      width:16px;
+      height:16px;
+      margin:2px 0 0;
+      accent-color: var(--order-brand-primary);
+      flex:0 0 auto;
+    }
+
+    .choiceCardTitle{
+      font-size:13px;
+      font-weight:900;
+      color:var(--h-text);
+      line-height:1.15;
+    }
+
+    .choiceCardSub{
+      font-size:11px;
+      color:var(--h-muted);
+      font-weight:700;
+      line-height:1.3;
+      margin-top:3px;
+    }
+
+    .checkoutFooter{
+      position:sticky;
+      bottom:0;
+      background:linear-gradient(to top, #fff 75%, rgba(255,255,255,0));
+      padding-top:10px;
+    }
+
+    .payButton{
+      width:100%;
+      min-height:54px;
+      border-radius:16px;
+      border:1px solid transparent;
+      background:linear-gradient(135deg, var(--order-brand-primary), var(--order-brand-secondary));
+      color:#fff;
+      font-family:var(--sans);
+      font-size:16px;
+      font-weight:950;
+      cursor:pointer;
+      box-shadow:0 12px 22px color-mix(in srgb, var(--order-brand-primary) 26%, transparent);
+    }
+
+    .payHelper{
+      margin-top:8px;
+      text-align:center;
+      font-size:11px;
+      line-height:1.35;
+      color:var(--h-muted);
+      font-weight:700;
+    }
+
+    .bundleModalBackdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,0.46);
+      z-index:95;
+      display:none;
+      align-items:flex-end;
+      justify-content:center;
+    }
+
+    .bundleModalBackdrop.open{
+      display:flex;
+    }
+
+    .bundleModal{
+      width:min(860px, 100%);
+      max-height:90vh;
+      overflow:auto;
+      background:#fff;
+      border-radius:22px 22px 0 0;
+      box-shadow:0 -8px 24px rgba(15,23,42,0.18);
+      padding:12px 14px calc(20px + env(safe-area-inset-bottom));
+      display:grid;
+      gap:12px;
+    }
+
+    .bundleLineBlock{
+      border:1px solid var(--h-border-2);
+      border-radius:16px;
+      padding:12px;
+      background:rgba(15,23,42,0.02);
+      display:grid;
+      gap:10px;
+    }
+
+    .bundleLineHead{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+    }
+
+    .bundleLineTitle{
+      font-size:14px;
+      font-weight:900;
+      color:var(--h-text);
+      line-height:1.18;
+      margin:0;
+    }
+
+    .bundleLineSub{
+      margin-top:4px;
+      font-size:11px;
+      color:var(--h-muted);
+      font-weight:700;
+      line-height:1.3;
+    }
+
+    .bundleOptions{
+      display:grid;
+      gap:8px;
+    }
+
+    .bundleOption{
+      border:1px solid var(--h-border);
+      border-radius:14px;
+      background:#fff;
+      padding:10px 12px;
+      display:flex;
+      gap:8px;
+      align-items:flex-start;
+      cursor:pointer;
+    }
+
+    .bundleOption input{
+      width:16px;
+      height:16px;
+      margin:2px 0 0;
+      accent-color:var(--order-brand-primary);
+      flex:0 0 auto;
+    }
+
+    .bundleOption.active{
+      border-color: color-mix(in srgb, var(--order-brand-primary) 35%, white);
+      background: color-mix(in srgb, var(--order-brand-primary) 8%, white);
+    }
+
+    .bundleOptionName{
+      font-size:13px;
+      font-weight:900;
+      line-height:1.15;
+      color:var(--h-text);
+    }
+
+    .bundleOptionSub{
+      margin-top:3px;
+      font-size:11px;
+      line-height:1.3;
+      color:var(--h-muted);
+      font-weight:700;
+    }
+
+    .bundleFooter{
+      position:sticky;
+      bottom:0;
+      background:linear-gradient(to top, #fff 75%, rgba(255,255,255,0));
+      padding-top:10px;
+      display:grid;
+      gap:10px;
+    }
+
+    .statusNotice{
+      border-radius:14px;
+      padding:11px 12px;
+      border:1px solid var(--h-border-2);
+      background:rgba(15,23,42,0.02);
+      font-size:12px;
+      font-weight:800;
+      color:var(--h-text);
+      line-height:1.35;
+    }
+
+    .statusNotice.warn{
+      background:#fff7ed;
+      border-color:rgba(245,158,11,0.22);
+      color:#9a3412;
+    }
+
+    .statusNotice.error{
+      background:#fef2f2;
+      border-color:#fecaca;
+      color:#991b1b;
+    }
+
+    .footerBrand{
+      padding:8px 4px 0;
+      text-align:center;
+      font-size:11px;
+      font-weight:700;
+      color:var(--h-muted);
+      line-height:1.35;
+    }
+
+    .footerBrand a{
+      color:inherit;
+    }
+
+    .hidden{
+      display:none !important;
+    }
+
+    @media (max-width:720px){
+      .heroInner{
+        min-height:220px;
+        padding:16px 14px 14px;
+      }
+
+      .heroVendorName{
+        font-size:22px;
+      }
+
+      .heroInfoGrid{
+        grid-template-columns:1fr;
+      }
+
+      .sectionCard,
+      .heroBodyCard{
+        padding:12px 12px;
+      }
+
+      .checkoutGrid{
+        grid-template-columns:1fr;
+      }
+
+      .menuItemTop{
+        align-items:flex-start;
+      }
+
+      .menuPrice{
+        font-size:16px;
+      }
+    }
+  </style>
+</head>
+<body class="orderBody">
+  <div class="container">
+    <div class="orderPage">
+
+      <div class="orderTopBar">
+        <div class="orderTopBarLeft">
+          <img id="vendorLogoMini" class="vendorLogoMini hidden" alt="Vendor logo" />
+          <div class="vendorIdentityMini">
+            <div class="eyebrow">Order direct</div>
+            <div class="name" id="vendorMiniName">Loading…</div>
+          </div>
+        </div>
+
+        <a href="index.html" class="utilityLink">Service Board</a>
+      </div>
+
+      <div class="card heroOrderCard">
+        <div class="heroMedia" id="heroMedia">
+          <div class="heroInner">
+            <div class="heroBrandRow">
+              <img id="vendorLogoHero" class="heroLogo hidden" alt="Vendor logo" />
+              <div>
+                <h1 class="heroVendorName" id="heroVendorName">Loading vendor…</h1>
+                <p class="heroTagline" id="heroTagline">Preparing today’s drop…</p>
+              </div>
+            </div>
+
+            <div class="heroDropMeta">
+              <h2 class="heroDropTitle" id="heroDropTitle">Loading drop…</h2>
+              <p class="heroDropSub" id="heroDropSub">Please wait</p>
+            </div>
+
+            <div class="heroChips">
+              <div class="heroChip" id="chipOrderWindow">Loading…</div>
+              <div class="heroChip" id="chipCapacityLeft">Loading…</div>
+              <div class="heroChip hidden" id="chipFulfilment">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="heroBodyCard">
+          <div class="heroInfoGrid">
+            <div class="heroInfoTile">
+              <span class="label">Drop type</span>
+              <span class="value" id="heroInfoType">—</span>
+            </div>
+            <div class="heroInfoTile">
+              <span class="label">Fulfilment</span>
+              <span class="value" id="heroInfoFulfilment">—</span>
+            </div>
+            <div class="heroInfoTile">
+              <span class="label">Host / location</span>
+              <span class="value" id="heroInfoHost">—</span>
+            </div>
+          </div>
+
+          <div class="statusNotice hidden" id="pageStatusNotice"></div>
+          <div class="errorBox" id="errorBox"></div>
+        </div>
+      </div>
+
+      <div class="card sectionCard">
+        <div class="sectionCardHead">
+          <div>
+            <h3 class="sectionTitle">Menu</h3>
+            <p class="sectionSub">Choose from today’s available items</p>
+          </div>
+        </div>
+
+        <div id="menuSections">
+          <div class="emptyState">Loading menu…</div>
+        </div>
+      </div>
+
+      <div class="footerBrand" id="footerBrand"></div>
+
+    </div>
+  </div>
+
+  <div class="basketBar" id="basketBar">
+    <div class="basketBarInner">
+      <button class="basketSummaryBtn" id="openBasketBtn" type="button">
+        <div class="basketSummaryLeft">
+          <div class="basketSummaryTop" id="basketSummaryTop">0 items</div>
+          <div class="basketSummarySub" id="basketSummarySub">Basket empty</div>
+        </div>
+        <div class="basketSummaryPrice" id="basketSummaryPrice">£0</div>
+      </button>
+    </div>
+  </div>
+
+  <div class="basketBackdrop" id="basketBackdrop">
+    <div class="basketSheet" role="dialog" aria-modal="true" aria-label="Basket and checkout">
+      <div class="sheetHandle"></div>
+
+      <div class="basketHead">
+        <div>
+          <h3 class="sectionTitle">Your order</h3>
+          <p class="sectionSub">Review your basket and enter delivery details</p>
+        </div>
+        <button class="btnGhost" id="closeBasketBtn" type="button">Close</button>
+      </div>
+
+      <div class="basketList" id="basketList">
+        <div class="emptyState">Your basket is empty.</div>
+      </div>
+
+      <div class="basketTotals" id="basketTotals">
+        <div class="basketTotalLine">
+          <span>Subtotal</span>
+          <span id="basketSubtotal">£0</span>
+        </div>
+        <div class="basketTotalLine">
+          <span>Delivery</span>
+          <span id="basketDelivery">Free</span>
+        </div>
+        <div class="basketTotalLine">
+          <span>Capacity in basket</span>
+          <span id="basketCapacity">0</span>
+        </div>
+        <div class="basketTotalLine">
+          <strong>Total</strong>
+          <strong id="basketGrandTotal">£0</strong>
+        </div>
+      </div>
+
+      <div class="sectionCard checkoutBlock" style="padding:0; border:none; box-shadow:none;">
+        <div>
+          <h3 class="sectionTitle">Checkout</h3>
+          <p class="sectionSub">One quick step before payment</p>
+        </div>
+
+        <div class="checkoutGrid">
+          <div class="field">
+            <label for="customerName">Name</label>
+            <input id="customerName" type="text" placeholder="Your name" />
+          </div>
+
+          <div class="field">
+            <label for="customerPhone">Phone</label>
+            <input id="customerPhone" type="tel" placeholder="07..." />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="customerEmail">Email (optional)</label>
+          <input id="customerEmail" type="email" placeholder="you@example.com" />
+        </div>
+
+        <div class="field hidden" id="fulfilmentChoiceWrap">
+          <label>How would you like to receive this order?</label>
+          <div class="checkoutChoice" id="fulfilmentChoice"></div>
+        </div>
+
+        <div class="field hidden" id="addressWrap">
+          <label for="customerAddress">Delivery address</label>
+          <textarea id="customerAddress" placeholder="House name / number, street, town, postcode"></textarea>
+        </div>
+
+        <div class="checkoutGrid hidden" id="tableWrap">
+          <div class="field">
+            <label for="tableNumber">Table number (optional)</label>
+            <input id="tableNumber" type="text" placeholder="e.g. 14" />
+          </div>
+
+          <div class="field">
+            <label for="tableNotes">Location note (optional)</label>
+            <input id="tableNotes" type="text" placeholder="Near the stage / by the heaters" />
+          </div>
+        </div>
+
+        <div class="field hidden" id="collectionWrap">
+          <label>Collection details</label>
+          <div class="statusNotice" id="collectionNotice">Collection details will appear here.</div>
+        </div>
+
+        <div class="field">
+          <label for="customerNotes">Notes (optional)</label>
+          <textarea id="customerNotes" placeholder="Allergies, gate code, delivery note, or anything else helpful"></textarea>
+        </div>
+
+        <div class="statusNotice hidden" id="checkoutNotice"></div>
+
+        <div class="checkoutFooter">
+          <button class="payButton" id="payBtn" type="button">Pay £0</button>
+          <div class="payHelper" id="payHelper">
+            Apple Pay / Google Pay / Card will be handled via Stripe when connected.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bundleModalBackdrop" id="bundleModalBackdrop">
+    <div class="bundleModal" role="dialog" aria-modal="true" aria-label="Customize bundle">
+      <div class="sheetHandle"></div>
+
+      <div class="basketHead">
+        <div>
+          <h3 class="sectionTitle" id="bundleModalTitle">Customize bundle</h3>
+          <p class="sectionSub" id="bundleModalSub">Choose what goes inside this bundle</p>
+        </div>
+        <button class="btnGhost" id="closeBundleModalBtn" type="button">Close</button>
+      </div>
+
+      <div id="bundleModalContent">
+        <div class="emptyState">Loading bundle…</div>
+      </div>
+
+      <div class="bundleFooter">
+        <div class="basketTotals" style="padding:10px 12px;">
+          <div class="basketTotalLine">
+            <span>Bundle price</span>
+            <strong id="bundleModalPrice">£0</strong>
+          </div>
+        </div>
+        <button class="payButton" id="addBundleBtn" type="button">Add bundle</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const CONFIG = window.HEARTH_CONFIG || {};
+      const SUPABASE_URL = CONFIG.SUPABASE_URL;
+      const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
+      const STRIPE_CHECKOUT_FUNCTION = CONFIG.STRIPE_CHECKOUT_FUNCTION || "create-stripe-checkout";
+
+      let supabase = null;
+      let countdownTimer = null;
+
+      const state = {
+        dropSlug: null,
+        drop: null,
+        dropSummary: null,
+        vendor: null,
+        host: null,
+        categories: [],
+        rawMenuRows: [],
+        products: [],
+        bundles: [],
+        bundleLines: [],
+        bundleChoiceProducts: [],
+        basket: [],
+        selectedFulfilmentMode: null,
+        bundleDraft: null
+      };
+
+      function byId(id) {
+        return document.getElementById(id);
+      }
+
+      function showError(message) {
+        const el = byId("errorBox");
+        if (!message) {
+          el.style.display = "none";
+          el.textContent = "";
+          return;
+        }
+        el.style.display = "block";
+        el.textContent = message;
+      }
+
+      function showNotice(message, type = "") {
+        const el = byId("pageStatusNotice");
+        if (!message) {
+          el.className = "statusNotice hidden";
+          el.textContent = "";
+          return;
+        }
+        el.className = `statusNotice ${type || ""}`;
+        el.textContent = message;
+      }
+
+      function showCheckoutNotice(message, type = "") {
+        const el = byId("checkoutNotice");
+        if (!message) {
+          el.className = "statusNotice hidden";
+          el.textContent = "";
+          return;
+        }
+        el.className = `statusNotice ${type || ""}`;
+        el.textContent = message;
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function formatMoneyPence(pence) {
+        return new Intl.NumberFormat("en-GB", {
+          style: "currency",
+          currency: "GBP",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        }).format((Number(pence || 0)) / 100);
+      }
+
+      function titleCase(value) {
+        const text = String(value || "");
+        return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
+      }
+
+      function formatDateTimeRange(startValue, endValue) {
+        if (!startValue || !endValue) return "Timing to be confirmed";
+        const start = new Date(startValue);
+        const end = new Date(endValue);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "Timing to be confirmed";
+
+        const datePart = start.toLocaleDateString("en-GB", {
+          weekday: "long",
+          day: "numeric",
+          month: "long"
+        });
+
+        const startTime = start.toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+
+        const endTime = end.toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+
+        return `${datePart} • ${startTime}–${endTime}`;
+      }
+
+      function formatShortDateTime(value) {
+        if (!value) return "—";
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return "—";
+        return d.toLocaleString("en-GB", {
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      }
+
+      function getQueryParam(name) {
+        return new URLSearchParams(window.location.search).get(name);
+      }
+
+      function getCategoryById(id) {
+        return state.categories.find((c) => c.id === id) || null;
+      }
+
+      function getCategoryDisplayName() {
+        const byIdMatch = state.drop?.capacity_category_id ? getCategoryById(state.drop.capacity_category_id) : null;
+        if (byIdMatch?.name) return byIdMatch.name;
+        if (state.dropSummary?.capacity_category_name) return state.dropSummary.capacity_category_name;
+        if (state.drop?.capacity_category) {
+          const byText = state.categories.find((c) => String(c.slug || "").toLowerCase() === String(state.drop.capacity_category).toLowerCase() || String(c.name || "").toLowerCase() === String(state.drop.capacity_category).toLowerCase());
+          if (byText?.name) return byText.name;
+          return titleCase(state.drop.capacity_category);
+        }
+        return "Items";
+      }
+
+      function getCapacityCategoryKey() {
+        return String(state.drop?.capacity_category || state.dropSummary?.capacity_category || "").toLowerCase();
+      }
+
+      function getItemName(row) {
+        return row.item_name || row.product_name || row.selected_product_name || row.name || "Item";
+      }
+
+      function getBundleLines(bundleId) {
+        return state.bundleLines
+          .filter((x) => x.bundle_id === bundleId)
+          .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+      }
+
+      function getChoiceProducts(bundleLineId) {
+        return state.bundleChoiceProducts
+          .filter((x) => x.bundle_line_id === bundleLineId)
+          .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+      }
+
+      function getProductById(id) {
+        return state.products.find((p) => p.id === id) || null;
+      }
+
+      function getBundleById(id) {
+        return state.bundles.find((b) => b.id === id) || null;
+      }
+
+      function inferCommunityTableMode() {
+        return Boolean(
+          state.drop?.allow_table_numbers ||
+          state.drop?.table_numbers_enabled ||
+          state.host?.allow_table_numbers ||
+          state.host?.table_numbers_enabled
+        );
+      }
+
+      function inferNeedsAddress(mode) {
+        const fulfilmentMode = mode || state.selectedFulfilmentMode || state.drop?.fulfilment_mode;
+        if (fulfilmentMode !== "delivery") return false;
+        if (String(state.drop?.drop_type || "").toLowerCase() === "community") return false;
+        return true;
+      }
+
+      function inferCanUseTable() {
+        const fulfilmentMode = state.selectedFulfilmentMode || state.drop?.fulfilment_mode;
+        if (fulfilmentMode !== "delivery") return false;
+        if (String(state.drop?.drop_type || "").toLowerCase() !== "community") return false;
+        return inferCommunityTableMode();
+      }
+
+      function getFulfilmentLabel(mode) {
+        const map = {
+          delivery: "Delivery",
+          collection: "Collection",
+          mixed: "Delivery or collection"
+        };
+        return map[mode] || titleCase(mode || "TBC");
+      }
+
+      function getOrderWindowState() {
+        const now = new Date();
+        const opensAt = state.drop?.opens_at ? new Date(state.drop.opens_at) : null;
+        const closesAt = state.drop?.closes_at ? new Date(state.drop.closes_at) : null;
+
+        if (opensAt && now < opensAt) return { state: "preopen", now, opensAt, closesAt };
+        if (closesAt && now > closesAt) return { state: "closed", now, opensAt, closesAt };
+        return { state: "open", now, opensAt, closesAt };
+      }
+
+      function formatTimeLeft(targetDate) {
+        if (!targetDate) return "";
+        const diffMs = targetDate.getTime() - Date.now();
+        if (diffMs <= 0) return "0m";
+
+        const totalMinutes = Math.floor(diffMs / 60000);
+        const days = Math.floor(totalMinutes / (60 * 24));
+        const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+        const minutes = totalMinutes % 60;
+
+        if (days > 0) return `${days}d ${hours}h`;
+        if (hours > 0) return `${hours}h ${minutes}m`;
+        return `${minutes}m`;
+      }
+
+      function getCapacityRemainingRaw() {
+        return Number(state.dropSummary?.capacity_units_remaining ?? 0);
+      }
+
+      function getBasketCapacityUnits() {
+        return state.basket.reduce((sum, item) => sum + (Number(item.capacity_units || 0) * Number(item.quantity || 0)), 0);
+      }
+
+      function getCapacityRemainingAfterBasket() {
+        return getCapacityRemainingRaw() - getBasketCapacityUnits();
+      }
+
+      function getBasketSubtotalPence() {
+        return state.basket.reduce((sum, item) => sum + (Number(item.unit_price_pence || 0) * Number(item.quantity || 0)), 0);
+      }
+
+      function getBasketItemCount() {
+        return state.basket.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+      }
+
+      function getDeliveryChargePence() {
+        return 0;
+      }
+
+      function getGrandTotalPence() {
+        return getBasketSubtotalPence() + getDeliveryChargePence();
+      }
+
+      function isDropClosed() {
+        return getOrderWindowState().state === "closed" || String(state.drop?.status || "").toLowerCase() === "closed";
+      }
+
+      function isDropPreOpen() {
+        return getOrderWindowState().state === "preopen";
+      }
+
+      function getCategoryNameForItem(row) {
+        const categoryId = row.category_id || null;
+        if (categoryId) {
+          const category = getCategoryById(categoryId);
+          if (category?.name) return category.name;
+        }
+        if (row.category_name) return row.category_name;
+        if (row.category) return titleCase(row.category);
+        return "Other";
+      }
+
+      function applyVendorBranding() {
+        const vendor = state.vendor || {};
+        const primary = vendor.brand_primary_color || vendor.brand_colour || vendor.brand_color || "#f97316";
+        const secondary = vendor.brand_secondary_color || vendor.brand_colour_secondary || primary;
+        const heroImage = vendor.hero_image_url || vendor.hero_image || vendor.cover_image_url || "";
+        const logoUrl = vendor.logo_url || "";
+
+        document.documentElement.style.setProperty("--order-brand-primary", primary);
+        document.documentElement.style.setProperty("--order-brand-secondary", secondary);
+        document.documentElement.style.setProperty("--order-brand-soft", hexToRgba(primary, 0.12));
+        document.documentElement.style.setProperty("--order-brand-soft-2", hexToRgba(secondary, 0.08));
+
+        const vendorDisplayName = vendor.display_name || vendor.name || "Vendor";
+        byId("vendorMiniName").textContent = vendorDisplayName;
+        byId("heroVendorName").textContent = vendorDisplayName;
+        byId("heroTagline").textContent = vendor.tagline || "Order directly from today’s drop";
+
+        const logoMini = byId("vendorLogoMini");
+        const logoHero = byId("vendorLogoHero");
+        [logoMini, logoHero].forEach((img) => {
+          if (logoUrl) {
+            img.src = logoUrl;
+            img.classList.remove("hidden");
+          } else {
+            img.classList.add("hidden");
+            img.removeAttribute("src");
+          }
+        });
+
+        const hero = byId("heroMedia");
+        if (heroImage) {
+          hero.classList.add("hasImage");
+          hero.style.backgroundImage = `${getComputedStyle(document.documentElement).getPropertyValue("--order-hero-overlay")}, url("${heroImage}")`;
+        } else {
+          hero.classList.remove("hasImage");
+          hero.style.backgroundImage = "";
+        }
+
+        const showPowered = vendor.powered_by_hearth_visible !== false;
+        const footerParts = [];
+        if (vendor.website_url) {
+          footerParts.push(`<a href="${escapeHtml(vendor.website_url)}" target="_blank" rel="noopener noreferrer">Visit ${escapeHtml(vendorDisplayName)}</a>`);
+        }
+        if (showPowered) {
+          footerParts.push(`Powered by Hearth`);
+        }
+        byId("footerBrand").innerHTML = footerParts.join(" • ");
+      }
+
+      function hexToRgba(hex, alpha) {
+        if (!hex || typeof hex !== "string") return `rgba(249,115,22,${alpha})`;
+        const clean = hex.replace("#", "");
+        if (![3, 6].includes(clean.length)) return `rgba(249,115,22,${alpha})`;
+
+        const expanded = clean.length === 3
+          ? clean.split("").map((x) => x + x).join("")
+          : clean;
+
+        const r = parseInt(expanded.slice(0, 2), 16);
+        const g = parseInt(expanded.slice(2, 4), 16);
+        const b = parseInt(expanded.slice(4, 6), 16);
+
+        if ([r, g, b].some((x) => Number.isNaN(x))) return `rgba(249,115,22,${alpha})`;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+
+      async function loadDropContext() {
+        state.dropSlug = getQueryParam("drop");
+
+        if (!state.dropSlug) {
+          throw new Error("Missing drop slug in URL. Expected format: order.html?drop=your-drop-slug");
+        }
+
+        const dropRes = await supabase
+          .from("drops")
+          .select("*")
+          .eq("slug", state.dropSlug)
+          .single();
+
+        if (dropRes.error) throw dropRes.error;
+        state.drop = dropRes.data;
+
+        const summaryRes = await supabase
+          .from("v_drop_summary")
+          .select("*")
+          .eq("drop_id", state.drop.id)
+          .single();
+
+        if (summaryRes.error) throw summaryRes.error;
+        state.dropSummary = summaryRes.data;
+
+        const vendorRes = await supabase
+          .from("vendors")
+          .select("*")
+          .eq("id", state.drop.vendor_id)
+          .single();
+
+        if (vendorRes.error) throw vendorRes.error;
+        state.vendor = vendorRes.data;
+
+        if (state.drop.host_id) {
+          const hostRes = await supabase
+            .from("hosts")
+            .select("*")
+            .eq("id", state.drop.host_id)
+            .single();
+
+          if (!hostRes.error) {
+            state.host = hostRes.data;
+          }
+        }
+
+        const categoriesRes = await supabase
+          .from("categories")
+          .select("*")
+          .eq("vendor_id", state.drop.vendor_id)
+          .order("sort_order", { ascending: true, nullsFirst: false })
+          .order("name", { ascending: true });
+
+        if (categoriesRes.error) throw categoriesRes.error;
+        state.categories = categoriesRes.data || [];
+
+        const menuRes = await supabase
+          .from("drop_menu_items")
+          .select("*")
+          .eq("drop_id", state.drop.id)
+          .eq("is_available", true)
+          .order("sort_order", { ascending: true, nullsFirst: false })
+          .order("created_at", { ascending: true });
+
+        if (menuRes.error) throw menuRes.error;
+        state.rawMenuRows = menuRes.data || [];
+
+        const productIds = [...new Set(state.rawMenuRows.filter((x) => x.menu_item_type === "product" && x.product_id).map((x) => x.product_id))];
+        const bundleIds = [...new Set(state.rawMenuRows.filter((x) => x.menu_item_type === "bundle" && x.bundle_id).map((x) => x.bundle_id))];
+
+        if (productIds.length) {
+          const productsRes = await supabase
+            .from("products")
+            .select("*")
+            .in("id", productIds);
+
+          if (productsRes.error) throw productsRes.error;
+          state.products = productsRes.data || [];
+        } else {
+          state.products = [];
+        }
+
+        if (bundleIds.length) {
+          const bundlesRes = await supabase
+            .from("bundles")
+            .select("*")
+            .in("id", bundleIds);
+
+          if (bundlesRes.error) throw bundlesRes.error;
+          state.bundles = bundlesRes.data || [];
+
+          const bundleLinesRes = await supabase
+            .from("bundle_lines")
+            .select("*")
+            .in("bundle_id", bundleIds)
+            .order("sort_order", { ascending: true, nullsFirst: false })
+            .order("created_at", { ascending: true });
+
+          if (bundleLinesRes.error) throw bundleLinesRes.error;
+          state.bundleLines = bundleLinesRes.data || [];
+
+          const lineIds = state.bundleLines.map((x) => x.id);
+          if (lineIds.length) {
+            const choiceRes = await supabase
+              .from("bundle_line_choice_products")
+              .select("*")
+              .in("bundle_line_id", lineIds)
+              .order("sort_order", { ascending: true, nullsFirst: false })
+              .order("created_at", { ascending: true });
+
+            if (choiceRes.error) throw choiceRes.error;
+            const rawChoices = choiceRes.data || [];
+
+            const extraProductIds = [...new Set(rawChoices.map((x) => x.product_id).filter(Boolean))];
+            const missingIds = extraProductIds.filter((id) => !state.products.some((p) => p.id === id));
+
+            if (missingIds.length) {
+              const missingProductsRes = await supabase
+                .from("products")
+                .select("*")
+                .in("id", missingIds);
+
+              if (!missingProductsRes.error) {
+                state.products = [...state.products, ...(missingProductsRes.data || [])];
+              }
+            }
+
+            state.bundleChoiceProducts = rawChoices.map((choice) => {
+              const product = getProductById(choice.product_id);
+              return {
+                ...choice,
+                product_name: product?.name || "Product",
+                category_id: product?.category_id || null,
+                category_name: getCategoryNameForItem(product || {}),
+                product_description: product?.description || null,
+                product_capacity_units: Number(product?.capacity_units || 0)
+              };
+            });
+          } else {
+            state.bundleChoiceProducts = [];
+          }
+        } else {
+          state.bundles = [];
+          state.bundleLines = [];
+          state.bundleChoiceProducts = [];
+        }
+
+        state.selectedFulfilmentMode = getDefaultSelectedFulfilmentMode();
+      }
+
+      function getDefaultSelectedFulfilmentMode() {
+        const raw = String(state.drop?.fulfilment_mode || "").toLowerCase();
+        if (raw === "mixed") return "delivery";
+        if (raw === "delivery") return "delivery";
+        if (raw === "collection") return "collection";
+        return null;
+      }
+
+      function getDropMenuItems() {
+        return state.rawMenuRows
+          .map((row) => {
+            if (row.menu_item_type === "product") {
+              const product = state.products.find((p) => p.id === row.product_id);
+              if (!product) return null;
+
+              return {
+                key: `product:${product.id}`,
+                menu_item_type: "product",
+                id: product.id,
+                name: product.name,
+                description: product.description || "",
+                category_id: product.category_id || null,
+                category_name: getCategoryNameForItem(product),
+                base_price_pence: row.price_override_pence ?? product.price_pence ?? 0,
+                capacity_units: Number(product.capacity_units || 0),
+                sort_order: row.sort_order ?? product.sort_order ?? 100
+              };
+            }
+
+            if (row.menu_item_type === "bundle") {
+              const bundle = state.bundles.find((b) => b.id === row.bundle_id);
+              if (!bundle) return null;
+
+              return {
+                key: `bundle:${bundle.id}`,
+                menu_item_type: "bundle",
+                id: bundle.id,
+                name: bundle.name,
+                description: bundle.description || "",
+                category_id: bundle.category_id || null,
+                category_name: getCategoryNameForItem(bundle),
+                base_price_pence: row.price_override_pence ?? bundle.price_pence ?? 0,
+                capacity_units: Number(bundle.capacity_units || 0),
+                sort_order: row.sort_order ?? bundle.sort_order ?? 100
+              };
+            }
+
+            return null;
+          })
+          .filter(Boolean)
+          .sort((a, b) => {
+            const catCompare = String(a.category_name || "").localeCompare(String(b.category_name || ""));
+            if (catCompare !== 0) return catCompare;
+            const sortCompare = Number(a.sort_order || 100) - Number(b.sort_order || 100);
+            if (sortCompare !== 0) return sortCompare;
+            return a.name.localeCompare(b.name);
+          });
+      }
+
+      function renderHero() {
+        applyVendorBranding();
+
+        const vendorDisplayName = state.vendor?.display_name || state.vendor?.name || "Vendor";
+        const dropTitle = state.drop?.name || state.dropSummary?.drop_name || "Drop";
+        const hostName = state.host?.name || state.dropSummary?.host_name || "";
+        const fulfilmentLabel = getFulfilmentLabel(state.drop?.fulfilment_mode);
+        const typeLabel = titleCase(state.drop?.drop_type || state.dropSummary?.drop_type || "Drop");
+        const timingLabel = formatDateTimeRange(state.drop?.delivery_start, state.drop?.delivery_end);
+
+        byId("heroDropTitle").textContent = dropTitle;
+        byId("heroDropSub").textContent = [hostName, timingLabel].filter(Boolean).join(" • ");
+        byId("heroInfoType").textContent = typeLabel;
+        byId("heroInfoFulfilment").textContent = fulfilmentLabel;
+        byId("heroInfoHost").textContent = hostName || "Direct drop";
+
+        const orderState = getOrderWindowState();
+        const closesAt = orderState.closesAt;
+        const opensAt = orderState.opensAt;
+        const windowChip = byId("chipOrderWindow");
+        windowChip.className = "heroChip";
+
+        if (orderState.state === "preopen") {
+          windowChip.textContent = opensAt ? `Orders open ${formatShortDateTime(opensAt)}` : "Not open yet";
+        } else if (orderState.state === "closed") {
+          windowChip.textContent = "Ordering closed";
+          windowChip.classList.add("low");
+        } else {
+          const timeLeft = closesAt ? formatTimeLeft(closesAt) : "";
+          windowChip.textContent = timeLeft ? `Orders close in ${timeLeft}` : "Ordering open";
+          if (closesAt && (closesAt.getTime() - Date.now()) <= 2 * 60 * 60 * 1000) {
+            windowChip.classList.add("urgent");
+          }
+        }
+
+        const capacityLabel = getCategoryDisplayName();
+        const remaining = Math.max(0, getCapacityRemainingAfterBasket());
+        const rawRemaining = Math.max(0, getCapacityRemainingRaw());
+        const capacityChip = byId("chipCapacityLeft");
+        capacityChip.className = "heroChip";
+        capacityChip.textContent = `${remaining} ${capacityLabel} left`;
+
+        if (rawRemaining <= 5) {
+          capacityChip.classList.add("low");
+        } else if (rawRemaining <= 12) {
+          capacityChip.classList.add("urgent");
+        }
+
+        const fulfilmentChip = byId("chipFulfilment");
+        fulfilmentChip.textContent = fulfilmentLabel;
+        fulfilmentChip.classList.remove("hidden");
+
+        if (isDropClosed()) {
+          showNotice("Ordering for this drop is now closed.", "warn");
+        } else if (isDropPreOpen()) {
+          showNotice("This drop is scheduled. You’ll be able to order once the ordering window opens.", "warn");
+        } else if (remaining <= 0) {
+          showNotice(`${capacityLabel} capacity has been reached for this drop.`, "warn");
+        } else {
+          showNotice("");
+        }
+      }
+
+      function renderMenu() {
+        const items = getDropMenuItems();
+        const wrap = byId("menuSections");
+
+        if (!items.length) {
+          wrap.innerHTML = `<div class="emptyState">No items are currently available for this drop.</div>`;
+          return;
+        }
+
+        const groups = new Map();
+        items.forEach((item) => {
+          const key = item.category_name || "Other";
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(item);
+        });
+
+        wrap.innerHTML = [...groups.entries()].map(([categoryName, groupItems]) => {
+          const productCount = groupItems.filter((x) => x.menu_item_type === "product").length;
+          const bundleCount = groupItems.filter((x) => x.menu_item_type === "bundle").length;
+
+          const cards = groupItems.map((item) => {
+            if (item.menu_item_type === "product") {
+              const qty = getProductBasketQuantity(item.id);
+              return `
+                <div class="menuItemCard">
+                  <div class="menuItemTop">
+                    <div>
+                      <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
+                      ${item.description ? `<p class="menuItemDesc">${escapeHtml(item.description)}</p>` : ""}
+                      <div class="menuItemMeta">
+                        ${Number(item.capacity_units || 0) > 0 ? `<span class="miniChip">${escapeHtml(String(item.capacity_units))} capacity</span>` : ""}
+                        <span class="miniChip">Product</span>
+                      </div>
+                    </div>
+                    <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
+                  </div>
+
+                  <div class="menuControls">
+                    <div class="stepper">
+                      <button type="button" class="js-product-minus" data-product-id="${item.id}" ${qty <= 0 || isDropClosed() || getCapacityRemainingAfterBasket() <= 0 ? "disabled" : ""}>−</button>
+                      <div class="stepperValue">${qty}</div>
+                      <button type="button" class="js-product-plus" data-product-id="${item.id}" ${isDropClosed() || getCapacityRemainingAfterBasket() <= 0 ? "disabled" : ""}>+</button>
+                    </div>
+
+                    <button class="brandBtn secondary js-product-add" type="button" data-product-id="${item.id}" ${isDropClosed() || getCapacityRemainingAfterBasket() <= 0 ? "disabled" : ""}>
+                      ${qty > 0 ? "Update" : "Add to order"}
+                    </button>
+                  </div>
+                </div>
+              `;
+            }
+
+            return `
+              <div class="menuItemCard">
+                <div class="menuItemTop">
+                  <div>
+                    <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
+                    ${item.description ? `<p class="menuItemDesc">${escapeHtml(item.description)}</p>` : ""}
+                    <div class="menuItemMeta">
+                      ${Number(item.capacity_units || 0) > 0 ? `<span class="miniChip">${escapeHtml(String(item.capacity_units))} capacity</span>` : ""}
+                      <span class="miniChip">Bundle</span>
+                    </div>
+                  </div>
+                  <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
+                </div>
+
+                <div class="menuControls">
+                  <div class="helperText">Choose what goes inside this bundle before adding it.</div>
+                  <button class="brandBtn js-open-bundle" type="button" data-bundle-id="${item.id}" ${isDropClosed() || getCapacityRemainingAfterBasket() <= 0 ? "disabled" : ""}>
+                    Customize
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join("");
+
+          return `
+            <div class="menuCategoryBlock">
+              <div class="menuCategoryHead">
+                <h4 class="menuCategoryTitle">${escapeHtml(categoryName)}</h4>
+                <div class="menuCategorySub">${productCount} product${productCount === 1 ? "" : "s"}${bundleCount ? ` • ${bundleCount} bundle${bundleCount === 1 ? "" : "s"}` : ""}</div>
+              </div>
+              <div class="menuCardGrid">${cards}</div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      function getProductBasketQuantity(productId) {
+        const row = state.basket.find((x) => x.type === "product" && x.product_id === productId);
+        return Number(row?.quantity || 0);
+      }
+
+      function addProductToBasket(productId, delta = 1) {
+        const productMenuItem = getDropMenuItems().find((x) => x.menu_item_type === "product" && x.id === productId);
+        if (!productMenuItem) return;
+
+        const existing = state.basket.find((x) => x.type === "product" && x.product_id === productId);
+        const nextQty = Math.max(0, (Number(existing?.quantity || 0) + Number(delta)));
+
+        if (nextQty === 0) {
+          state.basket = state.basket.filter((x) => !(x.type === "product" && x.product_id === productId));
+        } else if (existing) {
+          existing.quantity = nextQty;
+        } else {
+          state.basket.push({
+            key: `product:${productId}`,
+            type: "product",
+            product_id: productId,
+            name: productMenuItem.name,
+            unit_price_pence: Number(productMenuItem.base_price_pence || 0),
+            capacity_units: Number(productMenuItem.capacity_units || 0),
+            quantity: nextQty
+          });
+        }
+
+        enforceCapacityGuard();
+        renderAll();
+      }
+
+      function addBundleToBasket(bundleDraft) {
+        if (!bundleDraft) return;
+        state.basket.push({
+          key: `bundle:${bundleDraft.bundle_id}:${Date.now()}`,
+          type: "bundle",
+          bundle_id: bundleDraft.bundle_id,
+          name: bundleDraft.name,
+          unit_price_pence: Number(bundleDraft.unit_price_pence || 0),
+          capacity_units: Number(bundleDraft.capacity_units || 0),
+          quantity: 1,
+          selections: bundleDraft.selections || []
+        });
+
+        state.bundleDraft = null;
+        closeBundleModal();
+        enforceCapacityGuard();
+        renderAll();
+      }
+
+      function removeBasketItem(key) {
+        state.basket = state.basket.filter((x) => x.key !== key);
+        renderAll();
+      }
+
+      function updateBasketItemQuantity(key, delta) {
+        const item = state.basket.find((x) => x.key === key);
+        if (!item) return;
+
+        const nextQty = Math.max(0, Number(item.quantity || 0) + Number(delta));
+        if (nextQty === 0) {
+          removeBasketItem(key);
+          return;
+        }
+
+        item.quantity = nextQty;
+        enforceCapacityGuard();
+        renderAll();
+      }
+
+      function enforceCapacityGuard() {
+        while (getCapacityRemainingAfterBasket() < 0 && state.basket.length) {
+          state.basket.pop();
+        }
+      }
+
+      function renderBasketBar() {
+        const hasItems = state.basket.length > 0;
+        const bar = byId("basketBar");
+        bar.classList.toggle("show", hasItems);
+
+        byId("basketSummaryTop").textContent = `${getBasketItemCount()} item${getBasketItemCount() === 1 ? "" : "s"}`;
+        byId("basketSummarySub").textContent = `${getBasketCapacityUnits()} ${getCategoryDisplayName()} capacity in basket`;
+        byId("basketSummaryPrice").textContent = formatMoneyPence(getGrandTotalPence());
+
+        byId("payBtn").textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
+      }
+
+      function renderBasketSheet() {
+        const list = byId("basketList");
+
+        if (!state.basket.length) {
+          list.innerHTML = `<div class="emptyState">Your basket is empty.</div>`;
+        } else {
+          list.innerHTML = state.basket.map((item) => {
+            const selectionHtml = item.type === "bundle"
+              ? `
+                <div class="basketSelectionList">
+                  ${(item.selections || []).map((s) => `
+                    <div class="basketSelectionLine">
+                      <span>${escapeHtml(s.label || s.product_name || "Selection")}</span>
+                      <span>${escapeHtml(s.product_name || "—")}</span>
+                    </div>
+                  `).join("")}
+                </div>
+              `
+              : "";
+
+            return `
+              <div class="basketItem">
+                <div class="basketItemTop">
+                  <div>
+                    <h4 class="basketItemName">${escapeHtml(item.name)}</h4>
+                    <div class="basketItemSub">
+                      ${item.type === "bundle" ? "Bundle" : "Product"} • ${formatMoneyPence(item.unit_price_pence)} each
+                    </div>
+                  </div>
+                  <div class="menuPrice">${formatMoneyPence(Number(item.unit_price_pence || 0) * Number(item.quantity || 0))}</div>
+                </div>
+
+                ${selectionHtml}
+
+                <div class="menuControls">
+                  <div class="stepper">
+                    <button type="button" class="js-basket-minus" data-key="${escapeHtml(item.key)}">−</button>
+                    <div class="stepperValue">${Number(item.quantity || 0)}</div>
+                    <button type="button" class="js-basket-plus" data-key="${escapeHtml(item.key)}" ${getCapacityRemainingAfterBasket() <= 0 ? "disabled" : ""}>+</button>
+                  </div>
+
+                  <button class="brandBtn secondary js-basket-remove" type="button" data-key="${escapeHtml(item.key)}">Remove</button>
+                </div>
+              </div>
+            `;
+          }).join("");
+        }
+
+        byId("basketSubtotal").textContent = formatMoneyPence(getBasketSubtotalPence());
+        byId("basketDelivery").textContent = getDeliveryChargePence() ? formatMoneyPence(getDeliveryChargePence()) : "Free";
+        byId("basketCapacity").textContent = `${getBasketCapacityUnits()} ${getCategoryDisplayName()}`;
+        byId("basketGrandTotal").textContent = formatMoneyPence(getGrandTotalPence());
+
+        renderCheckoutForm();
+      }
+
+      function renderCheckoutForm() {
+        const fulfilmentMode = String(state.drop?.fulfilment_mode || "").toLowerCase();
+        const wrap = byId("fulfilmentChoiceWrap");
+        const choice = byId("fulfilmentChoice");
+
+        if (fulfilmentMode === "mixed") {
+          wrap.classList.remove("hidden");
+          choice.innerHTML = `
+            <label class="choiceCard ${state.selectedFulfilmentMode === "delivery" ? "active" : ""}">
+              <input type="radio" name="selectedFulfilmentMode" value="delivery" ${state.selectedFulfilmentMode === "delivery" ? "checked" : ""} />
+              <div>
+                <div class="choiceCardTitle">Delivery</div>
+                <div class="choiceCardSub">Delivered during the drop window</div>
+              </div>
+            </label>
+
+            <label class="choiceCard ${state.selectedFulfilmentMode === "collection" ? "active" : ""}">
+              <input type="radio" name="selectedFulfilmentMode" value="collection" ${state.selectedFulfilmentMode === "collection" ? "checked" : ""} />
+              <div>
+                <div class="choiceCardTitle">Collection</div>
+                <div class="choiceCardSub">Collect from the host / drop location</div>
+              </div>
+            </label>
+          `;
+        } else {
+          wrap.classList.add("hidden");
+          choice.innerHTML = "";
+          state.selectedFulfilmentMode = fulfilmentMode || state.selectedFulfilmentMode;
+        }
+
+        const needsAddress = inferNeedsAddress();
+        const canUseTable = inferCanUseTable();
+        const isCollection = (state.selectedFulfilmentMode || fulfilmentMode) === "collection";
+
+        byId("addressWrap").classList.toggle("hidden", !needsAddress);
+        byId("tableWrap").classList.toggle("hidden", !canUseTable);
+        byId("collectionWrap").classList.toggle("hidden", !isCollection);
+
+        const hostName = state.host?.name || state.dropSummary?.host_name || state.vendor?.display_name || state.vendor?.name || "the drop location";
+        byId("collectionNotice").textContent = `Collection instructions: please collect from ${hostName} during the stated fulfilment window.`;
+
+        const remaining = getCapacityRemainingAfterBasket();
+        if (remaining < 0) {
+          showCheckoutNotice(`Your basket is over the available ${getCategoryDisplayName()} capacity for this drop.`, "error");
+        } else if (remaining === 0 && state.basket.length) {
+          showCheckoutNotice(`Your basket uses the final available ${getCategoryDisplayName()} capacity for this drop.`, "warn");
+        } else {
+          showCheckoutNotice("");
+        }
+      }
+
+      function openBasket() {
+        byId("basketBackdrop").classList.add("open");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeBasket() {
+        byId("basketBackdrop").classList.remove("open");
+        if (!byId("bundleModalBackdrop").classList.contains("open")) {
+          document.body.style.overflow = "";
+        }
+      }
+
+      function openBundleModal(bundleId) {
+        const bundle = getDropMenuItems().find((x) => x.menu_item_type === "bundle" && x.id === bundleId);
+        if (!bundle) return;
+
+        const lines = getBundleLines(bundleId);
+        state.bundleDraft = {
+          bundle_id: bundleId,
+          name: bundle.name,
+          unit_price_pence: Number(bundle.base_price_pence || 0),
+          capacity_units: Number(bundle.capacity_units || 0),
+          selections: []
+        };
+
+        byId("bundleModalTitle").textContent = bundle.name;
+        byId("bundleModalSub").textContent = bundle.description || "Choose what goes inside this bundle";
+        byId("bundleModalPrice").textContent = formatMoneyPence(bundle.base_price_pence);
+
+        if (!lines.length) {
+          state.bundleDraft.selections = [];
+          byId("bundleModalContent").innerHTML = `<div class="statusNotice">This bundle has no configurable lines, so it can be added directly.</div>`;
+          byId("addBundleBtn").disabled = false;
+        } else {
+          byId("bundleModalContent").innerHTML = lines.map((line) => renderBundleLine(line)).join("");
+          hydrateBundleDraftDefaults(lines);
+          syncBundleDraftFromUi();
+        }
+
+        byId("bundleModalBackdrop").classList.add("open");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeBundleModal() {
+        byId("bundleModalBackdrop").classList.remove("open");
+        state.bundleDraft = null;
+        if (!byId("basketBackdrop").classList.contains("open")) {
+          document.body.style.overflow = "";
+        }
+      }
+
+      function renderBundleLine(line) {
+        const lineType = line.line_type;
+        const label = line.label || (
+          lineType === "fixed_product" ? "Included item" :
+          lineType === "category_choice" ? "Choose from category" :
+          "Choose from selected items"
+        );
+
+        let options = [];
+
+        if (lineType === "fixed_product") {
+          const product = getProductById(line.product_id);
+          if (product) {
+            options = [{
+              value: product.id,
+              name: product.name,
+              description: product.description || "",
+              category_name: getCategoryNameForItem(product)
+            }];
+          }
+        } else if (lineType === "category_choice") {
+          options = state.products
+            .filter((p) => p.category_id === line.category_id)
+            .map((p) => ({
+              value: p.id,
+              name: p.name,
+              description: p.description || "",
+              category_name: getCategoryNameForItem(p)
+            }));
+        } else {
+          options = getChoiceProducts(line.id).map((p) => ({
+            value: p.product_id,
+            name: p.product_name,
+            description: p.product_description || "",
+            category_name: p.category_name || "Other"
+          }));
+        }
+
+        const inputType = Number(line.max_choices || 1) > 1 ? "checkbox" : "radio";
+        const helper = lineType === "fixed_product"
+          ? `Included automatically • Qty ${Number(line.quantity || 1)}`
+          : `Choose ${Number(line.min_choices || 1)}${Number(line.max_choices || 1) > Number(line.min_choices || 1) ? ` to ${Number(line.max_choices || 1)}` : ""}`;
+
+        return `
+          <div class="bundleLineBlock" data-bundle-line-id="${line.id}" data-line-type="${escapeHtml(lineType)}" data-min="${Number(line.min_choices || 1)}" data-max="${Number(line.max_choices || 1)}" data-required="${Boolean(line.is_required)}">
+            <div class="bundleLineHead">
+              <div>
+                <h4 class="bundleLineTitle">${escapeHtml(label)}</h4>
+                <div class="bundleLineSub">${escapeHtml(helper)}</div>
+              </div>
+            </div>
+
+            <div class="bundleOptions">
+              ${options.length ? options.map((opt, index) => `
+                <label class="bundleOption ${lineType === "fixed_product" ? "active" : ""}">
+                  <input
+                    type="${lineType === "fixed_product" ? "checkbox" : inputType}"
+                    name="bundleLine:${line.id}"
+                    value="${opt.value}"
+                    ${lineType === "fixed_product" ? "checked disabled" : ""}
+                    ${lineType !== "fixed_product" && index === 0 && Number(line.min_choices || 1) === 1 && inputType === "radio" ? "checked" : ""}
+                  />
+                  <div>
+                    <div class="bundleOptionName">${escapeHtml(opt.name)}</div>
+                    <div class="bundleOptionSub">${escapeHtml(opt.description || opt.category_name || "")}</div>
+                  </div>
+                </label>
+              `).join("") : `<div class="emptyState">No options available for this bundle line.</div>`}
+            </div>
+          </div>
+        `;
+      }
+
+      function hydrateBundleDraftDefaults(lines) {
+        const selections = [];
+
+        lines.forEach((line) => {
+          if (line.line_type === "fixed_product") {
+            const product = getProductById(line.product_id);
+            if (product) {
+              selections.push({
+                bundle_line_id: line.id,
+                label: line.label || product.name,
+                selected_product_id: product.id,
+                product_name: product.name,
+                quantity: Number(line.quantity || 1),
+                drives_capacity: Boolean(line.drives_capacity)
+              });
+            }
+          } else {
+            const inputs = document.querySelectorAll(`[name="bundleLine:${line.id}"]:checked`);
+            inputs.forEach((input) => {
+              const product = getProductById(input.value);
+              if (product) {
+                selections.push({
+                  bundle_line_id: line.id,
+                  label: line.label || "Selection",
+                  selected_product_id: product.id,
+                  product_name: product.name,
+                  quantity: Number(line.quantity || 1),
+                  drives_capacity: Boolean(line.drives_capacity)
+                });
+              }
+            });
+          }
+        });
+
+        state.bundleDraft.selections = selections;
+      }
+
+      function syncBundleDraftFromUi() {
+        if (!state.bundleDraft) return;
+
+        const blocks = document.querySelectorAll("[data-bundle-line-id]");
+        const selections = [];
+        let isValid = true;
+        let validationMessage = "";
+
+        blocks.forEach((block) => {
+          const lineId = block.dataset.bundleLineId;
+          const minChoices = Number(block.dataset.min || 0);
+          const maxChoices = Number(block.dataset.max || 0);
+          const inputs = Array.from(block.querySelectorAll("input:checked"));
+          const line = state.bundleLines.find((x) => x.id === lineId);
+
+          if (!line) return;
+
+          if (line.line_type !== "fixed_product") {
+            if (inputs.length < minChoices) {
+              isValid = false;
+              validationMessage = `${line.label || "This choice"} needs at least ${minChoices} selection${minChoices === 1 ? "" : "s"}.`;
+            }
+            if (maxChoices > 0 && inputs.length > maxChoices) {
+              isValid = false;
+              validationMessage = `${line.label || "This choice"} allows up to ${maxChoices} selection${maxChoices === 1 ? "" : "s"}.`;
+            }
+          }
+
+          inputs.forEach((input) => {
+            const product = getProductById(input.value);
+            if (!product) return;
+            selections.push({
+              bundle_line_id: line.id,
+              label: line.label || product.name,
+              selected_product_id: product.id,
+              product_name: product.name,
+              quantity: Number(line.quantity || 1),
+              drives_capacity: Boolean(line.drives_capacity)
+            });
+          });
+        });
+
+        state.bundleDraft.selections = selections;
+        byId("addBundleBtn").disabled = !isValid;
+        byId("bundleModalSub").textContent = validationMessage || (getBundleById(state.bundleDraft.bundle_id)?.description || "Choose what goes inside this bundle");
+      }
+
+      function buildCheckoutPayload() {
+        const customerName = byId("customerName").value.trim();
+        const customerPhone = byId("customerPhone").value.trim();
+        const customerEmail = byId("customerEmail").value.trim();
+        const customerAddress = byId("customerAddress").value.trim();
+        const customerNotes = byId("customerNotes").value.trim();
+        const tableNumber = byId("tableNumber").value.trim();
+        const tableNotes = byId("tableNotes").value.trim();
+
+        const selectedFulfilmentMode = state.selectedFulfilmentMode || state.drop?.fulfilment_mode;
+
+        return {
+          source: "order.html",
+          vendor_id: state.vendor?.id || null,
+          vendor_name: state.vendor?.display_name || state.vendor?.name || null,
+          drop_id: state.drop?.id || null,
+          drop_slug: state.drop?.slug || null,
+          drop_name: state.drop?.name || null,
+          host_id: state.host?.id || null,
+          host_name: state.host?.name || null,
+
+          customer: {
+            name: customerName,
+            phone: customerPhone,
+            email: customerEmail || null,
+            notes: customerNotes || null
+          },
+
+          fulfilment: {
+            mode: selectedFulfilmentMode,
+            address: customerAddress || null,
+            table_number: tableNumber || null,
+            table_notes: tableNotes || null
+          },
+
+          totals: {
+            subtotal_pence: getBasketSubtotalPence(),
+            delivery_pence: getDeliveryChargePence(),
+            total_pence: getGrandTotalPence(),
+            capacity_units: getBasketCapacityUnits(),
+            capacity_category: getCategoryDisplayName()
+          },
+
+          basket: state.basket.map((item) => ({
+            type: item.type,
+            product_id: item.product_id || null,
+            bundle_id: item.bundle_id || null,
+            name: item.name,
+            unit_price_pence: Number(item.unit_price_pence || 0),
+            quantity: Number(item.quantity || 0),
+            capacity_units: Number(item.capacity_units || 0),
+            selections: (item.selections || []).map((s) => ({
+              bundle_line_id: s.bundle_line_id,
+              label: s.label,
+              selected_product_id: s.selected_product_id,
+              product_name: s.product_name,
+              quantity: Number(s.quantity || 1),
+              drives_capacity: Boolean(s.drives_capacity)
+            }))
+          }))
+        };
+      }
+
+      function validateCheckout() {
+        if (!state.basket.length) return "Add at least one item to your basket.";
+        if (isDropClosed()) return "Ordering for this drop is closed.";
+        if (isDropPreOpen()) return "This drop is not open for orders yet.";
+
+        if (getCapacityRemainingAfterBasket() < 0) {
+          return `Your basket exceeds the remaining ${getCategoryDisplayName()} capacity for this drop.`;
+        }
+
+        const customerName = byId("customerName").value.trim();
+        const customerPhone = byId("customerPhone").value.trim();
+
+        if (!customerName) return "Please enter your name.";
+        if (!customerPhone) return "Please enter your phone number.";
+
+        if (inferNeedsAddress()) {
+          const address = byId("customerAddress").value.trim();
+          if (!address) return "Please enter your delivery address.";
+        }
+
+        return "";
+      }
+
+      async function handoffToPayment() {
+        const validationError = validateCheckout();
+        if (validationError) {
+          showCheckoutNotice(validationError, "error");
+          return;
+        }
+
+        showCheckoutNotice("");
+        const payload = buildCheckoutPayload();
+        const payBtn = byId("payBtn");
+        payBtn.disabled = true;
+        payBtn.textContent = "Preparing payment…";
+
+        try {
+          const response = await fetch(`${SUPABASE_URL}/functions/v1/${STRIPE_CHECKOUT_FUNCTION}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: "Bearer " + SUPABASE_ANON_KEY
+            },
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+            let message = `Payment handoff failed (${response.status})`;
+            try {
+              const errorBody = await response.json();
+              if (errorBody?.error) message = errorBody.error;
+            } catch (_) {}
+            throw new Error(message);
+          }
+
+          const data = await response.json();
+
+          if (data?.url) {
+            window.location.href = data.url;
+            return;
+          }
+
+          if (data?.message) {
+            showCheckoutNotice(data.message, "warn");
+            return;
+          }
+
+          showCheckoutNotice("Stripe handoff endpoint responded, but no checkout URL was returned yet.", "warn");
+          console.log("Stripe-ready payload:", payload);
+        } catch (err) {
+          console.error(err);
+          showCheckoutNotice(
+            `${err.message || "Unable to start payment."} Stripe-ready payload has been logged to the console for now.`,
+            "warn"
+          );
+          console.log("Stripe-ready payload:", payload);
+        } finally {
+          payBtn.disabled = false;
+          payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
+        }
+      }
+
+      function renderAll() {
+        renderHero();
+        renderMenu();
+        renderBasketBar();
+        renderBasketSheet();
+      }
+
+      function tickCountdown() {
+        renderHero();
+        renderBasketBar();
+      }
+
+      function bindDynamicEvents() {
+        document.body.addEventListener("click", (e) => {
+          const productPlus = e.target.closest(".js-product-plus");
+          const productMinus = e.target.closest(".js-product-minus");
+          const productAdd = e.target.closest(".js-product-add");
+          const openBundle = e.target.closest(".js-open-bundle");
+          const basketMinus = e.target.closest(".js-basket-minus");
+          const basketPlus = e.target.closest(".js-basket-plus");
+          const basketRemove = e.target.closest(".js-basket-remove");
+
+          if (productPlus) {
+            addProductToBasket(productPlus.dataset.productId, 1);
+            return;
+          }
+
+          if (productMinus) {
+            addProductToBasket(productMinus.dataset.productId, -1);
+            return;
+          }
+
+          if (productAdd) {
+            const currentQty = getProductBasketQuantity(productAdd.dataset.productId);
+            if (currentQty === 0) addProductToBasket(productAdd.dataset.productId, 1);
+            else openBasket();
+            return;
+          }
+
+          if (openBundle) {
+            openBundleModal(openBundle.dataset.bundleId);
+            return;
+          }
+
+          if (basketMinus) {
+            updateBasketItemQuantity(basketMinus.dataset.key, -1);
+            return;
+          }
+
+          if (basketPlus) {
+            updateBasketItemQuantity(basketPlus.dataset.key, 1);
+            return;
+          }
+
+          if (basketRemove) {
+            removeBasketItem(basketRemove.dataset.key);
+          }
+        });
+
+        document.body.addEventListener("change", (e) => {
+          if (e.target.matches('input[name="selectedFulfilmentMode"]')) {
+            state.selectedFulfilmentMode = e.target.value;
+            renderBasketSheet();
+            return;
+          }
+
+          if (e.target.closest("[data-bundle-line-id]")) {
+            const block = e.target.closest("[data-bundle-line-id]");
+            const max = Number(block.dataset.max || 0);
+            const checked = Array.from(block.querySelectorAll("input:checked"));
+
+            if (e.target.type === "checkbox" && max > 0 && checked.length > max) {
+              e.target.checked = false;
+            }
+
+            block.querySelectorAll(".bundleOption").forEach((opt) => {
+              const input = opt.querySelector("input");
+              opt.classList.toggle("active", Boolean(input?.checked));
+            });
+
+            syncBundleDraftFromUi();
+          }
+        });
+
+        byId("openBasketBtn").addEventListener("click", openBasket);
+        byId("closeBasketBtn").addEventListener("click", closeBasket);
+        byId("basketBackdrop").addEventListener("click", (e) => {
+          if (e.target === byId("basketBackdrop")) closeBasket();
+        });
+
+        byId("closeBundleModalBtn").addEventListener("click", closeBundleModal);
+        byId("bundleModalBackdrop").addEventListener("click", (e) => {
+          if (e.target === byId("bundleModalBackdrop")) closeBundleModal();
+        });
+
+        byId("addBundleBtn").addEventListener("click", () => {
+          syncBundleDraftFromUi();
+          if (byId("addBundleBtn").disabled) return;
+          addBundleToBasket(state.bundleDraft);
+        });
+
+        byId("payBtn").addEventListener("click", handoffToPayment);
+      }
+
+      async function init() {
+        try {
+          if (!window.supabase || !window.supabase.createClient) {
+            throw new Error("Supabase library failed to load.");
+          }
+
+          if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+            throw new Error("Missing Supabase config. Check /assets/config.js.");
+          }
+
+          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+          bindDynamicEvents();
+          await loadDropContext();
+          renderAll();
+
+          clearInterval(countdownTimer);
+          countdownTimer = setInterval(tickCountdown, 60000);
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to load this ordering page.");
+          showNotice("");
+          byId("menuSections").innerHTML = `<div class="emptyState">We couldn’t load this drop.</div>`;
+        }
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
