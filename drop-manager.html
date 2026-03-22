@@ -1937,7 +1937,7 @@
       };
     }
 
- async function saveAssignments() {
+  async function saveAssignments() {
     const enabledRows = state.menuAssignments.filter((row) => row.enabled);
 
     const cleanedRows = [];
@@ -1987,7 +1987,7 @@
 
       cleanedRows.push({
         drop_id: state.selectedDropId,
-        item_type: itemType,
+        menu_item_type: itemType,
         product_id: itemType === "product" ? productId : null,
         bundle_id: itemType === "bundle" ? bundleId : null,
         is_available: true,
@@ -2158,7 +2158,7 @@
         const rows = sourceAssignments
           .map((row) => ({
             drop_id: insertedDrop.id,
-            item_type: row.item_type || row.menu_item_type,
+            menu_item_type: row.menu_item_type || row.item_type,
             product_id: row.product_id,
             bundle_id: row.bundle_id,
             is_available: row.is_available,
@@ -2166,13 +2166,13 @@
             stock_limit: row.stock_limit,
             sort_order: row.sort_order
           }))
-         .filter((row) =>
-  row.item_type &&
-  (
-    (row.item_type === "product" && row.product_id) ||
-    (row.item_type === "bundle" && row.bundle_id)
-  )
-);
+          .filter((row) =>
+            row.menu_item_type &&
+            (
+              (row.menu_item_type === "product" && row.product_id) ||
+              (row.menu_item_type === "bundle" && row.bundle_id)
+            )
+          );
 
         if (rows.length) {
           const { error: insertAssignmentsError } = await supabase.from("drop_menu_items").insert(rows);
