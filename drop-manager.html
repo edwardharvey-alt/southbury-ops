@@ -1937,105 +1937,106 @@
       };
     }
 
-  async function saveAssignments() {
-  const enabledRows = state.menuAssignments.filter((row) => row.enabled);
+ async function saveAssignments() {
+    const enabledRows = state.menuAssignments.filter((row) => row.enabled);
 
-  const cleanedRows = [];
-  const invalidRows = [];
+    const cleanedRows = [];
+    const invalidRows = [];
 
-  enabledRows.forEach((row, index) => {
-    const keyParts = String(row.key || "").split(":");
-    const keyType = normalizeItemType(keyParts[0] || "");
-    const rawType = normalizeItemType(row.item_type || row.menu_item_type || "");
+    enabledRows.forEach((row) => {
+      const keyParts = String(row.key || "").split(":");
+      const keyType = normalizeItemType(keyParts[0] || "");
+      const keyId = keyParts[1] || null;
+      const rawType = normalizeItemType(row.item_type || row.menu_item_type || "");
 
-    const itemType =
-      rawType ||
-      keyType ||
-      (row.bundle_id ? "bundle" : null) ||
-      (row.product_id ? "product" : null);
+      const itemType =
+        rawType ||
+        keyType ||
+        (row.bundle_id ? "bundle" : null) ||
+        (row.product_id ? "product" : null);
 
-    const productId =
-      itemType === "product"
-        ? (row.product_id || keyParts[0] === "product" ? keyParts[1] : null)
-        : null;
+      const productId =
+        itemType === "product"
+          ? (row.product_id || (keyType === "product" ? keyId : null))
+          : null;
 
-    const bundleId =
-      itemType === "bundle"
-        ? (row.bundle_id || keyParts[0] === "bundle" ? keyParts[1] : null)
-        : null;
+      const bundleId =
+        itemType === "bundle"
+          ? (row.bundle_id || (keyType === "bundle" ? keyId : null))
+          : null;
 
-    const valid =
-      Boolean(itemType) &&
-      (
-        (itemType === "product" && Boolean(productId)) ||
-        (itemType === "bundle" && Boolean(bundleId))
-      );
+      const valid =
+        Boolean(itemType) &&
+        (
+          (itemType === "product" && Boolean(productId)) ||
+          (itemType === "bundle" && Boolean(bundleId))
+        );
 
-    if (!valid) {
-      invalidRows.push({
-        key: row.key,
-        name: row.name,
-        item_type: row.item_type,
-        menu_item_type: row.menu_item_type,
-        inferred_item_type: itemType,
-        product_id: row.product_id,
-        bundle_id: row.bundle_id
+      if (!valid) {
+        invalidRows.push({
+          key: row.key,
+          name: row.name,
+          item_type: row.item_type,
+          menu_item_type: row.menu_item_type,
+          inferred_item_type: itemType,
+          product_id: row.product_id,
+          bundle_id: row.bundle_id
+        });
+        return;
+      }
+
+      cleanedRows.push({
+        drop_id: state.selectedDropId,
+        item_type: itemType,
+        product_id: itemType === "product" ? productId : null,
+        bundle_id: itemType === "bundle" ? bundleId : null,
+        is_available: true,
+        price_override_pence:
+          row.price_override_pence === "" || row.price_override_pence == null
+            ? null
+            : Number(row.price_override_pence),
+        stock_limit:
+          row.stock_limit === "" || row.stock_limit == null
+            ? null
+            : Number(row.stock_limit),
+        sort_order:
+          row.sort_order == null
+            ? (cleanedRows.length + 1) * 10
+            : Number(row.sort_order)
       });
+    });
+
+    if (invalidRows.length) {
+      console.error("Invalid enabled menu rows skipped during saveAssignments:", invalidRows);
+    }
+
+    const { error: deleteError } = await supabase
+      .from("drop_menu_items")
+      .delete()
+      .eq("drop_id", state.selectedDropId);
+
+    if (deleteError) throw deleteError;
+
+    if (!cleanedRows.length) {
+      if (enabledRows.length) {
+        throw new Error("Enabled menu items could not be saved because one or more selected rows has no valid product or bundle reference.");
+      }
       return;
     }
 
-    cleanedRows.push({
-      drop_id: state.selectedDropId,
-      menu_item_type: itemType,
-      product_id: itemType === "product" ? productId : null,
-      bundle_id: itemType === "bundle" ? bundleId : null,
-      is_available: true,
-      price_override_pence:
-        row.price_override_pence === "" || row.price_override_pence == null
-          ? null
-          : Number(row.price_override_pence),
-      stock_limit:
-        row.stock_limit === "" || row.stock_limit == null
-          ? null
-          : Number(row.stock_limit),
-      sort_order:
-        row.sort_order == null
-          ? (cleanedRows.length + 1) * 10
-          : Number(row.sort_order)
-    });
-  });
+    const { error: insertError } = await supabase
+      .from("drop_menu_items")
+      .insert(cleanedRows);
 
-  if (invalidRows.length) {
-    console.error("Invalid enabled menu rows skipped during saveAssignments:", invalidRows);
-  }
-
-  const { error: deleteError } = await supabase
-    .from("drop_menu_items")
-    .delete()
-    .eq("drop_id", state.selectedDropId);
-
-  if (deleteError) throw deleteError;
-
-  if (!cleanedRows.length) {
-    if (enabledRows.length) {
-      throw new Error("Enabled menu items could not be saved because one or more selected rows has no valid product or bundle reference.");
+    if (insertError) {
+      console.error("drop_menu_items insert failed", {
+        cleanedRows,
+        invalidRows,
+        insertError
+      });
+      throw insertError;
     }
-    return;
   }
-
-  const { error: insertError } = await supabase
-    .from("drop_menu_items")
-    .insert(cleanedRows);
-
-  if (insertError) {
-    console.error("drop_menu_items insert failed", {
-      cleanedRows,
-      invalidRows,
-      insertError
-    });
-    throw insertError;
-  }
-}
 
     async function saveDrop(showSuccess = true) {
       if (!state.selectedDropId || !state.drop) return;
@@ -2157,7 +2158,7 @@
         const rows = sourceAssignments
           .map((row) => ({
             drop_id: insertedDrop.id,
-            menu_item_type: row.menu_item_type || row.item_type,
+            item_type: row.item_type || row.menu_item_type,
             product_id: row.product_id,
             bundle_id: row.bundle_id,
             is_available: row.is_available,
@@ -2165,13 +2166,13 @@
             stock_limit: row.stock_limit,
             sort_order: row.sort_order
           }))
-          .filter((row) =>
-            row.menu_item_type &&
-            (
-              (row.menu_item_type === "product" && row.product_id) ||
-              (row.menu_item_type === "bundle" && row.bundle_id)
-            )
-          );
+         .filter((row) =>
+  row.item_type &&
+  (
+    (row.item_type === "product" && row.product_id) ||
+    (row.item_type === "bundle" && row.bundle_id)
+  )
+);
 
         if (rows.length) {
           const { error: insertAssignmentsError } = await supabase.from("drop_menu_items").insert(rows);
