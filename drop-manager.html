@@ -597,2063 +597,2053 @@
     </div>
   </div>
 
-  <script>
-    (function () {
-      const CONFIG = window.HEARTH_CONFIG || {};
-      const SUPABASE_URL = CONFIG.SUPABASE_URL;
-      const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
-      const DEFAULT_VENDOR_SLUG = "southbury-farm-pizza";
-      const STAGES = ["basics", "timing", "menu", "commercials", "review"];
-      const ACTIVE_DEFAULT_STATUSES = ["live", "scheduled", "draft"];
-      const DEFAULT_TYPE_FILTERS = ["neighbourhood", "community", "event"];
-      const LOCAL_TIMING_KEY_PREFIX = "hearth:dropStudioTiming:";
+<script>
+  (function () {
+    const CONFIG = window.HEARTH_CONFIG || {};
+    const SUPABASE_URL = CONFIG.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
+    const DEFAULT_VENDOR_SLUG = "southbury-farm-pizza";
+    const STAGES = ["basics", "timing", "menu", "commercials", "review"];
+    const ACTIVE_DEFAULT_STATUSES = ["live", "scheduled", "draft"];
+    const DEFAULT_TYPE_FILTERS = ["neighbourhood", "community", "event"];
 
-      let supabase = null;
-      let successTimer = null;
-      let manualSlugEdited = false;
+    let supabase = null;
+    let successTimer = null;
+    let manualSlugEdited = false;
 
-      const state = {
-        vendorId: null,
-        drops: [],
-        hosts: [],
-        products: [],
-        bundles: [],
-        categories: [],
-        selectedDropId: null,
-        selectedDropSummary: null,
-        drop: null,
-        readiness: null,
-        dropMenuItems: [],
-        dropMenuItemStock: [],
-        menuAssignments: [],
-        search: "",
-        statusFilters: [...ACTIVE_DEFAULT_STATUSES],
-        typeFilters: [...DEFAULT_TYPE_FILTERS],
-        saveState: "saved",
-        currentStage: "basics",
-        seriesRows: []
+    const state = {
+      vendorId: null,
+      drops: [],
+      hosts: [],
+      products: [],
+      bundles: [],
+      categories: [],
+      selectedDropId: null,
+      selectedDropSummary: null,
+      drop: null,
+      readiness: null,
+      dropMenuItems: [],
+      dropMenuItemStock: [],
+      menuAssignments: [],
+      search: "",
+      statusFilters: [...ACTIVE_DEFAULT_STATUSES],
+      typeFilters: [...DEFAULT_TYPE_FILTERS],
+      saveState: "saved",
+      currentStage: "basics",
+      seriesRows: [],
+      showInactiveMenuItems: false
+    };
+
+    function byId(id) {
+      return document.getElementById(id);
+    }
+
+    function showError(message) {
+      const el = byId("errorBox");
+      if (!message) {
+        el.style.display = "none";
+        el.textContent = "";
+        return;
+      }
+      el.style.display = "block";
+      el.textContent = message;
+    }
+
+    function showInlineSuccess(message) {
+      const el = byId("inlineSuccess");
+      clearTimeout(successTimer);
+      el.textContent = message;
+      el.style.display = "block";
+      successTimer = setTimeout(() => {
+        el.style.display = "none";
+        el.textContent = "";
+      }, 2500);
+    }
+
+    function setSaveState(status, text) {
+      state.saveState = status;
+      const el = byId("saveStateInline");
+      el.className = "saveStateInline";
+      if (status === "saved") {
+        el.classList.add("saved");
+        el.textContent = text || "All changes saved";
+      } else if (status === "saving") {
+        el.classList.add("saving");
+        el.textContent = text || "Saving changes…";
+      } else if (status === "error") {
+        el.classList.add("error");
+        el.textContent = text || "Save failed";
+      } else {
+        el.textContent = text || "Unsaved changes";
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function slugify(text) {
+      return String(text || "")
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .replace(/-{2,}/g, "-");
+    }
+
+    function uidSuffix() {
+      return Math.random().toString(36).slice(2, 7);
+    }
+
+    function formatMoneyPence(pence) {
+      return new Intl.NumberFormat("en-GB", {
+        style: "currency",
+        currency: "GBP",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }).format((Number(pence || 0)) / 100);
+    }
+
+    function formatDateShort(value) {
+      if (!value) return "—";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "—";
+      return d.toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short"
+      });
+    }
+
+    function formatTimeOnly(value) {
+      if (!value) return "—";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "—";
+      return d.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function formatDateInput(value) {
+      if (!value) return "";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "";
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+
+    function formatTimeInput(value) {
+      if (!value) return "";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "";
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function combineDateTime(dateStr, timeStr) {
+      if (!dateStr || !timeStr) return null;
+      const date = new Date(`${dateStr}T${timeStr}`);
+      if (Number.isNaN(date.getTime())) return null;
+      return date.toISOString();
+    }
+
+    function getDayOfWeekFromDateInput(value) {
+      if (!value) return "4";
+      const d = new Date(`${value}T12:00:00`);
+      if (Number.isNaN(d.getTime())) return "4";
+      return String(d.getDay());
+    }
+
+    function getSharePath() {
+      const slug = (state.drop?.slug || "").trim();
+      if (!slug) return "";
+      return `/order.html?drop=${encodeURIComponent(slug)}`;
+    }
+
+    function getShareUrl() {
+      const path = getSharePath();
+      if (!path) return "";
+      try {
+        return new URL(path, window.location.origin).toString();
+      } catch {
+        return path;
+      }
+    }
+
+    function getQrImageUrl(text) {
+      if (!text) return "";
+      return "https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=" + encodeURIComponent(text);
+    }
+
+    function getStatusPriority(status) {
+      const s = String(status || "").toLowerCase();
+      if (s === "live") return 1;
+      if (s === "scheduled") return 2;
+      if (s === "draft") return 3;
+      if (s === "closed") return 4;
+      if (s === "completed") return 5;
+      if (s === "cancelled") return 6;
+      if (s === "archived") return 7;
+      return 8;
+    }
+
+    function titleCase(value) {
+      const text = String(value || "");
+      return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
+    }
+
+    function categoryNameFromId(categoryId) {
+      const found = state.categories.find((c) => c.id === categoryId);
+      return found?.name || "Uncategorised";
+    }
+
+    function getCategoryById(categoryId) {
+      return state.categories.find((c) => c.id === categoryId) || null;
+    }
+
+    function getCategoryBySlugOrName(value) {
+      const needle = String(value || "").trim().toLowerCase();
+      if (!needle) return null;
+      return state.categories.find((c) =>
+        String(c.slug || "").trim().toLowerCase() === needle ||
+        String(c.name || "").trim().toLowerCase() === needle
+      ) || null;
+    }
+
+    function getCapacityCategoryRecord(dropLike) {
+      if (!dropLike) return null;
+      if (dropLike.capacity_category_id) {
+        const byId = getCategoryById(dropLike.capacity_category_id);
+        if (byId) return byId;
+      }
+      return getCategoryBySlugOrName(dropLike.capacity_category);
+    }
+
+    function getCapacityCategoryLabel(dropLike) {
+      const category = getCapacityCategoryRecord(dropLike);
+      if (category?.name) return category.name;
+      return titleCase(dropLike?.capacity_category || "Units");
+    }
+
+    function getCapacityCategorySlugFromId(categoryId) {
+      const category = getCategoryById(categoryId);
+      if (!category) return null;
+      return category.slug || slugify(category.name || "");
+    }
+
+    function getDefaultCapacityCategory() {
+      return (
+        getCategoryBySlugOrName("pizza") ||
+        state.categories.find((c) => c.is_active) ||
+        state.categories[0] ||
+        null
+      );
+    }
+
+    function populateCapacityCategoryOptions(selectedCategoryId = null, fallbackCapacityCategory = null) {
+      const select = byId("capacityCategory");
+
+      if (!state.categories.length) {
+        select.innerHTML = `<option value="">No categories found</option>`;
+        return;
+      }
+
+      let selectedId = selectedCategoryId;
+      if (!selectedId && fallbackCapacityCategory) {
+        selectedId = getCategoryBySlugOrName(fallbackCapacityCategory)?.id || null;
+      }
+      if (!selectedId) {
+        selectedId = getDefaultCapacityCategory()?.id || null;
+      }
+
+      select.innerHTML = state.categories.map((category) => `
+        <option value="${category.id}" ${category.id === selectedId ? "selected" : ""}>
+          ${escapeHtml(category.name)}
+        </option>
+      `).join("");
+    }
+
+    function groupByCategory(items) {
+      const groups = new Map();
+      items.forEach((item) => {
+        const key = item.category_name || "Uncategorised";
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(item);
+      });
+      return groups;
+    }
+
+    function getMenuItemKey(type, id) {
+      return `${type}:${id}`;
+    }
+
+    function getRepeatPattern() {
+      const checked = document.querySelector('input[name="repeatPattern"]:checked');
+      return checked ? checked.value : "one_off";
+    }
+
+    function getOpenPattern() {
+      const checked = document.querySelector('input[name="openPattern"]:checked');
+      return checked ? checked.value : "immediate";
+    }
+
+    function getLiveDropFromForm() {
+      if (!state.drop) return null;
+      return readDropFromForm();
+    }
+
+    function isValidDateOrder(a, b) {
+      if (!a || !b) return false;
+      const da = new Date(a);
+      const db = new Date(b);
+      if (Number.isNaN(da.getTime()) || Number.isNaN(db.getTime())) return false;
+      return db > da;
+    }
+
+    function getEnabledAssignments() {
+      return state.menuAssignments.filter((row) => row.enabled);
+    }
+
+    function getLiveReadiness() {
+      const dropData = getLiveDropFromForm() || state.drop || {};
+      const enabledAssignments = getEnabledAssignments();
+      const hasCapacityItem = enabledAssignments.some((item) => Number(item.capacity_units || 0) > 0);
+
+      const requiresHost = dropData.drop_type === "community";
+      const basicsComplete =
+        Boolean(dropData.name) &&
+        Boolean(dropData.slug) &&
+        Boolean(dropData.drop_type) &&
+        Boolean(dropData.capacity_category_id) &&
+        Boolean(dropData.capacity_category) &&
+        Number(dropData.capacity_units_total || 0) > 0 &&
+        (!requiresHost || Boolean(dropData.host_id));
+
+      const deliveryStartOk = Boolean(dropData.delivery_start);
+      const deliveryEndOk = Boolean(dropData.delivery_end);
+      const closesAtOk = Boolean(dropData.closes_at);
+      const deliveryWindowOk = isValidDateOrder(dropData.delivery_start, dropData.delivery_end);
+      const closeBeforeDeliveryOk =
+        dropData.closes_at && dropData.delivery_start
+          ? new Date(dropData.closes_at).getTime() <= new Date(dropData.delivery_start).getTime()
+          : false;
+
+      let openWindowOk = true;
+      if (getOpenPattern() === "scheduled") {
+        openWindowOk =
+          Boolean(dropData.opens_at) &&
+          Boolean(dropData.closes_at) &&
+          isValidDateOrder(dropData.opens_at, dropData.closes_at);
+      }
+
+      const timingComplete =
+        deliveryStartOk &&
+        deliveryEndOk &&
+        closesAtOk &&
+        deliveryWindowOk &&
+        closeBeforeDeliveryOk &&
+        openWindowOk;
+
+      let fundraisingValid = true;
+      if (dropData.fundraising_enabled) {
+        if (!dropData.fundraising_model) fundraisingValid = false;
+        if (dropData.fundraising_model === "percentage" && !(Number(dropData.fundraising_percentage) > 0)) fundraisingValid = false;
+        if (dropData.fundraising_model === "per_order" && !(Number(dropData.fundraising_per_order_pence) > 0)) fundraisingValid = false;
+        if (!dropData.fundraising_display_text) fundraisingValid = false;
+      }
+
+      let hostShareValid = true;
+      if (dropData.host_share_enabled) {
+        if (!dropData.host_share_model) hostShareValid = false;
+        if (dropData.host_share_model === "percentage" && !(Number(dropData.host_share_percentage) > 0)) hostShareValid = false;
+        if (dropData.host_share_model === "per_order" && !(Number(dropData.host_share_per_order_pence) > 0)) hostShareValid = false;
+        if (dropData.host_share_model === "fixed" && !(Number(dropData.host_share_fixed_pence) > 0)) hostShareValid = false;
+      }
+
+      const commercialsValid = fundraisingValid && hostShareValid;
+      const menuComplete = enabledAssignments.length > 0;
+
+      return {
+        basics_complete: basicsComplete,
+        timing_complete: timingComplete,
+        menu_complete: menuComplete,
+        capacity_product_present: hasCapacityItem,
+        commercials_valid: commercialsValid,
+        ready_to_publish:
+          basicsComplete &&
+          timingComplete &&
+          menuComplete &&
+          hasCapacityItem &&
+          commercialsValid
       };
+    }
 
-      function byId(id) {
-        return document.getElementById(id);
+    function getStageStatus(stage) {
+      const readiness = getLiveReadiness();
+      if (!readiness || !state.drop) return "not_started";
+      if (stage === "basics") return readiness.basics_complete ? "complete" : "attention";
+      if (stage === "timing") return readiness.timing_complete ? "complete" : "attention";
+      if (stage === "menu") return (readiness.menu_complete && readiness.capacity_product_present) ? "complete" : "attention";
+      if (stage === "commercials") return readiness.commercials_valid ? "complete" : "attention";
+      if (stage === "review") return readiness.ready_to_publish ? "attention" : "not_started";
+      return "not_started";
+    }
+
+    function getStageVisualStatus(stage) {
+      const readiness = getLiveReadiness();
+      if (!readiness || !state.drop) {
+        return stage === state.currentStage ? "active" : "neutral";
+      }
+      if (stage === state.currentStage) return "active";
+
+      const stageIndex = STAGES.indexOf(stage);
+      const currentIndex = STAGES.indexOf(state.currentStage);
+
+      if (stageIndex > currentIndex) return "neutral";
+      if (stage === "basics") return readiness.basics_complete ? "complete" : "neutral";
+      if (stage === "timing") return (currentIndex > stageIndex && readiness.timing_complete) ? "complete" : "neutral";
+      if (stage === "menu") return (currentIndex > stageIndex && readiness.menu_complete && readiness.capacity_product_present) ? "complete" : "neutral";
+      if (stage === "commercials") return (currentIndex > stageIndex && readiness.commercials_valid) ? "complete" : "neutral";
+      if (stage === "review") return readiness.ready_to_publish ? "attention" : "neutral";
+      return "neutral";
+    }
+
+    function renderStageBar() {
+      const name = state.drop?.name || "No drop selected";
+      const status = state.drop?.status || "draft";
+      const completeCount = ["basics", "timing", "menu", "commercials"].filter((stage) => getStageStatus(stage) === "complete").length;
+
+      byId("stageBarDropName").textContent = name;
+      byId("stageBarMeta").textContent = `${status} • ${completeCount} of 4 setup stages complete`;
+
+      document.querySelectorAll(".stagePill").forEach((pill) => {
+        const stage = pill.dataset.stage;
+        const visualStatus = getStageVisualStatus(stage);
+
+        pill.classList.remove("active", "complete", "attention");
+        if (visualStatus === "active") pill.classList.add("active");
+        if (visualStatus === "complete") pill.classList.add("complete");
+        if (visualStatus === "attention") pill.classList.add("attention");
+
+        const icon = byId(`icon-${stage}`);
+        if (visualStatus === "complete") icon.textContent = "✓";
+        else if (visualStatus === "attention") icon.textContent = "!";
+        else icon.textContent = String(STAGES.indexOf(stage) + 1);
+      });
+    }
+
+    function renderContextBar() {
+      const meta = byId("contextMeta");
+      const chips = byId("contextChips");
+
+      if (!state.drop || !state.selectedDropSummary) {
+        meta.textContent = "Select a drop to view context.";
+        chips.innerHTML = "";
+        return;
       }
 
-      function showError(message) {
-        const el = byId("errorBox");
-        if (!message) {
-          el.style.display = "none";
-          el.textContent = "";
-          return;
-        }
-        el.style.display = "block";
-        el.textContent = message;
+      const liveDrop = getLiveDropFromForm() || state.drop;
+      const host = state.hosts.find((h) => h.id === liveDrop.host_id);
+      const enabledCount = state.menuAssignments.filter((p) => p.enabled).length;
+      const capacityLabel = getCapacityCategoryLabel(liveDrop);
+
+      meta.textContent = [
+        liveDrop.drop_type || "drop",
+        host ? host.name : "No host",
+        liveDrop.delivery_start ? `${formatDateShort(liveDrop.delivery_start)} ${formatTimeOnly(liveDrop.delivery_start)}–${formatTimeOnly(liveDrop.delivery_end)}` : "No fulfilment window"
+      ].filter(Boolean).join(" • ");
+
+      chips.innerHTML = [
+        `<span class="miniChip">${Number(liveDrop.capacity_units_total || 0)} ${escapeHtml(capacityLabel)}</span>`,
+        `<span class="miniChip">${enabledCount} menu items</span>`,
+        `<span class="miniChip">${Number(state.selectedDropSummary.order_count || 0)} orders</span>`
+      ].join("");
+    }
+
+    function updateWorkspaceHeader() {
+      const map = {
+        basics: ["Basics", "Define the core setup for this drop"],
+        timing: ["Timing", "Set fulfilment timing, ordering window and recurrence"],
+        menu: ["Menu", "Choose what can be ordered"],
+        commercials: ["Commercials", "Optional economics and support settings"],
+        review: ["Review", "Check readiness, share and publish"]
+      };
+      byId("workspaceTitle").textContent = map[state.currentStage][0];
+      byId("workspaceSub").textContent = map[state.currentStage][1];
+
+      document.querySelectorAll(".stagePane").forEach((pane) => pane.classList.remove("active"));
+      byId(`pane-${state.currentStage}`).classList.add("active");
+
+      byId("backStageBtn").classList.toggle("hidden", state.currentStage === "basics");
+      byId("continueStageBtn").classList.toggle("hidden", state.currentStage === "review");
+      byId("openBoardBtn").classList.toggle("hidden", !(state.drop && ["live", "closed"].includes(state.drop.status)));
+    }
+
+    function updateStatusFilterSummary() {
+      const summary = byId("statusFilterSummary");
+      const selected = state.statusFilters;
+      if (!selected.length) {
+        summary.textContent = "No statuses";
+        return;
+      }
+      if (selected.length <= 3) {
+        summary.textContent = selected.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ");
+        return;
+      }
+      summary.textContent = `${selected.length} statuses`;
+    }
+
+    function updateTypeFilterSummary() {
+      const summary = byId("typeFilterSummary");
+      const selected = state.typeFilters;
+      if (selected.length === DEFAULT_TYPE_FILTERS.length) {
+        summary.textContent = "All types";
+        return;
+      }
+      if (!selected.length) {
+        summary.textContent = "No types";
+        return;
+      }
+      if (selected.length <= 2) {
+        summary.textContent = selected.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ");
+        return;
+      }
+      summary.textContent = `${selected.length} types`;
+    }
+
+    async function loadVendorId() {
+      const { data, error } = await supabase
+        .from("vendors")
+        .select("id")
+        .eq("slug", DEFAULT_VENDOR_SLUG)
+        .single();
+
+      if (error) throw error;
+      state.vendorId = data.id;
+    }
+
+    async function loadHosts() {
+      const { data, error } = await supabase
+        .from("hosts")
+        .select("*")
+        .neq("status", "archived")
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      state.hosts = data || [];
+    }
+
+    async function loadCategories() {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("vendor_id", state.vendorId)
+        .order("sort_order", { ascending: true, nullsFirst: false })
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      state.categories = data || [];
+    }
+
+    async function loadProducts() {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("vendor_id", state.vendorId)
+        .order("sort_order", { ascending: true, nullsFirst: false })
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      state.products = data || [];
+    }
+
+    async function loadBundles() {
+      const { data, error } = await supabase
+        .from("bundles")
+        .select("*")
+        .eq("vendor_id", state.vendorId)
+        .order("sort_order", { ascending: true, nullsFirst: false })
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      state.bundles = data || [];
+    }
+
+    async function loadDrops() {
+      const { data, error } = await supabase
+        .from("v_drop_summary")
+        .select("*");
+
+      if (error) throw error;
+
+      state.drops = (data || []).sort((a, b) => {
+        const statusDiff = getStatusPriority(a.status) - getStatusPriority(b.status);
+        if (statusDiff !== 0) return statusDiff;
+        const aTime = a.delivery_start ? new Date(a.delivery_start).getTime() : Number.MAX_SAFE_INTEGER;
+        const bTime = b.delivery_start ? new Date(b.delivery_start).getTime() : Number.MAX_SAFE_INTEGER;
+        return aTime - bTime;
+      });
+
+      const exists = state.drops.some((d) => d.drop_id === state.selectedDropId);
+      if (!exists) state.selectedDropId = (state.drops[0] || {}).drop_id || null;
+    }
+
+    async function loadSelectedDrop() {
+      if (!state.selectedDropId) {
+        state.drop = null;
+        state.selectedDropSummary = null;
+        state.readiness = null;
+        state.dropMenuItems = [];
+        state.dropMenuItemStock = [];
+        state.menuAssignments = [];
+        return;
       }
 
-      function showInlineSuccess(message) {
-        const el = byId("inlineSuccess");
-        clearTimeout(successTimer);
-        el.textContent = message;
-        el.style.display = "block";
-        successTimer = setTimeout(() => {
-          el.style.display = "none";
-          el.textContent = "";
-        }, 2500);
-      }
+      const [dropRes, summaryRes, readinessRes, dropMenuItemsRes, stockRes] = await Promise.all([
+        supabase.from("drops").select("*").eq("id", state.selectedDropId).single(),
+        supabase.from("v_drop_summary").select("*").eq("drop_id", state.selectedDropId).single(),
+        supabase.from("v_drop_readiness_v2").select("*").eq("drop_id", state.selectedDropId).single(),
+        supabase.from("drop_menu_items").select("*").eq("drop_id", state.selectedDropId),
+        supabase.from("v_drop_menu_item_stock").select("*").eq("drop_id", state.selectedDropId)
+      ]);
 
-      function setSaveState(status, text) {
-        state.saveState = status;
-        const el = byId("saveStateInline");
-        el.className = "saveStateInline";
-        if (status === "saved") {
-          el.classList.add("saved");
-          el.textContent = text || "All changes saved";
-        } else if (status === "saving") {
-          el.classList.add("saving");
-          el.textContent = text || "Saving changes…";
-        } else if (status === "error") {
-          el.classList.add("error");
-          el.textContent = text || "Save failed";
-        } else {
-          el.textContent = text || "Unsaved changes";
-        }
-      }
+      if (dropRes.error) throw dropRes.error;
+      if (summaryRes.error) throw summaryRes.error;
+      if (readinessRes.error) throw readinessRes.error;
+      if (dropMenuItemsRes.error) throw dropMenuItemsRes.error;
+      if (stockRes.error) throw stockRes.error;
 
-      function escapeHtml(value) {
-        return String(value ?? "")
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;")
-          .replaceAll('"', "&quot;")
-          .replaceAll("'", "&#39;");
-      }
+      state.drop = dropRes.data;
+      state.selectedDropSummary = summaryRes.data;
+      state.readiness = readinessRes.data;
+      state.dropMenuItems = dropMenuItemsRes.data || [];
+      state.dropMenuItemStock = stockRes.data || [];
+      state.menuAssignments = buildMenuAssignments();
+      manualSlugEdited = false;
+      setSaveState("saved");
+    }
 
-      function slugify(text) {
-        return String(text || "")
-          .toLowerCase()
-          .trim()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-+|-+$/g, "")
-          .replace(/-{2,}/g, "-");
-      }
+    function buildMenuAssignments() {
+      const assignmentMap = new Map(
+        (state.dropMenuItems || []).map((row) => {
+          const refId = row.menu_item_type === "bundle" ? row.bundle_id : row.product_id;
+          return [getMenuItemKey(row.menu_item_type, refId), row];
+        })
+      );
 
-      function uidSuffix() {
-        return Math.random().toString(36).slice(2, 7);
-      }
+      const stockMap = new Map(
+        (state.dropMenuItemStock || []).map((row) => {
+          const refId = row.menu_item_type === "bundle" ? row.bundle_id : row.product_id;
+          return [getMenuItemKey(row.menu_item_type, refId), row];
+        })
+      );
 
-      function formatMoneyPence(pence) {
-        return new Intl.NumberFormat("en-GB", {
-          style: "currency",
-          currency: "GBP",
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 2
-        }).format((Number(pence || 0)) / 100);
-      }
+      const catalogueItems = [
+        ...state.products.map((product) => ({
+          menu_item_type: "product",
+          ref_id: product.id,
+          item_id: product.id,
+          name: product.name,
+          description: product.description || null,
+          category_id: product.category_id || null,
+          category_name: categoryNameFromId(product.category_id),
+          base_price_pence: product.price_pence,
+          capacity_units: Number(product.capacity_units || 0),
+          catalogue_is_active: Boolean(product.is_active),
+          sort_order: product.sort_order ?? null
+        })),
+        ...state.bundles.map((bundle) => ({
+          menu_item_type: "bundle",
+          ref_id: bundle.id,
+          item_id: bundle.id,
+          name: bundle.name,
+          description: bundle.description || null,
+          category_id: bundle.category_id || null,
+          category_name: categoryNameFromId(bundle.category_id),
+          base_price_pence: bundle.price_pence,
+          capacity_units: Number(bundle.capacity_units || 0),
+          catalogue_is_active: Boolean(bundle.is_active),
+          sort_order: bundle.sort_order ?? null
+        }))
+      ];
 
-      function formatDateShort(value) {
-        if (!value) return "—";
-        const d = new Date(value);
-        if (Number.isNaN(d.getTime())) return "—";
-        return d.toLocaleDateString("en-GB", {
-          weekday: "short",
-          day: "numeric",
-          month: "short"
+      const missingAssigned = (state.dropMenuItemStock || [])
+        .filter((row) => {
+          const refId = row.menu_item_type === "bundle" ? row.bundle_id : row.product_id;
+          return !catalogueItems.some((item) => item.menu_item_type === row.menu_item_type && item.ref_id === refId);
+        })
+        .map((row) => ({
+          menu_item_type: row.menu_item_type,
+          ref_id: row.menu_item_type === "bundle" ? row.bundle_id : row.product_id,
+          item_id: row.item_id,
+          name: row.item_name,
+          description: row.item_description || null,
+          category_id: row.category_id || null,
+          category_name: row.category_name || "Uncategorised",
+          base_price_pence: row.base_price_pence,
+          capacity_units: Number(row.capacity_units || 0),
+          catalogue_is_active: Boolean(row.catalogue_is_active),
+          sort_order: row.sort_order ?? null
+        }));
+
+      return [...catalogueItems, ...missingAssigned]
+        .map((item) => {
+          const key = getMenuItemKey(item.menu_item_type, item.ref_id);
+          const assigned = assignmentMap.get(key);
+          const stock = stockMap.get(key);
+
+          return {
+            key,
+            menu_item_type: item.menu_item_type,
+            product_id: item.menu_item_type === "product" ? item.ref_id : null,
+            bundle_id: item.menu_item_type === "bundle" ? item.ref_id : null,
+            name: item.name,
+            description: item.description,
+            category_id: item.category_id,
+            category_name: item.category_name,
+            base_price_pence: item.base_price_pence,
+            capacity_units: item.capacity_units,
+            catalogue_is_active: item.catalogue_is_active,
+            sort_order: assigned?.sort_order ?? item.sort_order ?? null,
+            enabled: Boolean(assigned?.is_available),
+            price_override_pence: assigned?.price_override_pence ?? null,
+            stock_limit: assigned?.stock_limit ?? null,
+            qty_ordered: Number(stock?.qty_ordered || 0),
+            stock_remaining: stock?.stock_remaining == null ? null : Number(stock.stock_remaining)
+          };
+        })
+        .sort((a, b) => {
+          const catCompare = String(a.category_name || "").localeCompare(String(b.category_name || ""));
+          if (catCompare !== 0) return catCompare;
+          const typeCompare = a.menu_item_type.localeCompare(b.menu_item_type);
+          if (typeCompare !== 0) return typeCompare;
+          const sortA = a.sort_order == null ? 999999 : Number(a.sort_order);
+          const sortB = b.sort_order == null ? 999999 : Number(b.sort_order);
+          if (sortA !== sortB) return sortA - sortB;
+          return a.name.localeCompare(b.name);
         });
+    }
+
+    function getFilteredDrops() {
+      const search = state.search.trim().toLowerCase();
+      const selectedStatuses = state.statusFilters;
+      const selectedTypes = state.typeFilters;
+
+      return state.drops.filter((drop) => {
+        const statusOk = selectedStatuses.length ? selectedStatuses.includes(drop.status) : false;
+        const typeOk = selectedTypes.length ? selectedTypes.includes(drop.drop_type) : false;
+        if (!statusOk || !typeOk) return false;
+        if (!search) return true;
+
+        const haystack = [
+          drop.drop_name || "",
+          drop.host_name || "",
+          drop.drop_type || "",
+          drop.status || ""
+        ].join(" ").toLowerCase();
+
+        return haystack.includes(search);
+      });
+    }
+
+    function renderDropBand() {
+      const band = byId("dropBand");
+      const drops = getFilteredDrops();
+
+      if (!drops.length) {
+        band.innerHTML = `<div class="emptyState" style="min-width:280px;">No drops found.</div>`;
+        return;
       }
 
-      function formatTimeOnly(value) {
-        if (!value) return "—";
-        const d = new Date(value);
-        if (Number.isNaN(d.getTime())) return "—";
-        return d.toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit"
-        });
-      }
+      band.innerHTML = drops.map((drop) => {
+        const active = drop.drop_id === state.selectedDropId ? "active" : "";
+        const hostLine = drop.host_name
+          ? `${escapeHtml(drop.drop_type || "drop")} • ${escapeHtml(drop.host_name)}`
+          : `${escapeHtml(drop.drop_type || "drop")}`;
 
-      function formatDateInput(value) {
-        if (!value) return "";
-        const d = new Date(value);
-        if (Number.isNaN(d.getTime())) return "";
-        const pad = (n) => String(n).padStart(2, "0");
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-      }
+        return `
+          <div class="dropCard ${active}" data-drop-id="${drop.drop_id}">
+            <div>
+              <div class="dropCardTop">
+                <div>
+                  <h4 class="dropCardTitle">${escapeHtml(drop.drop_name || "Untitled drop")}</h4>
+                  <p class="dropCardSub">${hostLine}</p>
+                </div>
+                <span class="miniChip ${escapeHtml(drop.status || "")}">${escapeHtml(drop.status || "—")}</span>
+              </div>
 
-      function formatTimeInput(value) {
-        if (!value) return "";
-        const d = new Date(value);
-        if (Number.isNaN(d.getTime())) return "";
-        const pad = (n) => String(n).padStart(2, "0");
-        return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      }
+              <div class="dropCardMeta">${escapeHtml(formatDateShort(drop.delivery_start))}</div>
+              <div class="dropCardMeta">${escapeHtml(formatTimeOnly(drop.delivery_start))}–${escapeHtml(formatTimeOnly(drop.delivery_end))}</div>
 
-      function combineDateTime(dateStr, timeStr) {
-        if (!dateStr || !timeStr) return null;
-        const date = new Date(`${dateStr}T${timeStr}`);
-        if (Number.isNaN(date.getTime())) return null;
-        return date.toISOString();
-      }
+              <div class="dropCardStats">
+                <span class="miniChip">${Number(drop.capacity_units_used || 0)} / ${Number(drop.capacity_units_total || 0)} ${escapeHtml(titleCase(drop.capacity_category || "units"))}</span>
+                <span class="miniChip">${Number(drop.order_count || 0)} orders</span>
+              </div>
+            </div>
 
-      function timeMinusMinutes(timeStr, minutes) {
-        if (!timeStr) return "";
-        const [h, m] = String(timeStr).split(":").map(Number);
-        if (Number.isNaN(h) || Number.isNaN(m)) return "";
-        const total = (h * 60 + m - minutes + 1440) % 1440;
-        const hh = String(Math.floor(total / 60)).padStart(2, "0");
-        const mm = String(total % 60).padStart(2, "0");
-        return `${hh}:${mm}`;
-      }
+            <div class="dropCardActions">
+              <button class="btnSmall js-duplicate-drop" type="button" data-drop-id="${drop.drop_id}">Duplicate</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
 
-      function daysBefore(dateStr, days) {
-        if (!dateStr) return "";
-        const d = new Date(`${dateStr}T12:00:00`);
-        if (Number.isNaN(d.getTime())) return "";
-        d.setDate(d.getDate() - days);
-        return formatDateInput(d.toISOString());
-      }
-
-      function getDayOfWeekFromDateInput(value) {
-        if (!value) return "4";
-        const d = new Date(`${value}T12:00:00`);
-        if (Number.isNaN(d.getTime())) return "4";
-        return String(d.getDay());
-      }
-
-      function getTimingStorageKey(dropId) {
-        return `${LOCAL_TIMING_KEY_PREFIX}${dropId}`;
-      }
-
-      function loadLocalTimingDraft(dropId) {
-        if (!dropId) return null;
-        try {
-          const raw = localStorage.getItem(getTimingStorageKey(dropId));
-          return raw ? JSON.parse(raw) : null;
-        } catch {
-          return null;
-        }
-      }
-
-      function saveLocalTimingDraft() {
-        if (!state.selectedDropId) return;
-        const payload = {
-          repeatPattern: getRepeatPattern(),
-          openPattern: getOpenPattern(),
-          seriesRows: state.seriesRows,
-          seriesStartDate: byId("seriesStartDate")?.value || "",
-          seriesEndMode: byId("seriesEndMode")?.value || "end_date",
-          seriesEndDate: byId("seriesEndDate")?.value || "",
-          seriesDropCount: byId("seriesDropCount")?.value || "8"
-        };
-        try {
-          localStorage.setItem(getTimingStorageKey(state.selectedDropId), JSON.stringify(payload));
-        } catch {}
-      }
-
-      function getSharePath() {
-        const slug = (state.drop?.slug || "").trim();
-        if (!slug) return "";
-        return `/order.html?drop=${encodeURIComponent(slug)}`;
-      }
-
-      function getShareUrl() {
-        const path = getSharePath();
-        if (!path) return "";
-        try {
-          return new URL(path, window.location.origin).toString();
-        } catch {
-          return path;
-        }
-      }
-
-      function getQrImageUrl(text) {
-        if (!text) return "";
-        return "https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=" + encodeURIComponent(text);
-      }
-
-      function getStatusPriority(status) {
-        const s = String(status || "").toLowerCase();
-        if (s === "live") return 1;
-        if (s === "scheduled") return 2;
-        if (s === "draft") return 3;
-        if (s === "closed") return 4;
-        if (s === "completed") return 5;
-        if (s === "cancelled") return 6;
-        if (s === "archived") return 7;
-        return 8;
-      }
-
-      function titleCase(value) {
-        const text = String(value || "");
-        return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
-      }
-
-      function categoryNameFromId(categoryId) {
-        const found = state.categories.find((c) => c.id === categoryId);
-        return found?.name || "Uncategorised";
-      }
-
-      function getCategoryById(categoryId) {
-        return state.categories.find((c) => c.id === categoryId) || null;
-      }
-
-      function getCategoryBySlugOrName(value) {
-        const needle = String(value || "").trim().toLowerCase();
-        if (!needle) return null;
-        return state.categories.find((c) =>
-          String(c.slug || "").trim().toLowerCase() === needle ||
-          String(c.name || "").trim().toLowerCase() === needle
-        ) || null;
-      }
-
-      function getCapacityCategoryRecord(dropLike) {
-        if (!dropLike) return null;
-        if (dropLike.capacity_category_id) {
-          const byId = getCategoryById(dropLike.capacity_category_id);
-          if (byId) return byId;
-        }
-        return getCategoryBySlugOrName(dropLike.capacity_category);
-      }
-
-      function getCapacityCategoryLabel(dropLike) {
-        const category = getCapacityCategoryRecord(dropLike);
-        if (category?.name) return category.name;
-        return titleCase(dropLike?.capacity_category || "Units");
-      }
-
-      function getCapacityCategorySlugFromId(categoryId) {
-        const category = getCategoryById(categoryId);
-        if (!category) return null;
-        return category.slug || slugify(category.name || "");
-      }
-
-      function getDefaultCapacityCategory() {
-        return (
-          getCategoryBySlugOrName("pizza") ||
-          state.categories.find((c) => c.is_active) ||
-          state.categories[0] ||
-          null
-        );
-      }
-
-      function populateCapacityCategoryOptions(selectedCategoryId = null, fallbackCapacityCategory = null) {
-        const select = byId("capacityCategory");
-
-        if (!state.categories.length) {
-          select.innerHTML = `<option value="">No categories found</option>`;
-          return;
-        }
-
-        let selectedId = selectedCategoryId;
-        if (!selectedId && fallbackCapacityCategory) {
-          selectedId = getCategoryBySlugOrName(fallbackCapacityCategory)?.id || null;
-        }
-        if (!selectedId) {
-          selectedId = getDefaultCapacityCategory()?.id || null;
-        }
-
-        select.innerHTML = state.categories.map((category) => `
-          <option value="${category.id}" ${category.id === selectedId ? "selected" : ""}>
-            ${escapeHtml(category.name)}
+    function renderHostOptions() {
+      const select = byId("hostSelect");
+      const current = state.drop?.host_id || "";
+      select.innerHTML = [
+        `<option value="">No host selected</option>`,
+        ...state.hosts.map((host) => `
+          <option value="${host.id}" ${host.id === current ? "selected" : ""}>
+            ${escapeHtml(host.name)} (${escapeHtml(host.host_type)})
           </option>
-        `).join("");
+        `)
+      ].join("");
+    }
+
+    function renderHostPreview() {
+      const liveDrop = getLiveDropFromForm() || state.drop;
+      const host = state.hosts.find((h) => h.id === liveDrop?.host_id);
+      const preview = byId("hostPreview");
+
+      if (!host) {
+        preview.innerHTML = `<strong>No host selected</strong>Add a host for community or hosted drops.`;
+        return;
       }
 
-      function groupByCategory(items) {
-        const groups = new Map();
-        items.forEach((item) => {
-          const key = item.category_name || "Uncategorised";
-          if (!groups.has(key)) groups.set(key, []);
-          groups.get(key).push(item);
-        });
-        return groups;
+      preview.innerHTML = `
+        <strong>${escapeHtml(host.name)}</strong>
+        ${escapeHtml(host.host_type)}${host.postcode ? ` • ${escapeHtml(host.postcode)}` : ""}
+        ${host.address_summary ? `<div style="margin-top:4px;">${escapeHtml(host.address_summary)}</div>` : ""}
+      `;
+    }
+
+    function renderHostHelper() {
+      const type = byId("dropType").value || "neighbourhood";
+      const helper = byId("hostHelperText");
+      if (type === "community") helper.textContent = "Required for community drops.";
+      else if (type === "event") helper.textContent = "Optional, but useful for hosted events.";
+      else helper.textContent = "Optional for neighbourhood drops.";
+    }
+
+    function populateForm() {
+      const d = state.drop;
+      if (!d) return;
+
+      byId("dropName").value = d.name || "";
+      byId("dropSlug").value = d.slug || "";
+      byId("dropType").value = d.drop_type || "neighbourhood";
+      byId("dropStatus").value = d.status || "draft";
+      byId("notesInternal").value = d.notes_internal || "";
+
+      byId("fulfilmentMode").value = d.fulfilment_mode || "";
+      byId("centrePostcode").value = d.centre_postcode || "";
+      byId("radiusKm").value = d.radius_km ?? "";
+      populateCapacityCategoryOptions(d.capacity_category_id, d.capacity_category);
+      byId("capacityTotal").value = Number(d.capacity_units_total || 0);
+
+      byId("deliveryDate").value = formatDateInput(d.delivery_start);
+      byId("deliveryStartTime").value = formatTimeInput(d.delivery_start);
+      byId("deliveryEndTime").value = formatTimeInput(d.delivery_end);
+
+      const openPattern = d.opens_at ? "scheduled" : "immediate";
+      document.querySelectorAll('input[name="openPattern"]').forEach((radio) => {
+        radio.checked = radio.value === openPattern;
+      });
+
+      byId("opensAtDate").value = formatDateInput(d.opens_at);
+      byId("opensAtTime").value = formatTimeInput(d.opens_at);
+      byId("closesAtDate").value = formatDateInput(d.closes_at);
+      byId("closesAtTime").value = formatTimeInput(d.closes_at);
+
+      byId("fundraisingEnabled").checked = Boolean(d.fundraising_enabled);
+      byId("fundraisingModel").value = d.fundraising_model || "";
+      byId("fundraisingPercentage").value = d.fundraising_percentage ?? "";
+      byId("fundraisingPerOrderPence").value = d.fundraising_per_order_pence ?? "";
+      byId("fundraisingDisplayText").value = d.fundraising_display_text || "";
+
+      byId("hostShareEnabled").checked = Boolean(d.host_share_enabled);
+      byId("hostShareModel").value = d.host_share_model || "";
+      byId("hostSharePercentage").value = d.host_share_percentage ?? "";
+      byId("hostSharePerOrderPence").value = d.host_share_per_order_pence ?? "";
+      byId("hostShareFixedPence").value = d.host_share_fixed_pence ?? "";
+      byId("hostShareCustomerVisible").value = String(Boolean(d.host_share_customer_visible));
+
+      renderConditionalFields();
+      renderHostOptions();
+      renderHostPreview();
+      renderHostHelper();
+    }
+
+    function getVisibleMenuAssignments() {
+      return state.menuAssignments.filter((item) => {
+        if (state.showInactiveMenuItems) return true;
+        return item.catalogue_is_active || item.enabled;
+      });
+    }
+
+    function renderAssignments() {
+      const container = byId("assignmentGroups");
+      const summary = byId("menuStageSummary");
+
+      if (!state.menuAssignments.length) {
+        summary.textContent = "No catalogue items found yet. Build products and bundles in Menu Library first.";
+        container.innerHTML = `<div class="emptyState">No menu items found.</div>`;
+        return;
       }
 
-      function getMenuItemKey(type, id) {
-        return `${type}:${id}`;
+      const enabledCount = state.menuAssignments.filter((item) => item.enabled).length;
+      const bundleCount = state.menuAssignments.filter((item) => item.enabled && item.menu_item_type === "bundle").length;
+      const productCount = state.menuAssignments.filter((item) => item.enabled && item.menu_item_type === "product").length;
+      const inactiveHiddenCount = state.menuAssignments.filter((item) => !item.catalogue_is_active && !item.enabled).length;
+
+      summary.innerHTML = `
+        <div class="selectionSummaryBar">
+          <div>${enabledCount} enabled for this drop • ${productCount} products • ${bundleCount} bundles</div>
+          <div class="selectionSummaryMetrics">
+            <button class="btnGhost" id="menuSelectAllActiveBtn" type="button">Enable all active</button>
+            <button class="btnGhost" id="menuClearAllBtn" type="button">Clear all</button>
+            <button class="btnGhost" id="menuToggleInactiveBtn" type="button">
+              ${state.showInactiveMenuItems ? "Hide inactive" : `Show inactive${inactiveHiddenCount ? ` (${inactiveHiddenCount})` : ""}`}
+            </button>
+          </div>
+        </div>
+      `;
+
+      const visibleItems = getVisibleMenuAssignments();
+
+      if (!visibleItems.length) {
+        container.innerHTML = `<div class="emptyState">No visible menu items.</div>`;
+        return;
       }
 
-      function getStageStatus(stage) {
-        if (!state.readiness || !state.drop) return "not_started";
-        if (stage === "basics") return state.readiness.basics_complete ? "complete" : "attention";
-        if (stage === "timing") return state.readiness.timing_complete ? "complete" : "attention";
-        if (stage === "menu") return (state.readiness.menu_complete && state.readiness.capacity_product_present) ? "complete" : "attention";
-        if (stage === "commercials") return state.readiness.commercials_valid ? "complete" : "attention";
-        if (stage === "review") return state.readiness.ready_to_publish ? "attention" : "not_started";
-        return "not_started";
-      }
+      const groups = groupByCategory(visibleItems);
+      const categoryOrder = [...new Set(visibleItems.map((item) => item.category_name || "Uncategorised"))];
 
-      function getStageVisualStatus(stage) {
-        if (!state.readiness || !state.drop) {
-          return stage === state.currentStage ? "active" : "neutral";
-        }
-        if (stage === state.currentStage) return "active";
+      container.innerHTML = categoryOrder
+        .filter((cat) => groups.has(cat))
+        .map((category) => {
+          const items = groups.get(category);
+          const rows = items.map((row) => {
+            const activeText = row.catalogue_is_active ? "" : ` <span class="miniChip" style="margin-left:6px;">catalogue inactive</span>`;
+            const capacityText = Number(row.capacity_units || 0) > 0
+              ? `${row.capacity_units} capacity unit${Number(row.capacity_units) === 1 ? "" : "s"}`
+              : "No capacity impact";
 
-        const stageIndex = STAGES.indexOf(stage);
-        const currentIndex = STAGES.indexOf(state.currentStage);
-
-        if (stageIndex > currentIndex) return "neutral";
-        if (stage === "basics") return state.readiness.basics_complete ? "complete" : "neutral";
-        if (stage === "timing") return (currentIndex > stageIndex && state.readiness.timing_complete) ? "complete" : "neutral";
-        if (stage === "menu") return (currentIndex > stageIndex && state.readiness.menu_complete && state.readiness.capacity_product_present) ? "complete" : "neutral";
-        if (stage === "commercials") return (currentIndex > stageIndex && state.readiness.commercials_valid) ? "complete" : "neutral";
-        if (stage === "review") return state.readiness.ready_to_publish ? "attention" : "neutral";
-        return "neutral";
-      }
-
-      function renderStageBar() {
-        const name = state.drop?.name || "No drop selected";
-        const status = state.drop?.status || "draft";
-        const completeCount = ["basics", "timing", "menu", "commercials"].filter((stage) => getStageStatus(stage) === "complete").length;
-
-        byId("stageBarDropName").textContent = name;
-        byId("stageBarMeta").textContent = `${status} • ${completeCount} of 4 setup stages complete`;
-
-        document.querySelectorAll(".stagePill").forEach((pill) => {
-          const stage = pill.dataset.stage;
-          const visualStatus = getStageVisualStatus(stage);
-
-          pill.classList.remove("active", "complete", "attention");
-          if (visualStatus === "active") pill.classList.add("active");
-          if (visualStatus === "complete") pill.classList.add("complete");
-          if (visualStatus === "attention") pill.classList.add("attention");
-
-          const icon = byId(`icon-${stage}`);
-          if (visualStatus === "complete") icon.textContent = "✓";
-          else if (visualStatus === "attention") icon.textContent = "!";
-          else icon.textContent = String(STAGES.indexOf(stage) + 1);
-        });
-      }
-
-      function renderContextBar() {
-        const meta = byId("contextMeta");
-        const chips = byId("contextChips");
-
-        if (!state.drop || !state.selectedDropSummary) {
-          meta.textContent = "Select a drop to view context.";
-          chips.innerHTML = "";
-          return;
-        }
-
-        const host = state.hosts.find((h) => h.id === state.drop.host_id);
-        const enabledCount = state.menuAssignments.filter((p) => p.enabled).length;
-        const capacityLabel = getCapacityCategoryLabel(state.drop);
-
-        meta.textContent = [
-          state.drop.drop_type || "drop",
-          host ? host.name : "No host",
-          state.drop.delivery_start ? `${formatDateShort(state.drop.delivery_start)} ${formatTimeOnly(state.drop.delivery_start)}–${formatTimeOnly(state.drop.delivery_end)}` : "No fulfilment window"
-        ].filter(Boolean).join(" • ");
-
-        chips.innerHTML = [
-          `<span class="miniChip">${Number(state.drop.capacity_units_total || 0)} ${escapeHtml(capacityLabel)}</span>`,
-          `<span class="miniChip">${enabledCount} menu items</span>`,
-          `<span class="miniChip">${Number(state.selectedDropSummary.order_count || 0)} orders</span>`
-        ].join("");
-      }
-
-      function updateWorkspaceHeader() {
-        const map = {
-          basics: ["Basics", "Define the core setup for this drop"],
-          timing: ["Timing", "Set fulfilment timing, ordering window and recurrence"],
-          menu: ["Menu", "Choose what can be ordered"],
-          commercials: ["Commercials", "Optional economics and support settings"],
-          review: ["Review", "Check readiness, share and publish"]
-        };
-        byId("workspaceTitle").textContent = map[state.currentStage][0];
-        byId("workspaceSub").textContent = map[state.currentStage][1];
-
-        document.querySelectorAll(".stagePane").forEach((pane) => pane.classList.remove("active"));
-        byId(`pane-${state.currentStage}`).classList.add("active");
-
-        byId("backStageBtn").classList.toggle("hidden", state.currentStage === "basics");
-        byId("continueStageBtn").classList.toggle("hidden", state.currentStage === "review");
-        byId("openBoardBtn").classList.toggle("hidden", !(state.drop && ["live", "closed"].includes(state.drop.status)));
-      }
-
-      function updateStatusFilterSummary() {
-        const summary = byId("statusFilterSummary");
-        const selected = state.statusFilters;
-        if (!selected.length) {
-          summary.textContent = "No statuses";
-          return;
-        }
-        if (selected.length <= 3) {
-          summary.textContent = selected.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ");
-          return;
-        }
-        summary.textContent = `${selected.length} statuses`;
-      }
-
-      function updateTypeFilterSummary() {
-        const summary = byId("typeFilterSummary");
-        const selected = state.typeFilters;
-        if (selected.length === DEFAULT_TYPE_FILTERS.length) {
-          summary.textContent = "All types";
-          return;
-        }
-        if (!selected.length) {
-          summary.textContent = "No types";
-          return;
-        }
-        if (selected.length <= 2) {
-          summary.textContent = selected.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ");
-          return;
-        }
-        summary.textContent = `${selected.length} types`;
-      }
-
-      async function loadVendorId() {
-        const { data, error } = await supabase
-          .from("vendors")
-          .select("id")
-          .eq("slug", DEFAULT_VENDOR_SLUG)
-          .single();
-
-        if (error) throw error;
-        state.vendorId = data.id;
-      }
-
-      async function loadHosts() {
-        const { data, error } = await supabase
-          .from("hosts")
-          .select("*")
-          .neq("status", "archived")
-          .order("name", { ascending: true });
-
-        if (error) throw error;
-        state.hosts = data || [];
-      }
-
-      async function loadCategories() {
-        const { data, error } = await supabase
-          .from("categories")
-          .select("*")
-          .eq("vendor_id", state.vendorId)
-          .order("sort_order", { ascending: true, nullsFirst: false })
-          .order("name", { ascending: true });
-
-        if (error) throw error;
-        state.categories = data || [];
-      }
-
-      async function loadProducts() {
-        const { data, error } = await supabase
-          .from("products")
-          .select("*")
-          .eq("vendor_id", state.vendorId)
-          .order("sort_order", { ascending: true, nullsFirst: false })
-          .order("name", { ascending: true });
-
-        if (error) throw error;
-        state.products = data || [];
-      }
-
-      async function loadBundles() {
-        const { data, error } = await supabase
-          .from("bundles")
-          .select("*")
-          .eq("vendor_id", state.vendorId)
-          .order("sort_order", { ascending: true, nullsFirst: false })
-          .order("name", { ascending: true });
-
-        if (error) throw error;
-        state.bundles = data || [];
-      }
-
-      async function loadDrops() {
-        const { data, error } = await supabase
-          .from("v_drop_summary")
-          .select("*");
-
-        if (error) throw error;
-
-        state.drops = (data || []).sort((a, b) => {
-          const statusDiff = getStatusPriority(a.status) - getStatusPriority(b.status);
-          if (statusDiff !== 0) return statusDiff;
-          const aTime = a.delivery_start ? new Date(a.delivery_start).getTime() : Number.MAX_SAFE_INTEGER;
-          const bTime = b.delivery_start ? new Date(b.delivery_start).getTime() : Number.MAX_SAFE_INTEGER;
-          return aTime - bTime;
-        });
-
-        const exists = state.drops.some((d) => d.drop_id === state.selectedDropId);
-        if (!exists) state.selectedDropId = (state.drops[0] || {}).drop_id || null;
-      }
-
-      async function loadSelectedDrop() {
-        if (!state.selectedDropId) {
-          state.drop = null;
-          state.selectedDropSummary = null;
-          state.readiness = null;
-          state.dropMenuItems = [];
-          state.dropMenuItemStock = [];
-          state.menuAssignments = [];
-          state.seriesRows = [];
-          return;
-        }
-
-        const [dropRes, summaryRes, readinessRes, dropMenuItemsRes, stockRes] = await Promise.all([
-          supabase.from("drops").select("*").eq("id", state.selectedDropId).single(),
-          supabase.from("v_drop_summary").select("*").eq("drop_id", state.selectedDropId).single(),
-          supabase.from("v_drop_readiness_v2").select("*").eq("drop_id", state.selectedDropId).single(),
-          supabase.from("drop_menu_items").select("*").eq("drop_id", state.selectedDropId),
-          supabase.from("v_drop_menu_item_stock").select("*").eq("drop_id", state.selectedDropId)
-        ]);
-
-        if (dropRes.error) throw dropRes.error;
-        if (summaryRes.error) throw summaryRes.error;
-        if (readinessRes.error) throw readinessRes.error;
-        if (dropMenuItemsRes.error) throw dropMenuItemsRes.error;
-        if (stockRes.error) throw stockRes.error;
-
-        state.drop = dropRes.data;
-        state.selectedDropSummary = summaryRes.data;
-        state.readiness = readinessRes.data;
-        state.dropMenuItems = dropMenuItemsRes.data || [];
-        state.dropMenuItemStock = stockRes.data || [];
-        state.menuAssignments = buildMenuAssignments();
-
-        const localTiming = loadLocalTimingDraft(state.selectedDropId);
-        if (localTiming?.seriesRows?.length) {
-          state.seriesRows = localTiming.seriesRows;
-        } else {
-          state.seriesRows = [
-            {
-              id: uidSuffix(),
-              day_of_week: getDayOfWeekFromDateInput(formatDateInput(state.drop.delivery_start)),
-              fulfilment_start: formatTimeInput(state.drop.delivery_start) || "19:00",
-              fulfilment_end: formatTimeInput(state.drop.delivery_end) || "20:00",
-              order_close_time: formatTimeInput(state.drop.closes_at) || "18:00"
-            }
-          ];
-        }
-
-        manualSlugEdited = false;
-        setSaveState("saved");
-      }
-
-      function buildMenuAssignments() {
-        const assignmentMap = new Map(
-          (state.dropMenuItems || []).map((row) => {
-            const refId = row.menu_item_type === "bundle" ? row.bundle_id : row.product_id;
-            return [getMenuItemKey(row.menu_item_type, refId), row];
-          })
-        );
-
-        const stockMap = new Map(
-          (state.dropMenuItemStock || []).map((row) => {
-            const refId = row.menu_item_type === "bundle" ? row.bundle_id : row.product_id;
-            return [getMenuItemKey(row.menu_item_type, refId), row];
-          })
-        );
-
-        const catalogueItems = [
-          ...state.products.map((product) => ({
-            menu_item_type: "product",
-            ref_id: product.id,
-            item_id: product.id,
-            name: product.name,
-            description: product.description || null,
-            category_id: product.category_id || null,
-            category_name: categoryNameFromId(product.category_id),
-            base_price_pence: product.price_pence,
-            capacity_units: Number(product.capacity_units || 0),
-            catalogue_is_active: Boolean(product.is_active),
-            sort_order: product.sort_order ?? null
-          })),
-          ...state.bundles.map((bundle) => ({
-            menu_item_type: "bundle",
-            ref_id: bundle.id,
-            item_id: bundle.id,
-            name: bundle.name,
-            description: bundle.description || null,
-            category_id: bundle.category_id || null,
-            category_name: categoryNameFromId(bundle.category_id),
-            base_price_pence: bundle.price_pence,
-            capacity_units: Number(bundle.capacity_units || 0),
-            catalogue_is_active: Boolean(bundle.is_active),
-            sort_order: bundle.sort_order ?? null
-          }))
-        ];
-
-        const missingAssigned = (state.dropMenuItemStock || [])
-          .filter((row) => {
-            const refId = row.menu_item_type === "bundle" ? row.bundle_id : row.product_id;
-            return !catalogueItems.some((item) => item.menu_item_type === row.menu_item_type && item.ref_id === refId);
-          })
-          .map((row) => ({
-            menu_item_type: row.menu_item_type,
-            ref_id: row.menu_item_type === "bundle" ? row.bundle_id : row.product_id,
-            item_id: row.item_id,
-            name: row.item_name,
-            description: row.item_description || null,
-            category_id: row.category_id || null,
-            category_name: row.category_name || "Uncategorised",
-            base_price_pence: row.base_price_pence,
-            capacity_units: Number(row.capacity_units || 0),
-            catalogue_is_active: Boolean(row.catalogue_is_active),
-            sort_order: row.sort_order ?? null
-          }));
-
-        return [...catalogueItems, ...missingAssigned]
-          .map((item) => {
-            const key = getMenuItemKey(item.menu_item_type, item.ref_id);
-            const assigned = assignmentMap.get(key);
-            const stock = stockMap.get(key);
-
-            return {
-              key,
-              menu_item_type: item.menu_item_type,
-              product_id: item.menu_item_type === "product" ? item.ref_id : null,
-              bundle_id: item.menu_item_type === "bundle" ? item.ref_id : null,
-              name: item.name,
-              description: item.description,
-              category_id: item.category_id,
-              category_name: item.category_name,
-              base_price_pence: item.base_price_pence,
-              capacity_units: item.capacity_units,
-              catalogue_is_active: item.catalogue_is_active,
-              sort_order: assigned?.sort_order ?? item.sort_order ?? null,
-              enabled: Boolean(assigned?.is_available),
-              price_override_pence: assigned?.price_override_pence ?? null,
-              stock_limit: assigned?.stock_limit ?? null,
-              qty_ordered: Number(stock?.qty_ordered || 0),
-              stock_remaining: stock?.stock_remaining == null ? null : Number(stock.stock_remaining)
-            };
-          })
-          .sort((a, b) => {
-            const catCompare = String(a.category_name || "").localeCompare(String(b.category_name || ""));
-            if (catCompare !== 0) return catCompare;
-            const typeCompare = a.menu_item_type.localeCompare(b.menu_item_type);
-            if (typeCompare !== 0) return typeCompare;
-            const sortA = a.sort_order == null ? 999999 : Number(a.sort_order);
-            const sortB = b.sort_order == null ? 999999 : Number(b.sort_order);
-            if (sortA !== sortB) return sortA - sortB;
-            return a.name.localeCompare(b.name);
-          });
-      }
-
-      function getFilteredDrops() {
-        const search = state.search.trim().toLowerCase();
-        const selectedStatuses = state.statusFilters;
-        const selectedTypes = state.typeFilters;
-
-        return state.drops.filter((drop) => {
-          const statusOk = selectedStatuses.length ? selectedStatuses.includes(drop.status) : false;
-          const typeOk = selectedTypes.length ? selectedTypes.includes(drop.drop_type) : false;
-          if (!statusOk || !typeOk) return false;
-          if (!search) return true;
-
-          const haystack = [
-            drop.drop_name || "",
-            drop.host_name || "",
-            drop.drop_type || "",
-            drop.status || ""
-          ].join(" ").toLowerCase();
-
-          return haystack.includes(search);
-        });
-      }
-
-      function renderDropBand() {
-        const band = byId("dropBand");
-        const drops = getFilteredDrops();
-
-        if (!drops.length) {
-          band.innerHTML = `<div class="emptyState" style="min-width:280px;">No drops found.</div>`;
-          return;
-        }
-
-        band.innerHTML = drops.map((drop) => {
-          const active = drop.drop_id === state.selectedDropId ? "active" : "";
-          const hostLine = drop.host_name
-            ? `${escapeHtml(drop.drop_type || "drop")} • ${escapeHtml(drop.host_name)}`
-            : `${escapeHtml(drop.drop_type || "drop")}`;
+            return `
+              <tr data-menu-key="${escapeHtml(row.key)}">
+                <td style="width:60px;"><input class="js-assign-enabled" type="checkbox" ${row.enabled ? "checked" : ""} /></td>
+                <td>
+                  <span class="productName">${escapeHtml(row.name)}</span>${activeText}
+                  <span class="subMeta">${escapeHtml(row.menu_item_type)}${row.description ? ` • ${escapeHtml(row.description)}` : ""}</span>
+                </td>
+                <td style="width:85px;">${titleCase(row.menu_item_type)}</td>
+                <td style="width:110px;">${escapeHtml(row.category_name || "Uncategorised")}</td>
+                <td style="width:95px;">${formatMoneyPence(row.base_price_pence)}</td>
+                <td style="width:110px;"><input class="js-assign-override" type="number" min="0" step="1" value="${row.price_override_pence ?? ""}" placeholder="—" /></td>
+                <td style="width:100px;"><input class="js-assign-stock-limit" type="number" min="0" step="1" value="${row.stock_limit ?? ""}" placeholder="∞" /></td>
+                <td style="width:80px;">${row.stock_remaining == null ? "—" : row.stock_remaining}</td>
+                <td style="width:150px;"><span class="capacityTag ${Number(row.capacity_units || 0) > 0 ? "yes" : "no"}">${escapeHtml(capacityText)}</span></td>
+              </tr>
+            `;
+          }).join("");
 
           return `
-            <div class="dropCard ${active}" data-drop-id="${drop.drop_id}">
-              <div>
-                <div class="dropCardTop">
-                  <div>
-                    <h4 class="dropCardTitle">${escapeHtml(drop.drop_name || "Untitled drop")}</h4>
-                    <p class="dropCardSub">${hostLine}</p>
-                  </div>
-                  <span class="miniChip ${escapeHtml(drop.status || "")}">${escapeHtml(drop.status || "—")}</span>
-                </div>
-
-                <div class="dropCardMeta">${escapeHtml(formatDateShort(drop.delivery_start))}</div>
-                <div class="dropCardMeta">${escapeHtml(formatTimeOnly(drop.delivery_start))}–${escapeHtml(formatTimeOnly(drop.delivery_end))}</div>
-
-                <div class="dropCardStats">
-                  <span class="miniChip">${Number(drop.capacity_units_used || 0)} / ${Number(drop.capacity_units_total || 0)} ${escapeHtml(titleCase(drop.capacity_category || "units"))}</span>
-                  <span class="miniChip">${Number(drop.order_count || 0)} orders</span>
-                </div>
-              </div>
-
-              <div class="dropCardActions">
-                <button class="btnSmall js-duplicate-drop" type="button" data-drop-id="${drop.drop_id}">Duplicate</button>
-              </div>
+            <div class="productGroup">
+              <div class="productGroupHead">${escapeHtml(category)}</div>
+              <table class="assignmentTable">
+                <thead>
+                  <tr>
+                    <th>On</th>
+                    <th>Menu Item</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Base Price</th>
+                    <th>Drop Price</th>
+                    <th>Stock Limit</th>
+                    <th>Remain</th>
+                    <th>Capacity</th>
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
             </div>
           `;
         }).join("");
-      }
+    }
 
-      function renderHostOptions() {
-        const select = byId("hostSelect");
-        const current = state.drop?.host_id || "";
-        select.innerHTML = [
-          `<option value="">No host selected</option>`,
-          ...state.hosts.map((host) => `
-            <option value="${host.id}" ${host.id === current ? "selected" : ""}>
-              ${escapeHtml(host.name)} (${escapeHtml(host.host_type)})
-            </option>
-          `)
-        ].join("");
-      }
+    function renderConditionalFields() {
+      const fundraisingEnabled = byId("fundraisingEnabled").checked;
+      const fundraisingModel = byId("fundraisingModel").value;
+      byId("fundraisingFields").classList.toggle("hidden", !fundraisingEnabled);
+      byId("fundraisingPercentageField").classList.toggle("hidden", fundraisingModel !== "percentage");
+      byId("fundraisingPerOrderField").classList.toggle("hidden", fundraisingModel !== "per_order");
 
-      function renderHostPreview() {
-        const host = state.hosts.find((h) => h.id === state.drop?.host_id);
-        const preview = byId("hostPreview");
+      const hostShareEnabled = byId("hostShareEnabled").checked;
+      const hostShareModel = byId("hostShareModel").value;
+      byId("hostShareFields").classList.toggle("hidden", !hostShareEnabled);
+      byId("hostSharePercentageField").classList.toggle("hidden", hostShareModel !== "percentage");
+      byId("hostSharePerOrderField").classList.toggle("hidden", hostShareModel !== "per_order");
+      byId("hostShareFixedField").classList.toggle("hidden", hostShareModel !== "fixed");
 
-        if (!host) {
-          preview.innerHTML = `<strong>No host selected</strong>Add a host for community or hosted drops.`;
-          return;
-        }
+      const recurring = getRepeatPattern() === "recurring";
+      byId("recurringBlock").classList.toggle("hidden", !recurring);
 
-        preview.innerHTML = `
-          <strong>${escapeHtml(host.name)}</strong>
-          ${escapeHtml(host.host_type)}${host.postcode ? ` • ${escapeHtml(host.postcode)}` : ""}
-          ${host.address_summary ? `<div style="margin-top:4px;">${escapeHtml(host.address_summary)}</div>` : ""}
-        `;
-      }
+      const endMode = byId("seriesEndMode").value;
+      byId("seriesEndDateField").classList.toggle("hidden", endMode !== "end_date");
+      byId("seriesDropCountField").classList.toggle("hidden", endMode !== "drop_count");
 
-      function renderHostHelper() {
-        const type = byId("dropType").value || "neighbourhood";
-        const helper = byId("hostHelperText");
-        if (type === "community") helper.textContent = "Required for community drops.";
-        else if (type === "event") helper.textContent = "Optional, but useful for hosted events.";
-        else helper.textContent = "Optional for neighbourhood drops.";
-      }
+      const openPattern = getOpenPattern();
+      byId("scheduledOpenFields").classList.toggle("hidden", openPattern !== "scheduled");
+    }
 
-      function applyTimingDefaults(fromDeliveryChange = false) {
-        const deliveryDate = byId("deliveryDate").value;
-        const deliveryStartTime = byId("deliveryStartTime").value;
-        const deliveryEndTime = byId("deliveryEndTime").value;
-
-        const closesAtDate = byId("closesAtDate");
-        const closesAtTime = byId("closesAtTime");
-        const opensAtDate = byId("opensAtDate");
-        const opensAtTime = byId("opensAtTime");
-
-        if (deliveryDate && (!closesAtDate.value || fromDeliveryChange)) {
-          closesAtDate.value = deliveryDate;
-        }
-
-        if (deliveryStartTime && (!closesAtTime.value || fromDeliveryChange)) {
-          closesAtTime.value = timeMinusMinutes(deliveryStartTime, 60);
-        }
-
-        if (!deliveryEndTime && deliveryStartTime) {
-          byId("deliveryEndTime").value = timeMinusMinutes(deliveryStartTime, -60);
-        }
-
-        if (deliveryDate && deliveryStartTime && getOpenPattern() === "scheduled") {
-          if (!opensAtDate.value || fromDeliveryChange) {
-            opensAtDate.value = daysBefore(deliveryDate, 7) || deliveryDate;
+    function ensureScheduleRows() {
+      if (!state.seriesRows.length) {
+        state.seriesRows = [
+          {
+            id: uidSuffix(),
+            day_of_week: getDayOfWeekFromDateInput(byId("deliveryDate")?.value),
+            fulfilment_start: "19:00",
+            fulfilment_end: "20:00",
+            order_close_time: "18:00"
           }
-          if (!opensAtTime.value) {
-            opensAtTime.value = "18:00";
-          }
-        }
+        ];
+      }
+    }
+
+    function renderScheduleRows() {
+      ensureScheduleRows();
+      const body = byId("scheduleRowsBody");
+      body.innerHTML = state.seriesRows.map((row) => `
+        <tr data-row-id="${row.id}">
+          <td>
+            <select class="js-schedule-day">
+              <option value="0" ${row.day_of_week === "0" ? "selected" : ""}>Sunday</option>
+              <option value="1" ${row.day_of_week === "1" ? "selected" : ""}>Monday</option>
+              <option value="2" ${row.day_of_week === "2" ? "selected" : ""}>Tuesday</option>
+              <option value="3" ${row.day_of_week === "3" ? "selected" : ""}>Wednesday</option>
+              <option value="4" ${row.day_of_week === "4" ? "selected" : ""}>Thursday</option>
+              <option value="5" ${row.day_of_week === "5" ? "selected" : ""}>Friday</option>
+              <option value="6" ${row.day_of_week === "6" ? "selected" : ""}>Saturday</option>
+            </select>
+          </td>
+          <td><input class="js-schedule-start" type="time" value="${row.fulfilment_start || ""}" /></td>
+          <td><input class="js-schedule-end" type="time" value="${row.fulfilment_end || ""}" /></td>
+          <td><input class="js-schedule-close" type="time" value="${row.order_close_time || ""}" /></td>
+          <td><button class="btnGhost js-remove-schedule-row" type="button">Remove</button></td>
+        </tr>
+      `).join("");
+    }
+
+    function renderSeriesPreview() {
+      const list = byId("seriesPreviewList");
+      const summary = byId("seriesSummaryText");
+      if (getRepeatPattern() !== "recurring") {
+        list.innerHTML = "";
+        summary.textContent = "One-off drop.";
+        return;
       }
 
-      function populateForm() {
-        const d = state.drop;
-        if (!d) return;
+      const startDate = byId("seriesStartDate").value;
+      if (!startDate) {
+        list.innerHTML = "";
+        summary.textContent = "Add a start date and schedule to preview generated drops.";
+        return;
+      }
 
-        byId("dropName").value = d.name || "";
-        byId("dropSlug").value = d.slug || "";
-        byId("dropType").value = d.drop_type || "neighbourhood";
-        byId("dropStatus").value = d.status || "draft";
-        byId("notesInternal").value = d.notes_internal || "";
+      const rows = state.seriesRows.filter((r) => r.day_of_week !== "" && r.fulfilment_start && r.fulfilment_end);
+      if (!rows.length) {
+        list.innerHTML = "";
+        summary.textContent = "Add at least one weekly schedule line.";
+        return;
+      }
 
-        byId("fulfilmentMode").value = d.fulfilment_mode || "";
-        byId("centrePostcode").value = d.centre_postcode || "";
-        byId("radiusKm").value = d.radius_km ?? "";
-        populateCapacityCategoryOptions(d.capacity_category_id, d.capacity_category);
-        byId("capacityTotal").value = Number(d.capacity_units_total || 0);
+      const previews = [];
+      const start = new Date(`${startDate}T12:00:00`);
+      const endMode = byId("seriesEndMode").value;
+      const endDateVal = byId("seriesEndDate").value;
+      const dropCountVal = Number(byId("seriesDropCount").value || 0);
 
-        byId("deliveryDate").value = formatDateInput(d.delivery_start);
-        byId("deliveryStartTime").value = formatTimeInput(d.delivery_start);
-        byId("deliveryEndTime").value = formatTimeInput(d.delivery_end);
+      let cursor = new Date(start);
+      let safety = 0;
 
-        const openPattern = d.opens_at ? "scheduled" : "immediate";
-        document.querySelectorAll('input[name="openPattern"]').forEach((radio) => {
-          radio.checked = radio.value === openPattern;
+      while (previews.length < 8 && safety < 365) {
+        rows.forEach((row) => {
+          const targetDow = Number(row.day_of_week);
+          const d = new Date(cursor);
+          d.setDate(d.getDate() + ((targetDow - d.getDay() + 7) % 7));
+          if (d < start) return;
+
+          if (endMode === "end_date" && endDateVal) {
+            const endDate = new Date(`${endDateVal}T23:59:59`);
+            if (d > endDate) return;
+          }
+
+          previews.push({
+            date: new Date(d),
+            start: row.fulfilment_start,
+            end: row.fulfilment_end
+          });
         });
 
-        byId("opensAtDate").value = formatDateInput(d.opens_at);
-        byId("opensAtTime").value = formatTimeInput(d.opens_at);
-        byId("closesAtDate").value = formatDateInput(d.closes_at);
-        byId("closesAtTime").value = formatTimeInput(d.closes_at);
-
-        byId("fundraisingEnabled").checked = Boolean(d.fundraising_enabled);
-        byId("fundraisingModel").value = d.fundraising_model || "";
-        byId("fundraisingPercentage").value = d.fundraising_percentage ?? "";
-        byId("fundraisingPerOrderPence").value = d.fundraising_per_order_pence ?? "";
-        byId("fundraisingDisplayText").value = d.fundraising_display_text || "";
-
-        byId("hostShareEnabled").checked = Boolean(d.host_share_enabled);
-        byId("hostShareModel").value = d.host_share_model || "";
-        byId("hostSharePercentage").value = d.host_share_percentage ?? "";
-        byId("hostSharePerOrderPence").value = d.host_share_per_order_pence ?? "";
-        byId("hostShareFixedPence").value = d.host_share_fixed_pence ?? "";
-        byId("hostShareCustomerVisible").value = String(Boolean(d.host_share_customer_visible));
-
-        const localTiming = loadLocalTimingDraft(state.selectedDropId);
-        if (localTiming) {
-          document.querySelectorAll('input[name="repeatPattern"]').forEach((radio) => {
-            radio.checked = radio.value === (localTiming.repeatPattern || "one_off");
-          });
-
-          document.querySelectorAll('input[name="openPattern"]').forEach((radio) => {
-            radio.checked = radio.value === (localTiming.openPattern || (d.opens_at ? "scheduled" : "immediate"));
-          });
-
-          byId("seriesStartDate").value = localTiming.seriesStartDate || "";
-          byId("seriesEndMode").value = localTiming.seriesEndMode || "end_date";
-          byId("seriesEndDate").value = localTiming.seriesEndDate || "";
-          byId("seriesDropCount").value = localTiming.seriesDropCount || "8";
-        } else {
-          byId("seriesStartDate").value = formatDateInput(d.delivery_start) || "";
-          byId("seriesEndMode").value = "end_date";
-          byId("seriesEndDate").value = "";
-          byId("seriesDropCount").value = "8";
-        }
-
-        renderConditionalFields();
-        renderHostOptions();
-        renderHostPreview();
-        renderHostHelper();
-        applyTimingDefaults(false);
+        cursor.setDate(cursor.getDate() + 7);
+        safety += 7;
+        if (endMode === "drop_count" && dropCountVal && previews.length >= dropCountVal) break;
       }
 
-      function renderAssignments() {
-        const container = byId("assignmentGroups");
-        const summary = byId("menuStageSummary");
+      previews.sort((a, b) => a.date - b.date);
+      const finalPreviews = endMode === "drop_count" && dropCountVal ? previews.slice(0, dropCountVal) : previews.slice(0, 8);
 
-        if (!state.menuAssignments.length) {
-          summary.textContent = "No catalogue items found yet. Build products and bundles in Menu Library first.";
-          container.innerHTML = `<div class="emptyState">No menu items found.</div>`;
-          return;
-        }
+      summary.textContent = `Previewing ${finalPreviews.length} upcoming generated drop${finalPreviews.length === 1 ? "" : "s"}.`;
 
-        const enabledCount = state.menuAssignments.filter((item) => item.enabled).length;
-        const bundleCount = state.menuAssignments.filter((item) => item.enabled && item.menu_item_type === "bundle").length;
-        const productCount = state.menuAssignments.filter((item) => item.enabled && item.menu_item_type === "product").length;
-        summary.textContent = `${enabledCount} enabled for this drop • ${productCount} products • ${bundleCount} bundles`;
+      list.innerHTML = finalPreviews.map((item) => `
+        <div class="previewLine">
+          <span>${escapeHtml(item.date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }))}</span>
+          <span>${escapeHtml(item.start)}–${escapeHtml(item.end)}</span>
+        </div>
+      `).join("");
+    }
 
-        const groups = groupByCategory(state.menuAssignments);
-        const categoryOrder = [...new Set(state.menuAssignments.map((item) => item.category_name || "Uncategorised"))];
+    function renderReview() {
+      const summary = byId("reviewSummary");
+      const readinessEl = byId("reviewReadiness");
+      const share = byId("shareLinkPreview");
+      const publishHelp = byId("publishHelpText");
+      const publishBtn = byId("publishBtn");
 
-        container.innerHTML = categoryOrder
-          .filter((cat) => groups.has(cat))
-          .map((category) => {
-            const items = groups.get(category);
-            const rows = items.map((row) => {
-              const activeText = row.catalogue_is_active ? "" : ` <span class="miniChip" style="margin-left:6px;">catalogue inactive</span>`;
-              const capacityText = Number(row.capacity_units || 0) > 0
-                ? `${row.capacity_units} capacity unit${Number(row.capacity_units) === 1 ? "" : "s"}`
-                : "No capacity impact";
-
-              return `
-                <tr data-menu-key="${escapeHtml(row.key)}">
-                  <td style="width:60px;"><input class="js-assign-enabled" type="checkbox" ${row.enabled ? "checked" : ""} /></td>
-                  <td>
-                    <span class="productName">${escapeHtml(row.name)}</span>${activeText}
-                    <span class="subMeta">${escapeHtml(row.menu_item_type)}${row.description ? ` • ${escapeHtml(row.description)}` : ""}</span>
-                  </td>
-                  <td style="width:85px;">${titleCase(row.menu_item_type)}</td>
-                  <td style="width:110px;">${escapeHtml(row.category_name || "Uncategorised")}</td>
-                  <td style="width:95px;">${formatMoneyPence(row.base_price_pence)}</td>
-                  <td style="width:110px;"><input class="js-assign-override" type="number" min="0" step="1" value="${row.price_override_pence ?? ""}" placeholder="—" ${row.enabled ? "" : "disabled"} /></td>
-                  <td style="width:100px;"><input class="js-assign-stock-limit" type="number" min="0" step="1" value="${row.stock_limit ?? ""}" placeholder="∞" ${row.enabled ? "" : "disabled"} /></td>
-                  <td style="width:80px;">${row.stock_remaining == null ? "—" : row.stock_remaining}</td>
-                  <td style="width:150px;"><span class="capacityTag ${Number(row.capacity_units || 0) > 0 ? "yes" : "no"}">${escapeHtml(capacityText)}</span></td>
-                </tr>
-              `;
-            }).join("");
-
-            return `
-              <div class="productGroup">
-                <div class="productGroupHead">${escapeHtml(category)}</div>
-                <table class="assignmentTable">
-                  <thead>
-                    <tr>
-                      <th>On</th>
-                      <th>Menu Item</th>
-                      <th>Type</th>
-                      <th>Category</th>
-                      <th>Base Price</th>
-                      <th>Drop Price</th>
-                      <th>Stock Limit</th>
-                      <th>Remain</th>
-                      <th>Capacity</th>
-                    </tr>
-                  </thead>
-                  <tbody>${rows}</tbody>
-                </table>
-              </div>
-            `;
-          }).join("");
+      if (!state.drop) {
+        summary.innerHTML = `<div class="emptyState">No drop selected.</div>`;
+        readinessEl.innerHTML = `<div class="emptyState">No drop selected.</div>`;
+        share.textContent = "No drop link yet.";
+        renderQrCode("");
+        return;
       }
 
-      function renderConditionalFields() {
-        const fundraisingEnabled = byId("fundraisingEnabled").checked;
-        const fundraisingModel = byId("fundraisingModel").value;
-        byId("fundraisingFields").classList.toggle("hidden", !fundraisingEnabled);
-        byId("fundraisingPercentageField").classList.toggle("hidden", fundraisingModel !== "percentage");
-        byId("fundraisingPerOrderField").classList.toggle("hidden", fundraisingModel !== "per_order");
+      const liveDrop = getLiveDropFromForm() || state.drop;
+      const readiness = getLiveReadiness();
+      const host = state.hosts.find((h) => h.id === liveDrop.host_id);
+      const enabledItems = state.menuAssignments.filter((p) => p.enabled).length;
+      const enabledBundles = state.menuAssignments.filter((p) => p.enabled && p.menu_item_type === "bundle").length;
+      const enabledProducts = state.menuAssignments.filter((p) => p.enabled && p.menu_item_type === "product").length;
+      const capacityLabel = getCapacityCategoryLabel(liveDrop);
 
-        const hostShareEnabled = byId("hostShareEnabled").checked;
-        const hostShareModel = byId("hostShareModel").value;
-        byId("hostShareFields").classList.toggle("hidden", !hostShareEnabled);
-        byId("hostSharePercentageField").classList.toggle("hidden", hostShareModel !== "percentage");
-        byId("hostSharePerOrderField").classList.toggle("hidden", hostShareModel !== "per_order");
-        byId("hostShareFixedField").classList.toggle("hidden", hostShareModel !== "fixed");
+      summary.innerHTML = [
+        ["Drop", liveDrop.name || "—"],
+        ["Type", liveDrop.drop_type || "—"],
+        ["Host", host ? host.name : "No host"],
+        ["Status", liveDrop.status || "draft"],
+        ["Order Window", liveDrop.opens_at && liveDrop.closes_at ? `${formatDateShort(liveDrop.opens_at)} ${formatTimeOnly(liveDrop.opens_at)} → ${formatDateShort(liveDrop.closes_at)} ${formatTimeOnly(liveDrop.closes_at)}` : (liveDrop.closes_at ? `Open immediately → ${formatDateShort(liveDrop.closes_at)} ${formatTimeOnly(liveDrop.closes_at)}` : "Not set")],
+        ["Fulfilment", liveDrop.delivery_start && liveDrop.delivery_end ? `${formatDateShort(liveDrop.delivery_start)} ${formatTimeOnly(liveDrop.delivery_start)}–${formatTimeOnly(liveDrop.delivery_end)}` : "Not set"],
+        ["Capacity", `${Number(liveDrop.capacity_units_total || 0)} ${capacityLabel}`],
+        ["Menu", `${enabledItems} enabled • ${enabledProducts} products • ${enabledBundles} bundles`],
+        ["Repeat", getRepeatPattern() === "recurring" ? "Recurring" : "One-off"]
+      ].map(([label, value]) => `
+        <div class="summaryItem">
+          <span class="label">${escapeHtml(label)}</span>
+          <span class="value">${escapeHtml(value)}</span>
+        </div>
+      `).join("");
 
-        const recurring = getRepeatPattern() === "recurring";
-        byId("recurringBlock").classList.toggle("hidden", !recurring);
+      const items = [
+        { ok: readiness.basics_complete, label: "Basics complete" },
+        { ok: readiness.timing_complete, label: "Timing complete" },
+        { ok: readiness.menu_complete, label: "At least one menu item enabled" },
+        { ok: readiness.capacity_product_present, label: "At least one enabled item has capacity impact" },
+        { ok: readiness.commercials_valid, label: "Commercials configured correctly" }
+      ];
 
-        const endMode = byId("seriesEndMode").value;
-        byId("seriesEndDateField").classList.toggle("hidden", endMode !== "end_date");
-        byId("seriesDropCountField").classList.toggle("hidden", endMode !== "drop_count");
+      readinessEl.innerHTML = items.map((item) => `
+        <div class="readinessItem ${item.ok ? "pass" : "fail"}">
+          <span class="readinessMark">${item.ok ? "✓" : "!"}</span>
+          <span>${escapeHtml(item.label)}</span>
+        </div>
+      `).join("");
 
-        const openPattern = getOpenPattern();
-        byId("scheduledOpenFields").classList.toggle("hidden", openPattern !== "scheduled");
+      const shareUrl = getShareUrl();
+      share.textContent = shareUrl || "No drop link yet.";
+      renderQrCode(shareUrl);
+
+      publishBtn.textContent = liveDrop.status === "live" ? "Update Live Drop" : "Publish Drop";
+
+      if (readiness.ready_to_publish) {
+        publishHelp.textContent = liveDrop.status === "live"
+          ? "This live drop can be updated."
+          : "This drop is ready to publish.";
+        publishBtn.disabled = false;
+      } else {
+        publishHelp.textContent = "Resolve the highlighted issues before publishing.";
+        publishBtn.disabled = true;
       }
+    }
 
-      function getRepeatPattern() {
-        const checked = document.querySelector('input[name="repeatPattern"]:checked');
-        return checked ? checked.value : "one_off";
+    function renderQrCode(text) {
+      const wrap = byId("qrWrap");
+      if (!text) {
+        wrap.innerHTML = `<div class="helperText">QR preview will appear once the drop link name is set.</div>`;
+        return;
       }
+      const qrUrl = getQrImageUrl(text);
+      wrap.innerHTML = `<img src="${escapeHtml(qrUrl)}" alt="QR code for drop link" />`;
+    }
 
-      function getOpenPattern() {
-        const checked = document.querySelector('input[name="openPattern"]:checked');
-        return checked ? checked.value : "immediate";
+    function readDropFromForm() {
+      const existing = state.drop || {};
+      const openPattern = getOpenPattern();
+      const opensAt = openPattern === "scheduled"
+        ? combineDateTime(byId("opensAtDate").value, byId("opensAtTime").value)
+        : null;
+
+      const capacityCategoryId = byId("capacityCategory").value || null;
+      const capacityCategorySlug = getCapacityCategorySlugFromId(capacityCategoryId);
+
+      return {
+        ...existing,
+        name: byId("dropName").value.trim(),
+        slug: slugify(byId("dropSlug").value.trim()),
+        drop_type: byId("dropType").value,
+        status: byId("dropStatus").value,
+        host_id: byId("hostSelect").value || null,
+        notes_internal: byId("notesInternal").value.trim() || null,
+
+        fulfilment_mode: byId("fulfilmentMode").value || null,
+        centre_postcode: byId("centrePostcode").value.trim() || null,
+        radius_km: byId("radiusKm").value === "" ? null : Number(byId("radiusKm").value),
+        capacity_category_id: capacityCategoryId,
+        capacity_category: capacityCategorySlug,
+        capacity_units_total: Number(byId("capacityTotal").value || 0),
+
+        delivery_start: combineDateTime(byId("deliveryDate").value, byId("deliveryStartTime").value),
+        delivery_end: combineDateTime(byId("deliveryDate").value, byId("deliveryEndTime").value),
+        opens_at: opensAt,
+        closes_at: combineDateTime(byId("closesAtDate").value, byId("closesAtTime").value),
+
+        fundraising_enabled: byId("fundraisingEnabled").checked,
+        fundraising_model: byId("fundraisingEnabled").checked ? (byId("fundraisingModel").value || null) : null,
+        fundraising_percentage: byId("fundraisingEnabled").checked && byId("fundraisingModel").value === "percentage"
+          ? (byId("fundraisingPercentage").value === "" ? null : Number(byId("fundraisingPercentage").value))
+          : null,
+        fundraising_per_order_pence: byId("fundraisingEnabled").checked && byId("fundraisingModel").value === "per_order"
+          ? (byId("fundraisingPerOrderPence").value === "" ? null : Number(byId("fundraisingPerOrderPence").value))
+          : null,
+        fundraising_display_text: byId("fundraisingEnabled").checked ? (byId("fundraisingDisplayText").value.trim() || null) : null,
+
+        host_share_enabled: byId("hostShareEnabled").checked,
+        host_share_model: byId("hostShareEnabled").checked ? (byId("hostShareModel").value || null) : null,
+        host_share_percentage: byId("hostShareEnabled").checked && byId("hostShareModel").value === "percentage"
+          ? (byId("hostSharePercentage").value === "" ? null : Number(byId("hostSharePercentage").value))
+          : null,
+        host_share_per_order_pence: byId("hostShareEnabled").checked && byId("hostShareModel").value === "per_order"
+          ? (byId("hostSharePerOrderPence").value === "" ? null : Number(byId("hostSharePerOrderPence").value))
+          : null,
+        host_share_fixed_pence: byId("hostShareEnabled").checked && byId("hostShareModel").value === "fixed"
+          ? (byId("hostShareFixedPence").value === "" ? null : Number(byId("hostShareFixedPence").value))
+          : null,
+        host_share_customer_visible: byId("hostShareEnabled").checked ? (byId("hostShareCustomerVisible").value === "true") : false
+      };
+    }
+
+    function getDropPayload(dropData) {
+      return {
+        vendor_id: dropData.vendor_id,
+        host_id: dropData.host_id,
+        slug: dropData.slug,
+        name: dropData.name,
+        drop_type: dropData.drop_type,
+        status: dropData.status,
+        fulfilment_mode: dropData.fulfilment_mode,
+        centre_postcode: dropData.centre_postcode,
+        radius_km: dropData.radius_km,
+        capacity_category_id: dropData.capacity_category_id,
+        capacity_category: dropData.capacity_category,
+        capacity_units_total: dropData.capacity_units_total,
+        opens_at: dropData.opens_at,
+        closes_at: dropData.closes_at,
+        delivery_start: dropData.delivery_start,
+        delivery_end: dropData.delivery_end,
+        notes_internal: dropData.notes_internal,
+
+        fundraising_enabled: dropData.fundraising_enabled,
+        fundraising_model: dropData.fundraising_model,
+        fundraising_percentage: dropData.fundraising_percentage,
+        fundraising_per_order_pence: dropData.fundraising_per_order_pence,
+        fundraising_display_text: dropData.fundraising_display_text,
+
+        host_share_enabled: dropData.host_share_enabled,
+        host_share_model: dropData.host_share_model,
+        host_share_percentage: dropData.host_share_percentage,
+        host_share_per_order_pence: dropData.host_share_per_order_pence,
+        host_share_fixed_pence: dropData.host_share_fixed_pence,
+        host_share_customer_visible: dropData.host_share_customer_visible
+      };
+    }
+
+    async function saveAssignments() {
+      const enabledAssignments = state.menuAssignments
+        .filter((row) => row.enabled)
+        .map((row, index) => ({
+          drop_id: state.selectedDropId,
+          menu_item_type: row.menu_item_type,
+          product_id: row.menu_item_type === "product" ? row.product_id : null,
+          bundle_id: row.menu_item_type === "bundle" ? row.bundle_id : null,
+          is_available: true,
+          price_override_pence: row.price_override_pence === "" || row.price_override_pence == null ? null : Number(row.price_override_pence),
+          stock_limit: row.stock_limit === "" || row.stock_limit == null ? null : Number(row.stock_limit),
+          sort_order: row.sort_order == null ? ((index + 1) * 10) : Number(row.sort_order)
+        }));
+
+      const { error: deleteError } = await supabase
+        .from("drop_menu_items")
+        .delete()
+        .eq("drop_id", state.selectedDropId);
+
+      if (deleteError) throw deleteError;
+
+      if (enabledAssignments.length) {
+        const { error: insertError } = await supabase.from("drop_menu_items").insert(enabledAssignments);
+        if (insertError) throw insertError;
       }
+    }
 
-      function ensureScheduleRows() {
-        if (!state.seriesRows.length) {
-          state.seriesRows = [
-            {
-              id: uidSuffix(),
-              day_of_week: getDayOfWeekFromDateInput(byId("deliveryDate")?.value),
-              fulfilment_start: byId("deliveryStartTime")?.value || "19:00",
-              fulfilment_end: byId("deliveryEndTime")?.value || "20:00",
-              order_close_time: byId("closesAtTime")?.value || "18:00"
-            }
-          ];
-        }
-      }
+    async function saveDrop(showSuccess = true) {
+      if (!state.selectedDropId || !state.drop) return;
 
-      function renderScheduleRows() {
-        ensureScheduleRows();
-        const body = byId("scheduleRowsBody");
-        body.innerHTML = state.seriesRows.map((row) => `
-          <tr data-row-id="${row.id}">
-            <td>
-              <select class="js-schedule-day">
-                <option value="0" ${row.day_of_week === "0" ? "selected" : ""}>Sunday</option>
-                <option value="1" ${row.day_of_week === "1" ? "selected" : ""}>Monday</option>
-                <option value="2" ${row.day_of_week === "2" ? "selected" : ""}>Tuesday</option>
-                <option value="3" ${row.day_of_week === "3" ? "selected" : ""}>Wednesday</option>
-                <option value="4" ${row.day_of_week === "4" ? "selected" : ""}>Thursday</option>
-                <option value="5" ${row.day_of_week === "5" ? "selected" : ""}>Friday</option>
-                <option value="6" ${row.day_of_week === "6" ? "selected" : ""}>Saturday</option>
-              </select>
-            </td>
-            <td><input class="js-schedule-start" type="time" value="${row.fulfilment_start || ""}" /></td>
-            <td><input class="js-schedule-end" type="time" value="${row.fulfilment_end || ""}" /></td>
-            <td><input class="js-schedule-close" type="time" value="${row.order_close_time || ""}" /></td>
-            <td><button class="btnGhost js-remove-schedule-row" type="button">Remove</button></td>
-          </tr>
-        `).join("");
-      }
+      byId("dropSlug").value = slugify(byId("dropSlug").value.trim());
+      const dropData = readDropFromForm();
+      if (!dropData.slug) throw new Error("Drop Link Name is required.");
+      if (!dropData.capacity_category_id || !dropData.capacity_category) throw new Error("Capacity Category is required.");
 
-      function renderSeriesPreview() {
-        const list = byId("seriesPreviewList");
-        const summary = byId("seriesSummaryText");
-        if (getRepeatPattern() !== "recurring") {
-          list.innerHTML = "";
-          summary.textContent = "One-off drop.";
-          return;
-        }
+      setSaveState("saving");
 
-        const startDate = byId("seriesStartDate").value;
-        if (!startDate) {
-          list.innerHTML = "";
-          summary.textContent = "Add a start date and schedule to preview generated drops.";
-          return;
-        }
-
-        const rows = state.seriesRows.filter((r) => r.day_of_week !== "" && r.fulfilment_start && r.fulfilment_end);
-        if (!rows.length) {
-          list.innerHTML = "";
-          summary.textContent = "Add at least one weekly schedule line.";
-          return;
-        }
-
-        const previews = [];
-        const start = new Date(`${startDate}T12:00:00`);
-        const endMode = byId("seriesEndMode").value;
-        const endDateVal = byId("seriesEndDate").value;
-        const dropCountVal = Number(byId("seriesDropCount").value || 0);
-
-        let cursor = new Date(start);
-        let safety = 0;
-
-        while (previews.length < 8 && safety < 365) {
-          rows.forEach((row) => {
-            const targetDow = Number(row.day_of_week);
-            const d = new Date(cursor);
-            d.setDate(d.getDate() + ((targetDow - d.getDay() + 7) % 7));
-            if (d < start) return;
-
-            if (endMode === "end_date" && endDateVal) {
-              const endDate = new Date(`${endDateVal}T23:59:59`);
-              if (d > endDate) return;
-            }
-
-            previews.push({
-              date: new Date(d),
-              start: row.fulfilment_start,
-              end: row.fulfilment_end
-            });
-          });
-
-          cursor.setDate(cursor.getDate() + 7);
-          safety += 7;
-          if (endMode === "drop_count" && dropCountVal && previews.length >= dropCountVal) break;
-        }
-
-        previews.sort((a, b) => a.date - b.date);
-        const finalPreviews = endMode === "drop_count" && dropCountVal ? previews.slice(0, dropCountVal) : previews.slice(0, 8);
-
-        summary.textContent = `Previewing ${finalPreviews.length} upcoming generated drop${finalPreviews.length === 1 ? "" : "s"}.`;
-
-        list.innerHTML = finalPreviews.map((item) => `
-          <div class="previewLine">
-            <span>${escapeHtml(item.date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }))}</span>
-            <span>${escapeHtml(item.start)}–${escapeHtml(item.end)}</span>
-          </div>
-        `).join("");
-      }
-
-      function renderReview() {
-        const summary = byId("reviewSummary");
-        const readiness = byId("reviewReadiness");
-        const share = byId("shareLinkPreview");
-        const publishHelp = byId("publishHelpText");
-        const publishBtn = byId("publishBtn");
-
-        if (!state.drop || !state.readiness) {
-          summary.innerHTML = `<div class="emptyState">No drop selected.</div>`;
-          readiness.innerHTML = `<div class="emptyState">No drop selected.</div>`;
-          share.textContent = "No drop link yet.";
-          renderQrCode("");
-          return;
-        }
-
-        const host = state.hosts.find((h) => h.id === state.drop.host_id);
-        const enabledItems = state.menuAssignments.filter((p) => p.enabled).length;
-        const enabledBundles = state.menuAssignments.filter((p) => p.enabled && p.menu_item_type === "bundle").length;
-        const enabledProducts = state.menuAssignments.filter((p) => p.enabled && p.menu_item_type === "product").length;
-        const capacityLabel = getCapacityCategoryLabel(state.drop);
-
-        summary.innerHTML = [
-          ["Drop", state.drop.name || "—"],
-          ["Type", state.drop.drop_type || "—"],
-          ["Host", host ? host.name : "No host"],
-          ["Status", state.drop.status || "draft"],
-          ["Order Window", state.drop.opens_at && state.drop.closes_at ? `${formatDateShort(state.drop.opens_at)} ${formatTimeOnly(state.drop.opens_at)} → ${formatDateShort(state.drop.closes_at)} ${formatTimeOnly(state.drop.closes_at)}` : (state.drop.closes_at ? `Open immediately → ${formatDateShort(state.drop.closes_at)} ${formatTimeOnly(state.drop.closes_at)}` : "Not set")],
-          ["Fulfilment", state.drop.delivery_start && state.drop.delivery_end ? `${formatDateShort(state.drop.delivery_start)} ${formatTimeOnly(state.drop.delivery_start)}–${formatTimeOnly(state.drop.delivery_end)}` : "Not set"],
-          ["Capacity", `${Number(state.drop.capacity_units_total || 0)} ${capacityLabel}`],
-          ["Menu", `${enabledItems} enabled • ${enabledProducts} products • ${enabledBundles} bundles`],
-          ["Pattern", getRepeatPattern() === "recurring" ? "Recurring (editor preview)" : "One-off"]
-        ].map(([label, value]) => `
-          <div class="summaryItem">
-            <span class="label">${escapeHtml(label)}</span>
-            <span class="value">${escapeHtml(value)}</span>
-          </div>
-        `).join("");
-
-        const items = [
-          { ok: state.readiness.basics_complete, label: "Basics complete" },
-          { ok: state.readiness.timing_complete, label: "Timing complete" },
-          { ok: state.readiness.menu_complete, label: "At least one menu item enabled" },
-          { ok: state.readiness.capacity_product_present, label: "At least one enabled item has capacity impact" },
-          { ok: state.readiness.commercials_valid, label: "Commercials configured correctly" }
-        ];
-
-        readiness.innerHTML = items.map((item) => `
-          <div class="readinessItem ${item.ok ? "pass" : "fail"}">
-            <span class="readinessMark">${item.ok ? "✓" : "!"}</span>
-            <span>${escapeHtml(item.label)}</span>
-          </div>
-        `).join("");
-
-        const shareUrl = getShareUrl();
-        share.textContent = shareUrl || "No drop link yet.";
-        renderQrCode(shareUrl);
-
-        publishBtn.textContent = state.drop.status === "live" ? "Update Live Drop" : "Publish Drop";
-
-        if (state.readiness.ready_to_publish) {
-          publishHelp.textContent = state.drop.status === "live"
-            ? "This live drop can be updated."
-            : "This drop is ready to publish.";
-          publishBtn.disabled = false;
-        } else {
-          publishHelp.textContent = "Resolve the highlighted issues before publishing.";
-          publishBtn.disabled = true;
-        }
-      }
-
-      function renderQrCode(text) {
-        const wrap = byId("qrWrap");
-        if (!text) {
-          wrap.innerHTML = `<div class="helperText">QR preview will appear once the drop link name is set.</div>`;
-          return;
-        }
-        const qrUrl = getQrImageUrl(text);
-        wrap.innerHTML = `<img src="${escapeHtml(qrUrl)}" alt="QR code for drop link" />`;
-      }
-
-      function readDropFromForm() {
-        const existing = state.drop || {};
-        const openPattern = getOpenPattern();
-        const opensAt = openPattern === "scheduled"
-          ? combineDateTime(byId("opensAtDate").value, byId("opensAtTime").value)
-          : null;
-
-        const capacityCategoryId = byId("capacityCategory").value || null;
-        const capacityCategorySlug = getCapacityCategorySlugFromId(capacityCategoryId);
-
-        return {
-          ...existing,
-          name: byId("dropName").value.trim(),
-          slug: slugify(byId("dropSlug").value.trim()),
-          drop_type: byId("dropType").value,
-          status: byId("dropStatus").value,
-          host_id: byId("hostSelect").value || null,
-          notes_internal: byId("notesInternal").value.trim() || null,
-
-          fulfilment_mode: byId("fulfilmentMode").value || null,
-          centre_postcode: byId("centrePostcode").value.trim() || null,
-          radius_km: byId("radiusKm").value === "" ? null : Number(byId("radiusKm").value),
-          capacity_category_id: capacityCategoryId,
-          capacity_category: capacityCategorySlug,
-          capacity_units_total: Number(byId("capacityTotal").value || 0),
-
-          delivery_start: combineDateTime(byId("deliveryDate").value, byId("deliveryStartTime").value),
-          delivery_end: combineDateTime(byId("deliveryDate").value, byId("deliveryEndTime").value),
-          opens_at: opensAt,
-          closes_at: combineDateTime(byId("closesAtDate").value, byId("closesAtTime").value),
-
-          fundraising_enabled: byId("fundraisingEnabled").checked,
-          fundraising_model: byId("fundraisingEnabled").checked ? (byId("fundraisingModel").value || null) : null,
-          fundraising_percentage: byId("fundraisingEnabled").checked && byId("fundraisingModel").value === "percentage"
-            ? (byId("fundraisingPercentage").value === "" ? null : Number(byId("fundraisingPercentage").value))
-            : null,
-          fundraising_per_order_pence: byId("fundraisingEnabled").checked && byId("fundraisingModel").value === "per_order"
-            ? (byId("fundraisingPerOrderPence").value === "" ? null : Number(byId("fundraisingPerOrderPence").value))
-            : null,
-          fundraising_display_text: byId("fundraisingEnabled").checked ? (byId("fundraisingDisplayText").value.trim() || null) : null,
-
-          host_share_enabled: byId("hostShareEnabled").checked,
-          host_share_model: byId("hostShareEnabled").checked ? (byId("hostShareModel").value || null) : null,
-          host_share_percentage: byId("hostShareEnabled").checked && byId("hostShareModel").value === "percentage"
-            ? (byId("hostSharePercentage").value === "" ? null : Number(byId("hostSharePercentage").value))
-            : null,
-          host_share_per_order_pence: byId("hostShareEnabled").checked && byId("hostShareModel").value === "per_order"
-            ? (byId("hostSharePerOrderPence").value === "" ? null : Number(byId("hostSharePerOrderPence").value))
-            : null,
-          host_share_fixed_pence: byId("hostShareEnabled").checked && byId("hostShareModel").value === "fixed"
-            ? (byId("hostShareFixedPence").value === "" ? null : Number(byId("hostShareFixedPence").value))
-            : null,
-          host_share_customer_visible: byId("hostShareEnabled").checked ? (byId("hostShareCustomerVisible").value === "true") : false
-        };
-      }
-
-      function getDropPayload(dropData) {
-        return {
-          vendor_id: dropData.vendor_id,
-          host_id: dropData.host_id,
-          slug: dropData.slug,
-          name: dropData.name,
-          drop_type: dropData.drop_type,
-          status: dropData.status,
-          fulfilment_mode: dropData.fulfilment_mode,
-          centre_postcode: dropData.centre_postcode,
-          radius_km: dropData.radius_km,
-          capacity_category_id: dropData.capacity_category_id,
-          capacity_category: dropData.capacity_category,
-          capacity_units_total: dropData.capacity_units_total,
-          opens_at: dropData.opens_at,
-          closes_at: dropData.closes_at,
-          delivery_start: dropData.delivery_start,
-          delivery_end: dropData.delivery_end,
-          notes_internal: dropData.notes_internal,
-
-          fundraising_enabled: dropData.fundraising_enabled,
-          fundraising_model: dropData.fundraising_model,
-          fundraising_percentage: dropData.fundraising_percentage,
-          fundraising_per_order_pence: dropData.fundraising_per_order_pence,
-          fundraising_display_text: dropData.fundraising_display_text,
-
-          host_share_enabled: dropData.host_share_enabled,
-          host_share_model: dropData.host_share_model,
-          host_share_percentage: dropData.host_share_percentage,
-          host_share_per_order_pence: dropData.host_share_per_order_pence,
-          host_share_fixed_pence: dropData.host_share_fixed_pence,
-          host_share_customer_visible: dropData.host_share_customer_visible
-        };
-      }
-
-      async function saveAssignments() {
-        const enabledAssignments = state.menuAssignments
-          .filter((row) => row.enabled)
-          .map((row, index) => ({
-            drop_id: state.selectedDropId,
-            menu_item_type: row.menu_item_type,
-            product_id: row.menu_item_type === "product" ? row.product_id : null,
-            bundle_id: row.menu_item_type === "bundle" ? row.bundle_id : null,
-            is_available: true,
-            price_override_pence: row.price_override_pence === "" || row.price_override_pence == null ? null : Number(row.price_override_pence),
-            stock_limit: row.stock_limit === "" || row.stock_limit == null ? null : Number(row.stock_limit),
-            sort_order: row.sort_order == null ? ((index + 1) * 10) : Number(row.sort_order)
-          }));
-
-        const { error: deleteError } = await supabase
-          .from("drop_menu_items")
-          .delete()
-          .eq("drop_id", state.selectedDropId);
-
-        if (deleteError) throw deleteError;
-
-        if (enabledAssignments.length) {
-          const { error: insertError } = await supabase.from("drop_menu_items").insert(enabledAssignments);
-          if (insertError) throw insertError;
-        }
-      }
-
-      async function saveDrop(showSuccess = true) {
-        if (!state.selectedDropId || !state.drop) return;
-
-        byId("dropSlug").value = slugify(byId("dropSlug").value.trim());
-        const dropData = readDropFromForm();
-        if (!dropData.slug) throw new Error("Drop Link Name is required.");
-        if (!dropData.capacity_category_id || !dropData.capacity_category) throw new Error("Capacity Category is required.");
-
-        setSaveState("saving");
-
-        try {
-          const { error } = await supabase
-            .from("drops")
-            .update(getDropPayload(dropData))
-            .eq("id", state.selectedDropId);
-
-          if (error) throw error;
-
-          state.drop = { ...state.drop, ...dropData };
-          await saveAssignments();
-          saveLocalTimingDraft();
-          await loadDrops();
-          await loadSelectedDrop();
-          renderEverything();
-          setSaveState("saved");
-          if (showSuccess) showInlineSuccess("Changes saved successfully");
-        } catch (err) {
-          setSaveState("error", err.message || "Unable to save changes");
-          throw err;
-        }
-      }
-
-      async function createNewDrop() {
-        const now = new Date();
-        const deliveryStart = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        deliveryStart.setHours(19, 0, 0, 0);
-        const deliveryEnd = new Date(deliveryStart);
-        deliveryEnd.setHours(20, 0, 0, 0);
-        const closesAt = new Date(deliveryStart);
-        closesAt.setHours(18, 0, 0, 0);
-
-        const defaultCapacityCategory = getDefaultCapacityCategory();
-
-        const payload = {
-          vendor_id: state.vendorId,
-          name: "New Drop",
-          slug: `new-drop-${uidSuffix()}`,
-          drop_type: "neighbourhood",
-          status: "draft",
-          fulfilment_mode: null,
-          centre_postcode: null,
-          radius_km: null,
-          capacity_category_id: defaultCapacityCategory?.id || null,
-          capacity_category: defaultCapacityCategory?.slug || "pizza",
-          capacity_units_total: 40,
-          opens_at: null,
-          closes_at: closesAt.toISOString(),
-          delivery_start: deliveryStart.toISOString(),
-          delivery_end: deliveryEnd.toISOString(),
-          fundraising_enabled: false,
-          host_share_enabled: false
-        };
-
-        const { data, error } = await supabase
-          .from("drops")
-          .insert(payload)
-          .select("id")
-          .single();
-
-        if (error) throw error;
-
-        state.selectedDropId = data.id;
-        state.currentStage = "basics";
-        await refreshAll();
-        showInlineSuccess("New draft drop created");
-      }
-
-      async function duplicateDrop(dropId) {
-        const targetId = dropId || state.selectedDropId;
-        if (!targetId) return;
-
-        const { data: sourceDrop, error: sourceError } = await supabase
-          .from("drops")
-          .select("*")
-          .eq("id", targetId)
-          .single();
-
-        if (sourceError) throw sourceError;
-
-        const { data: sourceAssignments, error: assignmentsError } = await supabase
-          .from("drop_menu_items")
-          .select("*")
-          .eq("drop_id", targetId);
-
-        if (assignmentsError) throw assignmentsError;
-
-        const duplicatePayload = {
-          ...getDropPayload(sourceDrop),
-          slug: `${slugify(sourceDrop.slug || sourceDrop.name || "drop")}-${uidSuffix()}`,
-          name: `${sourceDrop.name} Copy`,
-          status: "draft",
-          series_id: null,
-          series_position: null
-        };
-
-        const { data: insertedDrop, error: insertDropError } = await supabase
-          .from("drops")
-          .insert(duplicatePayload)
-          .select("id")
-          .single();
-
-        if (insertDropError) throw insertDropError;
-
-        if ((sourceAssignments || []).length) {
-          const rows = sourceAssignments.map((row) => ({
-            drop_id: insertedDrop.id,
-            menu_item_type: row.menu_item_type,
-            product_id: row.product_id,
-            bundle_id: row.bundle_id,
-            is_available: row.is_available,
-            price_override_pence: row.price_override_pence,
-            stock_limit: row.stock_limit,
-            sort_order: row.sort_order
-          }));
-
-          const { error: insertAssignmentsError } = await supabase.from("drop_menu_items").insert(rows);
-          if (insertAssignmentsError) throw insertAssignmentsError;
-        }
-
-        const sourceTiming = loadLocalTimingDraft(targetId);
-        if (sourceTiming) {
-          try {
-            localStorage.setItem(
-              getTimingStorageKey(insertedDrop.id),
-              JSON.stringify({
-                ...sourceTiming,
-                seriesRows: (sourceTiming.seriesRows || []).map((row) => ({
-                  ...row,
-                  id: uidSuffix()
-                }))
-              })
-            );
-          } catch {}
-        }
-
-        state.selectedDropId = insertedDrop.id;
-        state.currentStage = "basics";
-        await refreshAll();
-        showInlineSuccess("Drop duplicated");
-      }
-
-      async function updateDropStatus(status) {
-        if (!state.selectedDropId) return;
-
+      try {
         const { error } = await supabase
           .from("drops")
-          .update({ status })
+          .update(getDropPayload(dropData))
           .eq("id", state.selectedDropId);
 
         if (error) throw error;
 
-        await refreshAll();
-      }
-
-      function renderEverything() {
-        updateStatusFilterSummary();
-        updateTypeFilterSummary();
-        renderDropBand();
-        populateForm();
-        renderAssignments();
-        renderConditionalFields();
-        renderScheduleRows();
-        renderSeriesPreview();
-        renderStageBar();
-        renderContextBar();
-        updateWorkspaceHeader();
-        renderReview();
-      }
-
-      async function refreshAll() {
-        showError("");
-        await Promise.all([loadHosts(), loadCategories(), loadProducts(), loadBundles(), loadDrops()]);
+        state.drop = { ...state.drop, ...dropData };
+        await saveAssignments();
+        await loadDrops();
         await loadSelectedDrop();
         renderEverything();
+        setSaveState("saved");
+        if (showSuccess) showInlineSuccess("Changes saved successfully");
+      } catch (err) {
+        setSaveState("error", err.message || "Unable to save changes");
+        throw err;
+      }
+    }
+
+    async function createNewDrop() {
+      const now = new Date();
+      const deliveryStart = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      deliveryStart.setHours(19, 0, 0, 0);
+      const deliveryEnd = new Date(deliveryStart);
+      deliveryEnd.setHours(20, 0, 0, 0);
+      const closesAt = new Date(deliveryStart);
+      closesAt.setHours(18, 0, 0, 0);
+
+      const defaultCapacityCategory = getDefaultCapacityCategory();
+
+      const payload = {
+        vendor_id: state.vendorId,
+        name: "New Drop",
+        slug: `new-drop-${uidSuffix()}`,
+        drop_type: "neighbourhood",
+        status: "draft",
+        fulfilment_mode: null,
+        centre_postcode: null,
+        radius_km: null,
+        capacity_category_id: defaultCapacityCategory?.id || null,
+        capacity_category: defaultCapacityCategory?.slug || "pizza",
+        capacity_units_total: 40,
+        opens_at: null,
+        closes_at: closesAt.toISOString(),
+        delivery_start: deliveryStart.toISOString(),
+        delivery_end: deliveryEnd.toISOString(),
+        fundraising_enabled: false,
+        host_share_enabled: false
+      };
+
+      const { data, error } = await supabase
+        .from("drops")
+        .insert(payload)
+        .select("id")
+        .single();
+
+      if (error) throw error;
+
+      state.selectedDropId = data.id;
+      state.currentStage = "basics";
+      await refreshAll();
+      showInlineSuccess("New draft drop created");
+    }
+
+    async function duplicateDrop(dropId) {
+      const targetId = dropId || state.selectedDropId;
+      if (!targetId) return;
+
+      const { data: sourceDrop, error: sourceError } = await supabase
+        .from("drops")
+        .select("*")
+        .eq("id", targetId)
+        .single();
+
+      if (sourceError) throw sourceError;
+
+      const { data: sourceAssignments, error: assignmentsError } = await supabase
+        .from("drop_menu_items")
+        .select("*")
+        .eq("drop_id", targetId);
+
+      if (assignmentsError) throw assignmentsError;
+
+      const duplicatePayload = {
+        ...getDropPayload(sourceDrop),
+        slug: `${slugify(sourceDrop.slug || sourceDrop.name || "drop")}-${uidSuffix()}`,
+        name: `${sourceDrop.name} Copy`,
+        status: "draft",
+        series_id: null,
+        series_position: null
+      };
+
+      const { data: insertedDrop, error: insertDropError } = await supabase
+        .from("drops")
+        .insert(duplicatePayload)
+        .select("id")
+        .single();
+
+      if (insertDropError) throw insertDropError;
+
+      if ((sourceAssignments || []).length) {
+        const rows = sourceAssignments.map((row) => ({
+          drop_id: insertedDrop.id,
+          menu_item_type: row.menu_item_type,
+          product_id: row.product_id,
+          bundle_id: row.bundle_id,
+          is_available: row.is_available,
+          price_override_pence: row.price_override_pence,
+          stock_limit: row.stock_limit,
+          sort_order: row.sort_order
+        }));
+
+        const { error: insertAssignmentsError } = await supabase.from("drop_menu_items").insert(rows);
+        if (insertAssignmentsError) throw insertAssignmentsError;
       }
 
-      function ensureRecurringStartDateFromDropDate() {
-        const repeatPattern = getRepeatPattern();
-        const deliveryDate = byId("deliveryDate")?.value;
-        const seriesStartDate = byId("seriesStartDate");
-        if (repeatPattern === "recurring" && seriesStartDate && deliveryDate && !seriesStartDate.value) {
-          seriesStartDate.value = deliveryDate;
-        }
+      state.selectedDropId = insertedDrop.id;
+      state.currentStage = "basics";
+      await refreshAll();
+      showInlineSuccess("Drop duplicated");
+    }
+
+    async function updateDropStatus(status) {
+      if (!state.selectedDropId) return;
+
+      const { error } = await supabase
+        .from("drops")
+        .update({ status })
+        .eq("id", state.selectedDropId);
+
+      if (error) throw error;
+
+      await refreshAll();
+    }
+
+    function renderEverything() {
+      updateStatusFilterSummary();
+      updateTypeFilterSummary();
+      renderDropBand();
+      populateForm();
+      renderAssignments();
+      renderConditionalFields();
+      renderScheduleRows();
+      renderSeriesPreview();
+      renderStageBar();
+      renderContextBar();
+      updateWorkspaceHeader();
+      renderReview();
+    }
+
+    async function refreshAll() {
+      showError("");
+      await Promise.all([loadHosts(), loadCategories(), loadProducts(), loadBundles(), loadDrops()]);
+      await loadSelectedDrop();
+      renderEverything();
+    }
+
+    function ensureRecurringStartDateFromDropDate() {
+      const repeatPattern = getRepeatPattern();
+      const deliveryDate = byId("deliveryDate")?.value;
+      const seriesStartDate = byId("seriesStartDate");
+      if (repeatPattern === "recurring" && seriesStartDate && deliveryDate && !seriesStartDate.value) {
+        seriesStartDate.value = deliveryDate;
       }
+    }
 
-      function ensureSeriesDayMatchesDropDateIfDefault() {
-        const deliveryDate = byId("deliveryDate")?.value;
-        if (!deliveryDate || !state.seriesRows.length) return;
-        if (getRepeatPattern() !== "recurring") return;
+    function ensureSeriesDayMatchesDropDateIfDefault() {
+      const deliveryDate = byId("deliveryDate")?.value;
+      if (!deliveryDate || !state.seriesRows.length) return;
+      if (getRepeatPattern() !== "recurring") return;
 
-        if (state.seriesRows.length === 1) {
-          state.seriesRows[0].day_of_week = getDayOfWeekFromDateInput(deliveryDate);
-          if (!state.seriesRows[0].fulfilment_start && byId("deliveryStartTime").value) {
-            state.seriesRows[0].fulfilment_start = byId("deliveryStartTime").value;
-          }
-          if (!state.seriesRows[0].fulfilment_end && byId("deliveryEndTime").value) {
-            state.seriesRows[0].fulfilment_end = byId("deliveryEndTime").value;
-          }
-          if (!state.seriesRows[0].order_close_time && byId("closesAtTime").value) {
-            state.seriesRows[0].order_close_time = byId("closesAtTime").value;
-          }
-          renderScheduleRows();
-        }
+      if (state.seriesRows.length === 1) {
+        state.seriesRows[0].day_of_week = getDayOfWeekFromDateInput(deliveryDate);
+        renderScheduleRows();
       }
+    }
 
-      function markDirty() {
-        ensureRecurringStartDateFromDropDate();
-        setSaveState("default", "Unsaved changes");
-        state.drop = { ...state.drop, ...readDropFromForm() };
-        renderHostPreview();
-        renderHostHelper();
-        renderContextBar();
-        renderReview();
-        saveLocalTimingDraft();
+    function markDirty() {
+      ensureRecurringStartDateFromDropDate();
+      setSaveState("default", "Unsaved changes");
+      state.drop = { ...state.drop, ...readDropFromForm() };
+      renderHostPreview();
+      renderHostHelper();
+      renderContextBar();
+      renderStageBar();
+      renderReview();
+    }
+
+    function openStage(stage) {
+      state.currentStage = stage;
+      renderStageBar();
+      updateWorkspaceHeader();
+    }
+
+    function goNextStage() {
+      const idx = STAGES.indexOf(state.currentStage);
+      if (idx >= 0 && idx < STAGES.length - 1) openStage(STAGES[idx + 1]);
+    }
+
+    function goPrevStage() {
+      const idx = STAGES.indexOf(state.currentStage);
+      if (idx > 0) openStage(STAGES[idx - 1]);
+    }
+
+    function syncAssignmentRow(tr) {
+      const key = tr.dataset.menuKey;
+      const assignment = state.menuAssignments.find((p) => p.key === key);
+      if (!assignment) return;
+
+      assignment.enabled = tr.querySelector(".js-assign-enabled").checked;
+      const overrideValue = tr.querySelector(".js-assign-override").value;
+      const stockLimitValue = tr.querySelector(".js-assign-stock-limit").value;
+
+      assignment.price_override_pence = overrideValue === "" ? null : Number(overrideValue);
+      assignment.stock_limit = stockLimitValue === "" ? null : Number(stockLimitValue);
+
+      markDirty();
+      renderAssignments();
+      renderContextBar();
+      renderStageBar();
+      renderReview();
+    }
+
+    function syncScheduleRow(tr) {
+      const id = tr.dataset.rowId;
+      const row = state.seriesRows.find((r) => r.id === id);
+      if (!row) return;
+
+      row.day_of_week = tr.querySelector(".js-schedule-day").value;
+      row.fulfilment_start = tr.querySelector(".js-schedule-start").value;
+      row.fulfilment_end = tr.querySelector(".js-schedule-end").value;
+      row.order_close_time = tr.querySelector(".js-schedule-close").value;
+      renderSeriesPreview();
+      markDirty();
+    }
+
+    function enableAllActiveMenuItems() {
+      state.menuAssignments.forEach((row) => {
+        if (row.catalogue_is_active) row.enabled = true;
+      });
+      markDirty();
+      renderAssignments();
+      renderContextBar();
+      renderStageBar();
+      renderReview();
+    }
+
+    function clearAllMenuItems() {
+      state.menuAssignments.forEach((row) => {
+        row.enabled = false;
+      });
+      markDirty();
+      renderAssignments();
+      renderContextBar();
+      renderStageBar();
+      renderReview();
+    }
+
+    function downloadQr() {
+      const url = getQrImageUrl(getShareUrl());
+      if (!url) throw new Error("QR preview unavailable.");
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${(state.drop?.slug || "drop")}-qr.png`;
+      link.click();
+    }
+
+    async function copyLink() {
+      const url = getShareUrl();
+      if (!url) throw new Error("No drop link available yet.");
+      await navigator.clipboard.writeText(url);
+      showInlineSuccess("Drop link copied");
+    }
+
+    function previewOrderPage() {
+      const url = getShareUrl();
+      if (!url) throw new Error("No drop link available yet.");
+      window.open(url, "_blank");
+    }
+
+    function openServiceBoard() {
+      if (!state.selectedDropId) return;
+      localStorage.setItem("hearth:selectedDropId", state.selectedDropId);
+      window.location.href = "index.html";
+    }
+
+    function showModalMessage(id, message, isError = false) {
+      const el = byId(id);
+      if (!message) {
+        el.style.display = "none";
+        el.textContent = "";
+        return;
       }
+      el.style.display = "block";
+      el.textContent = message;
+      el.style.color = isError ? "#991b1b" : "var(--h-good)";
+    }
 
-      function openStage(stage) {
-        state.currentStage = stage;
-        renderStageBar();
-        updateWorkspaceHeader();
-      }
+    function openModal(id) {
+      byId(id).classList.add("open");
+    }
 
-      function goNextStage() {
-        const idx = STAGES.indexOf(state.currentStage);
-        if (idx >= 0 && idx < STAGES.length - 1) openStage(STAGES[idx + 1]);
-      }
+    function closeModal(id) {
+      byId(id).classList.remove("open");
+    }
 
-      function goPrevStage() {
-        const idx = STAGES.indexOf(state.currentStage);
-        if (idx > 0) openStage(STAGES[idx - 1]);
-      }
+    async function createHost() {
+      const name = byId("newHostName").value.trim();
+      if (!name) throw new Error("Host Name is required.");
 
-      function syncAssignmentRow(tr) {
-        const key = tr.dataset.menuKey;
-        const assignment = state.menuAssignments.find((p) => p.key === key);
-        if (!assignment) return;
+      const payload = {
+        name,
+        slug: slugify(name),
+        host_type: byId("newHostType").value,
+        postcode: byId("newHostPostcode").value.trim() || null,
+        address_summary: byId("newHostAddress").value.trim() || null,
+        notes_internal: byId("newHostNotes").value.trim() || null
+      };
 
-        assignment.enabled = tr.querySelector(".js-assign-enabled").checked;
+      const { data, error } = await supabase
+        .from("hosts")
+        .insert(payload)
+        .select("*")
+        .single();
 
-        if (!assignment.enabled) {
-          assignment.price_override_pence = null;
-          assignment.stock_limit = null;
-        } else {
-          const overrideValue = tr.querySelector(".js-assign-override").value;
-          const stockLimitValue = tr.querySelector(".js-assign-stock-limit").value;
+      if (error) throw error;
 
-          assignment.price_override_pence = overrideValue === "" ? null : Number(overrideValue);
-          assignment.stock_limit = stockLimitValue === "" ? null : Number(stockLimitValue);
-        }
+      await loadHosts();
+      renderHostOptions();
+      byId("hostSelect").value = data.id;
+      state.drop.host_id = data.id;
+      renderHostPreview();
+      markDirty();
+      closeModal("hostModal");
+      showInlineSuccess("Host created and selected");
+    }
 
-        markDirty();
-        renderAssignments();
-        renderContextBar();
-        renderReview();
-      }
+    function attachEvents() {
+      byId("dropSearch").addEventListener("input", (e) => {
+        state.search = e.target.value || "";
+        renderDropBand();
+      });
 
-      function syncScheduleRow(tr) {
-        const id = tr.dataset.rowId;
-        const row = state.seriesRows.find((r) => r.id === id);
-        if (!row) return;
+      const statusFilterBtn = byId("statusFilterBtn");
+      const statusFilterPopover = byId("statusFilterPopover");
+      const typeFilterBtn = byId("typeFilterBtn");
+      const typeFilterPopover = byId("typeFilterPopover");
 
-        row.day_of_week = tr.querySelector(".js-schedule-day").value;
-        row.fulfilment_start = tr.querySelector(".js-schedule-start").value;
-        row.fulfilment_end = tr.querySelector(".js-schedule-end").value;
-        row.order_close_time = tr.querySelector(".js-schedule-close").value;
-        renderSeriesPreview();
-        markDirty();
-      }
+      statusFilterBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        typeFilterPopover.classList.remove("open");
+        statusFilterPopover.classList.toggle("open");
+      });
 
-      function downloadQr() {
-        const url = getQrImageUrl(getShareUrl());
-        if (!url) throw new Error("QR preview unavailable.");
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${(state.drop?.slug || "drop")}-qr.png`;
-        link.click();
-      }
+      typeFilterBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        statusFilterPopover.classList.remove("open");
+        typeFilterPopover.classList.toggle("open");
+      });
 
-      async function copyLink() {
-        const url = getShareUrl();
-        if (!url) throw new Error("No drop link available yet.");
-        await navigator.clipboard.writeText(url);
-        showInlineSuccess("Drop link copied");
-      }
-
-      function previewOrderPage() {
-        const url = getShareUrl();
-        if (!url) throw new Error("No drop link available yet.");
-        window.open(url, "_blank");
-      }
-
-      function openServiceBoard() {
-        if (!state.selectedDropId) return;
-        localStorage.setItem("hearth:selectedDropId", state.selectedDropId);
-        window.location.href = "index.html";
-      }
-
-      function showModalMessage(id, message, isError = false) {
-        const el = byId(id);
-        if (!message) {
-          el.style.display = "none";
-          el.textContent = "";
-          return;
-        }
-        el.style.display = "block";
-        el.textContent = message;
-        el.style.color = isError ? "#991b1b" : "var(--h-good)";
-      }
-
-      function openModal(id) {
-        byId(id).classList.add("open");
-      }
-
-      function closeModal(id) {
-        byId(id).classList.remove("open");
-      }
-
-      async function createHost() {
-        const name = byId("newHostName").value.trim();
-        if (!name) throw new Error("Host Name is required.");
-
-        const payload = {
-          name,
-          slug: slugify(name),
-          host_type: byId("newHostType").value,
-          postcode: byId("newHostPostcode").value.trim() || null,
-          address_summary: byId("newHostAddress").value.trim() || null,
-          notes_internal: byId("newHostNotes").value.trim() || null
-        };
-
-        const { data, error } = await supabase
-          .from("hosts")
-          .insert(payload)
-          .select("*")
-          .single();
-
-        if (error) throw error;
-
-        await loadHosts();
-        renderHostOptions();
-        byId("hostSelect").value = data.id;
-        state.drop.host_id = data.id;
-        renderHostPreview();
-        markDirty();
-        closeModal("hostModal");
-        showInlineSuccess("Host created and selected");
-      }
-
-      function attachEvents() {
-        byId("dropSearch").addEventListener("input", (e) => {
-          state.search = e.target.value || "";
-          renderDropBand();
-        });
-
-        const statusFilterBtn = byId("statusFilterBtn");
-        const statusFilterPopover = byId("statusFilterPopover");
-        const typeFilterBtn = byId("typeFilterBtn");
-        const typeFilterPopover = byId("typeFilterPopover");
-
-        statusFilterBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          typeFilterPopover.classList.remove("open");
-          statusFilterPopover.classList.toggle("open");
-        });
-
-        typeFilterBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
+      document.addEventListener("click", (e) => {
+        if (!statusFilterPopover.contains(e.target) && e.target !== statusFilterBtn && !statusFilterBtn.contains(e.target)) {
           statusFilterPopover.classList.remove("open");
-          typeFilterPopover.classList.toggle("open");
+        }
+        if (!typeFilterPopover.contains(e.target) && e.target !== typeFilterBtn && !typeFilterBtn.contains(e.target)) {
+          typeFilterPopover.classList.remove("open");
+        }
+      });
+
+      byId("statusFilterChecklist").addEventListener("change", () => {
+        const selected = Array.from(byId("statusFilterChecklist").querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+        state.statusFilters = selected;
+        updateStatusFilterSummary();
+        renderDropBand();
+      });
+
+      byId("statusActiveOnlyBtn").addEventListener("click", () => {
+        state.statusFilters = [...ACTIVE_DEFAULT_STATUSES];
+        byId("statusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+          cb.checked = state.statusFilters.includes(cb.value);
         });
+        updateStatusFilterSummary();
+        renderDropBand();
+      });
 
-        document.addEventListener("click", (e) => {
-          if (!statusFilterPopover.contains(e.target) && e.target !== statusFilterBtn && !statusFilterBtn.contains(e.target)) {
-            statusFilterPopover.classList.remove("open");
-          }
-          if (!typeFilterPopover.contains(e.target) && e.target !== typeFilterBtn && !typeFilterBtn.contains(e.target)) {
-            typeFilterPopover.classList.remove("open");
-          }
+      byId("statusAllBtn").addEventListener("click", () => {
+        state.statusFilters = ["live", "scheduled", "draft", "closed", "completed", "cancelled", "archived"];
+        byId("statusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+          cb.checked = true;
         });
+        updateStatusFilterSummary();
+        renderDropBand();
+      });
 
-        byId("statusFilterChecklist").addEventListener("change", () => {
-          const selected = Array.from(byId("statusFilterChecklist").querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
-          state.statusFilters = selected;
-          updateStatusFilterSummary();
-          renderDropBand();
+      byId("statusClearBtn").addEventListener("click", () => {
+        state.statusFilters = [];
+        byId("statusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+          cb.checked = false;
         });
+        updateStatusFilterSummary();
+        renderDropBand();
+      });
 
-        byId("statusActiveOnlyBtn").addEventListener("click", () => {
-          state.statusFilters = [...ACTIVE_DEFAULT_STATUSES];
-          byId("statusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-            cb.checked = state.statusFilters.includes(cb.value);
-          });
-          updateStatusFilterSummary();
-          renderDropBand();
+      byId("typeFilterChecklist").addEventListener("change", () => {
+        const selected = Array.from(byId("typeFilterChecklist").querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+        state.typeFilters = selected;
+        updateTypeFilterSummary();
+        renderDropBand();
+      });
+
+      byId("typeAllBtn").addEventListener("click", () => {
+        state.typeFilters = [...DEFAULT_TYPE_FILTERS];
+        byId("typeFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+          cb.checked = true;
         });
+        updateTypeFilterSummary();
+        renderDropBand();
+      });
 
-        byId("statusAllBtn").addEventListener("click", () => {
-          state.statusFilters = ["live", "scheduled", "draft", "closed", "completed", "cancelled", "archived"];
-          byId("statusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-            cb.checked = true;
-          });
-          updateStatusFilterSummary();
-          renderDropBand();
+      byId("typeClearBtn").addEventListener("click", () => {
+        state.typeFilters = [];
+        byId("typeFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+          cb.checked = false;
         });
+        updateTypeFilterSummary();
+        renderDropBand();
+      });
 
-        byId("statusClearBtn").addEventListener("click", () => {
-          state.statusFilters = [];
-          byId("statusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-            cb.checked = false;
-          });
-          updateStatusFilterSummary();
-          renderDropBand();
-        });
-
-        byId("typeFilterChecklist").addEventListener("change", () => {
-          const selected = Array.from(byId("typeFilterChecklist").querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
-          state.typeFilters = selected;
-          updateTypeFilterSummary();
-          renderDropBand();
-        });
-
-        byId("typeAllBtn").addEventListener("click", () => {
-          state.typeFilters = [...DEFAULT_TYPE_FILTERS];
-          byId("typeFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-            cb.checked = true;
-          });
-          updateTypeFilterSummary();
-          renderDropBand();
-        });
-
-        byId("typeClearBtn").addEventListener("click", () => {
-          state.typeFilters = [];
-          byId("typeFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-            cb.checked = false;
-          });
-          updateTypeFilterSummary();
-          renderDropBand();
-        });
-
-        byId("refreshBtn").addEventListener("click", async () => {
-          try {
-            await refreshAll();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to refresh Drop Studio.");
-          }
-        });
-
-        byId("newDropBtn").addEventListener("click", async () => {
-          try {
-            await createNewDrop();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to create drop.");
-          }
-        });
-
-        document.querySelectorAll(".stagePill").forEach((pill) => {
-          pill.addEventListener("click", () => openStage(pill.dataset.stage));
-        });
-
-        [
-          "dropType", "dropStatus", "hostSelect", "notesInternal",
-          "fulfilmentMode", "centrePostcode", "radiusKm", "capacityCategory", "capacityTotal",
-          "opensAtDate", "opensAtTime", "closesAtDate", "closesAtTime",
-          "fundraisingEnabled", "fundraisingModel", "fundraisingPercentage", "fundraisingPerOrderPence", "fundraisingDisplayText",
-          "hostShareEnabled", "hostShareModel", "hostSharePercentage", "hostSharePerOrderPence", "hostShareFixedPence", "hostShareCustomerVisible",
-          "seriesStartDate", "seriesEndMode", "seriesEndDate", "seriesDropCount"
-        ].forEach((id) => {
-          const el = byId(id);
-          if (!el) return;
-          el.addEventListener("input", () => {
-            renderConditionalFields();
-            renderSeriesPreview();
-            markDirty();
-          });
-          el.addEventListener("change", () => {
-            renderConditionalFields();
-            renderSeriesPreview();
-            markDirty();
-          });
-        });
-
-        byId("deliveryDate").addEventListener("change", () => {
-          ensureRecurringStartDateFromDropDate();
-          ensureSeriesDayMatchesDropDateIfDefault();
-          applyTimingDefaults(true);
-          renderConditionalFields();
-          renderScheduleRows();
-          renderSeriesPreview();
-          markDirty();
-        });
-
-        byId("deliveryStartTime").addEventListener("change", () => {
-          applyTimingDefaults(true);
-          renderScheduleRows();
-          renderSeriesPreview();
-          markDirty();
-        });
-
-        byId("deliveryEndTime").addEventListener("change", () => {
-          renderScheduleRows();
-          renderSeriesPreview();
-          markDirty();
-        });
-
-        document.querySelectorAll('input[name="openPattern"]').forEach((radio) => {
-          radio.addEventListener("change", () => {
-            applyTimingDefaults(false);
-            renderConditionalFields();
-            renderSeriesPreview();
-            markDirty();
-          });
-        });
-
-        byId("dropName").addEventListener("input", () => {
-          if (!manualSlugEdited) {
-            byId("dropSlug").value = slugify(byId("dropName").value);
-          }
-          markDirty();
-        });
-
-        byId("dropSlug").addEventListener("input", () => {
-          manualSlugEdited = true;
-          byId("dropSlug").value = slugify(byId("dropSlug").value);
-          markDirty();
-        });
-
-        byId("dropSlug").addEventListener("blur", () => {
-          byId("dropSlug").value = slugify(byId("dropSlug").value);
-          markDirty();
-        });
-
-        document.querySelectorAll('input[name="repeatPattern"]').forEach((radio) => {
-          radio.addEventListener("change", () => {
-            ensureRecurringStartDateFromDropDate();
-            ensureSeriesDayMatchesDropDateIfDefault();
-            renderConditionalFields();
-            renderScheduleRows();
-            renderSeriesPreview();
-            markDirty();
-          });
-        });
-
-        byId("addScheduleRowBtn").addEventListener("click", () => {
-          state.seriesRows.push({
-            id: uidSuffix(),
-            day_of_week: getDayOfWeekFromDateInput(byId("deliveryDate")?.value),
-            fulfilment_start: byId("deliveryStartTime")?.value || "19:00",
-            fulfilment_end: byId("deliveryEndTime")?.value || "20:00",
-            order_close_time: byId("closesAtTime")?.value || "18:00"
-          });
-          renderScheduleRows();
-          renderSeriesPreview();
-          markDirty();
-        });
-
-        byId("scheduleRowsBody").addEventListener("input", (e) => {
-          const tr = e.target.closest("tr[data-row-id]");
-          if (!tr) return;
-          syncScheduleRow(tr);
-        });
-
-        byId("scheduleRowsBody").addEventListener("change", (e) => {
-          const tr = e.target.closest("tr[data-row-id]");
-          if (!tr) return;
-          syncScheduleRow(tr);
-        });
-
-        byId("scheduleRowsBody").addEventListener("click", (e) => {
-          const btn = e.target.closest(".js-remove-schedule-row");
-          if (!btn) return;
-          const tr = btn.closest("tr[data-row-id]");
-          state.seriesRows = state.seriesRows.filter((r) => r.id !== tr.dataset.rowId);
-          if (!state.seriesRows.length && getRepeatPattern() === "recurring") {
-            ensureScheduleRows();
-          }
-          renderScheduleRows();
-          renderSeriesPreview();
-          markDirty();
-        });
-
-        byId("assignmentGroups").addEventListener("input", (e) => {
-          const tr = e.target.closest("tr[data-menu-key]");
-          if (!tr) return;
-          syncAssignmentRow(tr);
-        });
-
-        byId("assignmentGroups").addEventListener("change", (e) => {
-          const tr = e.target.closest("tr[data-menu-key]");
-          if (!tr) return;
-          syncAssignmentRow(tr);
-        });
-
-        byId("backStageBtn").addEventListener("click", goPrevStage);
-        byId("continueStageBtn").addEventListener("click", goNextStage);
-
-        byId("saveDraftBtn").addEventListener("click", async () => {
-          try {
-            await saveDrop(true);
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to save drop.");
-          }
-        });
-
-        byId("publishBtn").addEventListener("click", async () => {
-          try {
-            await saveDrop(false);
-            await updateDropStatus("live");
-            showInlineSuccess(state.drop?.status === "live" ? "Live drop updated" : "Drop is now live");
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to publish drop.");
-          }
-        });
-
-        byId("cancelDropBtn").addEventListener("click", async () => {
-          try {
-            await saveDrop(false);
-            await updateDropStatus("cancelled");
-            showInlineSuccess("Drop cancelled");
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to cancel drop.");
-          }
-        });
-
-        byId("archiveDropBtn").addEventListener("click", async () => {
-          try {
-            await saveDrop(false);
-            await updateDropStatus("archived");
-            showInlineSuccess("Drop archived");
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to archive drop.");
-          }
-        });
-
-        byId("copyLinkBtn").addEventListener("click", async () => {
-          try {
-            await copyLink();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to copy link.");
-          }
-        });
-
-        byId("downloadQrBtn").addEventListener("click", () => {
-          try {
-            downloadQr();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to download QR.");
-          }
-        });
-
-        byId("previewOrderPageBtn").addEventListener("click", () => {
-          try {
-            previewOrderPage();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to preview ordering page.");
-          }
-        });
-
-        byId("openBoardBtn").addEventListener("click", () => {
-          try {
-            openServiceBoard();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to open Service Board.");
-          }
-        });
-
-        document.body.addEventListener("click", async (e) => {
-          const card = e.target.closest(".dropCard");
-          if (card && !e.target.closest(".js-duplicate-drop")) {
-            state.selectedDropId = card.dataset.dropId;
-            try {
-              await loadSelectedDrop();
-              state.currentStage = "basics";
-              renderEverything();
-            } catch (err) {
-              console.error(err);
-              showError(err.message || "Unable to load drop.");
-            }
-            return;
-          }
-
-          const dup = e.target.closest(".js-duplicate-drop");
-          if (dup) {
-            try {
-              await duplicateDrop(dup.dataset.dropId);
-            } catch (err) {
-              console.error(err);
-              showError(err.message || "Unable to duplicate drop.");
-            }
-          }
-        });
-
-        byId("openHostModalBtn").addEventListener("click", () => openModal("hostModal"));
-        byId("closeHostModalBtn").addEventListener("click", () => closeModal("hostModal"));
-        byId("cancelHostBtn").addEventListener("click", () => closeModal("hostModal"));
-        byId("saveHostBtn").addEventListener("click", async () => {
-          try {
-            await createHost();
-          } catch (err) {
-            console.error(err);
-            showModalMessage("hostModalMessage", err.message || "Unable to create host.", true);
-          }
-        });
-
-        byId("hostModal").addEventListener("click", (e) => {
-          if (e.target === byId("hostModal")) closeModal("hostModal");
-        });
-      }
-
-      async function init() {
+      byId("refreshBtn").addEventListener("click", async () => {
         try {
-          if (!window.supabase || !window.supabase.createClient) throw new Error("Supabase library failed to load.");
-          if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error("Missing Supabase config. Check ./assets/config.js.");
-
-          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-          attachEvents();
-          updateStatusFilterSummary();
-          updateTypeFilterSummary();
-          await loadVendorId();
           await refreshAll();
         } catch (err) {
           console.error(err);
-          showError(err.message || "Unable to initialise Drop Studio.");
+          showError(err.message || "Unable to refresh Drop Studio.");
         }
-      }
+      });
 
-      init();
-    })();
-  </script>
+      byId("newDropBtn").addEventListener("click", async () => {
+        try {
+          await createNewDrop();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to create drop.");
+        }
+      });
+
+      document.querySelectorAll(".stagePill").forEach((pill) => {
+        pill.addEventListener("click", () => openStage(pill.dataset.stage));
+      });
+
+      [
+        "dropType", "dropStatus", "hostSelect", "notesInternal",
+        "fulfilmentMode", "centrePostcode", "radiusKm", "capacityCategory", "capacityTotal",
+        "deliveryStartTime", "deliveryEndTime",
+        "opensAtDate", "opensAtTime", "closesAtDate", "closesAtTime",
+        "fundraisingEnabled", "fundraisingModel", "fundraisingPercentage", "fundraisingPerOrderPence", "fundraisingDisplayText",
+        "hostShareEnabled", "hostShareModel", "hostSharePercentage", "hostSharePerOrderPence", "hostShareFixedPence", "hostShareCustomerVisible",
+        "seriesStartDate", "seriesEndMode", "seriesEndDate", "seriesDropCount"
+      ].forEach((id) => {
+        const el = byId(id);
+        if (!el) return;
+        el.addEventListener("input", () => {
+          renderConditionalFields();
+          renderSeriesPreview();
+          markDirty();
+        });
+        el.addEventListener("change", () => {
+          renderConditionalFields();
+          renderSeriesPreview();
+          markDirty();
+        });
+      });
+
+      byId("deliveryDate").addEventListener("change", () => {
+        ensureRecurringStartDateFromDropDate();
+        ensureSeriesDayMatchesDropDateIfDefault();
+        renderConditionalFields();
+        renderSeriesPreview();
+        markDirty();
+      });
+
+      document.querySelectorAll('input[name="openPattern"]').forEach((radio) => {
+        radio.addEventListener("change", () => {
+          renderConditionalFields();
+          markDirty();
+        });
+      });
+
+      byId("dropName").addEventListener("input", () => {
+        if (!manualSlugEdited) {
+          byId("dropSlug").value = slugify(byId("dropName").value);
+        }
+        markDirty();
+      });
+
+      byId("dropSlug").addEventListener("input", () => {
+        manualSlugEdited = true;
+        byId("dropSlug").value = slugify(byId("dropSlug").value);
+        markDirty();
+      });
+
+      byId("dropSlug").addEventListener("blur", () => {
+        byId("dropSlug").value = slugify(byId("dropSlug").value);
+        markDirty();
+      });
+
+      document.querySelectorAll('input[name="repeatPattern"]').forEach((radio) => {
+        radio.addEventListener("change", () => {
+          ensureRecurringStartDateFromDropDate();
+          ensureSeriesDayMatchesDropDateIfDefault();
+          renderConditionalFields();
+          renderSeriesPreview();
+          markDirty();
+        });
+      });
+
+      byId("addScheduleRowBtn").addEventListener("click", () => {
+        state.seriesRows.push({
+          id: uidSuffix(),
+          day_of_week: getDayOfWeekFromDateInput(byId("deliveryDate")?.value),
+          fulfilment_start: "19:00",
+          fulfilment_end: "20:00",
+          order_close_time: "18:00"
+        });
+        renderScheduleRows();
+        renderSeriesPreview();
+        markDirty();
+      });
+
+      byId("scheduleRowsBody").addEventListener("input", (e) => {
+        const tr = e.target.closest("tr[data-row-id]");
+        if (!tr) return;
+        syncScheduleRow(tr);
+      });
+
+      byId("scheduleRowsBody").addEventListener("change", (e) => {
+        const tr = e.target.closest("tr[data-row-id]");
+        if (!tr) return;
+        syncScheduleRow(tr);
+      });
+
+      byId("scheduleRowsBody").addEventListener("click", (e) => {
+        const btn = e.target.closest(".js-remove-schedule-row");
+        if (!btn) return;
+        const tr = btn.closest("tr[data-row-id]");
+        state.seriesRows = state.seriesRows.filter((r) => r.id !== tr.dataset.rowId);
+        renderScheduleRows();
+        renderSeriesPreview();
+        markDirty();
+      });
+
+      byId("assignmentGroups").addEventListener("input", (e) => {
+        const tr = e.target.closest("tr[data-menu-key]");
+        if (!tr) return;
+        syncAssignmentRow(tr);
+      });
+
+      byId("assignmentGroups").addEventListener("change", (e) => {
+        const tr = e.target.closest("tr[data-menu-key]");
+        if (!tr) return;
+        syncAssignmentRow(tr);
+      });
+
+      byId("menuStageSummary").addEventListener("click", (e) => {
+        if (e.target.id === "menuSelectAllActiveBtn") {
+          enableAllActiveMenuItems();
+        }
+        if (e.target.id === "menuClearAllBtn") {
+          clearAllMenuItems();
+        }
+        if (e.target.id === "menuToggleInactiveBtn") {
+          state.showInactiveMenuItems = !state.showInactiveMenuItems;
+          renderAssignments();
+        }
+      });
+
+      byId("backStageBtn").addEventListener("click", goPrevStage);
+      byId("continueStageBtn").addEventListener("click", goNextStage);
+
+      byId("saveDraftBtn").addEventListener("click", async () => {
+        try {
+          await saveDrop(true);
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to save drop.");
+        }
+      });
+
+      byId("publishBtn").addEventListener("click", async () => {
+        try {
+          await saveDrop(false);
+          await updateDropStatus("live");
+          showInlineSuccess(state.drop?.status === "live" ? "Live drop updated" : "Drop is now live");
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to publish drop.");
+        }
+      });
+
+      byId("cancelDropBtn").addEventListener("click", async () => {
+        try {
+          await saveDrop(false);
+          await updateDropStatus("cancelled");
+          showInlineSuccess("Drop cancelled");
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to cancel drop.");
+        }
+      });
+
+      byId("archiveDropBtn").addEventListener("click", async () => {
+        try {
+          await saveDrop(false);
+          await updateDropStatus("archived");
+          showInlineSuccess("Drop archived");
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to archive drop.");
+        }
+      });
+
+      byId("copyLinkBtn").addEventListener("click", async () => {
+        try {
+          await copyLink();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to copy link.");
+        }
+      });
+
+      byId("downloadQrBtn").addEventListener("click", () => {
+        try {
+          downloadQr();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to download QR.");
+        }
+      });
+
+      byId("previewOrderPageBtn").addEventListener("click", () => {
+        try {
+          previewOrderPage();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to preview ordering page.");
+        }
+      });
+
+      byId("openBoardBtn").addEventListener("click", () => {
+        try {
+          openServiceBoard();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to open Service Board.");
+        }
+      });
+
+      document.body.addEventListener("click", async (e) => {
+        const card = e.target.closest(".dropCard");
+        if (card && !e.target.closest(".js-duplicate-drop")) {
+          state.selectedDropId = card.dataset.dropId;
+          try {
+            await loadSelectedDrop();
+            state.currentStage = "basics";
+            renderEverything();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to load drop.");
+          }
+          return;
+        }
+
+        const dup = e.target.closest(".js-duplicate-drop");
+        if (dup) {
+          try {
+            await duplicateDrop(dup.dataset.dropId);
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to duplicate drop.");
+          }
+        }
+      });
+
+      byId("openHostModalBtn").addEventListener("click", () => openModal("hostModal"));
+      byId("closeHostModalBtn").addEventListener("click", () => closeModal("hostModal"));
+      byId("cancelHostBtn").addEventListener("click", () => closeModal("hostModal"));
+      byId("saveHostBtn").addEventListener("click", async () => {
+        try {
+          await createHost();
+        } catch (err) {
+          console.error(err);
+          showModalMessage("hostModalMessage", err.message || "Unable to create host.", true);
+        }
+      });
+
+      byId("hostModal").addEventListener("click", (e) => {
+        if (e.target === byId("hostModal")) closeModal("hostModal");
+      });
+    }
+
+    async function init() {
+      try {
+        if (!window.supabase || !window.supabase.createClient) throw new Error("Supabase library failed to load.");
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error("Missing Supabase config. Check ./assets/config.js.");
+
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        attachEvents();
+        updateStatusFilterSummary();
+        updateTypeFilterSummary();
+        await loadVendorId();
+        await refreshAll();
+      } catch (err) {
+        console.error(err);
+        showError(err.message || "Unable to initialise Drop Studio.");
+      }
+    }
+
+    init();
+  })();
+</script>  
+ 
 </body>
 </html>
