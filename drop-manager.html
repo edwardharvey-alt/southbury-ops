@@ -1267,119 +1267,124 @@
     }
 
     function buildMenuAssignments() {
-      const assignmentMap = new Map(
-        (state.dropMenuItems || []).map((row) => {
-          const itemType = row.menu_item_type || row.item_type;
-          const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
-          return [getMenuItemKey(itemType, refId), row];
-        })
-      );
+  const assignmentMap = new Map(
+    (state.dropMenuItems || []).map((row) => {
+      const itemType = row.menu_item_type || row.item_type;
+      const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
+      return [getMenuItemKey(itemType, refId), row];
+    })
+  );
 
-      const stockMap = new Map(
-        (state.dropMenuItemStock || []).map((row) => {
-          const itemType = row.menu_item_type || row.item_type;
-          const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
-          return [getMenuItemKey(itemType, refId), row];
-        })
-      );
+  const stockMap = new Map(
+    (state.dropMenuItemStock || []).map((row) => {
+      const itemType = row.menu_item_type || row.item_type;
+      const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
+      return [getMenuItemKey(itemType, refId), row];
+    })
+  );
 
-      const catalogueItems = [
-        ...state.products.map((product) => ({
-          menu_item_type: "product",
-          ref_id: product.id,
-          item_id: product.id,
-          name: product.name,
-          description: product.description || null,
-          category_id: product.category_id || null,
-          category_name: categoryNameFromId(product.category_id),
-          base_price_pence: product.price_pence,
-          capacity_units: Number(product.capacity_units || 0),
-          catalogue_is_active: Boolean(product.is_active),
-          sort_order: product.sort_order ?? null
-        })),
-        ...state.bundles.map((bundle) => ({
-          menu_item_type: "bundle",
-          ref_id: bundle.id,
-          item_id: bundle.id,
-          name: bundle.name,
-          description: bundle.description || null,
-          category_id: bundle.category_id || null,
-          category_name: categoryNameFromId(bundle.category_id),
-          base_price_pence: bundle.price_pence,
-          capacity_units: Number(bundle.capacity_units || 0),
-          catalogue_is_active: Boolean(bundle.is_active),
-          sort_order: bundle.sort_order ?? null
-        }))
-      ];
+  const catalogueItems = [
+    ...state.products.map((product) => ({
+      menu_item_type: "product",
+      ref_id: product.id,
+      item_id: product.id,
+      name: product.name,
+      description: product.description || null,
+      category_id: product.category_id || null,
+      category_name: categoryNameFromId(product.category_id),
+      base_price_pence: product.price_pence,
+      capacity_units: Number(product.capacity_units || 0),
+      catalogue_is_active: Boolean(product.is_active),
+      sort_order: product.sort_order ?? null
+    })),
+    ...state.bundles.map((bundle) => ({
+      menu_item_type: "bundle",
+      ref_id: bundle.id,
+      item_id: bundle.id,
+      name: bundle.name,
+      description: bundle.description || null,
+      category_id: bundle.category_id || null,
+      category_name: categoryNameFromId(bundle.category_id),
+      base_price_pence: bundle.price_pence,
+      capacity_units: Number(bundle.capacity_units || 0),
+      catalogue_is_active: Boolean(bundle.is_active),
+      sort_order: bundle.sort_order ?? null
+    }))
+  ];
 
-      const missingAssigned = (state.dropMenuItems || [])
-        .filter((row) => {
-          const itemType = row.menu_item_type || row.item_type;
-          const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
-          if (!itemType || !refId) return false;
-          return !catalogueItems.some((item) => item.menu_item_type === itemType && item.ref_id === refId);
-        })
-        .map((row) => {
-          const itemType = row.menu_item_type || row.item_type;
-          const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
-          const stockRow = (state.dropMenuItemStock || []).find((s) => {
-            const sType = s.menu_item_type || s.item_type;
-            const sRefId = sType === "bundle" ? s.bundle_id : s.product_id;
-            return sType === itemType && sRefId === refId;
-          });
-          return {
-            menu_item_type: itemType,
-            ref_id: refId,
-            item_id: row.item_id || refId,
-            name: stockRow?.item_name || `Missing ${itemType}`,
-            description: stockRow?.item_description || null,
-            category_id: stockRow?.category_id || null,
-            category_name: stockRow?.category_name || "Uncategorised",
-            base_price_pence: stockRow?.base_price_pence ?? null,
-            capacity_units: Number(stockRow?.capacity_units || 0),
-            catalogue_is_active: false,
-            sort_order: row.sort_order ?? null
-          };
-        });
+  const missingAssigned = (state.dropMenuItems || [])
+    .filter((row) => {
+      const itemType = row.menu_item_type || row.item_type;
+      const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
+      if (!itemType || !refId) return false;
+      return !catalogueItems.some((item) => item.menu_item_type === itemType && item.ref_id === refId);
+    })
+    .map((row) => {
+      const itemType = row.menu_item_type || row.item_type;
+      const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
+      const stockRow = (state.dropMenuItemStock || []).find((s) => {
+        const sType = s.menu_item_type || s.item_type;
+        const sRefId = sType === "bundle" ? s.bundle_id : s.product_id;
+        return sType === itemType && sRefId === refId;
+      });
 
-      return [...catalogueItems, ...missingAssigned]
-        .map((item) => {
-          const key = getMenuItemKey(item.menu_item_type, item.ref_id);
-          const assigned = assignmentMap.get(key);
-          const stock = stockMap.get(key);
+      return {
+        menu_item_type: itemType,
+        ref_id: refId,
+        item_id: row.item_id || refId,
+        name: stockRow?.item_name || `Missing ${itemType}`,
+        description: stockRow?.item_description || null,
+        category_id: stockRow?.category_id || null,
+        category_name: stockRow?.category_name || "Uncategorised",
+        base_price_pence: stockRow?.base_price_pence ?? null,
+        capacity_units: Number(stockRow?.capacity_units || 0),
+        catalogue_is_active: false,
+        sort_order: row.sort_order ?? null
+      };
+    });
 
-          return {
-            key,
-            menu_item_type: item.menu_item_type,
-            product_id: item.menu_item_type === "product" ? item.ref_id : null,
-            bundle_id: item.menu_item_type === "bundle" ? item.ref_id : null,
-            name: item.name,
-            description: item.description,
-            category_id: item.category_id,
-            category_name: item.category_name,
-            base_price_pence: item.base_price_pence,
-            capacity_units: item.capacity_units,
-            catalogue_is_active: item.catalogue_is_active,
-            sort_order: assigned?.sort_order ?? item.sort_order ?? null,
-            enabled: Boolean(assigned?.is_available),
-            price_override_pence: assigned?.price_override_pence ?? null,
-            stock_limit: assigned?.stock_limit ?? null,
-            qty_ordered: Number(stock?.qty_ordered || 0),
-            stock_remaining: stock?.stock_remaining == null ? null : Number(stock.stock_remaining)
-          };
-        })
-        .filter((item) => item.menu_item_type && (item.product_id || item.bundle_id))
-        .sort((a, b) => {
-          const catCompare = String(a.category_name || "").localeCompare(String(b.category_name || ""));
-          if (catCompare !== 0) return catCompare;
-          const typeCompare = a.menu_item_type.localeCompare(b.menu_item_type);
-          if (typeCompare !== 0) return typeCompare;
-          const sortA = a.sort_order == null ? 999999 : Number(a.sort_order);
-          const sortB = b.sort_order == null ? 999999 : Number(b.sort_order);
-          if (sortA !== sortB) return sortA - sortB;
-          return a.name.localeCompare(b.name);
-        });
-    }
+  return [...catalogueItems, ...missingAssigned]
+    .map((item) => {
+      const key = getMenuItemKey(item.menu_item_type, item.ref_id);
+      const assigned = assignmentMap.get(key);
+      const stock = stockMap.get(key);
+
+      return {
+        key,
+        item_type: item.menu_item_type,
+        menu_item_type: item.menu_item_type,
+        product_id: item.menu_item_type === "product" ? item.ref_id : null,
+        bundle_id: item.menu_item_type === "bundle" ? item.ref_id : null,
+        name: item.name,
+        description: item.description,
+        category_id: item.category_id,
+        category_name: item.category_name,
+        base_price_pence: item.base_price_pence,
+        capacity_units: item.capacity_units,
+        catalogue_is_active: item.catalogue_is_active,
+        sort_order: assigned?.sort_order ?? item.sort_order ?? null,
+        enabled: Boolean(assigned?.is_available),
+        price_override_pence: assigned?.price_override_pence ?? null,
+        stock_limit: assigned?.stock_limit ?? null,
+        qty_ordered: Number(stock?.qty_ordered || 0),
+        stock_remaining: stock?.stock_remaining == null ? null : Number(stock.stock_remaining)
+      };
+    })
+    .filter((item) => item.menu_item_type && (item.product_id || item.bundle_id))
+    .sort((a, b) => {
+      const catCompare = String(a.category_name || "").localeCompare(String(b.category_name || ""));
+      if (catCompare !== 0) return catCompare;
+
+      const typeCompare = a.menu_item_type.localeCompare(b.menu_item_type);
+      if (typeCompare !== 0) return typeCompare;
+
+      const sortA = a.sort_order == null ? 999999 : Number(a.sort_order);
+      const sortB = b.sort_order == null ? 999999 : Number(b.sort_order);
+      if (sortA !== sortB) return sortA - sortB;
+
+      return a.name.localeCompare(b.name);
+    });
+}
 
     function getFilteredDrops() {
       const search = state.search.trim().toLowerCase();
@@ -1938,22 +1943,13 @@
     }
 
  async function saveAssignments() {
-  const enabledRows = state.menuAssignments.filter((row) => row.enabled);
+  const enabledRows = getEnabledAssignments();
 
-  const cleanedRows = [];
-  const invalidRows = [];
-
-  enabledRows.forEach((row) => {
+  const cleanedRows = enabledRows.map((row, index) => {
     const keyParts = String(row.key || "").split(":");
     const keyType = normalizeItemType(keyParts[0] || "");
     const keyId = keyParts[1] || null;
-    const rawType = normalizeItemType(row.item_type || row.menu_item_type || "");
-
-    const itemType =
-      rawType ||
-      keyType ||
-      (row.bundle_id ? "bundle" : null) ||
-      (row.product_id ? "product" : null);
+    const itemType = normalizeItemType(row.menu_item_type || row.item_type || keyType);
 
     const productId =
       itemType === "product"
@@ -1965,27 +1961,19 @@
         ? (row.bundle_id || (keyType === "bundle" ? keyId : null))
         : null;
 
-    const valid =
-      Boolean(itemType) &&
-      (
-        (itemType === "product" && Boolean(productId)) ||
-        (itemType === "bundle" && Boolean(bundleId))
-      );
-
-    if (!valid) {
-      invalidRows.push({
-        key: row.key,
-        name: row.name,
-        item_type: row.item_type,
-        menu_item_type: row.menu_item_type,
-        inferred_item_type: itemType,
-        product_id: row.product_id,
-        bundle_id: row.bundle_id
-      });
-      return;
+    if (!itemType) {
+      throw new Error(`Enabled menu row is missing item type: ${row.name || row.key || "unknown row"}`);
     }
 
-    cleanedRows.push({
+    if (itemType === "product" && !productId) {
+      throw new Error(`Enabled product row is missing product_id: ${row.name || row.key || "unknown row"}`);
+    }
+
+    if (itemType === "bundle" && !bundleId) {
+      throw new Error(`Enabled bundle row is missing bundle_id: ${row.name || row.key || "unknown row"}`);
+    }
+
+    return {
       drop_id: state.selectedDropId,
       item_type: itemType,
       menu_item_type: itemType,
@@ -2002,14 +1990,10 @@
           : Number(row.stock_limit),
       sort_order:
         row.sort_order == null
-          ? (cleanedRows.length + 1) * 10
+          ? (index + 1) * 10
           : Number(row.sort_order)
-    });
+    };
   });
-
-  if (invalidRows.length) {
-    console.error("Invalid enabled menu rows skipped during saveAssignments:", invalidRows);
-  }
 
   const { error: deleteError } = await supabase
     .from("drop_menu_items")
@@ -2019,11 +2003,10 @@
   if (deleteError) throw deleteError;
 
   if (!cleanedRows.length) {
-    if (enabledRows.length) {
-      throw new Error("Enabled menu items could not be saved because one or more selected rows has no valid product or bundle reference.");
-    }
     return;
   }
+
+  console.log("Saving drop_menu_items rows:", cleanedRows);
 
   const { error: insertError } = await supabase
     .from("drop_menu_items")
@@ -2032,7 +2015,6 @@
   if (insertError) {
     console.error("drop_menu_items insert failed", {
       cleanedRows,
-      invalidRows,
       insertError
     });
     throw insertError;
