@@ -761,7 +761,7 @@
     }
 
     function getSharePath() {
-      const slug = (state.drop?.slug || "").trim();
+      const slug = (getLiveDropFromForm()?.slug || state.drop?.slug || "").trim();
       if (!slug) return "";
       return `/order.html?drop=${encodeURIComponent(slug)}`;
     }
@@ -895,7 +895,11 @@
 
     function getLiveDropFromForm() {
       if (!state.drop) return null;
-      return readDropFromForm();
+      try {
+        return readDropFromForm();
+      } catch {
+        return state.drop;
+      }
     }
 
     function isValidDateOrder(a, b) {
@@ -906,8 +910,35 @@
       return db > da;
     }
 
+    function buildUniqueSlug(baseSlug, excludeDropId = null) {
+      const base = slugify(baseSlug) || `drop-${uidSuffix()}`;
+      const taken = new Set(
+        (state.drops || [])
+          .filter((d) => d.drop_id !== excludeDropId)
+          .map((d) => slugify(d.slug || d.drop_slug || d.drop_name || ""))
+          .filter(Boolean)
+      );
+
+      if (!taken.has(base)) return base;
+
+      let candidate = "";
+      let i = 2;
+      while (!candidate || taken.has(candidate)) {
+        candidate = `${base}-${i}`;
+        i += 1;
+      }
+      return candidate;
+    }
+
     function getEnabledAssignments() {
-      return state.menuAssignments.filter((row) => row.enabled);
+      return state.menuAssignments.filter((row) =>
+        row.enabled &&
+        row.menu_item_type &&
+        (
+          (row.menu_item_type === "product" && row.product_id) ||
+          (row.menu_item_type === "bundle" && row.bundle_id)
+        )
+      );
     }
 
     function getLiveReadiness() {
@@ -1050,7 +1081,7 @@
 
       const liveDrop = getLiveDropFromForm() || state.drop;
       const host = state.hosts.find((h) => h.id === liveDrop.host_id);
-      const enabledCount = state.menuAssignments.filter((p) => p.enabled).length;
+      const enabledCount = getEnabledAssignments().length;
       const capacityLabel = getCapacityCategoryLabel(liveDrop);
 
       meta.textContent = [
@@ -1232,15 +1263,17 @@
     function buildMenuAssignments() {
       const assignmentMap = new Map(
         (state.dropMenuItems || []).map((row) => {
-          const refId = row.menu_item_type === "bundle" ? row.bundle_id : row.product_id;
-          return [getMenuItemKey(row.menu_item_type, refId), row];
+          const itemType = row.menu_item_type || row.item_type;
+          const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
+          return [getMenuItemKey(itemType, refId), row];
         })
       );
 
       const stockMap = new Map(
         (state.dropMenuItemStock || []).map((row) => {
-          const refId = row.menu_item_type === "bundle" ? row.bundle_id : row.product_id;
-          return [getMenuItemKey(row.menu_item_type, refId), row];
+          const itemType = row.menu_item_type || row.item_type;
+          const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
+          return [getMenuItemKey(itemType, refId), row];
         })
       );
 
@@ -1273,24 +1306,35 @@
         }))
       ];
 
-      const missingAssigned = (state.dropMenuItemStock || [])
+      const missingAssigned = (state.dropMenuItems || [])
         .filter((row) => {
-          const refId = row.menu_item_type === "bundle" ? row.bundle_id : row.product_id;
-          return !catalogueItems.some((item) => item.menu_item_type === row.menu_item_type && item.ref_id === refId);
+          const itemType = row.menu_item_type || row.item_type;
+          const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
+          if (!itemType || !refId) return false;
+          return !catalogueItems.some((item) => item.menu_item_type === itemType && item.ref_id === refId);
         })
-        .map((row) => ({
-          menu_item_type: row.menu_item_type,
-          ref_id: row.menu_item_type === "bundle" ? row.bundle_id : row.product_id,
-          item_id: row.item_id,
-          name: row.item_name,
-          description: row.item_description || null,
-          category_id: row.category_id || null,
-          category_name: row.category_name || "Uncategorised",
-          base_price_pence: row.base_price_pence,
-          capacity_units: Number(row.capacity_units || 0),
-          catalogue_is_active: Boolean(row.catalogue_is_active),
-          sort_order: row.sort_order ?? null
-        }));
+        .map((row) => {
+          const itemType = row.menu_item_type || row.item_type;
+          const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
+          const stockRow = (state.dropMenuItemStock || []).find((s) => {
+            const sType = s.menu_item_type || s.item_type;
+            const sRefId = sType === "bundle" ? s.bundle_id : s.product_id;
+            return sType === itemType && sRefId === refId;
+          });
+          return {
+            menu_item_type: itemType,
+            ref_id: refId,
+            item_id: row.item_id || refId,
+            name: stockRow?.item_name || `Missing ${itemType}`,
+            description: stockRow?.item_description || null,
+            category_id: stockRow?.category_id || null,
+            category_name: stockRow?.category_name || "Uncategorised",
+            base_price_pence: stockRow?.base_price_pence ?? null,
+            capacity_units: Number(stockRow?.capacity_units || 0),
+            catalogue_is_active: false,
+            sort_order: row.sort_order ?? null
+          };
+        });
 
       return [...catalogueItems, ...missingAssigned]
         .map((item) => {
@@ -1318,6 +1362,7 @@
             stock_remaining: stock?.stock_remaining == null ? null : Number(stock.stock_remaining)
           };
         })
+        .filter((item) => item.menu_item_type && (item.product_id || item.bundle_id))
         .sort((a, b) => {
           const catCompare = String(a.category_name || "").localeCompare(String(b.category_name || ""));
           if (catCompare !== 0) return catCompare;
@@ -1345,7 +1390,9 @@
           drop.drop_name || "",
           drop.host_name || "",
           drop.drop_type || "",
-          drop.status || ""
+          drop.status || "",
+          drop.slug || "",
+          drop.drop_slug || ""
         ].join(" ").toLowerCase();
 
         return haystack.includes(search);
@@ -1499,9 +1546,9 @@
         return;
       }
 
-      const enabledCount = state.menuAssignments.filter((item) => item.enabled).length;
-      const bundleCount = state.menuAssignments.filter((item) => item.enabled && item.menu_item_type === "bundle").length;
-      const productCount = state.menuAssignments.filter((item) => item.enabled && item.menu_item_type === "product").length;
+      const enabledCount = getEnabledAssignments().length;
+      const bundleCount = getEnabledAssignments().filter((item) => item.menu_item_type === "bundle").length;
+      const productCount = getEnabledAssignments().filter((item) => item.menu_item_type === "product").length;
       const inactiveHiddenCount = state.menuAssignments.filter((item) => !item.catalogue_is_active && !item.enabled).length;
 
       summary.innerHTML = `
@@ -1546,7 +1593,7 @@
                 </td>
                 <td style="width:85px;">${titleCase(row.menu_item_type)}</td>
                 <td style="width:110px;">${escapeHtml(row.category_name || "Uncategorised")}</td>
-                <td style="width:95px;">${formatMoneyPence(row.base_price_pence)}</td>
+                <td style="width:95px;">${row.base_price_pence == null ? "—" : formatMoneyPence(row.base_price_pence)}</td>
                 <td style="width:110px;"><input class="js-assign-override" type="number" min="0" step="1" value="${row.price_override_pence ?? ""}" placeholder="—" /></td>
                 <td style="width:100px;"><input class="js-assign-stock-limit" type="number" min="0" step="1" value="${row.stock_limit ?? ""}" placeholder="∞" /></td>
                 <td style="width:80px;">${row.stock_remaining == null ? "—" : row.stock_remaining}</td>
@@ -1729,9 +1776,9 @@
       const liveDrop = getLiveDropFromForm() || state.drop;
       const readiness = getLiveReadiness();
       const host = state.hosts.find((h) => h.id === liveDrop.host_id);
-      const enabledItems = state.menuAssignments.filter((p) => p.enabled).length;
-      const enabledBundles = state.menuAssignments.filter((p) => p.enabled && p.menu_item_type === "bundle").length;
-      const enabledProducts = state.menuAssignments.filter((p) => p.enabled && p.menu_item_type === "product").length;
+      const enabledItems = getEnabledAssignments().length;
+      const enabledBundles = getEnabledAssignments().filter((p) => p.menu_item_type === "bundle").length;
+      const enabledProducts = getEnabledAssignments().filter((p) => p.menu_item_type === "product").length;
       const capacityLabel = getCapacityCategoryLabel(liveDrop);
 
       summary.innerHTML = [
@@ -1884,43 +1931,58 @@
       };
     }
 
-   async function saveAssignments() {
-  const enabledAssignments = state.menuAssignments
-    .filter((row) => row.enabled)
-    .map((row, index) => ({
-      drop_id: state.selectedDropId,
-      item_type: row.menu_item_type,
-      product_id: row.menu_item_type === "product" ? row.product_id : null,
-      bundle_id: row.menu_item_type === "bundle" ? row.bundle_id : null,
-      is_available: true,
-      price_override_pence: row.price_override_pence === "" || row.price_override_pence == null ? null : Number(row.price_override_pence),
-      stock_limit: row.stock_limit === "" || row.stock_limit == null ? null : Number(row.stock_limit),
-      sort_order: row.sort_order == null ? ((index + 1) * 10) : Number(row.sort_order)
-    }));
+    async function saveAssignments() {
+      const invalidEnabled = state.menuAssignments.filter((row) =>
+        row.enabled &&
+        (
+          !row.menu_item_type ||
+          (row.menu_item_type === "product" && !row.product_id) ||
+          (row.menu_item_type === "bundle" && !row.bundle_id)
+        )
+      );
 
-  const { error: deleteError } = await supabase
-    .from("drop_menu_items")
-    .delete()
-    .eq("drop_id", state.selectedDropId);
+      if (invalidEnabled.length) {
+        throw new Error("One or more selected menu items is invalid. Deselect it and try again.");
+      }
 
-  if (deleteError) throw deleteError;
+      const enabledAssignments = state.menuAssignments
+        .filter((row) => row.enabled)
+        .map((row, index) => ({
+          drop_id: state.selectedDropId,
+          menu_item_type: row.menu_item_type,
+          product_id: row.menu_item_type === "product" ? row.product_id : null,
+          bundle_id: row.menu_item_type === "bundle" ? row.bundle_id : null,
+          is_available: true,
+          price_override_pence: row.price_override_pence === "" || row.price_override_pence == null ? null : Number(row.price_override_pence),
+          stock_limit: row.stock_limit === "" || row.stock_limit == null ? null : Number(row.stock_limit),
+          sort_order: row.sort_order == null ? ((index + 1) * 10) : Number(row.sort_order)
+        }));
 
-  if (enabledAssignments.length) {
-    const { error: insertError } = await supabase
-      .from("drop_menu_items")
-      .insert(enabledAssignments);
+      const { error: deleteError } = await supabase
+        .from("drop_menu_items")
+        .delete()
+        .eq("drop_id", state.selectedDropId);
 
-    if (insertError) throw insertError;
-  }
-}
+      if (deleteError) throw deleteError;
+
+      if (enabledAssignments.length) {
+        const { error: insertError } = await supabase
+          .from("drop_menu_items")
+          .insert(enabledAssignments);
+
+        if (insertError) throw insertError;
+      }
+    }
 
     async function saveDrop(showSuccess = true) {
       if (!state.selectedDropId || !state.drop) return;
 
-      byId("dropSlug").value = slugify(byId("dropSlug").value.trim());
-      const dropData = readDropFromForm();
+      let dropData = readDropFromForm();
       if (!dropData.slug) throw new Error("Drop Link Name is required.");
       if (!dropData.capacity_category_id || !dropData.capacity_category) throw new Error("Capacity Category is required.");
+
+      dropData.slug = buildUniqueSlug(dropData.slug, state.selectedDropId);
+      byId("dropSlug").value = dropData.slug;
 
       setSaveState("saving");
 
@@ -1955,11 +2017,12 @@
       closesAt.setHours(18, 0, 0, 0);
 
       const defaultCapacityCategory = getDefaultCapacityCategory();
+      const slug = buildUniqueSlug(`new-drop-${uidSuffix()}`);
 
       const payload = {
         vendor_id: state.vendorId,
         name: "New Drop",
-        slug: `new-drop-${uidSuffix()}`,
+        slug,
         drop_type: "neighbourhood",
         status: "draft",
         fulfilment_mode: null,
@@ -2009,9 +2072,10 @@
 
       if (assignmentsError) throw assignmentsError;
 
+      const duplicateSlugBase = `${slugify(sourceDrop.slug || sourceDrop.name || "drop")}-copy`;
       const duplicatePayload = {
         ...getDropPayload(sourceDrop),
-        slug: `${slugify(sourceDrop.slug || sourceDrop.name || "drop")}-${uidSuffix()}`,
+        slug: buildUniqueSlug(duplicateSlugBase),
         name: `${sourceDrop.name} Copy`,
         status: "draft",
         series_id: null,
@@ -2027,19 +2091,29 @@
       if (insertDropError) throw insertDropError;
 
       if ((sourceAssignments || []).length) {
-        const rows = sourceAssignments.map((row) => ({
-  drop_id: insertedDrop.id,
-  item_type: row.item_type || row.menu_item_type,
-  product_id: row.product_id,
-  bundle_id: row.bundle_id,
-  is_available: row.is_available,
-  price_override_pence: row.price_override_pence,
-  stock_limit: row.stock_limit,
-  sort_order: row.sort_order
-}));
+        const rows = sourceAssignments
+          .map((row) => ({
+            drop_id: insertedDrop.id,
+            menu_item_type: row.menu_item_type || row.item_type,
+            product_id: row.product_id,
+            bundle_id: row.bundle_id,
+            is_available: row.is_available,
+            price_override_pence: row.price_override_pence,
+            stock_limit: row.stock_limit,
+            sort_order: row.sort_order
+          }))
+          .filter((row) =>
+            row.menu_item_type &&
+            (
+              (row.menu_item_type === "product" && row.product_id) ||
+              (row.menu_item_type === "bundle" && row.bundle_id)
+            )
+          );
 
-        const { error: insertAssignmentsError } = await supabase.from("drop_menu_items").insert(rows);
-        if (insertAssignmentsError) throw insertAssignmentsError;
+        if (rows.length) {
+          const { error: insertAssignmentsError } = await supabase.from("drop_menu_items").insert(rows);
+          if (insertAssignmentsError) throw insertAssignmentsError;
+        }
       }
 
       state.selectedDropId = insertedDrop.id;
@@ -2189,7 +2263,7 @@
       if (!url) throw new Error("QR preview unavailable.");
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${(state.drop?.slug || "drop")}-qr.png`;
+      link.download = `${(getLiveDropFromForm()?.slug || state.drop?.slug || "drop")}-qr.png`;
       link.click();
     }
 
@@ -2428,7 +2502,7 @@
       });
 
       byId("dropSlug").addEventListener("blur", () => {
-        byId("dropSlug").value = slugify(byId("dropSlug").value);
+        byId("dropSlug").value = buildUniqueSlug(byId("dropSlug").value, state.selectedDropId);
         markDirty();
       });
 
@@ -2518,7 +2592,7 @@
         try {
           await saveDrop(false);
           await updateDropStatus("live");
-          showInlineSuccess(state.drop?.status === "live" ? "Live drop updated" : "Drop is now live");
+          showInlineSuccess((getLiveDropFromForm()?.status || state.drop?.status) === "live" ? "Live drop updated" : "Drop is now live");
         } catch (err) {
           console.error(err);
           showError(err.message || "Unable to publish drop.");
@@ -2646,7 +2720,7 @@
 
     init();
   })();
-</script>  
+</script>
  
 </body>
 </html>
