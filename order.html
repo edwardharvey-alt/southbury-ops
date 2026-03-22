@@ -16,6 +16,7 @@
       --order-brand-ink: var(--h-accent-ink, #7c2d12);
       --order-brand-soft: rgba(249,115,22,0.10);
       --order-brand-soft-2: rgba(249,115,22,0.06);
+      --order-brand-text: #ffffff;
       --order-hero-overlay: linear-gradient(180deg, rgba(15,23,42,0.18), rgba(15,23,42,0.38));
     }
 
@@ -95,7 +96,7 @@
         var(--order-hero-overlay),
         linear-gradient(135deg, rgba(15,23,42,0.18), rgba(15,23,42,0.34)),
         linear-gradient(135deg, var(--order-brand-primary), var(--order-brand-secondary));
-      color:#fff;
+      color:var(--order-brand-text, #fff);
     }
 
     .heroMedia.hasImage{
@@ -143,7 +144,7 @@
     .heroTagline{
       font-size:13px;
       line-height:1.35;
-      color:rgba(255,255,255,0.88);
+      color:color-mix(in srgb, var(--order-brand-text, #fff) 88%, transparent);
       margin:4px 0 0;
       max-width:560px;
     }
@@ -163,7 +164,7 @@
     .heroDropSub{
       font-size:13px;
       line-height:1.35;
-      color:rgba(255,255,255,0.88);
+      color:color-mix(in srgb, var(--order-brand-text, #fff) 88%, transparent);
       margin:0;
     }
 
@@ -184,7 +185,7 @@
       border:1px solid rgba(255,255,255,0.16);
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
-      color:#fff;
+      color:var(--order-brand-text, #fff);
       font-size:12px;
       font-weight:800;
       white-space:nowrap;
@@ -883,12 +884,12 @@
         <div class="orderTopBarLeft">
           <img id="vendorLogoMini" class="vendorLogoMini hidden" alt="Vendor logo" />
           <div class="vendorIdentityMini">
-            <div class="eyebrow">Order direct</div>
+            <div class="eyebrow" id="vendorEyebrow">ORDER DIRECT</div>
             <div class="name" id="vendorMiniName">Loading…</div>
           </div>
         </div>
 
-        <a href="index.html" class="utilityLink">Service Board</a>
+        <div id="topRightLink"></div>
       </div>
 
       <div class="card heroOrderCard">
@@ -1233,15 +1234,14 @@
         if (byIdMatch?.name) return byIdMatch.name;
         if (state.dropSummary?.capacity_category_name) return state.dropSummary.capacity_category_name;
         if (state.drop?.capacity_category) {
-          const byText = state.categories.find((c) => String(c.slug || "").toLowerCase() === String(state.drop.capacity_category).toLowerCase() || String(c.name || "").toLowerCase() === String(state.drop.capacity_category).toLowerCase());
+          const byText = state.categories.find((c) =>
+            String(c.slug || "").toLowerCase() === String(state.drop.capacity_category).toLowerCase() ||
+            String(c.name || "").toLowerCase() === String(state.drop.capacity_category).toLowerCase()
+          );
           if (byText?.name) return byText.name;
           return titleCase(state.drop.capacity_category);
         }
         return "Items";
-      }
-
-      function getCapacityCategoryKey() {
-        return String(state.drop?.capacity_category || state.dropSummary?.capacity_category || "").toLowerCase();
       }
 
       function getItemName(row) {
@@ -1372,55 +1372,6 @@
         return "Other";
       }
 
-      function applyVendorBranding() {
-        const vendor = state.vendor || {};
-        const primary = vendor.brand_primary_color || vendor.brand_colour || vendor.brand_color || "#f97316";
-        const secondary = vendor.brand_secondary_color || vendor.brand_colour_secondary || primary;
-        const heroImage = vendor.hero_image_url || vendor.hero_image || vendor.cover_image_url || "";
-        const logoUrl = vendor.logo_url || "";
-
-        document.documentElement.style.setProperty("--order-brand-primary", primary);
-        document.documentElement.style.setProperty("--order-brand-secondary", secondary);
-        document.documentElement.style.setProperty("--order-brand-soft", hexToRgba(primary, 0.12));
-        document.documentElement.style.setProperty("--order-brand-soft-2", hexToRgba(secondary, 0.08));
-
-        const vendorDisplayName = vendor.display_name || vendor.name || "Vendor";
-        byId("vendorMiniName").textContent = vendorDisplayName;
-        byId("heroVendorName").textContent = vendorDisplayName;
-        byId("heroTagline").textContent = vendor.tagline || "Order directly from today’s drop";
-
-        const logoMini = byId("vendorLogoMini");
-        const logoHero = byId("vendorLogoHero");
-        [logoMini, logoHero].forEach((img) => {
-          if (logoUrl) {
-            img.src = logoUrl;
-            img.classList.remove("hidden");
-          } else {
-            img.classList.add("hidden");
-            img.removeAttribute("src");
-          }
-        });
-
-        const hero = byId("heroMedia");
-        if (heroImage) {
-          hero.classList.add("hasImage");
-          hero.style.backgroundImage = `${getComputedStyle(document.documentElement).getPropertyValue("--order-hero-overlay")}, url("${heroImage}")`;
-        } else {
-          hero.classList.remove("hasImage");
-          hero.style.backgroundImage = "";
-        }
-
-        const showPowered = vendor.powered_by_hearth_visible !== false;
-        const footerParts = [];
-        if (vendor.website_url) {
-          footerParts.push(`<a href="${escapeHtml(vendor.website_url)}" target="_blank" rel="noopener noreferrer">Visit ${escapeHtml(vendorDisplayName)}</a>`);
-        }
-        if (showPowered) {
-          footerParts.push(`Powered by Hearth`);
-        }
-        byId("footerBrand").innerHTML = footerParts.join(" • ");
-      }
-
       function hexToRgba(hex, alpha) {
         if (!hex || typeof hex !== "string") return `rgba(249,115,22,${alpha})`;
         const clean = hex.replace("#", "");
@@ -1436,6 +1387,69 @@
 
         if ([r, g, b].some((x) => Number.isNaN(x))) return `rgba(249,115,22,${alpha})`;
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+
+      function applyVendorBranding() {
+        const vendor = state.vendor || {};
+
+        const primary = vendor.brand_primary_color || "#f97316";
+        const secondary = vendor.brand_secondary_color || primary;
+        const heroImage = vendor.hero_image_url || "";
+        const logoUrl = vendor.logo_url || "";
+        const vendorDisplayName = vendor.display_name || vendor.name || "Vendor";
+        const tagline = vendor.tagline || "Order directly from today’s drop";
+        const orderLabel = (vendor.order_label || "Order direct").toUpperCase();
+        const textOnPrimary = vendor.brand_text_on_primary || "#ffffff";
+
+        document.documentElement.style.setProperty("--order-brand-primary", primary);
+        document.documentElement.style.setProperty("--order-brand-secondary", secondary);
+        document.documentElement.style.setProperty("--order-brand-soft", hexToRgba(primary, 0.12));
+        document.documentElement.style.setProperty("--order-brand-soft-2", hexToRgba(secondary, 0.08));
+        document.documentElement.style.setProperty("--order-brand-text", textOnPrimary);
+
+        byId("vendorEyebrow").textContent = orderLabel;
+        byId("vendorMiniName").textContent = vendorDisplayName;
+        byId("heroVendorName").textContent = vendorDisplayName;
+        byId("heroTagline").textContent = tagline;
+
+        const logoMini = byId("vendorLogoMini");
+        const logoHero = byId("vendorLogoHero");
+
+        [logoMini, logoHero].forEach((img) => {
+          if (logoUrl) {
+            img.src = logoUrl;
+            img.classList.remove("hidden");
+          } else {
+            img.classList.add("hidden");
+            img.removeAttribute("src");
+          }
+        });
+
+        const hero = byId("heroMedia");
+        if (heroImage) {
+          hero.classList.add("hasImage");
+          hero.style.backgroundImage = `var(--order-hero-overlay), url("${heroImage}")`;
+        } else {
+          hero.classList.remove("hasImage");
+          hero.style.backgroundImage = "";
+        }
+
+        const topRight = byId("topRightLink");
+        if (vendor.website_url) {
+          topRight.innerHTML = `<a href="${escapeHtml(vendor.website_url)}" class="utilityLink" target="_blank" rel="noopener noreferrer">Visit site</a>`;
+        } else {
+          topRight.innerHTML = "";
+        }
+
+        const footerParts = [];
+        if (vendor.website_url) {
+          footerParts.push(`<a href="${escapeHtml(vendor.website_url)}" target="_blank" rel="noopener noreferrer">Visit ${escapeHtml(vendorDisplayName)}</a>`);
+        }
+        if (vendor.powered_by_hearth_visible !== false) {
+          footerParts.push("Powered by Hearth");
+        }
+
+        byId("footerBrand").innerHTML = footerParts.join(" • ");
       }
 
       async function loadDropContext() {
@@ -1650,7 +1664,6 @@
       function renderHero() {
         applyVendorBranding();
 
-        const vendorDisplayName = state.vendor?.display_name || state.vendor?.name || "Vendor";
         const dropTitle = state.drop?.name || state.dropSummary?.drop_name || "Drop";
         const hostName = state.host?.name || state.dropSummary?.host_name || "";
         const fulfilmentLabel = getFulfilmentLabel(state.drop?.fulfilment_mode);
