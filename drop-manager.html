@@ -1884,32 +1884,35 @@
       };
     }
 
-    async function saveAssignments() {
-      const enabledAssignments = state.menuAssignments
-        .filter((row) => row.enabled)
-        .map((row, index) => ({
-          drop_id: state.selectedDropId,
-          menu_item_type: row.menu_item_type,
-          product_id: row.menu_item_type === "product" ? row.product_id : null,
-          bundle_id: row.menu_item_type === "bundle" ? row.bundle_id : null,
-          is_available: true,
-          price_override_pence: row.price_override_pence === "" || row.price_override_pence == null ? null : Number(row.price_override_pence),
-          stock_limit: row.stock_limit === "" || row.stock_limit == null ? null : Number(row.stock_limit),
-          sort_order: row.sort_order == null ? ((index + 1) * 10) : Number(row.sort_order)
-        }));
+   async function saveAssignments() {
+  const enabledAssignments = state.menuAssignments
+    .filter((row) => row.enabled)
+    .map((row, index) => ({
+      drop_id: state.selectedDropId,
+      item_type: row.menu_item_type,
+      product_id: row.menu_item_type === "product" ? row.product_id : null,
+      bundle_id: row.menu_item_type === "bundle" ? row.bundle_id : null,
+      is_available: true,
+      price_override_pence: row.price_override_pence === "" || row.price_override_pence == null ? null : Number(row.price_override_pence),
+      stock_limit: row.stock_limit === "" || row.stock_limit == null ? null : Number(row.stock_limit),
+      sort_order: row.sort_order == null ? ((index + 1) * 10) : Number(row.sort_order)
+    }));
 
-      const { error: deleteError } = await supabase
-        .from("drop_menu_items")
-        .delete()
-        .eq("drop_id", state.selectedDropId);
+  const { error: deleteError } = await supabase
+    .from("drop_menu_items")
+    .delete()
+    .eq("drop_id", state.selectedDropId);
 
-      if (deleteError) throw deleteError;
+  if (deleteError) throw deleteError;
 
-      if (enabledAssignments.length) {
-        const { error: insertError } = await supabase.from("drop_menu_items").insert(enabledAssignments);
-        if (insertError) throw insertError;
-      }
-    }
+  if (enabledAssignments.length) {
+    const { error: insertError } = await supabase
+      .from("drop_menu_items")
+      .insert(enabledAssignments);
+
+    if (insertError) throw insertError;
+  }
+}
 
     async function saveDrop(showSuccess = true) {
       if (!state.selectedDropId || !state.drop) return;
@@ -2025,15 +2028,15 @@
 
       if ((sourceAssignments || []).length) {
         const rows = sourceAssignments.map((row) => ({
-          drop_id: insertedDrop.id,
-          menu_item_type: row.menu_item_type,
-          product_id: row.product_id,
-          bundle_id: row.bundle_id,
-          is_available: row.is_available,
-          price_override_pence: row.price_override_pence,
-          stock_limit: row.stock_limit,
-          sort_order: row.sort_order
-        }));
+  drop_id: insertedDrop.id,
+  item_type: row.item_type || row.menu_item_type,
+  product_id: row.product_id,
+  bundle_id: row.bundle_id,
+  is_available: row.is_available,
+  price_override_pence: row.price_override_pence,
+  stock_limit: row.stock_limit,
+  sort_order: row.sort_order
+}));
 
         const { error: insertAssignmentsError } = await supabase.from("drop_menu_items").insert(rows);
         if (insertAssignmentsError) throw insertAssignmentsError;
