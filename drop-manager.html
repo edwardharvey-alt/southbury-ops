@@ -883,6 +883,12 @@
       return `${type}:${id}`;
     }
 
+    function normalizeItemType(value) {
+  const v = String(value || "").trim().toLowerCase();
+  if (v === "product" || v === "bundle") return v;
+  return null;
+}
+    
     function getRepeatPattern() {
       const checked = document.querySelector('input[name="repeatPattern"]:checked');
       return checked ? checked.value : "one_off";
@@ -1931,48 +1937,86 @@
       };
     }
 
-    async function saveAssignments() {
-      const invalidEnabled = state.menuAssignments.filter((row) =>
-        row.enabled &&
-        (
-          !row.menu_item_type ||
-          (row.menu_item_type === "product" && !row.product_id) ||
-          (row.menu_item_type === "bundle" && !row.bundle_id)
-        )
-      );
+   async function saveAssignments() {
+  const enabledRows = state.menuAssignments.filter((row) => row.enabled);
 
-      if (invalidEnabled.length) {
-        throw new Error("One or more selected menu items is invalid. Deselect it and try again.");
-      }
+  const cleanedRows = [];
+  const invalidRows = [];
 
-      const enabledAssignments = state.menuAssignments
-        .filter((row) => row.enabled)
-        .map((row, index) => ({
-          drop_id: state.selectedDropId,
-          menu_item_type: row.menu_item_type,
-          product_id: row.menu_item_type === "product" ? row.product_id : null,
-          bundle_id: row.menu_item_type === "bundle" ? row.bundle_id : null,
-          is_available: true,
-          price_override_pence: row.price_override_pence === "" || row.price_override_pence == null ? null : Number(row.price_override_pence),
-          stock_limit: row.stock_limit === "" || row.stock_limit == null ? null : Number(row.stock_limit),
-          sort_order: row.sort_order == null ? ((index + 1) * 10) : Number(row.sort_order)
-        }));
+  enabledRows.forEach((row, index) => {
+    const itemType = normalizeItemType(
+      row.item_type ||
+      row.menu_item_type ||
+      (row.bundle_id ? "bundle" : null) ||
+      (row.product_id ? "product" : null)
+    );
 
-      const { error: deleteError } = await supabase
-        .from("drop_menu_items")
-        .delete()
-        .eq("drop_id", state.selectedDropId);
+    const productId = itemType === "product" ? row.product_id : null;
+    const bundleId = itemType === "bundle" ? row.bundle_id : null;
 
-      if (deleteError) throw deleteError;
+    const valid =
+      Boolean(itemType) &&
+      ((itemType === "product" && productId) || (itemType === "bundle" && bundleId));
 
-      if (enabledAssignments.length) {
-        const { error: insertError } = await supabase
-          .from("drop_menu_items")
-          .insert(enabledAssignments);
-
-        if (insertError) throw insertError;
-      }
+    if (!valid) {
+      invalidRows.push({
+        index,
+        key: row.key,
+        name: row.name,
+        item_type: row.item_type,
+        menu_item_type: row.menu_item_type,
+        product_id: row.product_id,
+        bundle_id: row.bundle_id,
+        raw: row
+      });
+      return;
     }
+
+    cleanedRows.push({
+      drop_id: state.selectedDropId,
+      item_type: itemType,
+      product_id: productId,
+      bundle_id: bundleId,
+      is_available: true,
+      price_override_pence:
+        row.price_override_pence === "" || row.price_override_pence == null
+          ? null
+          : Number(row.price_override_pence),
+      stock_limit:
+        row.stock_limit === "" || row.stock_limit == null
+          ? null
+          : Number(row.stock_limit),
+      sort_order:
+        row.sort_order == null
+          ? (cleanedRows.length + 1) * 10
+          : Number(row.sort_order)
+    });
+  });
+
+  if (invalidRows.length) {
+    console.error("Invalid enabled menu rows skipped during save:", invalidRows);
+  }
+
+  const { error: deleteError } = await supabase
+    .from("drop_menu_items")
+    .delete()
+    .eq("drop_id", state.selectedDropId);
+
+  if (deleteError) throw deleteError;
+
+  if (!cleanedRows.length) {
+    if (enabledRows.length) {
+      throw new Error("Selected menu items are invalid. Open browser console to inspect skipped rows.");
+    }
+    return;
+  }
+
+  const { error: insertError } = await supabase
+    .from("drop_menu_items")
+    .insert(cleanedRows);
+
+  if (insertError) throw insertError;
+}
 
     async function saveDrop(showSuccess = true) {
       if (!state.selectedDropId || !state.drop) return;
