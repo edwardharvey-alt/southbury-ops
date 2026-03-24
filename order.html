@@ -297,38 +297,99 @@
       flex-wrap:wrap;
     }
 
-    .menuCategoryBlock{
+    .menuLeadNote{
+      font-size:12px;
+      color:var(--h-muted);
+      line-height:1.4;
+      font-weight:700;
+    }
+
+    .menuAccordionList{
       display:grid;
       gap:10px;
     }
 
-    .menuCategoryHead{
+    .menuCategoryBlock{
+      border:1px solid var(--h-border-2);
+      border-radius:18px;
+      background:#fff;
+      overflow:hidden;
+      box-shadow:0 2px 10px rgba(15,23,42,0.03);
+    }
+
+    .menuCategoryToggle{
+      width:100%;
+      border:none;
+      background:#fff;
+      cursor:pointer;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
-      margin-top:4px;
-      padding-top:2px;
+      gap:12px;
+      padding:14px 16px;
+      text-align:left;
+      font-family:var(--sans);
+    }
+
+    .menuCategoryToggle:hover{
+      background:rgba(15,23,42,0.015);
+    }
+
+    .menuCategoryTitleWrap{
+      min-width:0;
     }
 
     .menuCategoryTitle{
       margin:0;
-      font-size:15px;
+      font-size:16px;
       font-weight:950;
       letter-spacing:-0.02em;
       color:var(--h-text);
     }
 
-    .menuCategorySub{
+    .menuCategoryHint{
+      margin-top:4px;
       font-size:11px;
       color:var(--h-muted);
       font-weight:700;
-      white-space:nowrap;
+      line-height:1.3;
+    }
+
+    .menuCategoryChevron{
+      flex:0 0 auto;
+      width:22px;
+      height:22px;
+      border-radius:999px;
+      border:1px solid var(--h-border);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:var(--h-text);
+      font-size:12px;
+      font-weight:900;
+      background:#fff;
+      transition:transform .18s ease;
+    }
+
+    .menuCategoryBlock.open .menuCategoryChevron{
+      transform:rotate(180deg);
+    }
+
+    .menuCategoryContent{
+      display:none;
+      padding:0 14px 14px;
+      border-top:1px solid rgba(15,23,42,0.05);
+      background:linear-gradient(to bottom, rgba(15,23,42,0.015), rgba(15,23,42,0));
+    }
+
+    .menuCategoryBlock.open .menuCategoryContent{
+      display:block;
     }
 
     .menuCardGrid{
       display:grid;
       gap:10px;
+      padding-top:12px;
     }
 
     .menuItemCard{
@@ -471,13 +532,6 @@
       cursor:not-allowed;
       opacity:.5;
       box-shadow:none;
-    }
-
-    .menuLeadNote{
-      font-size:12px;
-      color:var(--h-muted);
-      line-height:1.4;
-      font-weight:700;
     }
 
     .basketBar{
@@ -991,7 +1045,7 @@
                 <img id="vendorLogoHero" class="heroLogo hidden" alt="Vendor logo" />
                 <div class="heroVendorBlock">
                   <h1 class="heroVendorName" id="heroVendorName">Loading vendor…</h1>
-                  <p class="heroTagline" id="heroTagline">Preparing today’s drop…</p>
+                  <p class="heroTagline" id="heroTagline">Preparing today’s menu…</p>
                 </div>
               </div>
 
@@ -999,8 +1053,8 @@
             </div>
 
             <div class="heroDropBlock">
-              <div class="heroDropEyebrow" id="heroDropEyebrow">Today’s drop</div>
-              <h2 class="heroDropTitle" id="heroDropTitle">Loading drop…</h2>
+              <div class="heroDropEyebrow" id="heroDropEyebrow">Available now</div>
+              <h2 class="heroDropTitle" id="heroDropTitle">Loading…</h2>
               <p class="heroDropSub" id="heroDropSub">Please wait</p>
 
               <div class="heroChips">
@@ -1205,7 +1259,8 @@
         bundleChoiceProducts: [],
         basket: [],
         selectedFulfilmentMode: null,
-        bundleDraft: null
+        bundleDraft: null,
+        openCategories: new Set()
       };
 
       function byId(id) {
@@ -1326,6 +1381,27 @@
           return titleCase(state.drop.capacity_category);
         }
         return "Items";
+      }
+
+      function singularizeLabel(label) {
+        const text = String(label || "item").trim();
+        if (!text) return "item";
+        if (/ies$/i.test(text)) return text.replace(/ies$/i, "y");
+        if (/s$/i.test(text)) return text.slice(0, -1);
+        return text;
+      }
+
+      function pluralizeLabel(label) {
+        const text = String(label || "items").trim();
+        if (!text) return "items";
+        if (/s$/i.test(text)) return text;
+        if (/y$/i.test(text)) return text.replace(/y$/i, "ies");
+        return `${text}s`;
+      }
+
+      function formatCapacityLeft(count, label) {
+        const numeric = Number(count || 0);
+        return `${numeric} ${numeric === 1 ? singularizeLabel(label) : pluralizeLabel(label)} left`;
       }
 
       function getBundleLines(bundleId) {
@@ -1452,6 +1528,11 @@
         return "Other";
       }
 
+      function getCategorySortForItem(item) {
+        const category = item?.category_id ? getCategoryById(item.category_id) : null;
+        return Number(category?.sort_order ?? item?.sort_order ?? 9999);
+      }
+
       function hexToRgba(hex, alpha) {
         if (!hex || typeof hex !== "string") return `rgba(139,107,63,${alpha})`;
         const clean = hex.replace("#", "");
@@ -1477,7 +1558,7 @@
         const heroImage = vendor.hero_image_url || "";
         const logoUrl = vendor.logo_url || "";
         const vendorDisplayName = vendor.display_name || vendor.name || "Vendor";
-        const tagline = vendor.tagline || "Order directly from today’s drop";
+        const tagline = vendor.tagline || "Freshly made and ready to order";
         const orderLabel = (vendor.order_label || "Order direct").toUpperCase();
         const textOnPrimary = vendor.brand_text_on_primary || "#ffffff";
 
@@ -1514,16 +1595,11 @@
           hero.style.backgroundImage = "";
         }
 
-        const topRight = byId("topRightLink");
+        byId("topRightLink").innerHTML = "";
         const heroVisitWrap = byId("heroVisitWrap");
-
-        if (vendor.website_url) {
-          topRight.innerHTML = `<a href="${escapeHtml(vendor.website_url)}" class="utilityLink" target="_blank" rel="noopener noreferrer">Visit site</a>`;
-          heroVisitWrap.innerHTML = `<a href="${escapeHtml(vendor.website_url)}" class="heroVisitBtn" target="_blank" rel="noopener noreferrer">Visit site</a>`;
-        } else {
-          topRight.innerHTML = "";
-          heroVisitWrap.innerHTML = "";
-        }
+        heroVisitWrap.innerHTML = vendor.website_url
+          ? `<a href="${escapeHtml(vendor.website_url)}" class="heroVisitBtn" target="_blank" rel="noopener noreferrer">Visit site</a>`
+          : "";
 
         const footerParts = [];
         if (vendor.website_url) {
@@ -1711,7 +1787,8 @@
                 category_name: getCategoryNameForItem(product),
                 base_price_pence: row.price_override_pence ?? product.price_pence ?? 0,
                 capacity_units: Number(product.capacity_units || 0),
-                sort_order: row.sort_order ?? product.sort_order ?? 100
+                sort_order: row.sort_order ?? product.sort_order ?? 100,
+                category_sort_order: getCategorySortForItem(product)
               };
             }
 
@@ -1729,7 +1806,8 @@
                 category_name: getCategoryNameForItem(bundle),
                 base_price_pence: row.price_override_pence ?? bundle.price_pence ?? 0,
                 capacity_units: Number(bundle.capacity_units || 0),
-                sort_order: row.sort_order ?? bundle.sort_order ?? 100
+                sort_order: row.sort_order ?? bundle.sort_order ?? 100,
+                category_sort_order: getCategorySortForItem(bundle)
               };
             }
 
@@ -1737,10 +1815,15 @@
           })
           .filter(Boolean)
           .sort((a, b) => {
+            const catSortCompare = Number(a.category_sort_order || 9999) - Number(b.category_sort_order || 9999);
+            if (catSortCompare !== 0) return catSortCompare;
+
             const catCompare = String(a.category_name || "").localeCompare(String(b.category_name || ""));
             if (catCompare !== 0) return catCompare;
+
             const sortCompare = Number(a.sort_order || 100) - Number(b.sort_order || 100);
             if (sortCompare !== 0) return sortCompare;
+
             return a.name.localeCompare(b.name);
           });
       }
@@ -1748,18 +1831,17 @@
       function renderHero() {
         applyVendorBranding();
 
-        const dropTitle = state.drop?.name || state.dropSummary?.drop_name || "Drop";
+        const dropTitle = state.drop?.name || state.dropSummary?.drop_name || "Available now";
         const hostName = state.host?.name || state.dropSummary?.host_name || "";
         const fulfilmentLabel = getFulfilmentLabel(state.drop?.fulfilment_mode);
-        const typeLabel = titleCase(state.drop?.drop_type || state.dropSummary?.drop_type || "Drop");
         const timingLabel = formatDateTimeRange(state.drop?.delivery_start, state.drop?.delivery_end);
 
+        byId("heroDropEyebrow").textContent = "Available now";
         byId("heroDropTitle").textContent = dropTitle;
         byId("heroDropSub").textContent = [hostName, timingLabel].filter(Boolean).join(" • ");
 
         const summaryBits = [];
         if (state.drop?.fulfilment_mode) summaryBits.push(fulfilmentLabel);
-        if (state.drop?.drop_type) summaryBits.push(typeLabel);
         if (hostName && !dropTitle.toLowerCase().includes(hostName.toLowerCase())) {
           summaryBits.push(hostName);
         }
@@ -1792,7 +1874,7 @@
         const rawRemaining = Math.max(0, getCapacityRemainingRaw());
         const capacityChip = byId("chipCapacityLeft");
         capacityChip.className = "heroChip";
-        capacityChip.textContent = `${remaining} ${capacityLabel} left`;
+        capacityChip.textContent = formatCapacityLeft(remaining, capacityLabel);
 
         if (rawRemaining <= 5) {
           capacityChip.classList.add("low");
@@ -1800,27 +1882,27 @@
           capacityChip.classList.add("urgent");
         }
 
-        const fulfilmentChip = byId("chipFulfilment");
-        if (state.drop?.fulfilment_mode) {
-          fulfilmentChip.textContent = fulfilmentLabel;
-          fulfilmentChip.classList.remove("hidden");
-        } else {
-          fulfilmentChip.classList.add("hidden");
-        }
+        byId("chipFulfilment").classList.add("hidden");
 
         if (isDropClosed()) {
-          showNotice("Ordering for this drop is now closed.", "warn");
+          showNotice("Ordering for this service is now closed.", "warn");
         } else if (isDropPreOpen()) {
-          showNotice("This drop is scheduled. You’ll be able to order once the ordering window opens.", "warn");
+          showNotice("This service is scheduled. You’ll be able to order once the ordering window opens.", "warn");
         } else if (remaining <= 0) {
-          showNotice(`${capacityLabel} capacity has been reached for this drop.`, "warn");
+          showNotice(`${pluralizeLabel(capacityLabel)} capacity has been reached for this service.`, "warn");
         } else {
           showNotice("");
         }
 
         byId("menuLeadNote").textContent = isDropClosed()
           ? "This menu is shown for reference only because ordering is now closed."
-          : "Freshly made for this drop. Add items to your basket below.";
+          : "Choose a section below to see what’s on today’s menu.";
+      }
+
+      function ensureInitialOpenCategory(groups) {
+        if (state.openCategories.size) return;
+        const firstGroup = groups[0];
+        if (firstGroup) state.openCategories.add(firstGroup.key);
       }
 
       function renderMenu() {
@@ -1828,22 +1910,35 @@
         const wrap = byId("menuSections");
 
         if (!items.length) {
-          wrap.innerHTML = `<div class="emptyState">No items are currently available for this drop.</div>`;
+          wrap.innerHTML = `<div class="emptyState">No items are currently available for this service.</div>`;
           return;
         }
 
-        const groups = new Map();
+        const groupsMap = new Map();
         items.forEach((item) => {
-          const key = item.category_name || "Other";
-          if (!groups.has(key)) groups.set(key, []);
-          groups.get(key).push(item);
+          const key = `${item.category_id || item.category_name || "other"}`;
+          if (!groupsMap.has(key)) {
+            groupsMap.set(key, {
+              key,
+              name: item.category_name || "Other",
+              sort: Number(item.category_sort_order || 9999),
+              items: []
+            });
+          }
+          groupsMap.get(key).items.push(item);
         });
 
-        wrap.innerHTML = [...groups.entries()].map(([categoryName, groupItems]) => {
-          const productCount = groupItems.filter((x) => x.menu_item_type === "product").length;
-          const bundleCount = groupItems.filter((x) => x.menu_item_type === "bundle").length;
+        const groups = [...groupsMap.values()].sort((a, b) => {
+          const sortCompare = Number(a.sort || 9999) - Number(b.sort || 9999);
+          if (sortCompare !== 0) return sortCompare;
+          return String(a.name).localeCompare(String(b.name));
+        });
 
-          const cards = groupItems.map((item) => {
+        ensureInitialOpenCategory(groups);
+
+        wrap.innerHTML = `<div class="menuAccordionList">${groups.map((group) => {
+          const isOpen = state.openCategories.has(group.key);
+          const cards = group.items.map((item) => {
             if (item.menu_item_type === "product") {
               const qty = getProductBasketQuantity(item.id);
 
@@ -1908,15 +2003,20 @@
           }).join("");
 
           return `
-            <div class="menuCategoryBlock">
-              <div class="menuCategoryHead">
-                <h4 class="menuCategoryTitle">${escapeHtml(categoryName)}</h4>
-                <div class="menuCategorySub">${productCount} product${productCount === 1 ? "" : "s"}${bundleCount ? ` • ${bundleCount} bundle${bundleCount === 1 ? "" : "s"}` : ""}</div>
+            <div class="menuCategoryBlock ${isOpen ? "open" : ""}" data-category-key="${escapeHtml(group.key)}">
+              <button class="menuCategoryToggle js-category-toggle" type="button" data-category-key="${escapeHtml(group.key)}" aria-expanded="${isOpen ? "true" : "false"}">
+                <div class="menuCategoryTitleWrap">
+                  <h4 class="menuCategoryTitle">${escapeHtml(group.name)}</h4>
+                  <div class="menuCategoryHint">Tap to ${isOpen ? "hide" : "view"} items</div>
+                </div>
+                <div class="menuCategoryChevron">⌄</div>
+              </button>
+              <div class="menuCategoryContent">
+                <div class="menuCardGrid">${cards}</div>
               </div>
-              <div class="menuCardGrid">${cards}</div>
             </div>
           `;
-        }).join("");
+        }).join("")}</div>`;
       }
 
       function getProductBasketQuantity(productId) {
@@ -1935,7 +2035,7 @@
         const existing = state.basket.find((x) => x.type === "product" && x.product_id === productId);
 
         if (delta > 0 && !canAddCapacity(productMenuItem.capacity_units || 0)) {
-          showCheckoutNotice(`No more ${getCategoryDisplayName()} capacity is available for this drop.`, "warn");
+          showCheckoutNotice(`No more ${pluralizeLabel(getCategoryDisplayName())} capacity is available for this service.`, "warn");
           renderAll();
           return;
         }
@@ -1965,7 +2065,7 @@
         if (!bundleDraft) return;
 
         if (!canAddCapacity(bundleDraft.capacity_units || 0)) {
-          showCheckoutNotice(`No more ${getCategoryDisplayName()} capacity is available for this drop.`, "warn");
+          showCheckoutNotice(`No more ${pluralizeLabel(getCategoryDisplayName())} capacity is available for this service.`, "warn");
           renderAll();
           return;
         }
@@ -1996,7 +2096,7 @@
         if (!item) return;
 
         if (delta > 0 && !canAddCapacity(item.capacity_units || 0)) {
-          showCheckoutNotice(`No more ${getCategoryDisplayName()} capacity is available for this drop.`, "warn");
+          showCheckoutNotice(`No more ${pluralizeLabel(getCategoryDisplayName())} capacity is available for this service.`, "warn");
           renderAll();
           return;
         }
@@ -2091,7 +2191,7 @@
               <input type="radio" name="selectedFulfilmentMode" value="delivery" ${state.selectedFulfilmentMode === "delivery" ? "checked" : ""} />
               <div>
                 <div class="choiceCardTitle">Delivery</div>
-                <div class="choiceCardSub">Delivered during the drop window</div>
+                <div class="choiceCardSub">Delivered during the service window</div>
               </div>
             </label>
 
@@ -2099,7 +2199,7 @@
               <input type="radio" name="selectedFulfilmentMode" value="collection" ${state.selectedFulfilmentMode === "collection" ? "checked" : ""} />
               <div>
                 <div class="choiceCardTitle">Collection</div>
-                <div class="choiceCardSub">Collect from the host or drop location</div>
+                <div class="choiceCardSub">Collect from the host or service location</div>
               </div>
             </label>
           `;
@@ -2117,14 +2217,14 @@
         byId("tableWrap").classList.toggle("hidden", !canUseTable);
         byId("collectionWrap").classList.toggle("hidden", !isCollection);
 
-        const hostName = state.host?.name || state.dropSummary?.host_name || state.vendor?.display_name || state.vendor?.name || "the drop location";
-        byId("collectionNotice").textContent = `Collection instructions: please collect from ${hostName} during the stated fulfilment window.`;
+        const hostName = state.host?.name || state.dropSummary?.host_name || state.vendor?.display_name || state.vendor?.name || "the location";
+        byId("collectionNotice").textContent = `Collection instructions: please collect from ${hostName} during the stated service window.`;
 
         const remaining = getCapacityRemainingAfterBasket();
         if (remaining < 0) {
-          showCheckoutNotice(`Your basket is over the available ${getCategoryDisplayName()} capacity for this drop.`, "error");
+          showCheckoutNotice(`Your basket is over the available ${getCategoryDisplayName()} capacity for this service.`, "error");
         } else if (remaining === 0 && state.basket.length) {
-          showCheckoutNotice(`Your basket uses the final available ${getCategoryDisplayName()} capacity for this drop.`, "warn");
+          showCheckoutNotice(`Your basket uses the final available ${getCategoryDisplayName()} capacity for this service.`, "warn");
         } else {
           showCheckoutNotice("");
         }
@@ -2403,11 +2503,11 @@
 
       function validateCheckout() {
         if (!state.basket.length) return "Add at least one item to your basket.";
-        if (isDropClosed()) return "Ordering for this drop is closed.";
-        if (isDropPreOpen()) return "This drop is not open for orders yet.";
+        if (isDropClosed()) return "Ordering for this service is closed.";
+        if (isDropPreOpen()) return "This service is not open for orders yet.";
 
         if (getCapacityRemainingAfterBasket() < 0) {
-          return `Your basket exceeds the remaining ${getCategoryDisplayName()} capacity for this drop.`;
+          return `Your basket exceeds the remaining ${getCategoryDisplayName()} capacity for this service.`;
         }
 
         const customerName = byId("customerName").value.trim();
@@ -2505,6 +2605,15 @@
           const basketMinus = e.target.closest(".js-basket-minus");
           const basketPlus = e.target.closest(".js-basket-plus");
           const basketRemove = e.target.closest(".js-basket-remove");
+          const categoryToggle = e.target.closest(".js-category-toggle");
+
+          if (categoryToggle) {
+            const key = categoryToggle.dataset.categoryKey;
+            if (state.openCategories.has(key)) state.openCategories.delete(key);
+            else state.openCategories.add(key);
+            renderMenu();
+            return;
+          }
 
           if (productPlus) {
             addProductToBasket(productPlus.dataset.productId, 1);
@@ -2610,7 +2719,7 @@
           console.error(err);
           showError(err.message || "Unable to load this ordering page.");
           showNotice("");
-          byId("menuSections").innerHTML = `<div class="emptyState">We couldn’t load this drop.</div>`;
+          byId("menuSections").innerHTML = `<div class="emptyState">We couldn’t load this service.</div>`;
         }
       }
 
