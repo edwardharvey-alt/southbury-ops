@@ -31,71 +31,21 @@
 
     .orderPage{
       max-width: 860px;
-      margin: 0 auto 120px;
-      display: grid;
-      gap: 16px;
-    }
-
-    .orderTopBar{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      padding:10px 4px 0;
-    }
-
-    .orderTopBarLeft{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      min-width:0;
-    }
-
-    .vendorLogoMini{
-      width:42px;
-      height:42px;
-      border-radius:12px;
-      object-fit:cover;
-      background:#fff;
-      border:1px solid var(--h-border-2);
-      display:block;
-      flex:0 0 auto;
-    }
-
-    .vendorIdentityMini{
-      min-width:0;
-    }
-
-    .vendorIdentityMini .eyebrow{
-      font-size:11px;
-      font-weight:800;
-      color:var(--h-muted);
-      text-transform:uppercase;
-      letter-spacing:.06em;
-      line-height:1.1;
-    }
-
-    .vendorIdentityMini .name{
-      font-size:15px;
-      font-weight:900;
-      line-height:1.15;
-      margin-top:3px;
-      color:var(--h-text);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
+      margin: 20px auto 120px;
+      display:grid;
+      gap:16px;
     }
 
     .heroOrderCard{
       overflow:hidden;
       position:relative;
       padding:0;
-      border-radius:24px;
+      border-radius:28px;
     }
 
     .heroMedia{
       position:relative;
-      min-height:340px;
+      min-height:360px;
       background: var(--order-hero-fallback);
       color:var(--order-brand-text, #fff);
     }
@@ -110,22 +60,22 @@
       position:absolute;
       inset:0;
       background:
-        linear-gradient(180deg, rgba(255,255,255,0.00) 0%, rgba(15,23,42,0.06) 25%, rgba(15,23,42,0.26) 72%, rgba(15,23,42,0.42) 100%);
+        linear-gradient(180deg, rgba(255,255,255,0.00) 0%, rgba(15,23,42,0.05) 24%, rgba(15,23,42,0.24) 68%, rgba(15,23,42,0.46) 100%);
       pointer-events:none;
     }
 
     .heroInner{
       position:relative;
       z-index:2;
-      min-height:340px;
+      min-height:360px;
       padding:22px 22px 20px;
       display:flex;
       flex-direction:column;
       justify-content:space-between;
-      gap:20px;
+      gap:22px;
     }
 
-    .heroBrandRow{
+    .heroTopRow{
       display:flex;
       align-items:flex-start;
       justify-content:space-between;
@@ -133,7 +83,7 @@
       flex-wrap:wrap;
     }
 
-    .heroBrandLeft{
+    .heroTopLeft{
       display:flex;
       align-items:flex-start;
       gap:12px;
@@ -156,6 +106,15 @@
       min-width:0;
     }
 
+    .heroVendorEyebrow{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-weight:900;
+      color:color-mix(in srgb, var(--order-brand-text, #fff) 82%, transparent);
+      margin-bottom:6px;
+    }
+
     .heroVendorName{
       font-size:30px;
       line-height:1.02;
@@ -167,10 +126,10 @@
 
     .heroTagline{
       font-size:14px;
-      line-height:1.4;
+      line-height:1.45;
       color:color-mix(in srgb, var(--order-brand-text, #fff) 88%, transparent);
-      margin:6px 0 0;
-      max-width:520px;
+      margin:7px 0 0;
+      max-width:540px;
       font-weight:600;
     }
 
@@ -193,8 +152,8 @@
 
     .heroDropBlock{
       display:grid;
-      gap:10px;
-      max-width:620px;
+      gap:12px;
+      max-width:660px;
     }
 
     .heroDropEyebrow{
@@ -202,23 +161,23 @@
       text-transform:uppercase;
       letter-spacing:.08em;
       font-weight:900;
-      color:color-mix(in srgb, var(--order-brand-text, #fff) 80%, transparent);
+      color:color-mix(in srgb, var(--order-brand-text, #fff) 82%, transparent);
     }
 
     .heroDropTitle{
-      font-size:34px;
+      font-size:36px;
       line-height:0.98;
       font-weight:950;
-      letter-spacing:-0.04em;
+      letter-spacing:-0.045em;
       margin:0;
       text-wrap:balance;
-      max-width:640px;
+      max-width:680px;
     }
 
     .heroDropSub{
       font-size:15px;
       line-height:1.45;
-      color:color-mix(in srgb, var(--order-brand-text, #fff) 88%, transparent);
+      color:color-mix(in srgb, var(--order-brand-text, #fff) 89%, transparent);
       margin:0;
       max-width:620px;
       font-weight:600;
@@ -228,6 +187,7 @@
       display:flex;
       flex-wrap:wrap;
       gap:8px;
+      padding-top:2px;
     }
 
     .heroChip{
@@ -264,27 +224,8 @@
       background:#fff;
     }
 
-    .heroSummaryRow{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-
-    .heroSummaryPill{
-      display:inline-flex;
-      align-items:center;
-      min-height:34px;
-      padding:0 12px;
-      border-radius:999px;
-      border:1px solid var(--h-border-2);
-      background:rgba(15,23,42,0.03);
-      color:var(--h-text);
-      font-size:12px;
-      font-weight:800;
-    }
-
     .sectionCard{
-      padding:16px;
+      padding:18px;
       display:grid;
       gap:14px;
     }
@@ -300,7 +241,7 @@
     .menuLeadNote{
       font-size:12px;
       color:var(--h-muted);
-      line-height:1.4;
+      line-height:1.45;
       font-weight:700;
     }
 
@@ -311,7 +252,7 @@
 
     .menuCategoryBlock{
       border:1px solid var(--h-border-2);
-      border-radius:18px;
+      border-radius:20px;
       background:#fff;
       overflow:hidden;
       box-shadow:0 2px 10px rgba(15,23,42,0.03);
@@ -326,7 +267,7 @@
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      padding:14px 16px;
+      padding:16px 16px;
       text-align:left;
       font-family:var(--sans);
     }
@@ -341,7 +282,7 @@
 
     .menuCategoryTitle{
       margin:0;
-      font-size:16px;
+      font-size:17px;
       font-weight:950;
       letter-spacing:-0.02em;
       color:var(--h-text);
@@ -357,8 +298,8 @@
 
     .menuCategoryChevron{
       flex:0 0 auto;
-      width:22px;
-      height:22px;
+      width:24px;
+      height:24px;
       border-radius:999px;
       border:1px solid var(--h-border);
       display:flex;
@@ -394,11 +335,11 @@
 
     .menuItemCard{
       border:1px solid var(--h-border-2);
-      border-radius:18px;
+      border-radius:20px;
       background:#fff;
-      padding:14px;
+      padding:16px;
       display:grid;
-      gap:12px;
+      gap:14px;
       box-shadow:0 2px 10px rgba(15,23,42,0.03);
     }
 
@@ -406,15 +347,16 @@
       display:flex;
       align-items:flex-start;
       justify-content:space-between;
-      gap:12px;
+      gap:14px;
     }
 
     .menuItemCopy{
       min-width:0;
+      flex:1;
     }
 
     .menuItemName{
-      font-size:18px;
+      font-size:19px;
       line-height:1.12;
       font-weight:950;
       margin:0;
@@ -423,27 +365,22 @@
     }
 
     .menuItemDesc{
-      margin:6px 0 0;
+      margin:7px 0 0;
       font-size:13px;
-      line-height:1.45;
+      line-height:1.5;
       color:var(--h-muted);
-    }
-
-    .menuItemMeta{
-      display:flex;
-      flex-wrap:wrap;
-      gap:6px;
-      margin-top:9px;
+      max-width:52ch;
     }
 
     .menuPriceBlock{
       text-align:right;
       flex:0 0 auto;
+      min-width:max-content;
     }
 
     .menuPrice{
       min-width:max-content;
-      font-size:22px;
+      font-size:24px;
       line-height:1;
       font-weight:950;
       color:var(--h-text);
@@ -452,7 +389,7 @@
     }
 
     .menuPriceHint{
-      margin-top:4px;
+      margin-top:5px;
       font-size:11px;
       line-height:1.2;
       color:var(--h-muted);
@@ -464,6 +401,14 @@
       align-items:center;
       justify-content:space-between;
       gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .menuControlsRight{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-left:auto;
       flex-wrap:wrap;
     }
 
@@ -971,6 +916,7 @@
     @media (max-width:720px){
       .orderPage{
         gap:14px;
+        margin-top:14px;
       }
 
       .heroInner{
@@ -978,11 +924,11 @@
         padding:18px 16px 18px;
       }
 
-      .heroBrandRow{
+      .heroTopRow{
         gap:12px;
       }
 
-      .heroBrandLeft{
+      .heroTopLeft{
         width:100%;
       }
 
@@ -991,7 +937,7 @@
       }
 
       .heroDropTitle{
-        font-size:28px;
+        font-size:29px;
       }
 
       .heroDropSub{
@@ -1012,11 +958,17 @@
       }
 
       .menuPrice{
-        font-size:19px;
+        font-size:20px;
       }
 
       .menuControls{
         align-items:flex-start;
+      }
+
+      .menuControlsRight{
+        width:100%;
+        justify-content:space-between;
+        margin-left:0;
       }
     }
   </style>
@@ -1025,25 +977,14 @@
   <div class="container">
     <div class="orderPage">
 
-      <div class="orderTopBar">
-        <div class="orderTopBarLeft">
-          <img id="vendorLogoMini" class="vendorLogoMini hidden" alt="Vendor logo" />
-          <div class="vendorIdentityMini">
-            <div class="eyebrow" id="vendorEyebrow">ORDER DIRECT</div>
-            <div class="name" id="vendorMiniName">Loading…</div>
-          </div>
-        </div>
-
-        <div id="topRightLink"></div>
-      </div>
-
       <div class="card heroOrderCard">
         <div class="heroMedia" id="heroMedia">
           <div class="heroInner">
-            <div class="heroBrandRow">
-              <div class="heroBrandLeft">
+            <div class="heroTopRow">
+              <div class="heroTopLeft">
                 <img id="vendorLogoHero" class="heroLogo hidden" alt="Vendor logo" />
                 <div class="heroVendorBlock">
+                  <div class="heroVendorEyebrow" id="vendorEyebrow">ORDER DIRECT</div>
                   <h1 class="heroVendorName" id="heroVendorName">Loading vendor…</h1>
                   <p class="heroTagline" id="heroTagline">Preparing today’s menu…</p>
                 </div>
@@ -1067,7 +1008,6 @@
         </div>
 
         <div class="heroBodyCard">
-          <div class="heroSummaryRow" id="heroSummaryRow"></div>
           <div class="statusNotice hidden" id="pageStatusNotice"></div>
           <div class="errorBox" id="errorBox"></div>
         </div>
@@ -1401,7 +1341,9 @@
 
       function formatCapacityLeft(count, label) {
         const numeric = Number(count || 0);
-        return `${numeric} ${numeric === 1 ? singularizeLabel(label) : pluralizeLabel(label)} left`;
+        function formatCapacityLeft(count, label) {
+  const numeric = Number(count || 0);
+  return `${numeric} ${numeric === 1 ? singularizeLabel(label) : pluralizeLabel(label)} left`;
       }
 
       function getBundleLines(bundleId) {
@@ -1569,22 +1511,18 @@
         document.documentElement.style.setProperty("--order-brand-text", textOnPrimary);
 
         byId("vendorEyebrow").textContent = orderLabel;
-        byId("vendorMiniName").textContent = vendorDisplayName;
         byId("heroVendorName").textContent = vendorDisplayName;
         byId("heroTagline").textContent = tagline;
 
-        const logoMini = byId("vendorLogoMini");
         const logoHero = byId("vendorLogoHero");
 
-        [logoMini, logoHero].forEach((img) => {
-          if (logoUrl) {
-            img.src = logoUrl;
-            img.classList.remove("hidden");
-          } else {
-            img.classList.add("hidden");
-            img.removeAttribute("src");
-          }
-        });
+        if (logoUrl) {
+          logoHero.src = logoUrl;
+          logoHero.classList.remove("hidden");
+        } else {
+          logoHero.classList.add("hidden");
+          logoHero.removeAttribute("src");
+        }
 
         const hero = byId("heroMedia");
         if (heroImage) {
@@ -1595,7 +1533,6 @@
           hero.style.backgroundImage = "";
         }
 
-        byId("topRightLink").innerHTML = "";
         const heroVisitWrap = byId("heroVisitWrap");
         heroVisitWrap.innerHTML = vendor.website_url
           ? `<a href="${escapeHtml(vendor.website_url)}" class="heroVisitBtn" target="_blank" rel="noopener noreferrer">Visit site</a>`
@@ -1833,22 +1770,11 @@
 
         const dropTitle = state.drop?.name || state.dropSummary?.drop_name || "Available now";
         const hostName = state.host?.name || state.dropSummary?.host_name || "";
-        const fulfilmentLabel = getFulfilmentLabel(state.drop?.fulfilment_mode);
         const timingLabel = formatDateTimeRange(state.drop?.delivery_start, state.drop?.delivery_end);
 
         byId("heroDropEyebrow").textContent = "Available now";
         byId("heroDropTitle").textContent = dropTitle;
         byId("heroDropSub").textContent = [hostName, timingLabel].filter(Boolean).join(" • ");
-
-        const summaryBits = [];
-        if (state.drop?.fulfilment_mode) summaryBits.push(fulfilmentLabel);
-        if (hostName && !dropTitle.toLowerCase().includes(hostName.toLowerCase())) {
-          summaryBits.push(hostName);
-        }
-
-        byId("heroSummaryRow").innerHTML = summaryBits
-          .map((bit) => `<span class="heroSummaryPill">${escapeHtml(bit)}</span>`)
-          .join("");
 
         const orderState = getOrderWindowState();
         const closesAt = orderState.closesAt;
@@ -1899,12 +1825,6 @@
           : "Choose a section below to see what’s on today’s menu.";
       }
 
-      function ensureInitialOpenCategory(groups) {
-        if (state.openCategories.size) return;
-        const firstGroup = groups[0];
-        if (firstGroup) state.openCategories.add(firstGroup.key);
-      }
-
       function renderMenu() {
         const items = getDropMenuItems();
         const wrap = byId("menuSections");
@@ -1934,8 +1854,6 @@
           return String(a.name).localeCompare(String(b.name));
         });
 
-        ensureInitialOpenCategory(groups);
-
         wrap.innerHTML = `<div class="menuAccordionList">${groups.map((group) => {
           const isOpen = state.openCategories.has(group.key);
           const cards = group.items.map((item) => {
@@ -1948,9 +1866,6 @@
                     <div class="menuItemCopy">
                       <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
                       ${item.description ? `<p class="menuItemDesc">${escapeHtml(item.description)}</p>` : ""}
-                      <div class="menuItemMeta">
-                        ${Number(item.capacity_units || 0) > 0 ? `<span class="miniChip">${escapeHtml(String(item.capacity_units))} capacity</span>` : ""}
-                      </div>
                     </div>
 
                     <div class="menuPriceBlock">
@@ -1960,15 +1875,17 @@
                   </div>
 
                   <div class="menuControls">
-                    <div class="stepper">
-                      <button type="button" class="js-product-minus" data-product-id="${item.id}" ${qty <= 0 || isDropClosed() ? "disabled" : ""}>−</button>
-                      <div class="stepperValue">${qty}</div>
-                      <button type="button" class="js-product-plus" data-product-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>+</button>
-                    </div>
+                    <div class="menuControlsRight">
+                      <div class="stepper">
+                        <button type="button" class="js-product-minus" data-product-id="${item.id}" ${qty <= 0 || isDropClosed() ? "disabled" : ""}>−</button>
+                        <div class="stepperValue">${qty}</div>
+                        <button type="button" class="js-product-plus" data-product-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>+</button>
+                      </div>
 
-                    <button class="brandBtn ${qty > 0 ? "secondary" : ""} js-product-add" type="button" data-product-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>
-                      ${qty > 0 ? "View basket" : "Add to order"}
-                    </button>
+                      <button class="brandBtn ${qty > 0 ? "secondary" : ""} js-product-add" type="button" data-product-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>
+                        ${qty > 0 ? "View basket" : "Add to order"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               `;
@@ -1980,10 +1897,6 @@
                   <div class="menuItemCopy">
                     <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
                     ${item.description ? `<p class="menuItemDesc">${escapeHtml(item.description)}</p>` : ""}
-                    <div class="menuItemMeta">
-                      ${Number(item.capacity_units || 0) > 0 ? `<span class="miniChip">${escapeHtml(String(item.capacity_units))} capacity</span>` : ""}
-                      <span class="miniChip">Bundle</span>
-                    </div>
                   </div>
 
                   <div class="menuPriceBlock">
@@ -2117,7 +2030,7 @@
         bar.classList.toggle("show", hasItems);
 
         byId("basketSummaryTop").textContent = `${getBasketItemCount()} item${getBasketItemCount() === 1 ? "" : "s"}`;
-        byId("basketSummarySub").textContent = `${getBasketCapacityUnits()} ${getCategoryDisplayName()} capacity in basket`;
+        byId("basketSummarySub").textContent = `${getBasketCapacityUnits()} ${singularizeLabel(getCategoryDisplayName())} capacity in basket`;
         byId("basketSummaryPrice").textContent = formatMoneyPence(getGrandTotalPence());
 
         byId("payBtn").textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
@@ -2173,7 +2086,7 @@
 
         byId("basketSubtotal").textContent = formatMoneyPence(getBasketSubtotalPence());
         byId("basketDelivery").textContent = getDeliveryChargePence() ? formatMoneyPence(getDeliveryChargePence()) : "Free";
-        byId("basketCapacity").textContent = `${getBasketCapacityUnits()} ${getCategoryDisplayName()}`;
+        byId("basketCapacity").textContent = `${getBasketCapacityUnits()} ${singularizeLabel(getCategoryDisplayName())}`;
         byId("basketGrandTotal").textContent = formatMoneyPence(getGrandTotalPence());
 
         renderCheckoutForm();
