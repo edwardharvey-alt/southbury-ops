@@ -185,12 +185,20 @@
 
     .heroChips{
       display:flex;
-      flex-wrap:wrap;
+      flex-wrap:nowrap;
       gap:8px;
       padding-top:2px;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+    }
+
+    .heroChips::-webkit-scrollbar{
+      display:none;
     }
 
     .heroChip{
+      flex:0 0 auto;
       display:inline-flex;
       align-items:center;
       gap:6px;
@@ -1340,9 +1348,9 @@
       }
 
       function formatCapacityLeft(count, label) {
-  const numeric = Number(count || 0);
-  return `${numeric} ${numeric === 1 ? singularizeLabel(label) : pluralizeLabel(label)} left`;
-}
+        const numeric = Number(count || 0);
+        return `${numeric} ${numeric === 1 ? singularizeLabel(label) : pluralizeLabel(label)} left`;
+      }
 
       function getBundleLines(bundleId) {
         return state.bundleLines
@@ -1815,7 +1823,7 @@
         } else if (remaining <= 0) {
           showNotice(`${pluralizeLabel(capacityLabel)} capacity has been reached for this service.`, "warn");
         } else {
-          showNotice(err.message || "We couldn’t load this service.", "error");
+          showNotice("");
         }
 
         byId("menuLeadNote").textContent = isDropClosed()
@@ -2629,7 +2637,7 @@
         } catch (err) {
           console.error(err);
           showError(err.message || "Unable to load this ordering page.");
-          showNotice("");
+          showNotice(err.message || "We couldn’t load this service.", "error");
           byId("menuSections").innerHTML = `<div class="emptyState">We couldn’t load this service.</div>`;
         }
       }
