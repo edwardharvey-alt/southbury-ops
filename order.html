@@ -30,8 +30,8 @@
     }
 
     .orderPage{
-      max-width: 860px;
-      margin: 20px auto 120px;
+      max-width:860px;
+      margin:20px auto 120px;
       display:grid;
       gap:16px;
     }
@@ -46,7 +46,7 @@
     .heroMedia{
       position:relative;
       min-height:360px;
-      background: var(--order-hero-fallback);
+      background:var(--order-hero-fallback);
       color:var(--order-brand-text, #fff);
     }
 
@@ -146,8 +146,8 @@
       justify-content:center;
       font-size:13px;
       font-weight:800;
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter:blur(6px);
+      -webkit-backdrop-filter:blur(6px);
     }
 
     .heroDropBlock{
@@ -179,7 +179,7 @@
       line-height:1.45;
       color:color-mix(in srgb, var(--order-brand-text, #fff) 89%, transparent);
       margin:0;
-      max-width:620px;
+      max-width:680px;
       font-weight:600;
     }
 
@@ -202,15 +202,15 @@
       display:inline-flex;
       align-items:center;
       gap:6px;
-      min-height:38px;
-      padding:0 13px;
+      min-height:34px;
+      padding:0 11px;
       border-radius:999px;
       background:rgba(255,255,255,0.14);
       border:1px solid rgba(255,255,255,0.16);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter:blur(6px);
+      -webkit-backdrop-filter:blur(6px);
       color:var(--order-brand-text, #fff);
-      font-size:12px;
+      font-size:11px;
       font-weight:800;
       white-space:nowrap;
     }
@@ -347,7 +347,7 @@
       background:#fff;
       padding:16px;
       display:grid;
-      gap:14px;
+      gap:12px;
       box-shadow:0 2px 10px rgba(15,23,42,0.03);
     }
 
@@ -408,38 +408,39 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:12px;
+      gap:10px;
       flex-wrap:wrap;
     }
 
     .menuControlsRight{
       display:flex;
       align-items:center;
-      gap:10px;
+      gap:8px;
       margin-left:auto;
-      flex-wrap:wrap;
+      flex-wrap:nowrap;
     }
 
     .stepper{
       display:inline-flex;
       align-items:center;
-      gap:6px;
+      gap:4px;
       border:1px solid var(--h-border);
       border-radius:999px;
-      padding:4px;
+      padding:3px;
       background:#fff;
-      min-height:44px;
+      min-height:40px;
+      flex:0 0 auto;
     }
 
     .stepper button{
-      width:34px;
-      height:34px;
-      min-width:34px;
+      width:30px;
+      height:30px;
+      min-width:30px;
       border-radius:999px;
       border:1px solid var(--h-border);
       background:#fff;
       color:var(--h-text);
-      font-size:16px;
+      font-size:15px;
       font-weight:900;
       cursor:pointer;
       display:flex;
@@ -448,7 +449,7 @@
     }
 
     .stepperValue{
-      min-width:28px;
+      min-width:26px;
       text-align:center;
       font-size:15px;
       font-weight:900;
@@ -456,9 +457,9 @@
     }
 
     .brandBtn{
-      min-height:44px;
-      height:44px;
-      padding:0 16px;
+      min-height:40px;
+      height:40px;
+      padding:0 14px;
       border-radius:14px;
       border:1px solid transparent;
       background:linear-gradient(135deg, var(--order-brand-primary), var(--order-brand-secondary));
@@ -471,6 +472,7 @@
       align-items:center;
       justify-content:center;
       text-align:center;
+      white-space:nowrap;
       box-shadow:0 10px 18px color-mix(in srgb, var(--order-brand-primary) 24%, transparent);
     }
 
@@ -495,8 +497,8 @@
       z-index:70;
       padding:10px 12px calc(10px + env(safe-area-inset-bottom));
       background:linear-gradient(to top, rgba(247,247,251,0.98), rgba(247,247,251,0.92));
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
       border-top:1px solid rgba(15,23,42,0.08);
       display:none;
     }
@@ -582,7 +584,7 @@
       background:#fff;
       border-radius:24px 24px 0 0;
       box-shadow:0 -8px 24px rgba(15,23,42,0.18);
-      padding:12px 14px calc(22px + env(safe-area-inset-bottom));
+      padding:0 14px calc(22px + env(safe-area-inset-bottom));
       display:grid;
       gap:14px;
     }
@@ -592,14 +594,26 @@
       height:6px;
       border-radius:999px;
       background:rgba(15,23,42,0.16);
-      margin:4px auto 2px;
+      margin:10px auto 2px;
     }
 
     .basketHead{
+      position:sticky;
+      top:0;
+      z-index:5;
+      background:#fff;
+      padding:6px 0 6px;
       display:flex;
       align-items:flex-start;
       justify-content:space-between;
       gap:10px;
+      border-bottom:1px solid rgba(15,23,42,0.06);
+    }
+
+    .basketHead .btnGhost{
+      position:relative;
+      z-index:6;
+      flex:0 0 auto;
     }
 
     .basketList{
@@ -712,8 +726,8 @@
     }
 
     .choiceCard.active{
-      border-color: color-mix(in srgb, var(--order-brand-primary) 35%, white);
-      background: color-mix(in srgb, var(--order-brand-primary) 9%, white);
+      border-color:color-mix(in srgb, var(--order-brand-primary) 35%, white);
+      background:color-mix(in srgb, var(--order-brand-primary) 9%, white);
       box-shadow:0 6px 14px color-mix(in srgb, var(--order-brand-primary) 12%, transparent);
     }
 
@@ -721,7 +735,7 @@
       width:16px;
       height:16px;
       margin:2px 0 0;
-      accent-color: var(--order-brand-primary);
+      accent-color:var(--order-brand-primary);
       flex:0 0 auto;
     }
 
@@ -853,8 +867,8 @@
     }
 
     .bundleOption.active{
-      border-color: color-mix(in srgb, var(--order-brand-primary) 35%, white);
-      background: color-mix(in srgb, var(--order-brand-primary) 8%, white);
+      border-color:color-mix(in srgb, var(--order-brand-primary) 35%, white);
+      background:color-mix(in srgb, var(--order-brand-primary) 8%, white);
     }
 
     .bundleOptionName{
@@ -970,13 +984,38 @@
       }
 
       .menuControls{
-        align-items:flex-start;
+        align-items:center;
       }
 
       .menuControlsRight{
         width:100%;
         justify-content:space-between;
         margin-left:0;
+      }
+
+      .stepper{
+        min-height:38px;
+      }
+
+      .stepper button{
+        width:28px;
+        height:28px;
+        min-width:28px;
+      }
+
+      .brandBtn{
+        min-height:38px;
+        height:38px;
+        padding:0 12px;
+        font-size:12px;
+      }
+
+      .basketSheet{
+        padding:0 12px calc(22px + env(safe-area-inset-bottom));
+      }
+
+      .basketHead{
+        padding-top:8px;
       }
     }
   </style>
@@ -1025,7 +1064,7 @@
         <div class="sectionCardHead">
           <div>
             <h3 class="sectionTitle">Menu</h3>
-            <p class="sectionSub">Choose from today’s available items</p>
+            <p class="sectionSub">Today’s available items</p>
           </div>
         </div>
 
@@ -1159,7 +1198,7 @@
     <div class="bundleModal" role="dialog" aria-modal="true" aria-label="Customize bundle">
       <div class="sheetHandle"></div>
 
-      <div class="basketHead">
+      <div class="basketHead" style="position:static; border-bottom:none; padding:0;">
         <div>
           <h3 class="sectionTitle" id="bundleModalTitle">Customize bundle</h3>
           <p class="sectionSub" id="bundleModalSub">Choose what goes inside this bundle</p>
@@ -1777,10 +1816,11 @@
         const dropTitle = state.drop?.name || state.dropSummary?.drop_name || "Available now";
         const hostName = state.host?.name || state.dropSummary?.host_name || "";
         const timingLabel = formatDateTimeRange(state.drop?.delivery_start, state.drop?.delivery_end);
+        const fulfilmentLabel = getFulfilmentLabel(state.drop?.fulfilment_mode);
 
         byId("heroDropEyebrow").textContent = "Available now";
         byId("heroDropTitle").textContent = dropTitle;
-        byId("heroDropSub").textContent = [hostName, timingLabel].filter(Boolean).join(" • ");
+        byId("heroDropSub").textContent = [fulfilmentLabel, hostName, timingLabel].filter(Boolean).join(" • ");
 
         const orderState = getOrderWindowState();
         const closesAt = orderState.closesAt;
@@ -1826,9 +1866,7 @@
           showNotice("");
         }
 
-        byId("menuLeadNote").textContent = isDropClosed()
-          ? "This menu is shown for reference only because ordering is now closed."
-          : "Choose a section below to see what’s on today’s menu.";
+        byId("menuLeadNote").textContent = "";
       }
 
       function renderMenu() {
@@ -2036,7 +2074,7 @@
         bar.classList.toggle("show", hasItems);
 
         byId("basketSummaryTop").textContent = `${getBasketItemCount()} item${getBasketItemCount() === 1 ? "" : "s"}`;
-        byId("basketSummarySub").textContent = `${getBasketCapacityUnits()} ${singularizeLabel(getCategoryDisplayName())} capacity in basket`;
+        byId("basketSummarySub").textContent = `${getBasketCapacityUnits()} ${singularizeLabel(getCategoryDisplayName()).toLowerCase()} capacity in basket`;
         byId("basketSummaryPrice").textContent = formatMoneyPence(getGrandTotalPence());
 
         byId("payBtn").textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
@@ -2092,7 +2130,7 @@
 
         byId("basketSubtotal").textContent = formatMoneyPence(getBasketSubtotalPence());
         byId("basketDelivery").textContent = getDeliveryChargePence() ? formatMoneyPence(getDeliveryChargePence()) : "Free";
-        byId("basketCapacity").textContent = `${getBasketCapacityUnits()} ${singularizeLabel(getCategoryDisplayName())}`;
+        byId("basketCapacity").textContent = `${getBasketCapacityUnits()} ${singularizeLabel(getCategoryDisplayName()).toLowerCase()}`;
         byId("basketGrandTotal").textContent = formatMoneyPence(getGrandTotalPence());
 
         renderCheckoutForm();
