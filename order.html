@@ -1340,11 +1340,9 @@
       }
 
       function formatCapacityLeft(count, label) {
-        const numeric = Number(count || 0);
-        function formatCapacityLeft(count, label) {
   const numeric = Number(count || 0);
   return `${numeric} ${numeric === 1 ? singularizeLabel(label) : pluralizeLabel(label)} left`;
-      }
+}
 
       function getBundleLines(bundleId) {
         return state.bundleLines
@@ -1817,7 +1815,7 @@
         } else if (remaining <= 0) {
           showNotice(`${pluralizeLabel(capacityLabel)} capacity has been reached for this service.`, "warn");
         } else {
-          showNotice("");
+          showNotice(err.message || "We couldn’t load this service.", "error");
         }
 
         byId("menuLeadNote").textContent = isDropClosed()
