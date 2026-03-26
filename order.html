@@ -579,12 +579,12 @@
 
     .basketSheet{
       width:min(860px, 100%);
-      max-height:88vh;
+      max-height:calc(100vh - 12px);
       overflow:auto;
       background:#fff;
       border-radius:24px 24px 0 0;
       box-shadow:0 -8px 24px rgba(15,23,42,0.18);
-      padding:0 14px calc(22px + env(safe-area-inset-bottom));
+      padding:12px 14px calc(22px + env(safe-area-inset-bottom));
       display:grid;
       gap:14px;
     }
@@ -594,15 +594,15 @@
       height:6px;
       border-radius:999px;
       background:rgba(15,23,42,0.16);
-      margin:10px auto 2px;
+      margin:0 auto 2px;
     }
 
     .basketHead{
       position:sticky;
       top:0;
-      z-index:5;
+      z-index:8;
       background:#fff;
-      padding:6px 0 6px;
+      padding:14px 0 10px;
       display:flex;
       align-items:flex-start;
       justify-content:space-between;
@@ -612,8 +612,14 @@
 
     .basketHead .btnGhost{
       position:relative;
-      z-index:6;
+      z-index:9;
       flex:0 0 auto;
+      min-height:40px;
+      padding:0 14px;
+      border-radius:12px;
+      background:#fff;
+      border:1px solid var(--h-border);
+      box-shadow:0 2px 8px rgba(15,23,42,0.04);
     }
 
     .basketList{
@@ -655,7 +661,7 @@
 
     .basketSelectionList{
       display:grid;
-      gap:4px;
+      gap:6px;
       margin-top:2px;
     }
 
@@ -666,6 +672,16 @@
       font-size:12px;
       color:var(--h-text);
       line-height:1.3;
+    }
+
+    .basketSelectionLine span:first-child{
+      color:var(--h-muted);
+      font-weight:700;
+    }
+
+    .basketSelectionLine span:last-child{
+      text-align:right;
+      font-weight:800;
     }
 
     .basketTotals{
@@ -1011,11 +1027,12 @@
       }
 
       .basketSheet{
-        padding:0 12px calc(22px + env(safe-area-inset-bottom));
+        max-height:calc(100vh - 8px);
+        padding:10px 12px calc(22px + env(safe-area-inset-bottom));
       }
 
       .basketHead{
-        padding-top:8px;
+        padding:12px 0 10px;
       }
     }
   </style>
@@ -1085,7 +1102,7 @@
       <button class="basketSummaryBtn" id="openBasketBtn" type="button">
         <div class="basketSummaryLeft">
           <div class="basketSummaryTop" id="basketSummaryTop">0 items</div>
-          <div class="basketSummarySub" id="basketSummarySub">Basket empty</div>
+          <div class="basketSummarySub" id="basketSummarySub">View basket</div>
         </div>
         <div class="basketSummaryPrice" id="basketSummaryPrice">£0</div>
       </button>
@@ -1101,7 +1118,7 @@
           <h3 class="sectionTitle">Your order</h3>
           <p class="sectionSub">Review your basket and enter delivery details</p>
         </div>
-        <button class="btnGhost" id="closeBasketBtn" type="button">Close</button>
+        <button class="btnGhost" id="closeBasketBtn" type="button">Done</button>
       </div>
 
       <div class="basketList" id="basketList">
@@ -1203,7 +1220,7 @@
           <h3 class="sectionTitle" id="bundleModalTitle">Customize bundle</h3>
           <p class="sectionSub" id="bundleModalSub">Choose what goes inside this bundle</p>
         </div>
-        <button class="btnGhost" id="closeBundleModalBtn" type="button">Close</button>
+        <button class="btnGhost" id="closeBundleModalBtn" type="button">Done</button>
       </div>
 
       <div id="bundleModalContent">
@@ -1344,6 +1361,16 @@
           month: "short",
           hour: "2-digit",
           minute: "2-digit"
+        });
+      }
+
+      function formatShortCloseDate(value) {
+        if (!value) return "—";
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return "—";
+        return d.toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short"
         });
       }
 
@@ -1834,8 +1861,14 @@
           windowChip.textContent = "Ordering closed";
           windowChip.classList.add("low");
         } else {
-          const timeLeft = closesAt ? formatTimeLeft(closesAt) : "";
-          windowChip.textContent = timeLeft ? `Orders close in ${timeLeft}` : "Ordering open";
+          const hoursUntilClose = closesAt ? ((closesAt.getTime() - Date.now()) / (1000 * 60 * 60)) : null;
+          if (closesAt && hoursUntilClose !== null && hoursUntilClose > 48) {
+            windowChip.textContent = `Orders close ${formatShortCloseDate(closesAt)}`;
+          } else {
+            const timeLeft = closesAt ? formatTimeLeft(closesAt) : "";
+            windowChip.textContent = timeLeft ? `Orders close in ${timeLeft}` : "Ordering open";
+          }
+
           if (closesAt && (closesAt.getTime() - Date.now()) <= 2 * 60 * 60 * 1000) {
             windowChip.classList.add("urgent");
           }
@@ -1892,13 +1925,11 @@
           groupsMap.get(key).items.push(item);
         });
 
-        const groups = [...groupsMap.values()].sort((a, b) => {
+        wrap.innerHTML = `<div class="menuAccordionList">${[...groupsMap.values()].sort((a, b) => {
           const sortCompare = Number(a.sort || 9999) - Number(b.sort || 9999);
           if (sortCompare !== 0) return sortCompare;
           return String(a.name).localeCompare(String(b.name));
-        });
-
-        wrap.innerHTML = `<div class="menuAccordionList">${groups.map((group) => {
+        }).map((group) => {
           const isOpen = state.openCategories.has(group.key);
           const cards = group.items.map((item) => {
             if (item.menu_item_type === "product") {
@@ -2074,7 +2105,7 @@
         bar.classList.toggle("show", hasItems);
 
         byId("basketSummaryTop").textContent = `${getBasketItemCount()} item${getBasketItemCount() === 1 ? "" : "s"}`;
-        byId("basketSummarySub").textContent = `${getBasketCapacityUnits()} ${singularizeLabel(getCategoryDisplayName()).toLowerCase()} capacity in basket`;
+        byId("basketSummarySub").textContent = "View basket";
         byId("basketSummaryPrice").textContent = formatMoneyPence(getGrandTotalPence());
 
         byId("payBtn").textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
@@ -2685,3 +2716,4 @@
   </script>
 </body>
 </html>
+
