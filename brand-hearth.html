@@ -339,6 +339,7 @@
       backdrop-filter:blur(6px);
       -webkit-backdrop-filter:blur(6px);
       white-space:nowrap;
+      text-decoration:none;
     }
 
     .brandPreviewDrop{
@@ -465,6 +466,10 @@
       text-decoration:none;
     }
 
+    .hidden{
+      display:none !important;
+    }
+
     @media (max-width: 1080px){
       .brandWorkspace{
         grid-template-columns:1fr;
@@ -557,7 +562,7 @@
               <p class="brandSummarySub" id="summaryTagline">Freshly made and ready to order</p>
 
               <div class="brandLinkRow" style="margin-top:10px;">
-                <a class="brandMiniLink" href="#" id="summaryWebsiteLink" target="_blank" rel="noopener noreferrer" style="display:none;">Visit website</a>
+                <a class="brandMiniLink hidden" href="#" id="summaryWebsiteLink" target="_blank" rel="noopener noreferrer">Visit website</a>
                 <span class="miniChip">Powered by Hearth</span>
               </div>
             </div>
@@ -582,6 +587,11 @@
             <div class="brandMetaRow">
               <span class="label">Hero image</span>
               <span class="value" id="summaryHeroStatus">Not set</span>
+            </div>
+
+            <div class="brandMetaRow">
+              <span class="label">Preview drop</span>
+              <span class="value" id="summaryPreviewDropStatus">Looking up…</span>
             </div>
 
             <div>
@@ -747,29 +757,35 @@
                     </div>
                   </div>
 
-                  <div class="brandPreviewSite" id="previewWebsiteBtn">Visit site</div>
+                  <a class="brandPreviewSite hidden" id="previewWebsiteBtn" href="#" target="_blank" rel="noopener noreferrer">Visit site</a>
                 </div>
 
-                <div class="brandPreviewDrop">
-                  <div class="brandPreviewDropEyebrow">Available now</div>
-                  <h4 class="brandPreviewDropTitle">Friday Farm Drop</h4>
-                  <p class="brandPreviewDropSub">Delivery • Hurst Cricket Club • Friday 19:00–20:00</p>
+                <div class="brandPreviewDrop" id="previewDropBlock">
+                  <div class="brandPreviewDropEyebrow" id="previewDropEyebrow">Available now</div>
+                  <h4 class="brandPreviewDropTitle" id="previewDropTitle">Friday Farm Drop</h4>
+                  <p class="brandPreviewDropSub" id="previewDropSub">Delivery • Hurst Cricket Club • Friday 19:00–20:00</p>
 
-                  <div class="brandPreviewChips">
-                    <div class="brandPreviewChip">Orders close in 1h 20m</div>
-                    <div class="brandPreviewChip">40 pizzas left</div>
+                  <div class="brandPreviewChips" id="previewDropChips">
+                    <div class="brandPreviewChip" id="previewChipOne">Orders close soon</div>
+                    <div class="brandPreviewChip" id="previewChipTwo">Fresh drop</div>
                   </div>
+                </div>
+
+                <div class="brandPreviewDrop hidden" id="previewDropEmptyBlock">
+                  <div class="brandPreviewDropEyebrow">Preview unavailable</div>
+                  <h4 class="brandPreviewDropTitle">Create a test drop</h4>
+                  <p class="brandPreviewDropSub">Add a live, scheduled or draft drop in Drop Studio to preview your branded ordering page.</p>
                 </div>
               </div>
             </div>
 
             <div class="brandPreviewBody">
-              <div class="brandPreviewNotice">
+              <div class="brandPreviewNotice" id="previewNotice">
                 This preview reflects the customer-facing order page styling.
               </div>
 
               <div class="brandPreviewFooter">
-                <span id="previewFooterSite">Visit Southbury Farm Pizza</span> • Powered by Hearth
+                <span id="previewFooterSite">Southbury Farm Pizza</span> • Powered by Hearth
               </div>
             </div>
           </div>
@@ -777,7 +793,7 @@
           <div class="brandPreviewMetaCard">
             <h4 class="brandPreviewMetaTitle">Preview Notes</h4>
             <p class="brandPreviewMetaText">Logo, hero image, colours, display name, tagline and order label update live here as you edit.</p>
-            <p class="brandPreviewMetaText">The order page will still fall back safely if any of these fields are left blank.</p>
+            <p class="brandPreviewMetaText">Preview drop selection uses live first, then scheduled, then draft.</p>
           </div>
         </div>
       </div>
@@ -790,13 +806,14 @@
     const SUPABASE_URL = CONFIG.SUPABASE_URL;
     const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
     const DEFAULT_VENDOR_SLUG = "southbury-farm-pizza";
-    const ORDER_PAGE_PATH = "order.html";
 
     let supabase = null;
     let successTimer = null;
 
     const state = {
       vendor: null,
+      previewDrop: null,
+      previewHost: null,
       saveState: "saved"
     };
 
@@ -875,6 +892,49 @@
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 
+    function formatDateShort(value) {
+      if (!value) return "—";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "—";
+      return d.toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short"
+      });
+    }
+
+    function formatTimeOnly(value) {
+      if (!value) return "—";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "—";
+      return d.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function getPreviewStatusLabel(status) {
+      const s = String(status || "").toLowerCase();
+      if (s === "live") return "Available now";
+      if (s === "scheduled") return "Scheduled";
+      if (s === "draft") return "Draft preview";
+      return "Preview";
+    }
+
+    function getPreviewDropLine(drop, host) {
+      if (!drop) return "";
+      const parts = [];
+      if (drop.fulfilment_mode) {
+        const mode = String(drop.fulfilment_mode);
+        parts.push(mode.charAt(0).toUpperCase() + mode.slice(1));
+      }
+      if (host?.name) parts.push(host.name);
+      if (drop.delivery_start && drop.delivery_end) {
+        parts.push(`${formatDateShort(drop.delivery_start)} ${formatTimeOnly(drop.delivery_start)}–${formatTimeOnly(drop.delivery_end)}`);
+      }
+      return parts.filter(Boolean).join(" • ");
+    }
+
     function getFormData() {
       return {
         name: byId("vendorName").value.trim(),
@@ -934,7 +994,6 @@
       byId("summaryVendorSlug").textContent = state.vendor?.slug || DEFAULT_VENDOR_SLUG;
 
       const summaryLogo = byId("summaryLogo");
-      const summaryLogoFallback = byId("summaryLogoFallback");
       if (logoUrl) {
         summaryLogo.innerHTML = `<img src="${escapeHtml(logoUrl)}" alt="Logo preview" />`;
       } else {
@@ -944,16 +1003,17 @@
       const summaryWebsiteLink = byId("summaryWebsiteLink");
       if (websiteUrl) {
         summaryWebsiteLink.href = websiteUrl;
-        summaryWebsiteLink.style.display = "inline-flex";
+        summaryWebsiteLink.classList.remove("hidden");
         summaryWebsiteLink.textContent = `Visit ${displayName}`;
       } else {
-        summaryWebsiteLink.style.display = "none";
+        summaryWebsiteLink.classList.add("hidden");
         summaryWebsiteLink.removeAttribute("href");
       }
 
       byId("summaryWebsiteStatus").textContent = websiteUrl ? "Set" : "Not set";
       byId("summaryLogoStatus").textContent = logoUrl ? "Set" : "Not set";
       byId("summaryHeroStatus").textContent = heroUrl ? "Set" : "Not set";
+      byId("summaryPreviewDropStatus").textContent = state.previewDrop ? `${state.previewDrop.name || "Untitled"} (${state.previewDrop.status || "preview"})` : "No drop found";
 
       byId("swatchPrimary").style.background = primary;
       byId("swatchSecondary").style.background = secondary;
@@ -965,14 +1025,22 @@
       byId("previewOrderLabel").textContent = orderLabel;
       byId("previewDisplayName").textContent = displayName;
       byId("previewTagline").textContent = tagline;
-      byId("previewWebsiteBtn").textContent = websiteUrl ? "Visit site" : "No site set";
-      byId("previewFooterSite").textContent = websiteUrl ? `Visit ${displayName}` : displayName;
+      byId("previewFooterSite").textContent = displayName;
 
       const previewLogo = byId("previewLogo");
       if (logoUrl) {
         previewLogo.innerHTML = `<img src="${escapeHtml(logoUrl)}" alt="Logo preview" />`;
       } else {
         previewLogo.innerHTML = `<span id="previewLogoFallback">${escapeHtml(titleInitial(displayName))}</span>`;
+      }
+
+      const previewWebsiteBtn = byId("previewWebsiteBtn");
+      if (websiteUrl) {
+        previewWebsiteBtn.href = websiteUrl;
+        previewWebsiteBtn.classList.remove("hidden");
+      } else {
+        previewWebsiteBtn.classList.add("hidden");
+        previewWebsiteBtn.removeAttribute("href");
       }
 
       const hero = byId("previewHero");
@@ -984,7 +1052,36 @@
         hero.style.backgroundImage = "";
       }
 
-      summaryLogoFallback && (summaryLogoFallback.textContent = titleInitial(displayName));
+      const hasPreviewDrop = Boolean(state.previewDrop);
+      byId("previewDropBlock").classList.toggle("hidden", !hasPreviewDrop);
+      byId("previewDropEmptyBlock").classList.toggle("hidden", hasPreviewDrop);
+
+      if (hasPreviewDrop) {
+        byId("previewDropEyebrow").textContent = getPreviewStatusLabel(state.previewDrop.status);
+        byId("previewDropTitle").textContent = state.previewDrop.name || "Untitled drop";
+        byId("previewDropSub").textContent = getPreviewDropLine(state.previewDrop, state.previewHost) || "Preview drop";
+
+        const chipOne = byId("previewChipOne");
+        const chipTwo = byId("previewChipTwo");
+
+        if (String(state.previewDrop.status || "").toLowerCase() === "live") {
+          chipOne.textContent = "Ordering open";
+        } else if (String(state.previewDrop.status || "").toLowerCase() === "scheduled") {
+          chipOne.textContent = "Ready to schedule";
+        } else {
+          chipOne.textContent = "Draft preview";
+        }
+
+        const capacityTotal = Number(state.previewDrop.capacity_units_total || 0);
+        const capacityLabel = state.previewDrop.capacity_category || "units";
+        chipTwo.textContent = capacityTotal > 0
+          ? `${capacityTotal} ${capacityLabel}`
+          : "Capacity not set";
+
+        byId("previewNotice").textContent = "This preview reflects your current brand settings on a real drop.";
+      } else {
+        byId("previewNotice").textContent = "Create a live, scheduled or draft drop in Drop Studio to preview your branded ordering page.";
+      }
     }
 
     async function loadVendor() {
@@ -992,25 +1089,112 @@
         .from("vendors")
         .select("*")
         .eq("slug", DEFAULT_VENDOR_SLUG)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error(`No vendor found for slug "${DEFAULT_VENDOR_SLUG}".`);
       state.vendor = data;
+    }
+
+    async function getPreviewDrop(vendorId) {
+      let res = await supabase
+        .from("drops")
+        .select("*")
+        .eq("vendor_id", vendorId)
+        .eq("status", "live")
+        .order("delivery_start", { ascending: false })
+        .limit(1);
+
+      if (res.error) throw res.error;
+      if (res.data?.length) return res.data[0];
+
+      res = await supabase
+        .from("drops")
+        .select("*")
+        .eq("vendor_id", vendorId)
+        .eq("status", "scheduled")
+        .order("delivery_start", { ascending: false })
+        .limit(1);
+
+      if (res.error) throw res.error;
+      if (res.data?.length) return res.data[0];
+
+      res = await supabase
+        .from("drops")
+        .select("*")
+        .eq("vendor_id", vendorId)
+        .eq("status", "draft")
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (res.error) throw res.error;
+      if (res.data?.length) return res.data[0];
+
+      return null;
+    }
+
+    async function loadPreviewDrop() {
+      state.previewDrop = null;
+      state.previewHost = null;
+
+      if (!state.vendor?.id) return;
+
+      const drop = await getPreviewDrop(state.vendor.id);
+      state.previewDrop = drop;
+
+      if (drop?.host_id) {
+        const { data, error } = await supabase
+          .from("hosts")
+          .select("*")
+          .eq("id", drop.host_id)
+          .maybeSingle();
+
+        if (!error) {
+          state.previewHost = data || null;
+        }
+      }
     }
 
     async function refreshAll() {
       showError("");
       await loadVendor();
+      await loadPreviewDrop();
       populateForm(state.vendor);
       applyPreview();
       setSaveState("saved");
+    }
+
+    async function trySavePayloads(payloadVariants) {
+      let lastError = null;
+
+      for (const payload of payloadVariants) {
+        const { error } = await supabase
+          .from("vendors")
+          .update(payload)
+          .eq("id", state.vendor.id);
+
+        if (!error) return payload;
+        lastError = error;
+
+        const message = String(error.message || "").toLowerCase();
+        const isMissingColumnError =
+          message.includes("schema cache") ||
+          message.includes("could not find the") ||
+          message.includes("column");
+
+        if (!isMissingColumnError) {
+          throw error;
+        }
+      }
+
+      throw lastError || new Error("Unable to save vendor.");
     }
 
     async function saveVendor() {
       if (!state.vendor?.id) throw new Error("Vendor not found.");
 
       const form = getFormData();
-      const payload = {
+      const basePayload = {
         name: form.name || state.vendor.name || "Vendor",
         display_name: form.display_name || null,
         tagline: form.tagline || null,
@@ -1023,22 +1207,52 @@
         brand_text_on_primary: form.brand_text_on_primary || "#FFFFFF"
       };
 
+      const fallbackPayloadOne = {
+        name: basePayload.name,
+        display_name: basePayload.display_name,
+        tagline: basePayload.tagline,
+        order_label: basePayload.order_label,
+        website_url: basePayload.website_url,
+        logo_url: basePayload.logo_url,
+        hero_image_url: basePayload.hero_image_url,
+        brand_primary_color: basePayload.brand_primary_color,
+        brand_secondary_color: basePayload.brand_secondary_color
+      };
+
+      const fallbackPayloadTwo = {
+        name: basePayload.name,
+        display_name: basePayload.display_name,
+        tagline: basePayload.tagline,
+        order_label: basePayload.order_label,
+        logo_url: basePayload.logo_url,
+        hero_image_url: basePayload.hero_image_url,
+        brand_primary_color: basePayload.brand_primary_color,
+        brand_secondary_color: basePayload.brand_secondary_color
+      };
+
       setSaveState("saving");
 
-      const { error } = await supabase
-        .from("vendors")
-        .update(payload)
-        .eq("id", state.vendor.id);
+      try {
+        const savedPayload = await trySavePayloads([
+          basePayload,
+          fallbackPayloadOne,
+          fallbackPayloadTwo
+        ]);
 
-      if (error) {
+        state.vendor = { ...state.vendor, ...savedPayload };
+        setSaveState("saved");
+        showInlineSuccess("Brand updated");
+        applyPreview();
+
+        if (!("brand_text_on_primary" in savedPayload)) {
+          showError("Saved, but one or more new vendor columns may still be waiting on Supabase schema refresh.");
+        } else {
+          showError("");
+        }
+      } catch (error) {
         setSaveState("error", error.message || "Save failed");
         throw error;
       }
-
-      state.vendor = { ...state.vendor, ...payload };
-      setSaveState("saved");
-      showInlineSuccess("Brand updated");
-      applyPreview();
     }
 
     function markDirty() {
@@ -1055,8 +1269,11 @@
     }
 
     function previewOrderPage() {
-      const slug = state.vendor?.default_preview_drop_slug || "friday-drop";
-      const url = `${ORDER_PAGE_PATH}?drop=${encodeURIComponent(slug)}`;
+      if (!state.previewDrop?.slug) {
+        showError("No preview drop found yet. Create a live, scheduled or draft drop in Drop Studio first.");
+        return;
+      }
+      const url = `order.html?drop=${encodeURIComponent(state.previewDrop.slug)}`;
       window.open(url, "_blank");
     }
 
