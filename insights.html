@@ -8,265 +8,1886 @@
   <link rel="stylesheet" href="./assets/hearth.css?v=30" />
   <script src="./assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    .kpi-grid {
-      display:grid;
-      grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
-      gap:12px;
-    }
-    .kpi {
-      padding:14px;
-      border-radius:12px;
-      background:#fff;
-      border:1px solid #eee;
-    }
-    .kpi h3 {
-      font-size:12px;
-      opacity:.6;
-      margin-bottom:6px;
-    }
-    .kpi p {
-      font-size:20px;
-      font-weight:600;
+    :root{
+      --ins-bg:#f7f7f5;
+      --ins-card:#ffffff;
+      --ins-border:#ece7df;
+      --ins-text:#1f2937;
+      --ins-muted:#6b7280;
+      --ins-soft:#faf8f3;
+      --ins-accent:var(--h-accent,#8B6B3F);
+      --ins-accent-2:var(--h-accent-2,#CBB89D);
+      --ins-good:#166534;
+      --ins-good-bg:#ecfdf3;
+      --ins-warn:#92400e;
+      --ins-warn-bg:#fffbeb;
+      --ins-bad:#991b1b;
+      --ins-bad-bg:#fef2f2;
+      --ins-radius:18px;
+      --ins-shadow:0 8px 24px rgba(15,23,42,.05);
     }
 
-    .section {
+    body{
+      background:var(--ins-bg);
+      color:var(--ins-text);
+    }
+
+    .ins-shell{
+      display:grid;
+      gap:18px;
+      padding-bottom:40px;
+    }
+
+    .ins-card{
+      background:var(--ins-card);
+      border:1px solid var(--ins-border);
+      border-radius:var(--ins-radius);
+      box-shadow:var(--ins-shadow);
+    }
+
+    .ins-pad{ padding:18px; }
+    .ins-pad-lg{ padding:22px; }
+
+    .ins-hero{
+      display:grid;
+      grid-template-columns:1.3fr .9fr;
+      gap:16px;
+    }
+
+    .ins-heroMain{
+      background:
+        radial-gradient(circle at top right, rgba(203,184,157,.18), transparent 28%),
+        linear-gradient(180deg,#fff,#fcfbf8);
+    }
+
+    .ins-eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(139,107,63,.08);
+      color:var(--ins-accent);
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.02em;
+      text-transform:uppercase;
+    }
+
+    .ins-hero h1{
+      margin:14px 0 8px;
+      font-size:32px;
+      line-height:1.05;
+      letter-spacing:-.03em;
+    }
+
+    .ins-sub{
+      margin:0;
+      color:var(--ins-muted);
+      font-size:15px;
+      line-height:1.5;
+      max-width:62ch;
+    }
+
+    .ins-heroStats{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
       margin-top:18px;
     }
 
-    .card {
+    .ins-stat{
+      border:1px solid var(--ins-border);
+      border-radius:16px;
+      padding:14px;
       background:#fff;
-      border:1px solid #eee;
-      border-radius:14px;
-      padding:16px;
     }
 
-    canvas {
-      width:100%;
-      height:220px;
+    .ins-statLabel{
+      color:var(--ins-muted);
+      font-size:12px;
+      margin-bottom:6px;
     }
 
-    .two-col {
+    .ins-statValue{
+      font-size:24px;
+      font-weight:800;
+      letter-spacing:-.03em;
+    }
+
+    .ins-statMeta{
+      margin-top:6px;
+      font-size:12px;
+      color:var(--ins-muted);
+    }
+
+    .ins-controls{
+      display:grid;
+      gap:12px;
+    }
+
+    .ins-controlGrid{
       display:grid;
       grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+
+    .ins-label{
+      display:block;
+      margin-bottom:6px;
+      font-size:12px;
+      font-weight:700;
+      color:var(--ins-muted);
+      text-transform:uppercase;
+      letter-spacing:.03em;
+    }
+
+    .ins-input,
+    .ins-select,
+    .ins-button{
+      width:100%;
+      min-height:44px;
+      border-radius:12px;
+      border:1px solid var(--ins-border);
+      background:#fff;
+      padding:0 12px;
+      font:inherit;
+      color:var(--ins-text);
+    }
+
+    .ins-button{
+      cursor:pointer;
+      background:linear-gradient(180deg,#fff,#faf8f4);
+      font-weight:700;
+    }
+
+    .ins-button:hover{
+      border-color:#d9cfbf;
+    }
+
+    .ins-toolbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+
+    .ins-sectionTitle{
+      margin:0;
+      font-size:20px;
+      letter-spacing:-.02em;
+    }
+
+    .ins-sectionSub{
+      margin:4px 0 0;
+      color:var(--ins-muted);
+      font-size:13px;
+    }
+
+    .ins-grid-4{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
       gap:14px;
     }
 
-    .table {
-      width:100%;
-      font-size:13px;
-    }
-    .table th {
-      text-align:left;
-      opacity:.6;
-      padding-bottom:6px;
-    }
-    .table td {
-      padding:6px 0;
+    .ins-grid-3{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px;
     }
 
-    select {
-      padding:8px;
-      border-radius:8px;
-      border:1px solid #ddd;
+    .ins-grid-2{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:14px;
+    }
+
+    .ins-kpi{
+      padding:16px;
+      border-radius:16px;
+      border:1px solid var(--ins-border);
+      background:
+        linear-gradient(180deg,#fff,#fdfcf9);
+    }
+
+    .ins-kpiTop{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:8px;
+    }
+
+    .ins-kpiLabel{
+      font-size:12px;
+      font-weight:700;
+      color:var(--ins-muted);
+      text-transform:uppercase;
+      letter-spacing:.03em;
+    }
+
+    .ins-pill{
+      display:inline-flex;
+      align-items:center;
+      border-radius:999px;
+      padding:4px 8px;
+      font-size:11px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+
+    .ins-pill.good{ background:var(--ins-good-bg); color:var(--ins-good); }
+    .ins-pill.warn{ background:var(--ins-warn-bg); color:var(--ins-warn); }
+    .ins-pill.bad{ background:var(--ins-bad-bg); color:var(--ins-bad); }
+    .ins-pill.neutral{ background:#f3f4f6; color:#374151; }
+
+    .ins-kpiValue{
+      margin-top:10px;
+      font-size:30px;
+      font-weight:800;
+      letter-spacing:-.04em;
+    }
+
+    .ins-kpiMeta{
+      margin-top:8px;
+      color:var(--ins-muted);
+      font-size:13px;
+      line-height:1.45;
+    }
+
+    .ins-chartCard{
+      padding:18px;
+      border:1px solid var(--ins-border);
+      border-radius:16px;
+      background:#fff;
+    }
+
+    .ins-chartWrap{
+      position:relative;
+      height:280px;
+      margin-top:12px;
+    }
+
+    .ins-miniChartWrap{
+      position:relative;
+      height:210px;
+      margin-top:12px;
+    }
+
+    .ins-story{
+      display:grid;
+      gap:12px;
+    }
+
+    .ins-storyCard{
+      border:1px solid var(--ins-border);
+      border-radius:16px;
+      padding:15px;
+      background:linear-gradient(180deg,#fff,#fcfbf8);
+    }
+
+    .ins-storyLabel{
+      font-size:12px;
+      color:var(--ins-muted);
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.03em;
+      margin-bottom:8px;
+    }
+
+    .ins-storyText{
+      margin:0;
+      font-size:15px;
+      line-height:1.5;
+    }
+
+    .ins-signalGrid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:14px;
+    }
+
+    .ins-signal{
+      border:1px solid var(--ins-border);
+      border-radius:16px;
+      padding:16px;
+      background:#fff;
+    }
+
+    .ins-signal h4{
+      margin:0 0 6px;
+      font-size:15px;
+    }
+
+    .ins-signal strong{
+      display:block;
+      font-size:22px;
+      margin-bottom:8px;
+      letter-spacing:-.03em;
+    }
+
+    .ins-signal p{
+      margin:0;
+      color:var(--ins-muted);
+      font-size:13px;
+      line-height:1.5;
+    }
+
+    .ins-deepHeader{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:14px;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+
+    .ins-deepMeta{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      color:var(--ins-muted);
+      font-size:13px;
+    }
+
+    .ins-deepGrid{
+      display:grid;
+      grid-template-columns:1.1fr .9fr;
+      gap:14px;
+    }
+
+    .ins-list{
+      display:grid;
+      gap:10px;
+    }
+
+    .ins-listItem{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      border:1px solid var(--ins-border);
+      border-radius:14px;
+      padding:12px 14px;
+      background:#fff;
+    }
+
+    .ins-listItem h5{
+      margin:0 0 4px;
+      font-size:14px;
+    }
+
+    .ins-listItem p{
+      margin:0;
+      font-size:12px;
+      color:var(--ins-muted);
+    }
+
+    .ins-listItem strong{
+      font-size:16px;
+      white-space:nowrap;
+    }
+
+    .ins-tableWrap{
+      overflow:auto;
+      border:1px solid var(--ins-border);
+      border-radius:16px;
+      background:#fff;
+    }
+
+    table.ins-table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:760px;
+    }
+
+    .ins-table th,
+    .ins-table td{
+      text-align:left;
+      padding:12px 14px;
+      border-bottom:1px solid #f1ece4;
+      font-size:13px;
+      vertical-align:top;
+    }
+
+    .ins-table th{
+      color:var(--ins-muted);
+      font-size:12px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.03em;
+      background:#fcfbf8;
+    }
+
+    .ins-table tr:last-child td{
+      border-bottom:none;
+    }
+
+    .ins-callouts{
+      display:grid;
+      gap:12px;
+    }
+
+    .ins-action{
+      border:1px solid var(--ins-border);
+      border-radius:16px;
+      padding:16px;
+      background:linear-gradient(180deg,#fff,#fbfaf7);
+    }
+
+    .ins-actionTop{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-bottom:8px;
+    }
+
+    .ins-action h4{
+      margin:0;
+      font-size:15px;
+    }
+
+    .ins-action p{
+      margin:0;
+      color:var(--ins-muted);
+      line-height:1.55;
+      font-size:14px;
+    }
+
+    .ins-empty{
+      border:1px dashed #d8d1c6;
+      border-radius:16px;
+      padding:22px;
+      background:#fcfbf8;
+      color:var(--ins-muted);
+      text-align:center;
+      font-size:14px;
+      line-height:1.5;
+    }
+
+    .ins-loading{
+      color:var(--ins-muted);
+      font-size:14px;
+    }
+
+    .ins-muted{
+      color:var(--ins-muted);
+    }
+
+    .ins-note{
+      font-size:12px;
+      color:var(--ins-muted);
+    }
+
+    @media (max-width: 1100px){
+      .ins-hero,
+      .ins-deepGrid,
+      .ins-grid-4,
+      .ins-grid-3,
+      .ins-grid-2,
+      .ins-signalGrid{
+        grid-template-columns:1fr;
+      }
+      .ins-controlGrid{
+        grid-template-columns:1fr;
+      }
+      .ins-heroStats{
+        grid-template-columns:1fr 1fr;
+      }
+    }
+
+    @media (max-width: 720px){
+      .ins-hero h1{ font-size:26px; }
+      .ins-heroStats{ grid-template-columns:1fr; }
     }
   </style>
 </head>
 
 <body>
-<div class="container">
+  <div class="container">
+    <div class="ins-shell">
 
-  <div class="card headerBar">
-    <div>
-      <strong>Insights</strong>
-      <div style="font-size:12px;opacity:.6">
-        Understand how Hearth is growing your business
-      </div>
+      <!-- HERO -->
+      <section class="ins-hero">
+        <div class="ins-card ins-pad-lg ins-heroMain">
+          <div class="ins-eyebrow">Insights</div>
+          <h1 id="heroTitle">Understand how Hearth is growing your business</h1>
+          <p class="ins-sub" id="heroSubtitle">
+            Revenue, drop rhythm, capacity performance, menu signals, host strength, and practical actions — in one place.
+          </p>
+
+          <div class="ins-heroStats">
+            <div class="ins-stat">
+              <div class="ins-statLabel">Vendor</div>
+              <div class="ins-statValue" id="heroVendor">Loading…</div>
+              <div class="ins-statMeta" id="heroRange">Current reporting range</div>
+            </div>
+            <div class="ins-stat">
+              <div class="ins-statLabel">Selected lens</div>
+              <div class="ins-statValue" id="heroLens">All drops</div>
+              <div class="ins-statMeta" id="heroLensMeta">Across hosts and drop types</div>
+            </div>
+            <div class="ins-stat">
+              <div class="ins-statLabel">Business status</div>
+              <div class="ins-statValue" id="heroStatus">—</div>
+              <div class="ins-statMeta" id="heroStatusMeta">Waiting for data</div>
+            </div>
+            <div class="ins-stat">
+              <div class="ins-statLabel">Signal quality</div>
+              <div class="ins-statValue" id="heroSignal">—</div>
+              <div class="ins-statMeta" id="heroSignalMeta">Order, drop and host signals</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ins-card ins-pad-lg">
+          <div class="ins-toolbar" style="align-items:flex-start;">
+            <div>
+              <h3 class="ins-sectionTitle">Filters</h3>
+              <p class="ins-sectionSub">Adjust the lens for the whole page.</p>
+            </div>
+            <button class="ins-button" id="refreshBtn" type="button">Refresh</button>
+          </div>
+
+          <div class="ins-controls" style="margin-top:14px;">
+            <div>
+              <label class="ins-label" for="rangeSelect">Date range</label>
+              <select class="ins-select" id="rangeSelect">
+                <option value="30">Last 30 days</option>
+                <option value="90" selected>Last 90 days</option>
+                <option value="365">Last 12 months</option>
+                <option value="all">All time</option>
+              </select>
+            </div>
+
+            <div class="ins-controlGrid">
+              <div>
+                <label class="ins-label" for="dropTypeFilter">Drop type</label>
+                <select class="ins-select" id="dropTypeFilter">
+                  <option value="all">All drop types</option>
+                </select>
+              </div>
+              <div>
+                <label class="ins-label" for="hostFilter">Host</label>
+                <select class="ins-select" id="hostFilter">
+                  <option value="all">All hosts</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="ins-label" for="dropSelect">Drop deep dive</label>
+              <select class="ins-select" id="dropSelect">
+                <option value="">Select a drop</option>
+              </select>
+            </div>
+
+            <div class="ins-note">
+              This page uses Hearth views plus live order timing from orders for the demand curve.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 1 -->
+      <section class="ins-card ins-pad-lg">
+        <div class="ins-toolbar">
+          <div>
+            <h2 class="ins-sectionTitle">1. Your Hearth Business</h2>
+            <p class="ins-sectionSub">High-level performance across the selected reporting lens.</p>
+          </div>
+        </div>
+        <div class="ins-grid-4" id="overviewGrid">
+          <div class="ins-loading">Loading overview…</div>
+        </div>
+      </section>
+
+      <!-- SECTION 2 -->
+      <section class="ins-card ins-pad-lg">
+        <div class="ins-toolbar">
+          <div>
+            <h2 class="ins-sectionTitle">2. Momentum</h2>
+            <p class="ins-sectionSub">Revenue, cadence and capacity behaviour over time.</p>
+          </div>
+        </div>
+
+        <div class="ins-grid-2" style="margin-top:14px;">
+          <div class="ins-chartCard">
+            <div class="ins-toolbar">
+              <div>
+                <strong>Revenue over time</strong>
+                <div class="ins-note">Revenue generated via Hearth</div>
+              </div>
+            </div>
+            <div class="ins-chartWrap">
+              <canvas id="revenueChart"></canvas>
+            </div>
+          </div>
+
+          <div class="ins-story">
+            <div class="ins-storyCard">
+              <div class="ins-storyLabel">Story</div>
+              <p class="ins-storyText" id="momentumStory">Loading momentum narrative…</p>
+            </div>
+            <div class="ins-storyCard">
+              <div class="ins-storyLabel">Drop rhythm</div>
+              <p class="ins-storyText" id="rhythmStory">Loading cadence signals…</p>
+            </div>
+            <div class="ins-storyCard">
+              <div class="ins-storyLabel">Capacity signal</div>
+              <p class="ins-storyText" id="capacityStory">Loading capacity signals…</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="ins-grid-2" style="margin-top:14px;">
+          <div class="ins-chartCard">
+            <strong>Drops over time</strong>
+            <div class="ins-note">Count of drops by delivery date</div>
+            <div class="ins-miniChartWrap">
+              <canvas id="dropsChart"></canvas>
+            </div>
+          </div>
+
+          <div class="ins-chartCard">
+            <strong>Capacity utilisation by drop</strong>
+            <div class="ins-note">How strongly declared capacity is being used</div>
+            <div class="ins-miniChartWrap">
+              <canvas id="capacityChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 3 -->
+      <section class="ins-card ins-pad-lg">
+        <div class="ins-toolbar">
+          <div>
+            <h2 class="ins-sectionTitle">3. What’s Working / Needs Attention</h2>
+            <p class="ins-sectionSub">Signals that help the vendor focus quickly.</p>
+          </div>
+        </div>
+        <div class="ins-signalGrid" id="signalsGrid" style="margin-top:14px;">
+          <div class="ins-loading">Loading signals…</div>
+        </div>
+      </section>
+
+      <!-- SECTION 4 -->
+      <section class="ins-card ins-pad-lg">
+        <div class="ins-deepHeader">
+          <div>
+            <h2 class="ins-sectionTitle">4. Drop Deep Dive</h2>
+            <p class="ins-sectionSub">Selected drop performance, economics and order timing.</p>
+          </div>
+          <div class="ins-deepMeta" id="deepDiveMeta"></div>
+        </div>
+
+        <div class="ins-grid-4" id="deepDiveKpis">
+          <div class="ins-loading">Choose a drop to inspect.</div>
+        </div>
+
+        <div class="ins-deepGrid" style="margin-top:14px;">
+          <div class="ins-chartCard">
+            <strong>Demand curve</strong>
+            <div class="ins-note">Orders arriving over time before the selected drop</div>
+            <div class="ins-chartWrap">
+              <canvas id="demandCurveChart"></canvas>
+            </div>
+          </div>
+
+          <div class="ins-chartCard">
+            <strong>Selected drop notes</strong>
+            <div class="ins-callouts" id="deepDiveNotes" style="margin-top:12px;">
+              <div class="ins-loading">Waiting for drop selection…</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 5 -->
+      <section class="ins-card ins-pad-lg">
+        <div class="ins-toolbar">
+          <div>
+            <h2 class="ins-sectionTitle">5. Menu Intelligence</h2>
+            <p class="ins-sectionSub">What is driving revenue, volume and efficient use of capacity.</p>
+          </div>
+        </div>
+
+        <div class="ins-grid-2" style="margin-top:14px;">
+          <div class="ins-chartCard">
+            <strong>Revenue mix by category</strong>
+            <div class="ins-note">Based on sales in the selected reporting lens</div>
+            <div class="ins-miniChartWrap">
+              <canvas id="categoryMixChart"></canvas>
+            </div>
+          </div>
+
+          <div class="ins-chartCard">
+            <strong>Menu signals</strong>
+            <div class="ins-callouts" id="menuSignals">
+              <div class="ins-loading">Loading menu signals…</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ins-grid-2" style="margin-top:14px;">
+          <div class="ins-tableWrap">
+            <table class="ins-table" id="topItemsTable">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Category</th>
+                  <th>Units</th>
+                  <th>Revenue</th>
+                  <th>Revenue / Capacity Unit</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="5" class="ins-muted">Loading items…</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="ins-tableWrap">
+            <table class="ins-table" id="categoryTable">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Units</th>
+                  <th>Revenue</th>
+                  <th>Mix</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="4" class="ins-muted">Loading categories…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 6 -->
+      <section class="ins-card ins-pad-lg">
+        <div class="ins-toolbar">
+          <div>
+            <h2 class="ins-sectionTitle">6. Hosts & Context</h2>
+            <p class="ins-sectionSub">Which hosts and contexts look strongest.</p>
+          </div>
+        </div>
+
+        <div class="ins-grid-2" style="margin-top:14px;">
+          <div class="ins-chartCard">
+            <strong>Revenue by host</strong>
+            <div class="ins-note">Comparative host performance</div>
+            <div class="ins-miniChartWrap">
+              <canvas id="hostChart"></canvas>
+            </div>
+          </div>
+
+          <div class="ins-callouts" id="hostSignals">
+            <div class="ins-loading">Loading host signals…</div>
+          </div>
+        </div>
+
+        <div class="ins-tableWrap" style="margin-top:14px;">
+          <table class="ins-table" id="hostsTable">
+            <thead>
+              <tr>
+                <th>Host</th>
+                <th>Drops</th>
+                <th>Orders</th>
+                <th>Revenue</th>
+                <th>Avg / Drop</th>
+                <th>Avg Capacity</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="6" class="ins-muted">Loading hosts…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECTION 7 -->
+      <section class="ins-card ins-pad-lg">
+        <div class="ins-toolbar">
+          <div>
+            <h2 class="ins-sectionTitle">7. Recommended Actions</h2>
+            <p class="ins-sectionSub">Simple, practical next steps based on current signals.</p>
+          </div>
+        </div>
+        <div class="ins-grid-3" id="actionsGrid" style="margin-top:14px;">
+          <div class="ins-loading">Loading recommendations…</div>
+        </div>
+      </section>
+
     </div>
   </div>
 
-  <!-- KPI -->
-  <div class="section kpi-grid" id="kpis"></div>
+  <script>
+    const sb = window.supabase.createClient(
+      window.HEARTH_SUPABASE_URL,
+      window.HEARTH_SUPABASE_KEY
+    );
 
-  <!-- Trend -->
-  <div class="section card">
-    <h3>Revenue Trend</h3>
-    <canvas id="revenueChart"></canvas>
-  </div>
+    const state = {
+      vendor: null,
+      vendorId: null,
+      allDrops: [],
+      allRevenue: [],
+      allItems: [],
+      allHosts: [],
+      allOrders: [],
+      hostMap: new Map(),
+      charts: {},
+      filtered: {
+        drops: [],
+        revenue: [],
+        items: [],
+        hosts: [],
+        orders: []
+      }
+    };
 
-  <!-- Drop -->
-  <div class="section card">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <h3>Drop Performance</h3>
-      <select id="dropSelect"></select>
-    </div>
+    const els = {
+      rangeSelect: document.getElementById('rangeSelect'),
+      dropTypeFilter: document.getElementById('dropTypeFilter'),
+      hostFilter: document.getElementById('hostFilter'),
+      dropSelect: document.getElementById('dropSelect'),
+      refreshBtn: document.getElementById('refreshBtn')
+    };
 
-    <div class="kpi-grid" id="dropKpis" style="margin-top:12px;"></div>
-  </div>
+    const fmtGBP = (pence) => {
+      const n = Number(pence || 0) / 100;
+      return new Intl.NumberFormat('en-GB', {
+        style: 'currency',
+        currency: 'GBP',
+        maximumFractionDigits: n % 1 === 0 ? 0 : 2
+      }).format(n);
+    };
 
-  <!-- Items + Hosts -->
-  <div class="section two-col">
-    <div class="card">
-      <h3>Top Items</h3>
-      <table class="table" id="itemsTable"></table>
-    </div>
+    const fmtNum = (n) => new Intl.NumberFormat('en-GB').format(Number(n || 0));
+    const fmtPct = (n) => (n == null || Number.isNaN(Number(n))) ? '—' : `${Number(n).toFixed(1)}%`;
+    const fmtDate = (v) => {
+      if (!v) return '—';
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+    };
+    const fmtShortDate = (v) => {
+      if (!v) return '—';
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+    };
+    const daysBetween = (a,b) => Math.round((+new Date(a) - +new Date(b)) / 86400000);
+    const safe = (v, fallback='—') => (v == null || v === '') ? fallback : v;
+    const sum = (arr, fn) => arr.reduce((acc, x) => acc + Number(fn ? fn(x) : x || 0), 0);
+    const avg = (arr, fn) => arr.length ? sum(arr, fn) / arr.length : 0;
 
-    <div class="card">
-      <h3>Hosts</h3>
-      <table class="table" id="hostsTable"></table>
-    </div>
-  </div>
-
-</div>
-
-<script>
-const supabase = window.supabase.createClient(
-  window.HEARTH_SUPABASE_URL,
-  window.HEARTH_SUPABASE_KEY
-);
-
-let vendorId = null;
-let drops = [];
-
-async function init() {
-
-  // ⚠️ TEMP: pick first vendor
-  const { data: vendors } = await supabase.from('vendors').select('*').limit(1);
-  vendorId = vendors[0].id;
-
-  loadSummary();
-  loadTrend();
-  loadDrops();
-  loadItems();
-  loadHosts();
-}
-
-async function loadSummary() {
-  const { data } = await supabase
-    .from('v_hearth_summary')
-    .select('*')
-    .eq('vendor_id', vendorId)
-    .single();
-
-  const kpis = [
-    ['Revenue (30d)', formatMoney(data.total_revenue_30d_pence)],
-    ['Drops', data.drops_30d],
-    ['Avg / Drop', formatMoney(data.avg_revenue_per_drop_pence)],
-    ['Capacity Used', data.avg_capacity_utilisation_pct + '%']
-  ];
-
-  document.getElementById('kpis').innerHTML = kpis.map(k => `
-    <div class="kpi">
-      <h3>${k[0]}</h3>
-      <p>${k[1]}</p>
-    </div>
-  `).join('');
-}
-
-async function loadTrend() {
-  const { data } = await supabase
-    .from('v_hearth_revenue_over_time')
-    .select('*')
-    .eq('vendor_id', vendorId)
-    .order('order_date', { ascending: true });
-
-  const ctx = document.getElementById('revenueChart').getContext('2d');
-
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: data.map(d => d.order_date),
-      datasets: [{
-        label: 'Revenue',
-        data: data.map(d => d.revenue_pence / 100)
-      }]
+    function startDateFromRange(range){
+      if (range === 'all') return null;
+      const d = new Date();
+      d.setHours(0,0,0,0);
+      d.setDate(d.getDate() - Number(range));
+      return d;
     }
-  });
-}
 
-async function loadDrops() {
-  const { data } = await supabase
-    .from('v_hearth_drop_stats')
-    .select('*')
-    .eq('vendor_id', vendorId)
-    .order('delivery_start', { ascending:false });
+    function getUrlParam(name){
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name);
+    }
 
-  drops = data;
+    async function resolveVendor(){
+      const explicitVendorId = getUrlParam('vendor_id') || window.HEARTH_VENDOR_ID || null;
+      const explicitSlug = getUrlParam('vendor') || getUrlParam('vendor_slug') || null;
 
-  const select = document.getElementById('dropSelect');
-  select.innerHTML = data.map(d => `
-    <option value="${d.drop_id}">${d.drop_name}</option>
-  `).join('');
+      if (explicitVendorId) {
+        const { data, error } = await sb.from('vendors').select('*').eq('id', explicitVendorId).maybeSingle();
+        if (!error && data) return data;
+      }
 
-  select.onchange = () => renderDrop(select.value);
+      if (explicitSlug) {
+        const slugFields = ['slug', 'vendor_slug'];
+        for (const field of slugFields) {
+          try {
+            const { data, error } = await sb.from('vendors').select('*').eq(field, explicitSlug).maybeSingle();
+            if (!error && data) return data;
+          } catch (e) {}
+        }
+      }
 
-  renderDrop(data[0].drop_id);
-}
+      const { data, error } = await sb.from('vendors').select('*').limit(1);
+      if (error) throw error;
+      return data?.[0] || null;
+    }
 
-function renderDrop(id) {
-  const d = drops.find(x => x.drop_id === id);
+    async function fetchAllPages(baseQuery, key='id'){
+      let rows = [];
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await baseQuery.range(from, from + pageSize - 1);
+        if (error) throw error;
+        rows = rows.concat(data || []);
+        if (!data || data.length < pageSize) break;
+        from += pageSize;
+      }
+      return rows;
+    }
 
-  const kpis = [
-    ['Revenue', formatMoney(d.revenue_pence)],
-    ['Orders', d.orders_count],
-    ['Capacity', d.capacity_utilisation_pct + '%'],
-    ['AOV', formatMoney(d.avg_order_value_pence)]
-  ];
+    async function loadData(){
+      state.vendor = await resolveVendor();
+      if (!state.vendor) throw new Error('No vendor found');
+      state.vendorId = state.vendor.id;
 
-  document.getElementById('dropKpis').innerHTML = kpis.map(k => `
-    <div class="kpi">
-      <h3>${k[0]}</h3>
-      <p>${k[1]}</p>
-    </div>
-  `).join('');
-}
+      document.getElementById('heroVendor').textContent =
+        state.vendor.display_name || state.vendor.name || 'Vendor';
 
-async function loadItems() {
-  const { data } = await supabase
-    .from('v_item_sales')
-    .select('*')
-    .eq('vendor_id', vendorId)
-    .order('revenue_pence', { ascending:false })
-    .limit(5);
+      const vendorId = state.vendorId;
 
-  document.getElementById('itemsTable').innerHTML = `
-    <tr><th>Item</th><th>Revenue</th></tr>
-    ${data.map(i => `
-      <tr>
-        <td>${i.product_name}</td>
-        <td>${formatMoney(i.revenue_pence)}</td>
-      </tr>
-    `).join('')}
-  `;
-}
+      const [drops, revenue, items, hosts] = await Promise.all([
+        fetchAllPages(sb.from('v_hearth_drop_stats').select('*').eq('vendor_id', vendorId).order('delivery_start', { ascending:false })),
+        fetchAllPages(sb.from('v_hearth_revenue_over_time').select('*').eq('vendor_id', vendorId).order('order_date', { ascending:true })),
+        fetchAllPages(sb.from('v_item_sales').select('*').eq('vendor_id', vendorId)),
+        fetchAllPages(sb.from('v_host_performance').select('*').eq('vendor_id', vendorId))
+      ]);
 
-async function loadHosts() {
-  const { data } = await supabase
-    .from('v_host_performance')
-    .select('*')
-    .eq('vendor_id', vendorId)
-    .order('revenue_pence', { ascending:false });
+      state.allDrops = drops || [];
+      state.allRevenue = revenue || [];
+      state.allItems = items || [];
+      state.allHosts = hosts || [];
 
-  document.getElementById('hostsTable').innerHTML = `
-    <tr><th>Host</th><th>Revenue</th></tr>
-    ${data.map(h => `
-      <tr>
-        <td>${h.host_name || '—'}</td>
-        <td>${formatMoney(h.revenue_pence)}</td>
-      </tr>
-    `).join('')}
-  `;
-}
+      state.hostMap = new Map((state.allHosts || []).map(h => [h.host_id || '__none__', h.host_name || 'Direct / no host']));
 
-function formatMoney(p) {
-  return '£' + (p / 100).toFixed(2);
-}
+      const dropIds = state.allDrops.map(d => d.drop_id).filter(Boolean);
+      state.allOrders = dropIds.length
+        ? await fetchAllPages(
+            sb.from('orders')
+              .select('id, drop_id, created_at')
+              .in('drop_id', dropIds)
+              .order('created_at', { ascending:true })
+          )
+        : [];
+    }
 
-init();
-</script>
+    function populateFilters(){
+      const dropTypes = [...new Set(state.allDrops.map(d => d.drop_type).filter(Boolean))].sort();
+      const hosts = [...new Set(state.allDrops.map(d => JSON.stringify({
+        id: d.host_id || '__none__',
+        name: state.hostMap.get(d.host_id || '__none__') || 'Direct / no host'
+      })))].map(x => JSON.parse(x)).sort((a,b) => a.name.localeCompare(b.name));
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+      document.getElementById('dropTypeFilter').innerHTML =
+        `<option value="all">All drop types</option>` +
+        dropTypes.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(titleCase(t))}</option>`).join('');
 
+      document.getElementById('hostFilter').innerHTML =
+        `<option value="all">All hosts</option>` +
+        hosts.map(h => `<option value="${escapeHtml(h.id)}">${escapeHtml(h.name)}</option>`).join('');
+    }
+
+    function applyFilters(){
+      const range = els.rangeSelect.value;
+      const dropType = els.dropTypeFilter.value;
+      const host = els.hostFilter.value;
+      const start = startDateFromRange(range);
+
+      document.getElementById('heroRange').textContent =
+        range === 'all' ? 'All available history' : `${range === '365' ? 'Last 12 months' : `Last ${range} days`}`;
+
+      document.getElementById('heroLens').textContent =
+        dropType === 'all' ? 'All drops' : titleCase(dropType);
+
+      document.getElementById('heroLensMeta').textContent =
+        host === 'all'
+          ? 'Across hosts and drop types'
+          : `Filtered to ${state.hostMap.get(host) || 'selected host'}`;
+
+      state.filtered.drops = state.allDrops.filter(d => {
+        const ds = d.delivery_start ? new Date(d.delivery_start) : null;
+        if (start && (!ds || ds < start)) return false;
+        if (dropType !== 'all' && (d.drop_type || '') !== dropType) return false;
+        if (host !== 'all' && (d.host_id || '__none__') !== host) return false;
+        return true;
+      });
+
+      const filteredDropIds = new Set(state.filtered.drops.map(d => d.drop_id));
+
+      state.filtered.items = state.allItems.filter(i => filteredDropIds.has(i.drop_id));
+      state.filtered.orders = state.allOrders.filter(o => filteredDropIds.has(o.drop_id));
+
+      state.filtered.revenue = state.allRevenue.filter(r => {
+        const od = r.order_date ? new Date(r.order_date) : null;
+        if (start && (!od || od < start)) return false;
+        return true;
+      });
+
+      state.filtered.hosts = buildFilteredHosts(state.filtered.drops);
+
+      populateDropSelector();
+      renderAll();
+    }
+
+    function buildFilteredHosts(filteredDrops){
+      const byHost = new Map();
+      const statsByDrop = new Map(filteredDrops.map(d => [d.drop_id, d]));
+
+      for (const drop of filteredDrops) {
+        const key = drop.host_id || '__none__';
+        const hostName = state.hostMap.get(key) || 'Direct / no host';
+        if (!byHost.has(key)) {
+          byHost.set(key, {
+            host_id: key === '__none__' ? null : key,
+            host_name: hostName,
+            drops_run: 0,
+            orders_count: 0,
+            revenue_pence: 0,
+            avg_capacity_utilisation_pct: 0,
+            avg_revenue_per_drop_pence: 0
+          });
+        }
+        const row = byHost.get(key);
+        row.drops_run += 1;
+        row.orders_count += Number(drop.orders_count || 0);
+        row.revenue_pence += Number(drop.revenue_pence || 0);
+        row.avg_capacity_utilisation_pct += Number(drop.capacity_utilisation_pct || 0);
+      }
+
+      const rows = [...byHost.values()].map(r => ({
+        ...r,
+        avg_capacity_utilisation_pct: r.drops_run ? r.avg_capacity_utilisation_pct / r.drops_run : 0,
+        avg_revenue_per_drop_pence: r.drops_run ? r.revenue_pence / r.drops_run : 0
+      }));
+
+      return rows.sort((a,b) => b.revenue_pence - a.revenue_pence);
+    }
+
+    function populateDropSelector(){
+      const current = els.dropSelect.value;
+      const options = state.filtered.drops
+        .slice()
+        .sort((a,b) => new Date(b.delivery_start || 0) - new Date(a.delivery_start || 0))
+        .map(d => `<option value="${d.drop_id}">${escapeHtml(d.drop_name || 'Untitled drop')} · ${fmtDate(d.delivery_start)}</option>`)
+        .join('');
+
+      els.dropSelect.innerHTML = options || `<option value="">No drops in this filter</option>`;
+
+      if (options) {
+        const keep = state.filtered.drops.find(d => d.drop_id === current);
+        els.dropSelect.value = keep ? current : state.filtered.drops[0].drop_id;
+      }
+    }
+
+    function renderAll(){
+      renderHeroSummary();
+      renderOverview();
+      renderMomentum();
+      renderSignals();
+      renderDeepDive();
+      renderMenuIntelligence();
+      renderHostsContext();
+      renderActions();
+    }
+
+    function renderHeroSummary(){
+      const drops = state.filtered.drops;
+      const revenue = sum(drops, d => d.revenue_pence);
+      const avgCap = avg(drops.filter(d => d.capacity_utilisation_pct != null), d => d.capacity_utilisation_pct);
+      const count = drops.length;
+
+      let status = 'Getting started';
+      let statusMeta = 'Not enough data yet to infer a clear pattern';
+      if (count >= 8 && revenue > 0) {
+        status = 'Building momentum';
+        statusMeta = 'Enough signal to start seeing repeatable patterns';
+      }
+      if (count >= 14 && avgCap >= 70) {
+        status = 'Strong operating rhythm';
+        statusMeta = 'Frequent drops with healthy capacity usage';
+      }
+
+      document.getElementById('heroStatus').textContent = status;
+      document.getElementById('heroStatusMeta').textContent = statusMeta;
+
+      document.getElementById('heroSignal').textContent =
+        `${count} drop${count === 1 ? '' : 's'}`;
+      document.getElementById('heroSignalMeta').textContent =
+        `${fmtGBP(revenue)} via Hearth in selected range`;
+    }
+
+    function renderOverview(){
+      const container = document.getElementById('overviewGrid');
+      const drops = state.filtered.drops;
+      if (!drops.length) {
+        container.innerHTML = `<div class="ins-empty">No drops match the current filters yet.</div>`;
+        return;
+      }
+
+      const totalRevenue = sum(drops, d => d.revenue_pence);
+      const totalDrops = drops.length;
+      const avgRevenuePerDrop = totalDrops ? totalRevenue / totalDrops : 0;
+      const avgCapacity = avg(drops.filter(d => d.capacity_utilisation_pct != null), d => d.capacity_utilisation_pct);
+      const revenuePerCapacity = (() => {
+        const rev = sum(drops, d => d.revenue_pence);
+        const cap = sum(drops, d => d.capacity_units_used || 0);
+        return cap > 0 ? rev / cap : null;
+      })();
+
+      const previous = getPreviousPeriodComparison();
+      const deltaRevenue = pctDelta(totalRevenue, previous.revenue);
+      const deltaDrops = pctDelta(totalDrops, previous.drops);
+      const deltaAvgRev = pctDelta(avgRevenuePerDrop, previous.avgRevenuePerDrop);
+      const deltaCap = pctDelta(avgCapacity, previous.avgCapacity);
+
+      container.innerHTML = [
+        makeKpiCard('Revenue via Hearth', fmtGBP(totalRevenue), deltaPill(deltaRevenue), `${fmtNum(totalDrops)} drop${totalDrops === 1 ? '' : 's'} in range`),
+        makeKpiCard('Drops run', fmtNum(totalDrops), deltaPill(deltaDrops), `Average ${gapNarrative(drops)}`),
+        makeKpiCard('Average revenue / drop', fmtGBP(avgRevenuePerDrop), deltaPill(deltaAvgRev), strongestDropText(drops)),
+        makeKpiCard('Average capacity used', fmtPct(avgCapacity), deltaPill(deltaCap), capacityNarrative(drops)),
+        makeKpiCard('Revenue / capacity unit', revenuePerCapacity == null ? '—' : fmtGBP(revenuePerCapacity), pill('neutral','Efficiency'), `Useful where a vendor declares a real bottleneck`),
+        makeKpiCard('Orders', fmtNum(sum(drops, d => d.orders_count || 0)), pill('neutral','Volume'), `${fmtNum(sum(drops, d => d.units_sold || 0))} item units sold`),
+        makeKpiCard('Average order value', fmtGBP(avg(drops.filter(d => d.avg_order_value_pence != null), d => d.avg_order_value_pence)), pill('neutral','Basket'), aovNarrative(drops)),
+        makeKpiCard('Best host', bestHostLabel(), pill('neutral','Context'), bestHostNarrative())
+      ].join('');
+    }
+
+    function renderMomentum(){
+      const drops = state.filtered.drops.slice().sort((a,b) => new Date(a.delivery_start || 0) - new Date(b.delivery_start || 0));
+      const revenueSeries = aggregateRevenueSeries();
+      const dropSeries = aggregateDropSeries(drops);
+      const capacitySeries = drops.map(d => ({
+        label: shortDropLabel(d),
+        value: Number(d.capacity_utilisation_pct || 0)
+      }));
+
+      renderLineChart(
+        'revenueChart',
+        revenueSeries.labels,
+        revenueSeries.values,
+        'Revenue',
+        value => `£${Number(value).toFixed(0)}`
+      );
+
+      renderBarChart(
+        'dropsChart',
+        dropSeries.labels,
+        dropSeries.values,
+        'Drops'
+      );
+
+      renderBarChart(
+        'capacityChart',
+        capacitySeries.map(x => x.label),
+        capacitySeries.map(x => x.value),
+        'Capacity %'
+      );
+
+      document.getElementById('momentumStory').textContent = buildMomentumStory(drops, revenueSeries.values);
+      document.getElementById('rhythmStory').textContent = buildRhythmStory(drops);
+      document.getElementById('capacityStory').textContent = buildCapacityStory(drops);
+    }
+
+    function renderSignals(){
+      const container = document.getElementById('signalsGrid');
+      const drops = state.filtered.drops;
+      if (!drops.length) {
+        container.innerHTML = `<div class="ins-empty">No signals yet because there are no drops in the current filter.</div>`;
+        return;
+      }
+
+      const bestDrop = drops.slice().sort((a,b) => Number(b.revenue_pence || 0) - Number(a.revenue_pence || 0))[0];
+      const weakestDrop = drops.slice().sort((a,b) => Number(a.capacity_utilisation_pct || 0) - Number(b.capacity_utilisation_pct || 0))[0];
+      const bestItem = state.filtered.items.slice().sort((a,b) => Number(b.revenue_pence || 0) - Number(a.revenue_pence || 0))[0];
+      const bestHost = state.filtered.hosts[0];
+
+      container.innerHTML = [
+        signalCard(
+          'Strongest drop',
+          bestDrop ? fmtGBP(bestDrop.revenue_pence) : '—',
+          bestDrop ? `${safe(bestDrop.drop_name)} generated the highest revenue in this view.` : 'No drop data yet.'
+        ),
+        signalCard(
+          'Needs attention',
+          weakestDrop ? fmtPct(weakestDrop.capacity_utilisation_pct) : '—',
+          weakestDrop ? `${safe(weakestDrop.drop_name)} looks least filled against declared capacity.` : 'No capacity data yet.'
+        ),
+        signalCard(
+          'Top menu driver',
+          bestItem ? safe(bestItem.product_name) : '—',
+          bestItem ? `${fmtGBP(bestItem.revenue_pence)} revenue across ${fmtNum(bestItem.units_sold)} units.` : 'No item sales yet.'
+        ),
+        signalCard(
+          'Best context',
+          bestHost ? safe(bestHost.host_name) : '—',
+          bestHost ? `${fmtGBP(bestHost.avg_revenue_per_drop_pence)} average revenue per drop.` : 'No host signal yet.'
+        )
+      ].join('');
+    }
+
+    function renderDeepDive(){
+      const dropId = els.dropSelect.value;
+      const drop = state.filtered.drops.find(d => d.drop_id === dropId);
+
+      const meta = document.getElementById('deepDiveMeta');
+      const kpis = document.getElementById('deepDiveKpis');
+      const notes = document.getElementById('deepDiveNotes');
+
+      if (!drop) {
+        meta.innerHTML = '';
+        kpis.innerHTML = `<div class="ins-empty">No drop selected.</div>`;
+        notes.innerHTML = `<div class="ins-empty">Choose a drop to see detailed notes.</div>`;
+        renderLineChart('demandCurveChart', [], [], 'Orders');
+        return;
+      }
+
+      const hostName = state.hostMap.get(drop.host_id || '__none__') || 'Direct / no host';
+      meta.innerHTML = `
+        <span>${fmtDate(drop.delivery_start)}</span>
+        <span>•</span>
+        <span>${escapeHtml(titleCase(drop.drop_type || 'drop'))}</span>
+        <span>•</span>
+        <span>${escapeHtml(hostName)}</span>
+      `;
+
+      kpis.innerHTML = [
+        makeKpiCard('Revenue', fmtGBP(drop.revenue_pence), pill('neutral','Selected drop'), `${fmtNum(drop.orders_count || 0)} orders`),
+        makeKpiCard('Capacity used', fmtPct(drop.capacity_utilisation_pct), utilisationPill(drop.capacity_utilisation_pct), `${fmtNum(drop.capacity_units_used || 0)} units against ${fmtNum(drop.capacity_units_total || 0)} declared`),
+        makeKpiCard('Average order value', drop.avg_order_value_pence == null ? '—' : fmtGBP(drop.avg_order_value_pence), pill('neutral','Basket'), basketComment(drop)),
+        makeKpiCard('Revenue / capacity unit', drop.revenue_per_capacity_unit_pence == null ? '—' : fmtGBP(drop.revenue_per_capacity_unit_pence), pill('neutral','Efficiency'), 'Commercial return against operational load')
+      ].join('');
+
+      notes.innerHTML = buildDropNotes(drop);
+
+      const demand = buildDemandCurve(drop.drop_id);
+      renderLineChart(
+        'demandCurveChart',
+        demand.labels,
+        demand.values,
+        'Orders',
+        value => fmtNum(value)
+      );
+    }
+
+    function renderMenuIntelligence(){
+      const items = state.filtered.items.slice().sort((a,b) => Number(b.revenue_pence || 0) - Number(a.revenue_pence || 0));
+      const topItemsBody = document.querySelector('#topItemsTable tbody');
+      const categoryBody = document.querySelector('#categoryTable tbody');
+      const menuSignals = document.getElementById('menuSignals');
+
+      if (!items.length) {
+        topItemsBody.innerHTML = `<tr><td colspan="5" class="ins-muted">No item sales yet for this filter.</td></tr>`;
+        categoryBody.innerHTML = `<tr><td colspan="4" class="ins-muted">No category data yet.</td></tr>`;
+        menuSignals.innerHTML = `<div class="ins-empty">Menu insights appear once item sales exist.</div>`;
+        renderDoughnutChart('categoryMixChart', [], [], 'Revenue mix');
+        return;
+      }
+
+      const topTen = items.slice(0, 10);
+      topItemsBody.innerHTML = topTen.map(i => `
+        <tr>
+          <td>${escapeHtml(safe(i.product_name))}</td>
+          <td>${escapeHtml(safe(i.product_category, 'Uncategorised'))}</td>
+          <td>${fmtNum(i.units_sold)}</td>
+          <td>${fmtGBP(i.revenue_pence)}</td>
+          <td>${i.revenue_per_capacity_unit_pence == null ? '—' : fmtGBP(i.revenue_per_capacity_unit_pence)}</td>
+        </tr>
+      `).join('');
+
+      const categories = aggregateItemsByCategory(items);
+      const totalRevenue = sum(categories, c => c.revenue_pence);
+      categoryBody.innerHTML = categories.map(c => `
+        <tr>
+          <td>${escapeHtml(c.category)}</td>
+          <td>${fmtNum(c.units_sold)}</td>
+          <td>${fmtGBP(c.revenue_pence)}</td>
+          <td>${totalRevenue ? ((c.revenue_pence / totalRevenue) * 100).toFixed(1) + '%' : '—'}</td>
+        </tr>
+      `).join('');
+
+      renderDoughnutChart(
+        'categoryMixChart',
+        categories.map(c => c.category),
+        categories.map(c => +(Number(c.revenue_pence || 0) / 100).toFixed(2)),
+        'Revenue'
+      );
+
+      const bestRevenueItem = items[0];
+      const bestUnitsItem = items.slice().sort((a,b) => Number(b.units_sold || 0) - Number(a.units_sold || 0))[0];
+      const bestEfficiencyItem = items
+        .filter(i => i.revenue_per_capacity_unit_pence != null)
+        .sort((a,b) => Number(b.revenue_per_capacity_unit_pence || 0) - Number(a.revenue_per_capacity_unit_pence || 0))[0];
+
+      menuSignals.innerHTML = [
+        actionCard('Top revenue item', `${safe(bestRevenueItem.product_name)} is currently the strongest revenue contributor at ${fmtGBP(bestRevenueItem.revenue_pence)}.`),
+        actionCard('Top volume item', `${safe(bestUnitsItem.product_name)} leads by units sold at ${fmtNum(bestUnitsItem.units_sold)} units.`),
+        actionCard('Best efficiency signal', bestEfficiencyItem
+          ? `${safe(bestEfficiencyItem.product_name)} has the strongest revenue per capacity unit at ${fmtGBP(bestEfficiencyItem.revenue_per_capacity_unit_pence)}.`
+          : `No efficiency signal yet because no items currently resolve against capacity.`)
+      ].join('');
+    }
+
+    function renderHostsContext(){
+      const rows = state.filtered.hosts;
+      const tbody = document.querySelector('#hostsTable tbody');
+      const hostSignals = document.getElementById('hostSignals');
+
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="ins-muted">No host data yet in this filter.</td></tr>`;
+        hostSignals.innerHTML = `<div class="ins-empty">Host and context insights will appear once drops are associated with hosts.</div>`;
+        renderBarChart('hostChart', [], [], 'Revenue');
+        return;
+      }
+
+      tbody.innerHTML = rows.map(h => `
+        <tr>
+          <td>${escapeHtml(safe(h.host_name, 'Direct / no host'))}</td>
+          <td>${fmtNum(h.drops_run)}</td>
+          <td>${fmtNum(h.orders_count)}</td>
+          <td>${fmtGBP(h.revenue_pence)}</td>
+          <td>${fmtGBP(h.avg_revenue_per_drop_pence)}</td>
+          <td>${fmtPct(h.avg_capacity_utilisation_pct)}</td>
+        </tr>
+      `).join('');
+
+      renderBarChart(
+        'hostChart',
+        rows.slice(0,8).map(h => h.host_name || 'Direct'),
+        rows.slice(0,8).map(h => +(Number(h.revenue_pence || 0) / 100).toFixed(2)),
+        'Revenue'
+      );
+
+      const bestHost = rows[0];
+      const bestCapacityHost = rows
+        .filter(h => h.avg_capacity_utilisation_pct != null)
+        .sort((a,b) => Number(b.avg_capacity_utilisation_pct || 0) - Number(a.avg_capacity_utilisation_pct || 0))[0];
+
+      hostSignals.innerHTML = [
+        actionCard('Best-performing host', `${safe(bestHost.host_name)} leads on total revenue at ${fmtGBP(bestHost.revenue_pence)} and ${fmtGBP(bestHost.avg_revenue_per_drop_pence)} average per drop.`),
+        actionCard('Best fill signal', bestCapacityHost
+          ? `${safe(bestCapacityHost.host_name)} shows the strongest average capacity usage at ${fmtPct(bestCapacityHost.avg_capacity_utilisation_pct)}.`
+          : 'No host-level capacity signal yet.'),
+        actionCard('Context note', buildContextNarrative())
+      ].join('');
+    }
+
+    function renderActions(){
+      const grid = document.getElementById('actionsGrid');
+      const drops = state.filtered.drops;
+      if (!drops.length) {
+        grid.innerHTML = `<div class="ins-empty">No actions yet because there is no filtered performance data.</div>`;
+        return;
+      }
+
+      const actions = buildActions(drops, state.filtered.items, state.filtered.hosts);
+
+      grid.innerHTML = actions.map(a => `
+        <div class="ins-action">
+          <div class="ins-actionTop">
+            ${pill(a.tone || 'neutral', a.label)}
+          </div>
+          <h4>${escapeHtml(a.title)}</h4>
+          <p>${escapeHtml(a.text)}</p>
+        </div>
+      `).join('');
+    }
+
+    function aggregateRevenueSeries(){
+      const map = new Map();
+      for (const r of state.filtered.revenue) {
+        const key = r.order_date;
+        map.set(key, (map.get(key) || 0) + Number(r.revenue_pence || 0) / 100);
+      }
+      const entries = [...map.entries()].sort((a,b) => new Date(a[0]) - new Date(b[0]));
+      return {
+        labels: entries.map(([k]) => fmtShortDate(k)),
+        values: entries.map(([,v]) => +v.toFixed(2))
+      };
+    }
+
+    function aggregateDropSeries(drops){
+      const map = new Map();
+      for (const d of drops) {
+        const key = d.delivery_start ? d.delivery_start.slice(0,10) : 'Unknown';
+        map.set(key, (map.get(key) || 0) + 1);
+      }
+      const entries = [...map.entries()].sort((a,b) => new Date(a[0]) - new Date(b[0]));
+      return {
+        labels: entries.map(([k]) => fmtShortDate(k)),
+        values: entries.map(([,v]) => v)
+      };
+    }
+
+    function buildDemandCurve(dropId){
+      const orders = state.filtered.orders
+        .filter(o => o.drop_id === dropId)
+        .slice()
+        .sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+
+      if (!orders.length) return { labels: [], values: [] };
+
+      const buckets = new Map();
+      for (const o of orders) {
+        const key = new Date(o.created_at).toISOString().slice(0,13) + ':00';
+        buckets.set(key, (buckets.get(key) || 0) + 1);
+      }
+      const entries = [...buckets.entries()].sort((a,b) => new Date(a[0]) - new Date(b[0]));
+      let running = 0;
+      return {
+        labels: entries.map(([k]) => {
+          const d = new Date(k);
+          return d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+        }),
+        values: entries.map(([,v]) => {
+          running += v;
+          return running;
+        })
+      };
+    }
+
+    function aggregateItemsByCategory(items){
+      const map = new Map();
+      for (const item of items) {
+        const key = item.product_category || 'Uncategorised';
+        if (!map.has(key)) {
+          map.set(key, { category:key, units_sold:0, revenue_pence:0 });
+        }
+        const row = map.get(key);
+        row.units_sold += Number(item.units_sold || 0);
+        row.revenue_pence += Number(item.revenue_pence || 0);
+      }
+      return [...map.values()].sort((a,b) => b.revenue_pence - a.revenue_pence);
+    }
+
+    function buildMomentumStory(drops, revenueValues){
+      if (!drops.length) return 'No drops match this filter yet.';
+      const totalRevenue = sum(drops, d => d.revenue_pence);
+      const avgRevenue = drops.length ? totalRevenue / drops.length : 0;
+      const trendWord = revenueValues.length >= 2 && revenueValues[revenueValues.length - 1] > revenueValues[0]
+        ? 'improving'
+        : 'still forming';
+      return `Hearth has generated ${fmtGBP(totalRevenue)} across ${fmtNum(drops.length)} drops in this reporting lens. Average revenue per drop is ${fmtGBP(avgRevenue)}, and the revenue pattern looks ${trendWord}.`;
+    }
+
+    function buildRhythmStory(drops){
+      if (drops.length < 2) return 'More drops are needed before rhythm can be assessed properly.';
+      const sorted = drops.slice().sort((a,b) => new Date(a.delivery_start || 0) - new Date(b.delivery_start || 0));
+      const gaps = [];
+      for (let i = 1; i < sorted.length; i++) {
+        gaps.push(daysBetween(sorted[i].delivery_start, sorted[i - 1].delivery_start));
+      }
+      const avgGap = avg(gaps);
+      if (avgGap <= 7) return `Drops are happening roughly every ${Math.round(avgGap)} days, which suggests a strong repeatable rhythm.`;
+      if (avgGap <= 14) return `Drops are happening roughly every ${Math.round(avgGap)} days, showing a decent but improvable operating cadence.`;
+      return `Drops are spaced roughly ${Math.round(avgGap)} days apart, so there may be room to build a more regular rhythm.`;
+    }
+
+    function buildCapacityStory(drops){
+      const withCap = drops.filter(d => d.capacity_utilisation_pct != null);
+      if (!withCap.length) return 'No clear capacity signal yet because capacity is not resolving on enough drops.';
+      const a = avg(withCap, d => d.capacity_utilisation_pct);
+      if (a >= 90) return `Average capacity utilisation is ${fmtPct(a)}. This suggests drops are running very full and may justify testing slightly more declared capacity in similar contexts.`;
+      if (a >= 70) return `Average capacity utilisation is ${fmtPct(a)}. This looks healthy and suggests declared capacity is broadly in the right zone.`;
+      return `Average capacity utilisation is ${fmtPct(a)}. That may indicate under-filled drops or declared capacity set too high for some contexts.`;
+    }
+
+    function buildDropNotes(drop){
+      const notes = [];
+
+      notes.push(actionCard(
+        'Capacity view',
+        drop.capacity_utilisation_pct == null
+          ? 'No resolved capacity signal for this drop yet.'
+          : `This drop used ${fmtPct(drop.capacity_utilisation_pct)} of declared capacity, with ${fmtNum(drop.capacity_units_used || 0)} capacity units consumed.`
+      ));
+
+      notes.push(actionCard(
+        'Commercial view',
+        `${fmtGBP(drop.revenue_pence)} revenue from ${fmtNum(drop.orders_count || 0)} orders, with average order value of ${drop.avg_order_value_pence == null ? '—' : fmtGBP(drop.avg_order_value_pence)}.`
+      ));
+
+      notes.push(actionCard(
+        'Operational view',
+        `${safe(drop.drop_name)} ran on ${fmtDate(drop.delivery_start)} and is classified as ${safe(titleCase(drop.drop_type || 'drop'))}.`
+      ));
+
+      return notes.join('');
+    }
+
+    function buildActions(drops, items, hosts){
+      const actions = [];
+      const avgCap = avg(drops.filter(d => d.capacity_utilisation_pct != null), d => d.capacity_utilisation_pct);
+      const bestHost = hosts[0];
+      const bestItem = items.slice().sort((a,b) => Number(b.revenue_pence || 0) - Number(a.revenue_pence || 0))[0];
+      const weakestDrop = drops.slice().sort((a,b) => Number(a.capacity_utilisation_pct || 0) - Number(b.capacity_utilisation_pct || 0))[0];
+
+      if (avgCap >= 90) {
+        actions.push({
+          label:'Capacity',
+          tone:'good',
+          title:'Test a slightly larger declared capacity',
+          text:`Recent drops are averaging ${fmtPct(avgCap)} capacity usage. Similar drops may be able to absorb a modest capacity increase without diluting demand.`
+        });
+      } else if (avgCap > 0 && avgCap < 65) {
+        actions.push({
+          label:'Capacity',
+          tone:'warn',
+          title:'Review capacity sizing or demand concentration',
+          text:`Average capacity usage is ${fmtPct(avgCap)}. Consider whether some drops are oversized, or whether demand would perform better if concentrated into fewer, stronger moments.`
+        });
+      } else {
+        actions.push({
+          label:'Capacity',
+          tone:'neutral',
+          title:'Keep monitoring declared capacity',
+          text:`Capacity usage currently looks broadly serviceable. Keep watching how it changes by host and drop type.`
+        });
+      }
+
+      if (bestHost) {
+        actions.push({
+          label:'Host',
+          tone:'good',
+          title:'Lean into the strongest host context',
+          text:`${safe(bestHost.host_name)} is currently your strongest host signal, averaging ${fmtGBP(bestHost.avg_revenue_per_drop_pence)} per drop. That context may deserve repeat activation.`
+        });
+      }
+
+      if (bestItem) {
+        actions.push({
+          label:'Menu',
+          tone:'good',
+          title:'Protect and amplify the strongest menu driver',
+          text:`${safe(bestItem.product_name)} is your top revenue item in this lens. Use it as a commercial anchor, then test which adjacent items improve basket value without adding too much operational load.`
+        });
+      }
+
+      if (weakestDrop && weakestDrop.capacity_utilisation_pct != null && weakestDrop.capacity_utilisation_pct < 50) {
+        actions.push({
+          label:'Attention',
+          tone:'warn',
+          title:'Review under-filled drop patterns',
+          text:`${safe(weakestDrop.drop_name)} only reached ${fmtPct(weakestDrop.capacity_utilisation_pct)} of declared capacity. Compare its host, timing and promotion pattern against stronger drops.`
+        });
+      }
+
+      if (actions.length < 3) {
+        actions.push({
+          label:'Data',
+          tone:'neutral',
+          title:'Build more signal through repeated drops',
+          text:'The more repeatable drops Hearth sees, the better it can identify timing, host and menu patterns that genuinely move the business.'
+        });
+      }
+
+      return actions.slice(0, 6);
+    }
+
+    function buildContextNarrative(){
+      const byType = new Map();
+      for (const d of state.filtered.drops) {
+        const key = d.drop_type || 'Unclassified';
+        if (!byType.has(key)) byType.set(key, { revenue:0, drops:0 });
+        const row = byType.get(key);
+        row.revenue += Number(d.revenue_pence || 0);
+        row.drops += 1;
+      }
+      const rows = [...byType.entries()].map(([drop_type, x]) => ({
+        drop_type, avg: x.drops ? x.revenue / x.drops : 0
+      })).sort((a,b) => b.avg - a.avg);
+
+      if (!rows.length) return 'No context comparison yet.';
+      return `${titleCase(rows[0].drop_type)} drops currently look strongest on average, at ${fmtGBP(rows[0].avg)} revenue per drop.`;
+    }
+
+    function bestHostLabel(){
+      const best = state.filtered.hosts[0];
+      return best ? safe(best.host_name) : '—';
+    }
+
+    function bestHostNarrative(){
+      const best = state.filtered.hosts[0];
+      return best ? `${fmtGBP(best.avg_revenue_per_drop_pence)} average revenue per drop` : 'No host signal yet';
+    }
+
+    function strongestDropText(drops){
+      const best = drops.slice().sort((a,b) => Number(b.revenue_pence || 0) - Number(a.revenue_pence || 0))[0];
+      return best ? `${safe(best.drop_name)} is strongest at ${fmtGBP(best.revenue_pence)}` : 'No strongest drop yet';
+    }
+
+    function gapNarrative(drops){
+      if (drops.length < 2) return 'drop spacing not yet clear';
+      const sorted = drops.slice().sort((a,b) => new Date(a.delivery_start || 0) - new Date(b.delivery_start || 0));
+      const gaps = [];
+      for (let i = 1; i < sorted.length; i++) gaps.push(daysBetween(sorted[i].delivery_start, sorted[i - 1].delivery_start));
+      return `${Math.round(avg(gaps))} day gap between drops`;
+    }
+
+    function capacityNarrative(drops){
+      const a = avg(drops.filter(d => d.capacity_utilisation_pct != null), d => d.capacity_utilisation_pct);
+      if (!a) return 'Capacity signal still forming';
+      if (a >= 85) return 'Healthy fill pattern';
+      if (a >= 65) return 'Reasonable fill pattern';
+      return 'Opportunity to tighten demand or capacity';
+    }
+
+    function aovNarrative(drops){
+      const withAov = drops.filter(d => d.avg_order_value_pence != null);
+      if (!withAov.length) return 'No basket signal yet';
+      const high = withAov.slice().sort((a,b) => Number(b.avg_order_value_pence || 0) - Number(a.avg_order_value_pence || 0))[0];
+      return `${safe(high.drop_name)} has the strongest basket value`;
+    }
+
+    function basketComment(drop){
+      if (drop.avg_order_value_pence == null) return 'No basket signal yet';
+      if (drop.avg_order_value_pence >= 2500) return 'Strong basket strength for the selected drop';
+      if (drop.avg_order_value_pence >= 1800) return 'Healthy basket strength';
+      return 'Opportunity to improve basket value through bundles or add-ons';
+    }
+
+    function getPreviousPeriodComparison(){
+      const range = els.rangeSelect.value;
+      if (range === 'all') {
+        return { revenue:0, drops:0, avgRevenuePerDrop:0, avgCapacity:0 };
+      }
+      const days = Number(range);
+      const now = new Date();
+      const currentStart = startDateFromRange(range);
+      const previousStart = new Date(currentStart);
+      previousStart.setDate(previousStart.getDate() - days);
+
+      const previousDrops = state.allDrops.filter(d => {
+        const ds = d.delivery_start ? new Date(d.delivery_start) : null;
+        if (!ds) return false;
+        return ds >= previousStart && ds < currentStart;
+      });
+
+      const revenue = sum(previousDrops, d => d.revenue_pence);
+      const drops = previousDrops.length;
+      const avgRevenuePerDrop = drops ? revenue / drops : 0;
+      const avgCapacity = avg(previousDrops.filter(d => d.capacity_utilisation_pct != null), d => d.capacity_utilisation_pct);
+
+      return { revenue, drops, avgRevenuePerDrop, avgCapacity };
+    }
+
+    function pctDelta(current, previous){
+      if (!previous) return null;
+      return ((current - previous) / previous) * 100;
+    }
+
+    function deltaPill(delta){
+      if (delta == null || !isFinite(delta)) return pill('neutral', 'No prior period');
+      const rounded = `${delta > 0 ? '+' : ''}${delta.toFixed(1)}%`;
+      if (delta > 2) return pill('good', rounded);
+      if (delta < -2) return pill('bad', rounded);
+      return pill('neutral', rounded);
+    }
+
+    function utilisationPill(value){
+      if (value == null) return pill('neutral', 'No capacity signal');
+      if (value >= 90) return pill('good', 'Very full');
+      if (value >= 70) return pill('neutral', 'Healthy');
+      return pill('warn', 'Under-filled');
+    }
+
+    function makeKpiCard(label, value, pillHtml, meta){
+      return `
+        <div class="ins-kpi">
+          <div class="ins-kpiTop">
+            <div class="ins-kpiLabel">${escapeHtml(label)}</div>
+            ${pillHtml || ''}
+          </div>
+          <div class="ins-kpiValue">${escapeHtml(String(value))}</div>
+          <div class="ins-kpiMeta">${escapeHtml(meta || '')}</div>
+        </div>
+      `;
+    }
+
+    function signalCard(title, strong, text){
+      return `
+        <div class="ins-signal">
+          <h4>${escapeHtml(title)}</h4>
+          <strong>${escapeHtml(String(strong))}</strong>
+          <p>${escapeHtml(text)}</p>
+        </div>
+      `;
+    }
+
+    function actionCard(title, text){
+      return `
+        <div class="ins-action">
+          <h4>${escapeHtml(title)}</h4>
+          <p>${escapeHtml(text)}</p>
+        </div>
+      `;
+    }
+
+    function pill(type, text){
+      return `<span class="ins-pill ${type}">${escapeHtml(text)}</span>`;
+    }
+
+    function titleCase(str){
+      return String(str || '')
+        .replace(/[_-]+/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function shortDropLabel(drop){
+      return `${fmtShortDate(drop.delivery_start)} · ${String(drop.drop_name || 'Drop').slice(0,18)}`;
+    }
+
+    function escapeHtml(str){
+      return String(str ?? '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+    }
+
+    function destroyChart(id){
+      if (state.charts[id]) {
+        state.charts[id].destroy();
+        state.charts[id] = null;
+      }
+    }
+
+    function renderLineChart(id, labels, values, label, tickFormatter){
+      destroyChart(id);
+      const ctx = document.getElementById(id).getContext('2d');
+      state.charts[id] = new Chart(ctx, {
+        type:'line',
+        data:{
+          labels,
+          datasets:[{
+            label,
+            data: values,
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--ins-accent').trim() || '#8B6B3F',
+            backgroundColor:'rgba(139,107,63,.10)',
+            fill:true,
+            tension:.3,
+            pointRadius:2,
+            pointHoverRadius:4
+          }]
+        },
+        options:{
+          responsive:true,
+          maintainAspectRatio:false,
+          plugins:{
+            legend:{ display:false }
+          },
+          scales:{
+            x:{ grid:{ display:false } },
+            y:{
+              beginAtZero:true,
+              ticks:{
+                callback: tickFormatter || ((value) => value)
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderBarChart(id, labels, values, label){
+      destroyChart(id);
+      const ctx = document.getElementById(id).getContext('2d');
+      state.charts[id] = new Chart(ctx, {
+        type:'bar',
+        data:{
+          labels,
+          datasets:[{
+            label,
+            data: values,
+            backgroundColor:'rgba(139,107,63,.75)',
+            borderRadius:8,
+            maxBarThickness:38
+          }]
+        },
+        options:{
+          responsive:true,
+          maintainAspectRatio:false,
+          plugins:{ legend:{ display:false } },
+          scales:{
+            x:{ grid:{ display:false } },
+            y:{ beginAtZero:true }
+          }
+        }
+      });
+    }
+
+    function renderDoughnutChart(id, labels, values, label){
+      destroyChart(id);
+      const ctx = document.getElementById(id).getContext('2d');
+      state.charts[id] = new Chart(ctx, {
+        type:'doughnut',
+        data:{
+          labels,
+          datasets:[{
+            label,
+            data: values,
+            backgroundColor:[
+              'rgba(139,107,63,.92)',
+              'rgba(203,184,157,.92)',
+              'rgba(94,72,39,.85)',
+              'rgba(226,216,198,.95)',
+              'rgba(174,151,117,.88)',
+              'rgba(120,99,71,.78)'
+            ]
+          }]
+        },
+        options:{
+          responsive:true,
+          maintainAspectRatio:false,
+          plugins:{
+            legend:{ position:'bottom' }
+          }
+        }
+      });
+    }
+
+    async function init(){
+      bindEvents();
+      try {
+        await loadData();
+        populateFilters();
+        applyFilters();
+      } catch (err) {
+        console.error(err);
+        document.querySelector('.ins-shell').innerHTML = `
+          <div class="ins-card ins-pad-lg">
+            <div class="ins-empty">
+              Insights could not load. Check vendor resolution, Supabase access, and that the views exist and contain data.
+              <br><br>
+              <strong>${escapeHtml(err.message || 'Unknown error')}</strong>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function bindEvents(){
+      els.rangeSelect.addEventListener('change', applyFilters);
+      els.dropTypeFilter.addEventListener('change', applyFilters);
+      els.hostFilter.addEventListener('change', applyFilters);
+      els.dropSelect.addEventListener('change', renderDeepDive);
+      els.refreshBtn.addEventListener('click', async () => {
+        try {
+          await loadData();
+          populateFilters();
+          applyFilters();
+        } catch (err) {
+          console.error(err);
+          alert('Refresh failed. Check console.');
+        }
+      });
+    }
+
+    init();
+  </script>
 </body>
 </html>
