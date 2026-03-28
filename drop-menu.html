@@ -92,6 +92,7 @@
 
           <div class="field" style="margin:0;">
             <select id="librarySort">
+              <option value="manual_order">Sort: Manual order</option>
               <option value="type_then_name">Sort: Type / Name</option>
               <option value="name">Sort: Name</option>
               <option value="category_then_name">Sort: Category / Name</option>
@@ -165,6 +166,22 @@
               </div>
             </div>
 
+            <div class="orderingBar" id="orderingBar" style="display:none; margin-bottom:14px; padding:12px 14px; border:1px solid rgba(15,23,42,0.08); border-radius:14px; background:rgba(139,107,63,0.04);">
+              <div class="row" style="justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:end;">
+                <div>
+                  <div class="sectionTitle" style="font-size:14px; margin-bottom:4px;">Ordering</div>
+                  <div class="sectionSub" id="orderingHelp">Drag rows to set display order.</div>
+                </div>
+
+                <div class="row" style="gap:10px; flex-wrap:wrap; align-items:end;">
+                  <div class="field" id="orderingCategoryField" style="margin:0; min-width:240px; display:none;">
+                    <label for="orderingCategorySelect" id="orderingCategoryLabel">Category</label>
+                    <select id="orderingCategorySelect"></select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="inlineSuccess" id="inlineSuccess"></div>
             <div class="errorBox" id="errorBox"></div>
 
@@ -175,7 +192,7 @@
                     <thead id="libraryTableHead"></thead>
                     <tbody id="libraryTableBody">
                       <tr>
-                        <td colspan="8" class="muted">Loading catalogue…</td>
+                        <td colspan="9" class="muted">Loading catalogue…</td>
                       </tr>
                     </tbody>
                   </table>
@@ -658,7 +675,7 @@
         selectedStatuses: ["active", "inactive"],
         selectedCategoryIds: [],
         search: "",
-        sort: "type_then_name",
+        sort: "manual_order",
 
         categories: [],
         products: [],
@@ -672,7 +689,15 @@
         selectedProductId: null,
         selectedBundleId: null,
         selectedCategoryId: null,
-        selectedBundleLineId: null
+        selectedBundleLineId: null,
+
+        orderingCategoryIdProducts: null,
+        orderingCategoryIdBundles: null,
+
+        dragState: {
+          draggedId: null,
+          draggedType: null
+        }
       };
 
       function byId(id) {
@@ -768,6 +793,51 @@
         return "→ Stable";
       }
 
+      function getSortValue(item) {
+        if (item == null || item.sort_order == null || item.sort_order === "") return Number.MAX_SAFE_INTEGER;
+        const n = Number(item.sort_order);
+        return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
+      }
+
+      function manualCompare(a, b) {
+        const sortDiff = getSortValue(a) - getSortValue(b);
+        if (sortDiff !== 0) return sortDiff;
+        return String(a.name || "").localeCompare(String(b.name || ""));
+      }
+
+      function getActiveOrderingCategoryId() {
+        if (state.currentTab === "products") return state.orderingCategoryIdProducts;
+        if (state.currentTab === "bundles") return state.orderingCategoryIdBundles;
+        return null;
+      }
+
+      function setActiveOrderingCategoryId(value) {
+        if (state.currentTab === "products") state.orderingCategoryIdProducts = value || null;
+        if (state.currentTab === "bundles") state.orderingCategoryIdBundles = value || null;
+      }
+
+      function ensureOrderingSelectionsStillValid() {
+        const categoryIds = new Set(state.categories.map((c) => c.id));
+
+        if (!state.orderingCategoryIdProducts || !categoryIds.has(state.orderingCategoryIdProducts)) {
+          state.orderingCategoryIdProducts = state.categories[0]?.id || null;
+        }
+
+        if (!state.orderingCategoryIdBundles || !categoryIds.has(state.orderingCategoryIdBundles)) {
+          state.orderingCategoryIdBundles = state.categories[0]?.id || null;
+        }
+
+        if (state.currentTab === "products" && state.selectedProductId) {
+          const product = state.products.find((p) => p.id === state.selectedProductId);
+          if (product?.category_id) state.orderingCategoryIdProducts = product.category_id;
+        }
+
+        if (state.currentTab === "bundles" && state.selectedBundleId) {
+          const bundle = state.bundles.find((b) => b.id === state.selectedBundleId);
+          if (bundle?.category_id) state.orderingCategoryIdBundles = bundle.category_id;
+        }
+      }
+
       async function loadVendorId() {
         const { data, error } = await supabase
           .from("vendors")
@@ -812,6 +882,7 @@
 
         await loadBundleChildren();
         ensureSelectionsStillValid();
+        ensureOrderingSelectionsStillValid();
       }
 
       async function loadBundleChildren() {
@@ -900,12 +971,15 @@
           return;
         }
 
-        container.innerHTML = state.categories.map((category) => `
-          <label>
-            <input type="checkbox" value="${category.id}" ${state.selectedCategoryIds.includes(category.id) ? "checked" : ""} />
-            ${escapeHtml(category.name)}
-          </label>
-        `).join("");
+        container.innerHTML = state.categories
+          .slice()
+          .sort(manualCompare)
+          .map((category) => `
+            <label>
+              <input type="checkbox" value="${category.id}" ${state.selectedCategoryIds.includes(category.id) ? "checked" : ""} />
+              ${escapeHtml(category.name)}
+            </label>
+          `).join("");
       }
 
       function renderFilterSummaries() {
@@ -920,7 +994,9 @@
         if (!state.selectedCategoryIds.length) {
           categorySummary.textContent = "All categories";
         } else {
-          const names = state.categories.filter((c) => state.selectedCategoryIds.includes(c.id)).map((c) => c.name);
+          const names = state.categories
+            .filter((c) => state.selectedCategoryIds.includes(c.id))
+            .map((c) => c.name);
           categorySummary.textContent = names.length <= 2 ? names.join(", ") : `${names.length} categories`;
         }
 
@@ -937,62 +1013,87 @@
         byId("statActiveItems").textContent = String([...state.products, ...state.bundles].filter((x) => x.is_active).length);
       }
 
-      function getFilteredRowsForCurrentTab() {
-        const search = state.search.trim().toLowerCase();
-
-        let rows = [];
+      function getRowsForCurrentTabBase() {
         if (state.currentTab === "categories") {
-          rows = state.categories.map((c) => ({
+          return state.categories.map((c) => ({
             item_type: "category",
             item_id: c.id,
+            id: c.id,
             name: c.name,
+            sort_order: c.sort_order,
             is_active: c.is_active,
             product_count: state.products.filter((p) => p.category_id === c.id).length,
             bundle_count: state.bundles.filter((b) => b.category_id === c.id).length
           }));
-        } else if (state.currentTab === "products") {
-          rows = state.products.map((p) => ({
+        }
+
+        if (state.currentTab === "products") {
+          return state.products.map((p) => ({
             item_type: "product",
             item_id: p.id,
+            id: p.id,
             name: p.name,
             description: p.description,
             category_id: p.category_id,
             category_name: p.category_name,
             price_pence: p.price_pence,
             capacity_units: p.capacity_units,
+            sort_order: p.sort_order,
             is_active: p.is_active,
             analytics: getProductAnalytics(p.id)
           }));
-        } else {
-          rows = state.bundles.map((b) => ({
-            item_type: "bundle",
-            item_id: b.id,
-            name: b.name,
-            description: b.description,
-            category_id: b.category_id,
-            category_name: b.category_name,
-            price_pence: b.price_pence,
-            capacity_units: b.capacity_units,
-            is_active: b.is_active,
-            analytics: getBundleAnalytics(b.id)
-          }));
         }
 
+        return state.bundles.map((b) => ({
+          item_type: "bundle",
+          item_id: b.id,
+          id: b.id,
+          name: b.name,
+          description: b.description,
+          category_id: b.category_id,
+          category_name: b.category_name,
+          price_pence: b.price_pence,
+          capacity_units: b.capacity_units,
+          sort_order: b.sort_order,
+          is_active: b.is_active,
+          analytics: getBundleAnalytics(b.id)
+        }));
+      }
+
+      function shouldUseOrderingCategoryFilter() {
+        return state.currentTab === "products" || state.currentTab === "bundles";
+      }
+
+      function getFilteredRowsForCurrentTab() {
+        const search = state.search.trim().toLowerCase();
+        let rows = getRowsForCurrentTabBase();
+
         rows = rows.filter((row) => {
-          if (!state.selectedTypes.includes(row.item_type)) return false;
+          if (state.currentTab === "categories") {
+            if (!state.selectedTypes.includes("category")) return false;
+          } else if (state.currentTab === "products") {
+            if (!state.selectedTypes.includes("product")) return false;
+          } else if (state.currentTab === "bundles") {
+            if (!state.selectedTypes.includes("bundle")) return false;
+          }
 
           const statusOk =
             (row.is_active && state.selectedStatuses.includes("active")) ||
             (!row.is_active && state.selectedStatuses.includes("inactive"));
+
           if (!statusOk) return false;
 
-          if (state.currentTab !== "categories") {
-            if (state.selectedCategoryIds.length && row.category_id && !state.selectedCategoryIds.includes(row.category_id)) {
-              return false;
-            }
+          if (state.currentTab === "categories") {
+            if (state.selectedCategoryIds.length && !state.selectedCategoryIds.includes(row.item_id)) return false;
           } else {
-            if (state.selectedCategoryIds.length && !state.selectedCategoryIds.includes(row.item_id)) {
-              return false;
+            const orderingCategoryId = getActiveOrderingCategoryId();
+
+            if (state.sort === "manual_order") {
+              if (orderingCategoryId && row.category_id !== orderingCategoryId) return false;
+            } else {
+              if (state.selectedCategoryIds.length && row.category_id && !state.selectedCategoryIds.includes(row.category_id)) {
+                return false;
+              }
             }
           }
 
@@ -1010,6 +1111,8 @@
 
         rows.sort((a, b) => {
           switch (state.sort) {
+            case "manual_order":
+              return manualCompare(a, b);
             case "name":
               return a.name.localeCompare(b.name);
             case "category_then_name":
@@ -1032,15 +1135,87 @@
         return rows;
       }
 
+      function isDragOrderingEnabled() {
+        if (state.sort !== "manual_order") return false;
+        if (state.search.trim()) return false;
+
+        if (!(state.selectedStatuses.includes("active") && state.selectedStatuses.includes("inactive"))) return false;
+
+        if (state.currentTab === "categories") {
+          if (state.selectedCategoryIds.length) return false;
+          return true;
+        }
+
+        const orderingCategoryId = getActiveOrderingCategoryId();
+        if (!orderingCategoryId) return false;
+        return true;
+      }
+
+      function getOrderingHelpText() {
+        if (state.sort !== "manual_order") {
+          return "Switch sort to Manual order to drag and reorder items.";
+        }
+        if (state.search.trim()) {
+          return "Clear search to reorder items.";
+        }
+        if (!(state.selectedStatuses.includes("active") && state.selectedStatuses.includes("inactive"))) {
+          return "Show both active and inactive items to reorder safely.";
+        }
+        if (state.currentTab === "categories" && state.selectedCategoryIds.length) {
+          return "Clear category filters to reorder all categories.";
+        }
+        if ((state.currentTab === "products" || state.currentTab === "bundles") && !getActiveOrderingCategoryId()) {
+          return "Choose a category to reorder items within it.";
+        }
+
+        if (state.currentTab === "categories") {
+          return "Drag rows to set category order.";
+        }
+        if (state.currentTab === "products") {
+          return "Drag rows to set product order within the selected category.";
+        }
+        return "Drag rows to set bundle order within the selected category.";
+      }
+
+      function renderOrderingControls() {
+        const bar = byId("orderingBar");
+        const help = byId("orderingHelp");
+        const field = byId("orderingCategoryField");
+        const label = byId("orderingCategoryLabel");
+        const select = byId("orderingCategorySelect");
+
+        bar.style.display = "block";
+        help.textContent = getOrderingHelpText();
+
+        if (shouldUseOrderingCategoryFilter()) {
+          field.style.display = "block";
+          label.textContent = state.currentTab === "products" ? "Product category" : "Bundle category";
+
+          select.innerHTML = [
+            `<option value="">Select category</option>`,
+            ...state.categories
+              .slice()
+              .sort(manualCompare)
+              .map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`)
+          ].join("");
+
+          select.value = getActiveOrderingCategoryId() || "";
+        } else {
+          field.style.display = "none";
+        }
+      }
+
       function renderLibraryTable() {
         const head = byId("libraryTableHead");
         const body = byId("libraryTableBody");
         const rows = getFilteredRowsForCurrentTab();
+        const canDrag = isDragOrderingEnabled();
 
         if (state.currentTab === "categories") {
           head.innerHTML = `
             <tr>
-              <th style="width:44%;">Name</th>
+              <th style="width:7%;">Order</th>
+              <th style="width:37%;">Name</th>
               <th style="width:18%;">Status</th>
               <th style="width:19%;">Products</th>
               <th style="width:19%;">Bundles</th>
@@ -1049,14 +1224,15 @@
         } else {
           head.innerHTML = `
             <tr>
-              <th style="width:25%;">Name</th>
+              <th style="width:7%;">Order</th>
+              <th style="width:24%;">Name</th>
               <th style="width:9%;">Type</th>
               <th style="width:13%;">Category</th>
               <th style="width:9%;">Price</th>
               <th style="width:9%;">Capacity</th>
               <th style="width:10%;">Active</th>
               <th style="width:9%;">Sold</th>
-              <th style="width:12%;">Revenue</th>
+              <th style="width:10%;">Revenue</th>
             </tr>
           `;
         }
@@ -1064,7 +1240,7 @@
         if (!rows.length) {
           body.innerHTML = `
             <tr>
-              <td colspan="${state.currentTab === "categories" ? 4 : 8}">
+              <td colspan="${state.currentTab === "categories" ? 5 : 9}">
                 <div class="emptyState">No matching catalogue items found.</div>
               </td>
             </tr>
@@ -1076,9 +1252,18 @@
           body.innerHTML = rows.map((row) => {
             const active = row.item_id === state.selectedCategoryId ? "active" : "";
             return `
-              <tr class="menuLibraryRow ${active}" data-item-type="category" data-item-id="${row.item_id}">
+              <tr
+                class="menuLibraryRow ${active} ${canDrag ? "isDraggable" : ""}"
+                data-item-type="category"
+                data-item-id="${row.item_id}"
+                ${canDrag ? 'draggable="true"' : ""}
+              >
+                <td>
+                  <button class="dragHandle" type="button" title="${canDrag ? "Drag to reorder" : "Reordering unavailable"}" ${canDrag ? "" : "disabled"} style="border:0; background:none; cursor:${canDrag ? "grab" : "not-allowed"}; font-size:18px; line-height:1;">☰</button>
+                </td>
                 <td>
                   <div class="productName">${escapeHtml(row.name)}</div>
+                  <div class="subMeta">Sort order: ${row.sort_order ?? "—"}</div>
                 </td>
                 <td><span class="badgeStatus ${row.is_active ? "ready" : "delivered"}">${row.is_active ? "active" : "inactive"}</span></td>
                 <td>${escapeHtml(String(row.product_count || 0))}</td>
@@ -1086,31 +1271,172 @@
               </tr>
             `;
           }).join("");
-          return;
+        } else {
+          body.innerHTML = rows.map((row) => {
+            const analytics = row.analytics || {};
+            const active =
+              row.item_type === "product" && row.item_id === state.selectedProductId ? "active" :
+              row.item_type === "bundle" && row.item_id === state.selectedBundleId ? "active" : "";
+
+            return `
+              <tr
+                class="menuLibraryRow ${active} ${canDrag ? "isDraggable" : ""}"
+                data-item-type="${row.item_type}"
+                data-item-id="${row.item_id}"
+                data-category-id="${row.category_id || ""}"
+                ${canDrag ? 'draggable="true"' : ""}
+              >
+                <td>
+                  <button class="dragHandle" type="button" title="${canDrag ? "Drag to reorder" : "Reordering unavailable"}" ${canDrag ? "" : "disabled"} style="border:0; background:none; cursor:${canDrag ? "grab" : "not-allowed"}; font-size:18px; line-height:1;">☰</button>
+                </td>
+                <td>
+                  <div class="productName">${escapeHtml(row.name)}</div>
+                  <div class="subMeta">${escapeHtml(row.description || "No description")} • Sort order: ${row.sort_order ?? "—"}</div>
+                </td>
+                <td><span class="miniChip">${escapeHtml(row.item_type)}</span></td>
+                <td>${escapeHtml(row.category_name || "—")}</td>
+                <td>${row.price_pence == null ? "—" : formatMoneyPence(row.price_pence)}</td>
+                <td>${row.capacity_units == null ? "—" : escapeHtml(String(row.capacity_units))}</td>
+                <td><span class="badgeStatus ${row.is_active ? "ready" : "delivered"}">${row.is_active ? "active" : "inactive"}</span></td>
+                <td>${escapeHtml(String(analytics.units_sold || 0))}</td>
+                <td>${formatMoneyPence(analytics.revenue_pence || 0)}</td>
+              </tr>
+            `;
+          }).join("");
         }
 
-        body.innerHTML = rows.map((row) => {
-          const analytics = row.analytics || {};
-          const active =
-            row.item_type === "product" && row.item_id === state.selectedProductId ? "active" :
-            row.item_type === "bundle" && row.item_id === state.selectedBundleId ? "active" : "";
+        initialiseDragAndDrop();
+      }
 
-          return `
-            <tr class="menuLibraryRow ${active}" data-item-type="${row.item_type}" data-item-id="${row.item_id}">
-              <td>
-                <div class="productName">${escapeHtml(row.name)}</div>
-                <div class="subMeta">${escapeHtml(row.description || "No description")}</div>
-              </td>
-              <td><span class="miniChip">${escapeHtml(row.item_type)}</span></td>
-              <td>${escapeHtml(row.category_name || "—")}</td>
-              <td>${row.price_pence == null ? "—" : formatMoneyPence(row.price_pence)}</td>
-              <td>${row.capacity_units == null ? "—" : escapeHtml(String(row.capacity_units))}</td>
-              <td><span class="badgeStatus ${row.is_active ? "ready" : "delivered"}">${row.is_active ? "active" : "inactive"}</span></td>
-              <td>${escapeHtml(String(analytics.units_sold || 0))}</td>
-              <td>${formatMoneyPence(analytics.revenue_pence || 0)}</td>
-            </tr>
-          `;
-        }).join("");
+      function initialiseDragAndDrop() {
+        const body = byId("libraryTableBody");
+        const rows = Array.from(body.querySelectorAll("tr.isDraggable"));
+        if (!rows.length) return;
+
+        rows.forEach((row) => {
+          row.addEventListener("dragstart", handleDragStart);
+          row.addEventListener("dragover", handleDragOver);
+          row.addEventListener("drop", handleDrop);
+          row.addEventListener("dragend", handleDragEnd);
+        });
+      }
+
+      function handleDragStart(e) {
+        const row = e.currentTarget;
+        state.dragState.draggedId = row.dataset.itemId;
+        state.dragState.draggedType = row.dataset.itemType;
+        row.classList.add("dragging");
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", row.dataset.itemId || "");
+        }
+      }
+
+      function handleDragOver(e) {
+        e.preventDefault();
+        const targetRow = e.currentTarget;
+        const tbody = targetRow.parentElement;
+        const draggingRow = tbody.querySelector(".dragging");
+        if (!draggingRow || draggingRow === targetRow) return;
+
+        const rect = targetRow.getBoundingClientRect();
+        const shouldInsertAfter = e.clientY > rect.top + rect.height / 2;
+
+        if (shouldInsertAfter) {
+          if (targetRow.nextSibling !== draggingRow) {
+            tbody.insertBefore(draggingRow, targetRow.nextSibling);
+          }
+        } else {
+          if (targetRow !== draggingRow.nextSibling) {
+            tbody.insertBefore(draggingRow, targetRow);
+          }
+        }
+      }
+
+      async function handleDrop(e) {
+        e.preventDefault();
+        await persistCurrentVisibleOrder();
+      }
+
+      function handleDragEnd(e) {
+        e.currentTarget.classList.remove("dragging");
+        Array.from(byId("libraryTableBody").querySelectorAll(".dragging")).forEach((row) => row.classList.remove("dragging"));
+      }
+
+      async function persistCurrentVisibleOrder() {
+        const body = byId("libraryTableBody");
+        const orderedIds = Array.from(body.querySelectorAll("tr[data-item-id]")).map((row) => row.dataset.itemId);
+
+        if (!orderedIds.length) return;
+
+        setSaveState("saving", "Saving order…");
+
+        try {
+          if (state.currentTab === "categories") {
+            await saveSortOrderBatch("categories", orderedIds);
+            state.categories = orderedIds.map((id, index) => {
+              const existing = state.categories.find((c) => c.id === id);
+              return { ...existing, sort_order: (index + 1) * 10 };
+            });
+            state.categories.sort(manualCompare);
+            renderCategoryFilterChecklist();
+            renderFilterSummaries();
+            renderOrderingControls();
+            renderLibraryTable();
+            setSaveState("saved", "Category order saved");
+            showInlineSuccess("Category order saved");
+            return;
+          }
+
+          if (state.currentTab === "products") {
+            await saveSortOrderBatch("products", orderedIds);
+            orderedIds.forEach((id, index) => {
+              const product = state.products.find((p) => p.id === id);
+              if (product) product.sort_order = (index + 1) * 10;
+            });
+            state.products.sort((a, b) => {
+              if ((a.category_id || "") !== (b.category_id || "")) {
+                return String(a.category_name || "").localeCompare(String(b.category_name || ""));
+              }
+              return manualCompare(a, b);
+            });
+            renderLibraryTable();
+            setSaveState("saved", "Product order saved");
+            showInlineSuccess("Product order saved");
+            return;
+          }
+
+          if (state.currentTab === "bundles") {
+            await saveSortOrderBatch("bundles", orderedIds);
+            orderedIds.forEach((id, index) => {
+              const bundle = state.bundles.find((b) => b.id === id);
+              if (bundle) bundle.sort_order = (index + 1) * 10;
+            });
+            state.bundles.sort((a, b) => {
+              if ((a.category_id || "") !== (b.category_id || "")) {
+                return String(a.category_name || "").localeCompare(String(b.category_name || ""));
+              }
+              return manualCompare(a, b);
+            });
+            renderLibraryTable();
+            setSaveState("saved", "Bundle order saved");
+            showInlineSuccess("Bundle order saved");
+          }
+        } catch (err) {
+          console.error(err);
+          setSaveState("error", err.message || "Unable to save order");
+          showError(err.message || "Unable to save order.");
+          await refreshAll();
+        }
+      }
+
+      async function saveSortOrderBatch(tableName, orderedIds) {
+        for (let i = 0; i < orderedIds.length; i += 1) {
+          const id = orderedIds[i];
+          const sortOrder = (i + 1) * 10;
+          const { error } = await supabase.from(tableName).update({ sort_order: sortOrder }).eq("id", id);
+          if (error) throw error;
+        }
       }
 
       function renderPrimaryActionState() {
@@ -1150,6 +1476,7 @@
         byId(`pane-${state.currentTab}`).classList.add("active");
 
         renderPrimaryActionState();
+        renderOrderingControls();
       }
 
       function renderSelectionContext() {
@@ -1167,7 +1494,7 @@
           const productCount = state.products.filter((p) => p.category_id === current.id).length;
           const bundleCount = state.bundles.filter((b) => b.category_id === current.id).length;
 
-          meta.textContent = `${current.name} • ${current.is_active ? "active" : "inactive"}`;
+          meta.textContent = `${current.name} • ${current.is_active ? "active" : "inactive"} • sort ${current.sort_order ?? "—"}`;
           chips.innerHTML = [
             `<span class="miniChip">${productCount} products</span>`,
             `<span class="miniChip">${bundleCount} bundles</span>`
@@ -1184,7 +1511,7 @@
             return;
           }
 
-          meta.textContent = `${current.name} • ${current.category_name || "No category"} • ${current.is_active ? "active" : "inactive"}`;
+          meta.textContent = `${current.name} • ${current.category_name || "No category"} • ${current.is_active ? "active" : "inactive"} • sort ${current.sort_order ?? "—"}`;
           chips.innerHTML = [
             `<span class="miniChip">${formatMoneyPence(current.price_pence)}</span>`,
             `<span class="miniChip">${current.capacity_units} capacity</span>`,
@@ -1202,7 +1529,7 @@
           return;
         }
 
-        meta.textContent = `${current.name} • ${current.category_name || "No category"} • ${current.is_active ? "active" : "inactive"}`;
+        meta.textContent = `${current.name} • ${current.category_name || "No category"} • ${current.is_active ? "active" : "inactive"} • sort ${current.sort_order ?? "—"}`;
         chips.innerHTML = [
           `<span class="miniChip">${formatMoneyPence(current.price_pence)}</span>`,
           `<span class="miniChip">${current.capacity_units} capacity</span>`,
@@ -1215,7 +1542,10 @@
         const select = byId(selectId);
         const options = [
           includeBlank ? `<option value="">${blankLabel}</option>` : "",
-          ...state.categories.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`)
+          ...state.categories
+            .slice()
+            .sort(manualCompare)
+            .map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`)
         ].join("");
         select.innerHTML = options;
       }
@@ -1224,7 +1554,14 @@
         const select = byId(selectId);
         const options = [
           includeBlank ? `<option value="">Select item</option>` : "",
-          ...state.products.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`)
+          ...state.products
+            .slice()
+            .sort((a, b) => {
+              const catDiff = String(a.category_name || "").localeCompare(String(b.category_name || ""));
+              if (catDiff !== 0) return catDiff;
+              return manualCompare(a, b);
+            })
+            .map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`)
         ].join("");
         select.innerHTML = options;
       }
@@ -1263,7 +1600,7 @@
         const productCount = state.products.filter((p) => p.category_id === category.id).length;
         const bundleCount = state.bundles.filter((b) => b.category_id === category.id).length;
 
-        byId("categorySelectionLabel").textContent = `${category.name} • ${category.is_active ? "active" : "inactive"}`;
+        byId("categorySelectionLabel").textContent = `${category.name} • ${category.is_active ? "active" : "inactive"} • sort ${category.sort_order ?? "—"}`;
         byId("categorySelectionMetrics").innerHTML = [
           `<span class="miniChip">${productCount} products</span>`,
           `<span class="miniChip">${bundleCount} bundles</span>`
@@ -1283,13 +1620,20 @@
           return;
         }
 
-        wrap.innerHTML = state.products.map((product) => `
-          <label class="choiceSetOption">
-            <input type="checkbox" value="${product.id}" ${selectedIds.includes(product.id) ? "checked" : ""} />
-            <span>${escapeHtml(product.name)}</span>
-            <span class="subMeta">${escapeHtml(product.category_name || product.legacy_category || "—")}</span>
-          </label>
-        `).join("");
+        wrap.innerHTML = state.products
+          .slice()
+          .sort((a, b) => {
+            const catDiff = String(a.category_name || "").localeCompare(String(b.category_name || ""));
+            if (catDiff !== 0) return catDiff;
+            return manualCompare(a, b);
+          })
+          .map((product) => `
+            <label class="choiceSetOption">
+              <input type="checkbox" value="${product.id}" ${selectedIds.includes(product.id) ? "checked" : ""} />
+              <span>${escapeHtml(product.name)}</span>
+              <span class="subMeta">${escapeHtml(product.category_name || product.legacy_category || "—")}</span>
+            </label>
+          `).join("");
       }
 
       function updateBundleLineMode() {
@@ -1377,7 +1721,7 @@
 
         const lines = getBundleLines(bundle.id);
 
-        byId("bundleSelectionLabel").textContent = `${bundle.name} • ${bundle.category_name || "No category"} • ${bundle.is_active ? "active" : "inactive"}`;
+        byId("bundleSelectionLabel").textContent = `${bundle.name} • ${bundle.category_name || "No category"} • ${bundle.is_active ? "active" : "inactive"} • sort ${bundle.sort_order ?? "—"}`;
         byId("bundleSelectionMetrics").innerHTML = [
           `<span class="miniChip">${formatMoneyPence(bundle.price_pence)}</span>`,
           `<span class="miniChip">${bundle.capacity_units} capacity</span>`,
@@ -1459,7 +1803,7 @@
         byId("productIsActive").value = String(Boolean(product.is_active));
         byId("toggleProductActiveBtn").textContent = product.is_active ? "Deactivate" : "Activate";
 
-        byId("productSelectionLabel").textContent = `${product.name} • ${product.category_name || "No category"} • ${product.is_active ? "active" : "inactive"}`;
+        byId("productSelectionLabel").textContent = `${product.name} • ${product.category_name || "No category"} • ${product.is_active ? "active" : "inactive"} • sort ${product.sort_order ?? "—"}`;
         byId("productSelectionMetrics").innerHTML = [
           `<span class="miniChip">${formatMoneyPence(product.price_pence)}</span>`,
           `<span class="miniChip">${product.capacity_units} capacity</span>`,
@@ -1508,6 +1852,12 @@
         el.style.color = isError ? "#991b1b" : "var(--h-good)";
       }
 
+      function getNextSortOrder(itemsInScope) {
+        if (!itemsInScope.length) return 10;
+        const max = Math.max(...itemsInScope.map((x) => Number(x.sort_order || 0)));
+        return (Math.floor(max / 10) + 1) * 10 || 10;
+      }
+
       async function createCategory() {
         const name = byId("newCategoryName").value.trim();
         const slug = slugify(name);
@@ -1519,7 +1869,7 @@
           vendor_id: state.vendorId,
           name,
           slug,
-          sort_order: 100,
+          sort_order: getNextSortOrder(state.categories),
           is_active: byId("newCategoryActive").value === "true"
         };
 
@@ -1539,6 +1889,8 @@
         if (!name) throw new Error("Product Name is required.");
 
         const categoryId = byId("newProductCategory").value || null;
+        const itemsInCategory = state.products.filter((p) => (p.category_id || null) === categoryId);
+
         const payload = {
           vendor_id: state.vendorId,
           name,
@@ -1547,7 +1899,7 @@
           category: state.categories.find((c) => c.id === categoryId)?.name || "uncategorised",
           price_pence: Number(byId("newProductPricePence").value || 0),
           capacity_units: Number(byId("newProductCapacityUnits").value || 0),
-          sort_order: 100,
+          sort_order: getNextSortOrder(itemsInCategory),
           is_active: byId("newProductActive").value === "true"
         };
 
@@ -1555,6 +1907,7 @@
         if (error) throw error;
 
         state.selectedProductId = data.id;
+        if (categoryId) state.orderingCategoryIdProducts = categoryId;
         closeModal("newProductModal");
         await refreshAll();
         state.currentTab = "products";
@@ -1566,14 +1919,17 @@
         const name = byId("newBundleName").value.trim();
         if (!name) throw new Error("Bundle Name is required.");
 
+        const categoryId = byId("newBundleCategory").value || null;
+        const itemsInCategory = state.bundles.filter((b) => (b.category_id || null) === categoryId);
+
         const payload = {
           vendor_id: state.vendorId,
           name,
           description: byId("newBundleDescription").value.trim() || null,
-          category_id: byId("newBundleCategory").value || null,
+          category_id: categoryId,
           price_pence: Number(byId("newBundlePricePence").value || 0),
           capacity_units: Number(byId("newBundleCapacityUnits").value || 0),
-          sort_order: 100,
+          sort_order: getNextSortOrder(itemsInCategory),
           is_active: byId("newBundleActive").value === "true"
         };
 
@@ -1581,6 +1937,7 @@
         if (error) throw error;
 
         state.selectedBundleId = data.id;
+        if (categoryId) state.orderingCategoryIdBundles = categoryId;
         closeModal("newBundleModal");
         await refreshAll();
         state.currentTab = "bundles";
@@ -1597,7 +1954,7 @@
         const payload = {
           name: byId("categoryName").value.trim(),
           slug: slugify(byId("categoryName").value.trim()),
-          sort_order: category.sort_order ?? 100,
+          sort_order: category.sort_order ?? 10,
           is_active: byId("categoryIsActive").value === "true"
         };
 
@@ -1628,7 +1985,7 @@
           category: state.categories.find((c) => c.id === categoryId)?.name || product.legacy_category || "uncategorised",
           price_pence: Number(byId("productPricePence").value || 0),
           capacity_units: Number(byId("productCapacityUnits").value || 0),
-          sort_order: product.sort_order ?? 100,
+          sort_order: product.sort_order ?? 10,
           is_active: byId("productIsActive").value === "true"
         };
 
@@ -1640,6 +1997,7 @@
           throw error;
         }
 
+        if (categoryId) state.orderingCategoryIdProducts = categoryId;
         await refreshAll();
         showInlineSuccess("Product saved");
       }
@@ -1650,13 +2008,14 @@
 
         setSaveState("saving");
 
+        const categoryId = byId("bundleCategory").value || null;
         const payload = {
           name: byId("bundleName").value.trim(),
           description: byId("bundleDescription").value.trim() || null,
-          category_id: byId("bundleCategory").value || null,
+          category_id: categoryId,
           price_pence: Number(byId("bundlePricePence").value || 0),
           capacity_units: Number(byId("bundleCapacityUnits").value || 0),
-          sort_order: bundle.sort_order ?? 100,
+          sort_order: bundle.sort_order ?? 10,
           is_active: byId("bundleIsActive").value === "true"
         };
 
@@ -1668,6 +2027,7 @@
           throw error;
         }
 
+        if (categoryId) state.orderingCategoryIdBundles = categoryId;
         await refreshAll();
         showInlineSuccess("Bundle saved");
       }
@@ -1675,6 +2035,8 @@
       async function duplicateCurrentProduct() {
         const product = state.products.find((p) => p.id === state.selectedProductId);
         if (!product) throw new Error("No product selected.");
+
+        const itemsInCategory = state.products.filter((p) => (p.category_id || null) === (product.category_id || null));
 
         const payload = {
           vendor_id: state.vendorId,
@@ -1684,7 +2046,7 @@
           category: product.legacy_category || product.category_name || "uncategorised",
           price_pence: product.price_pence,
           capacity_units: product.capacity_units,
-          sort_order: product.sort_order ?? 100,
+          sort_order: getNextSortOrder(itemsInCategory),
           is_active: false
         };
 
@@ -1692,6 +2054,7 @@
         if (error) throw error;
 
         state.selectedProductId = data.id;
+        if (product.category_id) state.orderingCategoryIdProducts = product.category_id;
         await refreshAll();
         showInlineSuccess("Product duplicated");
       }
@@ -1699,6 +2062,8 @@
       async function duplicateCurrentBundle() {
         const bundle = state.bundles.find((b) => b.id === state.selectedBundleId);
         if (!bundle) throw new Error("No bundle selected.");
+
+        const itemsInCategory = state.bundles.filter((b) => (b.category_id || null) === (bundle.category_id || null));
 
         const { data: insertedBundle, error: bundleError } = await supabase
           .from("bundles")
@@ -1709,7 +2074,7 @@
             category_id: bundle.category_id,
             price_pence: bundle.price_pence,
             capacity_units: bundle.capacity_units,
-            sort_order: bundle.sort_order ?? 100,
+            sort_order: getNextSortOrder(itemsInCategory),
             is_active: false
           })
           .select("*")
@@ -1755,6 +2120,7 @@
         }
 
         state.selectedBundleId = insertedBundle.id;
+        if (bundle.category_id) state.orderingCategoryIdBundles = bundle.category_id;
         await refreshAll();
         showInlineSuccess("Bundle duplicated");
       }
@@ -1828,6 +2194,7 @@
         }
 
         const existingLine = state.bundleLines.find((l) => l.id === state.selectedBundleLineId);
+        const bundleLinesForCurrentBundle = getBundleLines(bundleId);
 
         const payload = {
           bundle_id: bundleId,
@@ -1840,7 +2207,7 @@
           max_choices: Number(byId("bundleLineMaxChoices").value || 1),
           is_required: byId("bundleLineRequired").value === "true",
           drives_capacity: byId("bundleLineDrivesCapacity").value === "true",
-          sort_order: existingLine?.sort_order ?? 100
+          sort_order: existingLine?.sort_order ?? getNextSortOrder(bundleLinesForCurrentBundle)
         };
 
         setSaveState("saving");
@@ -1949,17 +2316,40 @@
 
         byId("librarySearch").addEventListener("input", (e) => {
           state.search = e.target.value || "";
+          renderOrderingControls();
           renderLibraryTable();
         });
 
         byId("librarySort").addEventListener("change", (e) => {
-          state.sort = e.target.value || "type_then_name";
+          state.sort = e.target.value || "manual_order";
+          renderOrderingControls();
           renderLibraryTable();
+        });
+
+        byId("orderingCategorySelect").addEventListener("change", (e) => {
+          setActiveOrderingCategoryId(e.target.value || null);
+
+          if (state.currentTab === "products") {
+            const first = state.products
+              .filter((p) => (p.category_id || null) === (state.orderingCategoryIdProducts || null))
+              .sort(manualCompare)[0];
+            if (first) state.selectedProductId = first.id;
+          }
+
+          if (state.currentTab === "bundles") {
+            const first = state.bundles
+              .filter((b) => (b.category_id || null) === (state.orderingCategoryIdBundles || null))
+              .sort(manualCompare)[0];
+            if (first) state.selectedBundleId = first.id;
+          }
+
+          renderEverything();
         });
 
         byId("libraryTypeChecklist").addEventListener("change", () => {
           state.selectedTypes = Array.from(byId("libraryTypeChecklist").querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
           renderFilterSummaries();
+          renderOrderingControls();
           renderLibraryTable();
         });
 
@@ -1967,6 +2357,7 @@
           state.selectedTypes = ["category", "product", "bundle"];
           byId("libraryTypeChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = true; });
           renderFilterSummaries();
+          renderOrderingControls();
           renderLibraryTable();
         });
 
@@ -1974,12 +2365,14 @@
           state.selectedTypes = [];
           byId("libraryTypeChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
           renderFilterSummaries();
+          renderOrderingControls();
           renderLibraryTable();
         });
 
         byId("libraryCategoryChecklist").addEventListener("change", () => {
           state.selectedCategoryIds = Array.from(byId("libraryCategoryChecklist").querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
           renderFilterSummaries();
+          renderOrderingControls();
           renderLibraryTable();
         });
 
@@ -1987,6 +2380,7 @@
           state.selectedCategoryIds = [];
           byId("libraryCategoryChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
           renderFilterSummaries();
+          renderOrderingControls();
           renderLibraryTable();
         });
 
@@ -1994,6 +2388,7 @@
           state.selectedCategoryIds = [];
           byId("libraryCategoryChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
           renderFilterSummaries();
+          renderOrderingControls();
           renderLibraryTable();
         });
 
@@ -2001,6 +2396,7 @@
           state.selectedStatuses = ["active", "inactive"];
           byId("libraryStatusChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = true; });
           renderFilterSummaries();
+          renderOrderingControls();
           renderLibraryTable();
         });
 
@@ -2008,6 +2404,7 @@
           state.selectedStatuses = ["active"];
           byId("libraryStatusChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = cb.value === "active"; });
           renderFilterSummaries();
+          renderOrderingControls();
           renderLibraryTable();
         });
 
@@ -2015,18 +2412,21 @@
           state.selectedStatuses = ["inactive"];
           byId("libraryStatusChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = cb.value === "inactive"; });
           renderFilterSummaries();
+          renderOrderingControls();
           renderLibraryTable();
         });
 
         byId("libraryStatusChecklist").addEventListener("change", () => {
           state.selectedStatuses = Array.from(byId("libraryStatusChecklist").querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
           renderFilterSummaries();
+          renderOrderingControls();
           renderLibraryTable();
         });
 
         document.querySelectorAll(".workspaceTabs .stagePill").forEach((pill) => {
           pill.addEventListener("click", () => {
             state.currentTab = pill.dataset.tab;
+            ensureOrderingSelectionsStillValid();
             renderEverything();
           });
         });
@@ -2044,9 +2444,13 @@
           } else if (itemType === "product") {
             state.currentTab = "products";
             state.selectedProductId = itemId;
+            const product = state.products.find((p) => p.id === itemId);
+            if (product?.category_id) state.orderingCategoryIdProducts = product.category_id;
           } else if (itemType === "bundle") {
             state.currentTab = "bundles";
             state.selectedBundleId = itemId;
+            const bundle = state.bundles.find((b) => b.id === itemId);
+            if (bundle?.category_id) state.orderingCategoryIdBundles = bundle.category_id;
           }
 
           renderEverything();
