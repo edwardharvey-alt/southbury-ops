@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hearth — Insights</title>
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=30" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .kpi-grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
+      gap:12px;
+    }
+    .kpi {
+      padding:14px;
+      border-radius:12px;
+      background:#fff;
+      border:1px solid #eee;
+    }
+    .kpi h3 {
+      font-size:12px;
+      opacity:.6;
+      margin-bottom:6px;
+    }
+    .kpi p {
+      font-size:20px;
+      font-weight:600;
+    }
+
+    .section {
+      margin-top:18px;
+    }
+
+    .card {
+      background:#fff;
+      border:1px solid #eee;
+      border-radius:14px;
+      padding:16px;
+    }
+
+    canvas {
+      width:100%;
+      height:220px;
+    }
+
+    .two-col {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+    }
+
+    .table {
+      width:100%;
+      font-size:13px;
+    }
+    .table th {
+      text-align:left;
+      opacity:.6;
+      padding-bottom:6px;
+    }
+    .table td {
+      padding:6px 0;
+    }
+
+    select {
+      padding:8px;
+      border-radius:8px;
+      border:1px solid #ddd;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+
+  <div class="card headerBar">
+    <div>
+      <strong>Insights</strong>
+      <div style="font-size:12px;opacity:.6">
+        Understand how Hearth is growing your business
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="section kpi-grid" id="kpis"></div>
+
+  <!-- Trend -->
+  <div class="section card">
+    <h3>Revenue Trend</h3>
+    <canvas id="revenueChart"></canvas>
+  </div>
+
+  <!-- Drop -->
+  <div class="section card">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3>Drop Performance</h3>
+      <select id="dropSelect"></select>
+    </div>
+
+    <div class="kpi-grid" id="dropKpis" style="margin-top:12px;"></div>
+  </div>
+
+  <!-- Items + Hosts -->
+  <div class="section two-col">
+    <div class="card">
+      <h3>Top Items</h3>
+      <table class="table" id="itemsTable"></table>
+    </div>
+
+    <div class="card">
+      <h3>Hosts</h3>
+      <table class="table" id="hostsTable"></table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const supabase = window.supabase.createClient(
+  window.HEARTH_SUPABASE_URL,
+  window.HEARTH_SUPABASE_KEY
+);
+
+let vendorId = null;
+let drops = [];
+
+async function init() {
+
+  // ⚠️ TEMP: pick first vendor
+  const { data: vendors } = await supabase.from('vendors').select('*').limit(1);
+  vendorId = vendors[0].id;
+
+  loadSummary();
+  loadTrend();
+  loadDrops();
+  loadItems();
+  loadHosts();
+}
+
+async function loadSummary() {
+  const { data } = await supabase
+    .from('v_hearth_summary')
+    .select('*')
+    .eq('vendor_id', vendorId)
+    .single();
+
+  const kpis = [
+    ['Revenue (30d)', formatMoney(data.total_revenue_30d_pence)],
+    ['Drops', data.drops_30d],
+    ['Avg / Drop', formatMoney(data.avg_revenue_per_drop_pence)],
+    ['Capacity Used', data.avg_capacity_utilisation_pct + '%']
+  ];
+
+  document.getElementById('kpis').innerHTML = kpis.map(k => `
+    <div class="kpi">
+      <h3>${k[0]}</h3>
+      <p>${k[1]}</p>
+    </div>
+  `).join('');
+}
+
+async function loadTrend() {
+  const { data } = await supabase
+    .from('v_hearth_revenue_over_time')
+    .select('*')
+    .eq('vendor_id', vendorId)
+    .order('order_date', { ascending: true });
+
+  const ctx = document.getElementById('revenueChart').getContext('2d');
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.map(d => d.order_date),
+      datasets: [{
+        label: 'Revenue',
+        data: data.map(d => d.revenue_pence / 100)
+      }]
+    }
+  });
+}
+
+async function loadDrops() {
+  const { data } = await supabase
+    .from('v_hearth_drop_stats')
+    .select('*')
+    .eq('vendor_id', vendorId)
+    .order('delivery_start', { ascending:false });
+
+  drops = data;
+
+  const select = document.getElementById('dropSelect');
+  select.innerHTML = data.map(d => `
+    <option value="${d.drop_id}">${d.drop_name}</option>
+  `).join('');
+
+  select.onchange = () => renderDrop(select.value);
+
+  renderDrop(data[0].drop_id);
+}
+
+function renderDrop(id) {
+  const d = drops.find(x => x.drop_id === id);
+
+  const kpis = [
+    ['Revenue', formatMoney(d.revenue_pence)],
+    ['Orders', d.orders_count],
+    ['Capacity', d.capacity_utilisation_pct + '%'],
+    ['AOV', formatMoney(d.avg_order_value_pence)]
+  ];
+
+  document.getElementById('dropKpis').innerHTML = kpis.map(k => `
+    <div class="kpi">
+      <h3>${k[0]}</h3>
+      <p>${k[1]}</p>
+    </div>
+  `).join('');
+}
+
+async function loadItems() {
+  const { data } = await supabase
+    .from('v_item_sales')
+    .select('*')
+    .eq('vendor_id', vendorId)
+    .order('revenue_pence', { ascending:false })
+    .limit(5);
+
+  document.getElementById('itemsTable').innerHTML = `
+    <tr><th>Item</th><th>Revenue</th></tr>
+    ${data.map(i => `
+      <tr>
+        <td>${i.product_name}</td>
+        <td>${formatMoney(i.revenue_pence)}</td>
+      </tr>
+    `).join('')}
+  `;
+}
+
+async function loadHosts() {
+  const { data } = await supabase
+    .from('v_host_performance')
+    .select('*')
+    .eq('vendor_id', vendorId)
+    .order('revenue_pence', { ascending:false });
+
+  document.getElementById('hostsTable').innerHTML = `
+    <tr><th>Host</th><th>Revenue</th></tr>
+    ${data.map(h => `
+      <tr>
+        <td>${h.host_name || '—'}</td>
+        <td>${formatMoney(h.revenue_pence)}</td>
+      </tr>
+    `).join('')}
+  `;
+}
+
+function formatMoney(p) {
+  return '£' + (p / 100).toFixed(2);
+}
+
+init();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</body>
+</html>
