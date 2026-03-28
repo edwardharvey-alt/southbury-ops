@@ -1426,13 +1426,21 @@
       function getBundleLines(bundleId) {
         return state.bundleLines
           .filter((x) => x.bundle_id === bundleId)
-          .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+          .sort((a, b) => {
+            const sortCompare = Number(a.sort_order ?? 9999) - Number(b.sort_order ?? 9999);
+            if (sortCompare !== 0) return sortCompare;
+            return String(a.label || "").localeCompare(String(b.label || ""));
+          });
       }
 
       function getChoiceProducts(bundleLineId) {
         return state.bundleChoiceProducts
           .filter((x) => x.bundle_line_id === bundleLineId)
-          .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+          .sort((a, b) => {
+            const sortCompare = Number(a.sort_order ?? 9999) - Number(b.sort_order ?? 9999);
+            if (sortCompare !== 0) return sortCompare;
+            return String(a.product_name || "").localeCompare(String(b.product_name || ""));
+          });
       }
 
       function getProductById(id) {
@@ -1549,7 +1557,7 @@
 
       function getCategorySortForItem(item) {
         const category = item?.category_id ? getCategoryById(item.category_id) : null;
-        return Number(category?.sort_order ?? item?.sort_order ?? 9999);
+        return Number(category?.sort_order ?? 9999);
       }
 
       function hexToRgba(hex, alpha) {
@@ -1801,7 +1809,7 @@
                 category_name: getCategoryNameForItem(product),
                 base_price_pence: row.price_override_pence ?? product.price_pence ?? 0,
                 capacity_units: Number(product.capacity_units || 0),
-                sort_order: row.sort_order ?? product.sort_order ?? 100,
+                sort_order: row.sort_order ?? product.sort_order ?? 9999,
                 category_sort_order: getCategorySortForItem(product)
               };
             }
@@ -1820,7 +1828,7 @@
                 category_name: getCategoryNameForItem(bundle),
                 base_price_pence: row.price_override_pence ?? bundle.price_pence ?? 0,
                 capacity_units: Number(bundle.capacity_units || 0),
-                sort_order: row.sort_order ?? bundle.sort_order ?? 100,
+                sort_order: row.sort_order ?? bundle.sort_order ?? 9999,
                 category_sort_order: getCategorySortForItem(bundle)
               };
             }
@@ -1829,16 +1837,16 @@
           })
           .filter(Boolean)
           .sort((a, b) => {
-            const catSortCompare = Number(a.category_sort_order || 9999) - Number(b.category_sort_order || 9999);
+            const catSortCompare = Number(a.category_sort_order ?? 9999) - Number(b.category_sort_order ?? 9999);
             if (catSortCompare !== 0) return catSortCompare;
 
-            const catCompare = String(a.category_name || "").localeCompare(String(b.category_name || ""));
-            if (catCompare !== 0) return catCompare;
+            const catNameCompare = String(a.category_name || "").localeCompare(String(b.category_name || ""));
+            if (catNameCompare !== 0) return catNameCompare;
 
-            const sortCompare = Number(a.sort_order || 100) - Number(b.sort_order || 100);
-            if (sortCompare !== 0) return sortCompare;
+            const itemSortCompare = Number(a.sort_order ?? 9999) - Number(b.sort_order ?? 9999);
+            if (itemSortCompare !== 0) return itemSortCompare;
 
-            return a.name.localeCompare(b.name);
+            return String(a.name || "").localeCompare(String(b.name || ""));
           });
       }
 
@@ -1917,28 +1925,74 @@
         }
 
         const groupsMap = new Map();
+
         items.forEach((item) => {
           const key = `${item.category_id || item.category_name || "other"}`;
           if (!groupsMap.has(key)) {
             groupsMap.set(key, {
               key,
               name: item.category_name || "Other",
-              sort: Number(item.category_sort_order || 9999),
+              sort: Number(item.category_sort_order ?? 9999),
               items: []
             });
           }
           groupsMap.get(key).items.push(item);
         });
 
-        wrap.innerHTML = `<div class="menuAccordionList">${[...groupsMap.values()].sort((a, b) => {
-          const sortCompare = Number(a.sort || 9999) - Number(b.sort || 9999);
-          if (sortCompare !== 0) return sortCompare;
-          return String(a.name).localeCompare(String(b.name));
-        }).map((group) => {
-          const isOpen = state.openCategories.has(group.key);
-          const cards = group.items.map((item) => {
-            if (item.menu_item_type === "product") {
-              const qty = getProductBasketQuantity(item.id);
+        wrap.innerHTML = `<div class="menuAccordionList">${[...groupsMap.values()]
+          .sort((a, b) => {
+            const sortCompare = Number(a.sort ?? 9999) - Number(b.sort ?? 9999);
+            if (sortCompare !== 0) return sortCompare;
+            return String(a.name).localeCompare(String(b.name));
+          })
+          .map((group) => {
+            const isOpen = state.openCategories.has(group.key);
+
+            const sortedItems = group.items.slice().sort((a, b) => {
+              const sortCompare = Number(a.sort_order ?? 9999) - Number(b.sort_order ?? 9999);
+              if (sortCompare !== 0) return sortCompare;
+
+              if (a.menu_item_type !== b.menu_item_type) {
+                return String(a.menu_item_type).localeCompare(String(b.menu_item_type));
+              }
+
+              return String(a.name).localeCompare(String(b.name));
+            });
+
+            const cards = sortedItems.map((item) => {
+              if (item.menu_item_type === "product") {
+                const qty = getProductBasketQuantity(item.id);
+
+                return `
+                  <div class="menuItemCard">
+                    <div class="menuItemTop">
+                      <div class="menuItemCopy">
+                        <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
+                        ${item.description ? `<p class="menuItemDesc">${escapeHtml(item.description)}</p>` : ""}
+                      </div>
+
+                      <div class="menuPriceBlock">
+                        <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
+                        <div class="menuPriceHint">each</div>
+                      </div>
+                    </div>
+
+                    <div class="menuControls">
+                      <div class="menuControlsRight">
+                        <div class="stepper">
+                          <button type="button" class="js-product-minus" data-product-id="${item.id}" ${qty <= 0 || isDropClosed() ? "disabled" : ""}>−</button>
+                          <div class="stepperValue">${qty}</div>
+                          <button type="button" class="js-product-plus" data-product-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>+</button>
+                        </div>
+
+                        <button class="brandBtn ${qty > 0 ? "secondary" : ""} js-product-add" type="button" data-product-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>
+                          ${qty > 0 ? "View basket" : "Add to order"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }
 
               return `
                 <div class="menuItemCard">
@@ -1950,66 +2004,35 @@
 
                     <div class="menuPriceBlock">
                       <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
-                      <div class="menuPriceHint">each</div>
+                      <div class="menuPriceHint">bundle</div>
                     </div>
                   </div>
 
                   <div class="menuControls">
-                    <div class="menuControlsRight">
-                      <div class="stepper">
-                        <button type="button" class="js-product-minus" data-product-id="${item.id}" ${qty <= 0 || isDropClosed() ? "disabled" : ""}>−</button>
-                        <div class="stepperValue">${qty}</div>
-                        <button type="button" class="js-product-plus" data-product-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>+</button>
-                      </div>
-
-                      <button class="brandBtn ${qty > 0 ? "secondary" : ""} js-product-add" type="button" data-product-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>
-                        ${qty > 0 ? "View basket" : "Add to order"}
-                      </button>
-                    </div>
+                    <div class="menuLeadNote">Choose what goes inside before adding it to your order.</div>
+                    <button class="brandBtn js-open-bundle" type="button" data-bundle-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>
+                      Customize
+                    </button>
                   </div>
                 </div>
               `;
-            }
+            }).join("");
 
             return `
-              <div class="menuItemCard">
-                <div class="menuItemTop">
-                  <div class="menuItemCopy">
-                    <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
-                    ${item.description ? `<p class="menuItemDesc">${escapeHtml(item.description)}</p>` : ""}
+              <div class="menuCategoryBlock ${isOpen ? "open" : ""}" data-category-key="${escapeHtml(group.key)}">
+                <button class="menuCategoryToggle js-category-toggle" type="button" data-category-key="${escapeHtml(group.key)}" aria-expanded="${isOpen ? "true" : "false"}">
+                  <div class="menuCategoryTitleWrap">
+                    <h4 class="menuCategoryTitle">${escapeHtml(group.name)}</h4>
+                    <div class="menuCategoryHint">Tap to ${isOpen ? "hide" : "view"} items</div>
                   </div>
-
-                  <div class="menuPriceBlock">
-                    <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
-                    <div class="menuPriceHint">bundle</div>
-                  </div>
-                </div>
-
-                <div class="menuControls">
-                  <div class="menuLeadNote">Choose what goes inside before adding it to your order.</div>
-                  <button class="brandBtn js-open-bundle" type="button" data-bundle-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>
-                    Customize
-                  </button>
+                  <div class="menuCategoryChevron">⌄</div>
+                </button>
+                <div class="menuCategoryContent">
+                  <div class="menuCardGrid">${cards}</div>
                 </div>
               </div>
             `;
-          }).join("");
-
-          return `
-            <div class="menuCategoryBlock ${isOpen ? "open" : ""}" data-category-key="${escapeHtml(group.key)}">
-              <button class="menuCategoryToggle js-category-toggle" type="button" data-category-key="${escapeHtml(group.key)}" aria-expanded="${isOpen ? "true" : "false"}">
-                <div class="menuCategoryTitleWrap">
-                  <h4 class="menuCategoryTitle">${escapeHtml(group.name)}</h4>
-                  <div class="menuCategoryHint">Tap to ${isOpen ? "hide" : "view"} items</div>
-                </div>
-                <div class="menuCategoryChevron">⌄</div>
-              </button>
-              <div class="menuCategoryContent">
-                <div class="menuCardGrid">${cards}</div>
-              </div>
-            </div>
-          `;
-        }).join("")}</div>`;
+          }).join("")}</div>`;
       }
 
       function getProductBasketQuantity(productId) {
@@ -2296,6 +2319,11 @@
         } else if (lineType === "category_choice") {
           options = state.products
             .filter((p) => p.category_id === line.category_id)
+            .sort((a, b) => {
+              const sortCompare = Number(a.sort_order ?? 9999) - Number(b.sort_order ?? 9999);
+              if (sortCompare !== 0) return sortCompare;
+              return String(a.name || "").localeCompare(String(b.name || ""));
+            })
             .map((p) => ({
               value: p.id,
               name: p.name,
@@ -2720,4 +2748,3 @@
   </script>
 </body>
 </html>
-
