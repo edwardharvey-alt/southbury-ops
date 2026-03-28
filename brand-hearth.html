@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hearth — Brand Hearth</title>
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=30" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --brand-preview-primary:#8B6B3F;
+      --brand-preview-secondary:#CBB89D;
+      --brand-preview-text:#ffffff;
+      --brand-preview-soft:rgba(139,107,63,0.12);
+      --brand-preview-soft-2:rgba(203,184,157,0.10);
+    }
+
+    .brandPage{
+      display:grid;
+      gap:16px;
+    }
+
+    .brandTopCard{
+      display:grid;
+      gap:12px;
+    }
+
+    .brandSummaryBar{
+      display:grid;
+      grid-template-columns:minmax(0, 1.2fr) minmax(280px, .8fr);
+      gap:12px;
+    }
+
+    .brandSummaryMain,
+    .brandSummaryMeta{
+      border:1px solid var(--h-border-2);
+      border-radius:20px;
+      background:#fff;
+      padding:16px;
+      min-width:0;
+    }
+
+    .brandSummaryMain{
+      display:flex;
+      gap:14px;
+      align-items:flex-start;
+    }
+
+    .brandSummaryLogo{
+      width:68px;
+      height:68px;
+      border-radius:18px;
+      background:linear-gradient(135deg, var(--brand-preview-primary), var(--brand-preview-secondary));
+      color:var(--brand-preview-text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:24px;
+      font-weight:900;
+      overflow:hidden;
+      flex:0 0 auto;
+      border:1px solid rgba(15,23,42,0.08);
+    }
+
+    .brandSummaryLogo img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    .brandSummaryTitle{
+      font-size:24px;
+      line-height:1.02;
+      font-weight:950;
+      letter-spacing:-0.03em;
+      color:var(--h-text);
+      margin:0;
+    }
+
+    .brandSummarySub{
+      margin:6px 0 0;
+      font-size:13px;
+      line-height:1.45;
+      color:var(--h-muted);
+      font-weight:700;
+      max-width:56ch;
+    }
+
+    .brandSummaryEyebrow{
+      display:inline-flex;
+      min-height:28px;
+      align-items:center;
+      padding:0 10px;
+      border-radius:999px;
+      background:rgba(15,23,42,0.05);
+      border:1px solid rgba(15,23,42,0.08);
+      color:var(--h-text);
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      margin-bottom:8px;
+    }
+
+    .brandSummaryMeta{
+      display:grid;
+      gap:10px;
+    }
+
+    .brandMetaRow{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+      font-size:12px;
+      line-height:1.3;
+    }
+
+    .brandMetaRow .label{
+      color:var(--h-muted);
+      font-weight:700;
+    }
+
+    .brandMetaRow .value{
+      color:var(--h-text);
+      font-weight:800;
+      text-align:right;
+    }
+
+    .brandColourSwatches{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+
+    .brandSwatch{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      min-height:30px;
+      padding:4px 10px 4px 4px;
+      border-radius:999px;
+      background:#fff;
+      border:1px solid var(--h-border);
+      font-size:11px;
+      font-weight:800;
+      color:var(--h-text);
+    }
+
+    .brandSwatchDot{
+      width:20px;
+      height:20px;
+      border-radius:999px;
+      border:1px solid rgba(15,23,42,0.12);
+      flex:0 0 auto;
+    }
+
+    .brandWorkspace{
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) minmax(320px, 420px);
+      gap:16px;
+      align-items:start;
+    }
+
+    .brandEditor{
+      display:grid;
+      gap:16px;
+      min-width:0;
+    }
+
+    .brandPreviewColumn{
+      position:sticky;
+      top:18px;
+      display:grid;
+      gap:12px;
+    }
+
+    .brandSection{
+      border:1px solid var(--h-border-2);
+      border-radius:22px;
+      background:#fff;
+      padding:18px;
+      display:grid;
+      gap:14px;
+      box-shadow:0 2px 10px rgba(15,23,42,0.03);
+    }
+
+    .brandSectionHead{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+    }
+
+    .brandSectionTitle{
+      margin:0;
+      font-size:16px;
+      line-height:1.05;
+      font-weight:950;
+      letter-spacing:-0.02em;
+      color:var(--h-text);
+    }
+
+    .brandSectionSub{
+      margin:4px 0 0;
+      font-size:12px;
+      line-height:1.45;
+      color:var(--h-muted);
+      font-weight:700;
+      max-width:58ch;
+    }
+
+    .brandPreviewCard{
+      border:1px solid var(--h-border-2);
+      border-radius:24px;
+      background:
+        radial-gradient(900px 420px at 18% -10%, var(--brand-preview-soft), rgba(249,115,22,0) 60%),
+        radial-gradient(700px 300px at 90% 0%, var(--brand-preview-soft-2), rgba(251,146,60,0) 55%),
+        #fff;
+      overflow:hidden;
+      box-shadow:0 10px 24px rgba(15,23,42,0.08);
+    }
+
+    .brandPreviewHero{
+      position:relative;
+      min-height:320px;
+      background:
+        linear-gradient(135deg, rgba(32,26,18,0.18), rgba(32,26,18,0.34)),
+        linear-gradient(135deg, var(--brand-preview-primary), var(--brand-preview-secondary));
+      color:var(--brand-preview-text);
+      overflow:hidden;
+    }
+
+    .brandPreviewHero.hasImage{
+      background-size:cover;
+      background-position:center;
+    }
+
+    .brandPreviewHero::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(180deg, rgba(255,255,255,0.00) 0%, rgba(15,23,42,0.05) 28%, rgba(15,23,42,0.24) 68%, rgba(15,23,42,0.44) 100%);
+      pointer-events:none;
+    }
+
+    .brandPreviewHeroInner{
+      position:relative;
+      z-index:2;
+      min-height:320px;
+      padding:18px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap:18px;
+    }
+
+    .brandPreviewTop{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+    }
+
+    .brandPreviewVendor{
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      min-width:0;
+    }
+
+    .brandPreviewLogo{
+      width:58px;
+      height:58px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,0.18);
+      background:#fff;
+      overflow:hidden;
+      flex:0 0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#8B6B3F;
+      font-size:22px;
+      font-weight:900;
+    }
+
+    .brandPreviewLogo img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    .brandPreviewEyebrow{
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-weight:900;
+      color:color-mix(in srgb, var(--brand-preview-text) 82%, transparent);
+      margin-bottom:6px;
+    }
+
+    .brandPreviewVendorName{
+      margin:0;
+      font-size:24px;
+      line-height:1;
+      font-weight:950;
+      letter-spacing:-0.03em;
+      text-wrap:balance;
+    }
+
+    .brandPreviewTagline{
+      margin:6px 0 0;
+      font-size:13px;
+      line-height:1.45;
+      color:color-mix(in srgb, var(--brand-preview-text) 88%, transparent);
+      font-weight:600;
+      max-width:34ch;
+    }
+
+    .brandPreviewSite{
+      min-height:36px;
+      padding:0 12px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.22);
+      background:rgba(255,255,255,0.10);
+      color:var(--brand-preview-text);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:12px;
+      font-weight:800;
+      backdrop-filter:blur(6px);
+      -webkit-backdrop-filter:blur(6px);
+      white-space:nowrap;
+    }
+
+    .brandPreviewDrop{
+      display:grid;
+      gap:10px;
+    }
+
+    .brandPreviewDropEyebrow{
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-weight:900;
+      color:color-mix(in srgb, var(--brand-preview-text) 82%, transparent);
+    }
+
+    .brandPreviewDropTitle{
+      margin:0;
+      font-size:28px;
+      line-height:.98;
+      font-weight:950;
+      letter-spacing:-0.04em;
+      text-wrap:balance;
+    }
+
+    .brandPreviewDropSub{
+      margin:0;
+      font-size:13px;
+      line-height:1.45;
+      color:color-mix(in srgb, var(--brand-preview-text) 90%, transparent);
+      font-weight:600;
+      max-width:38ch;
+    }
+
+    .brandPreviewChips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+
+    .brandPreviewChip{
+      min-height:32px;
+      padding:0 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.14);
+      border:1px solid rgba(255,255,255,0.16);
+      display:inline-flex;
+      align-items:center;
+      font-size:11px;
+      font-weight:800;
+      color:var(--brand-preview-text);
+      backdrop-filter:blur(6px);
+      -webkit-backdrop-filter:blur(6px);
+    }
+
+    .brandPreviewBody{
+      padding:14px 16px 16px;
+      display:grid;
+      gap:12px;
+      background:#fff;
+    }
+
+    .brandPreviewNotice{
+      border:1px solid var(--h-border-2);
+      border-radius:14px;
+      background:rgba(15,23,42,0.02);
+      padding:11px 12px;
+      font-size:12px;
+      line-height:1.35;
+      color:var(--h-text);
+      font-weight:800;
+    }
+
+    .brandPreviewFooter{
+      text-align:center;
+      font-size:11px;
+      line-height:1.35;
+      color:var(--h-muted);
+      font-weight:700;
+      padding-top:2px;
+    }
+
+    .brandPreviewMetaCard{
+      border:1px solid var(--h-border-2);
+      border-radius:18px;
+      background:#fff;
+      padding:14px;
+      display:grid;
+      gap:10px;
+    }
+
+    .brandPreviewMetaTitle{
+      font-size:13px;
+      font-weight:900;
+      color:var(--h-text);
+      margin:0;
+    }
+
+    .brandPreviewMetaText{
+      font-size:12px;
+      line-height:1.45;
+      color:var(--h-muted);
+      font-weight:700;
+      margin:0;
+    }
+
+    .brandActions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .brandLinkRow{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .brandMiniLink{
+      font-size:12px;
+      font-weight:800;
+      color:var(--h-accent);
+      text-decoration:none;
+    }
+
+    @media (max-width: 1080px){
+      .brandWorkspace{
+        grid-template-columns:1fr;
+      }
+
+      .brandPreviewColumn{
+        position:static;
+      }
+    }
+
+    @media (max-width: 820px){
+      .brandSummaryBar{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media (max-width: 640px){
+      .brandSummaryMain{
+        flex-direction:column;
+      }
+
+      .brandPreviewTop{
+        flex-direction:column;
+        align-items:stretch;
+      }
+
+      .brandPreviewHeroInner{
+        min-height:300px;
+        padding:16px;
+      }
+
+      .brandPreviewVendorName{
+        font-size:22px;
+      }
+
+      .brandPreviewDropTitle{
+        font-size:24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card headerBar">
+      <div class="brand">
+        <div class="brandMark">H</div>
+        <div>
+          <div class="brandTitle">Hearth — Brand Hearth</div>
+          <div class="brandSubtitle">Shape how customers see your brand</div>
+        </div>
+      </div>
+
+      <div class="nav">
+        <a href="index.html">Service Board</a>
+        <a href="drop-manager.html">Drop Studio</a>
+        <a href="drop-menu.html">Menu Library</a>
+        <a href="brand-hearth.html" class="active">Brand Hearth</a>
+        <a href="#">Insights</a>
+      </div>
+    </div>
+
+    <div class="brandPage">
+      <div class="card brandTopCard">
+        <div class="row space" style="margin-bottom:2px;">
+          <div>
+            <h3 class="sectionTitle">Brand Hearth</h3>
+            <p class="sectionSub">Define the identity customers see on your ordering page</p>
+          </div>
+
+          <div class="brandActions">
+            <button class="btnGhost" id="refreshBrandBtn" type="button">Refresh</button>
+            <button class="btnGhost" id="previewOrderPageBtn" type="button">Preview Ordering Page</button>
+            <button class="btnAccent" id="saveBrandBtnTop" type="button">Save Brand</button>
+          </div>
+        </div>
+
+        <div class="saveStateInline saved" id="saveStateInline">All changes saved</div>
+        <div class="inlineSuccess" id="inlineSuccess"></div>
+        <div class="errorBox" id="errorBox"></div>
+
+        <div class="brandSummaryBar">
+          <div class="brandSummaryMain">
+            <div class="brandSummaryLogo" id="summaryLogo">
+              <span id="summaryLogoFallback">S</span>
+            </div>
+
+            <div style="min-width:0;">
+              <div class="brandSummaryEyebrow" id="summaryEyebrow">ORDER DIRECT</div>
+              <h2 class="brandSummaryTitle" id="summaryTitle">Southbury Farm Pizza</h2>
+              <p class="brandSummarySub" id="summaryTagline">Freshly made and ready to order</p>
+
+              <div class="brandLinkRow" style="margin-top:10px;">
+                <a class="brandMiniLink" href="#" id="summaryWebsiteLink" target="_blank" rel="noopener noreferrer" style="display:none;">Visit website</a>
+                <span class="miniChip">Powered by Hearth</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="brandSummaryMeta">
+            <div class="brandMetaRow">
+              <span class="label">Vendor</span>
+              <span class="value" id="summaryVendorSlug">southbury-farm-pizza</span>
+            </div>
+
+            <div class="brandMetaRow">
+              <span class="label">Website</span>
+              <span class="value" id="summaryWebsiteStatus">Not set</span>
+            </div>
+
+            <div class="brandMetaRow">
+              <span class="label">Logo</span>
+              <span class="value" id="summaryLogoStatus">Not set</span>
+            </div>
+
+            <div class="brandMetaRow">
+              <span class="label">Hero image</span>
+              <span class="value" id="summaryHeroStatus">Not set</span>
+            </div>
+
+            <div>
+              <div class="label" style="font-size:12px; color:var(--h-muted); font-weight:700; margin-bottom:8px;">Brand colours</div>
+              <div class="brandColourSwatches">
+                <div class="brandSwatch">
+                  <span class="brandSwatchDot" id="swatchPrimary"></span>
+                  <span id="swatchPrimaryLabel">#8B6B3F</span>
+                </div>
+                <div class="brandSwatch">
+                  <span class="brandSwatchDot" id="swatchSecondary"></span>
+                  <span id="swatchSecondaryLabel">#CBB89D</span>
+                </div>
+                <div class="brandSwatch">
+                  <span class="brandSwatchDot" id="swatchText"></span>
+                  <span id="swatchTextLabel">#FFFFFF</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="brandWorkspace">
+        <div class="brandEditor">
+          <div class="brandSection">
+            <div class="brandSectionHead">
+              <div>
+                <h4 class="brandSectionTitle">Brand Identity</h4>
+                <p class="brandSectionSub">Define the name, voice and customer-facing label for your brand.</p>
+              </div>
+            </div>
+
+            <div class="studioGrid2">
+              <div class="field">
+                <label for="vendorName">Vendor Name</label>
+                <input id="vendorName" type="text" placeholder="Southbury Farm Pizza" />
+                <div class="helperText">Internal / base vendor name.</div>
+              </div>
+
+              <div class="field">
+                <label for="vendorDisplayName">Display Name</label>
+                <input id="vendorDisplayName" type="text" placeholder="Southbury Farm Pizza" />
+                <div class="helperText">Used as the main customer-facing brand name.</div>
+              </div>
+
+              <div class="field" style="grid-column:1 / -1;">
+                <label for="vendorTagline">Tagline</label>
+                <input id="vendorTagline" type="text" placeholder="Wood-fired drops from the farmhouse oven" />
+                <div class="helperText">Shown beneath the vendor name on the ordering page.</div>
+              </div>
+
+              <div class="field">
+                <label for="vendorOrderLabel">Order Label</label>
+                <input id="vendorOrderLabel" type="text" placeholder="Order direct" />
+                <div class="helperText">The small uppercase eyebrow above the vendor name.</div>
+              </div>
+
+              <div class="field">
+                <label for="vendorWebsiteUrl">Website URL</label>
+                <input id="vendorWebsiteUrl" type="url" placeholder="https://example.com" />
+                <div class="helperText">Used for the “Visit site” button on the ordering page.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="brandSection">
+            <div class="brandSectionHead">
+              <div>
+                <h4 class="brandSectionTitle">Brand Assets</h4>
+                <p class="brandSectionSub">Add the images that shape your storefront.</p>
+              </div>
+            </div>
+
+            <div class="studioGrid2">
+              <div class="field">
+                <label for="vendorLogoUrl">Logo URL</label>
+                <input id="vendorLogoUrl" type="url" placeholder="https://..." />
+                <div class="helperText">Square or near-square image works best.</div>
+              </div>
+
+              <div class="field">
+                <label for="vendorHeroImageUrl">Hero Image URL</label>
+                <input id="vendorHeroImageUrl" type="url" placeholder="https://..." />
+                <div class="helperText">Wide, atmospheric image for the top of the order page.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="brandSection">
+            <div class="brandSectionHead">
+              <div>
+                <h4 class="brandSectionTitle">Brand Colours</h4>
+                <p class="brandSectionSub">Control the tones used across your ordering experience.</p>
+              </div>
+            </div>
+
+            <div class="studioGrid3">
+              <div class="field">
+                <label for="brandPrimaryColor">Primary Colour</label>
+                <input id="brandPrimaryColor" type="color" value="#8B6B3F" style="height:44px;" />
+                <div class="helperText" id="brandPrimaryColorText">#8B6B3F</div>
+              </div>
+
+              <div class="field">
+                <label for="brandSecondaryColor">Secondary Colour</label>
+                <input id="brandSecondaryColor" type="color" value="#CBB89D" style="height:44px;" />
+                <div class="helperText" id="brandSecondaryColorText">#CBB89D</div>
+              </div>
+
+              <div class="field">
+                <label for="brandTextOnPrimary">Text on Brand</label>
+                <input id="brandTextOnPrimary" type="color" value="#FFFFFF" style="height:44px;" />
+                <div class="helperText" id="brandTextOnPrimaryText">#FFFFFF</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="brandSection">
+            <div class="brandSectionHead">
+              <div>
+                <h4 class="brandSectionTitle">Platform Signature</h4>
+                <p class="brandSectionSub">Every drop is powered by Hearth, giving customers a consistent, high-quality ordering experience.</p>
+              </div>
+            </div>
+
+            <div class="summaryBlock">
+              <div class="summaryItem">
+                <span class="label">Footer treatment</span>
+                <span class="value">Powered by Hearth</span>
+              </div>
+              <div class="summaryItem">
+                <span class="label">Placement</span>
+                <span class="value">Standard across all vendors</span>
+              </div>
+              <div class="summaryItem">
+                <span class="label">Vendor control</span>
+                <span class="value">Not editable</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="brandActions">
+            <button class="btnGhost" id="resetDefaultsBtn" type="button">Reset Colour Defaults</button>
+            <button class="btnAccent" id="saveBrandBtnBottom" type="button">Save Brand</button>
+          </div>
+        </div>
+
+        <div class="brandPreviewColumn">
+          <div class="brandPreviewCard">
+            <div class="brandPreviewHero" id="previewHero">
+              <div class="brandPreviewHeroInner">
+                <div class="brandPreviewTop">
+                  <div class="brandPreviewVendor">
+                    <div class="brandPreviewLogo" id="previewLogo">
+                      <span id="previewLogoFallback">S</span>
+                    </div>
+
+                    <div style="min-width:0;">
+                      <div class="brandPreviewEyebrow" id="previewOrderLabel">ORDER DIRECT</div>
+                      <h3 class="brandPreviewVendorName" id="previewDisplayName">Southbury Farm Pizza</h3>
+                      <p class="brandPreviewTagline" id="previewTagline">Freshly made and ready to order</p>
+                    </div>
+                  </div>
+
+                  <div class="brandPreviewSite" id="previewWebsiteBtn">Visit site</div>
+                </div>
+
+                <div class="brandPreviewDrop">
+                  <div class="brandPreviewDropEyebrow">Available now</div>
+                  <h4 class="brandPreviewDropTitle">Friday Farm Drop</h4>
+                  <p class="brandPreviewDropSub">Delivery • Hurst Cricket Club • Friday 19:00–20:00</p>
+
+                  <div class="brandPreviewChips">
+                    <div class="brandPreviewChip">Orders close in 1h 20m</div>
+                    <div class="brandPreviewChip">40 pizzas left</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="brandPreviewBody">
+              <div class="brandPreviewNotice">
+                This preview reflects the customer-facing order page styling.
+              </div>
+
+              <div class="brandPreviewFooter">
+                <span id="previewFooterSite">Visit Southbury Farm Pizza</span> • Powered by Hearth
+              </div>
+            </div>
+          </div>
+
+          <div class="brandPreviewMetaCard">
+            <h4 class="brandPreviewMetaTitle">Preview Notes</h4>
+            <p class="brandPreviewMetaText">Logo, hero image, colours, display name, tagline and order label update live here as you edit.</p>
+            <p class="brandPreviewMetaText">The order page will still fall back safely if any of these fields are left blank.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  (function () {
+    const CONFIG = window.HEARTH_CONFIG || {};
+    const SUPABASE_URL = CONFIG.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
+    const DEFAULT_VENDOR_SLUG = "southbury-farm-pizza";
+    const ORDER_PAGE_PATH = "order.html";
+
+    let supabase = null;
+    let successTimer = null;
+
+    const state = {
+      vendor: null,
+      saveState: "saved"
+    };
+
+    function byId(id) {
+      return document.getElementById(id);
+    }
+
+    function showError(message) {
+      const el = byId("errorBox");
+      if (!message) {
+        el.style.display = "none";
+        el.textContent = "";
+        return;
+      }
+      el.style.display = "block";
+      el.textContent = message;
+    }
+
+    function showInlineSuccess(message) {
+      const el = byId("inlineSuccess");
+      clearTimeout(successTimer);
+      el.textContent = message;
+      el.style.display = "block";
+      successTimer = setTimeout(() => {
+        el.style.display = "none";
+        el.textContent = "";
+      }, 2500);
+    }
+
+    function setSaveState(status, text) {
+      state.saveState = status;
+      const el = byId("saveStateInline");
+      el.className = "saveStateInline";
+      if (status === "saved") {
+        el.classList.add("saved");
+        el.textContent = text || "All changes saved";
+      } else if (status === "saving") {
+        el.classList.add("saving");
+        el.textContent = text || "Saving changes…";
+      } else if (status === "error") {
+        el.classList.add("error");
+        el.textContent = text || "Save failed";
+      } else {
+        el.textContent = text || "Unsaved changes";
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function titleInitial(text) {
+      const value = String(text || "").trim();
+      return value ? value.charAt(0).toUpperCase() : "H";
+    }
+
+    function hexToRgba(hex, alpha) {
+      if (!hex || typeof hex !== "string") return `rgba(139,107,63,${alpha})`;
+      const clean = hex.replace("#", "");
+      if (![3, 6].includes(clean.length)) return `rgba(139,107,63,${alpha})`;
+
+      const expanded = clean.length === 3
+        ? clean.split("").map((x) => x + x).join("")
+        : clean;
+
+      const r = parseInt(expanded.slice(0, 2), 16);
+      const g = parseInt(expanded.slice(2, 4), 16);
+      const b = parseInt(expanded.slice(4, 6), 16);
+
+      if ([r, g, b].some((x) => Number.isNaN(x))) return `rgba(139,107,63,${alpha})`;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function getFormData() {
+      return {
+        name: byId("vendorName").value.trim(),
+        display_name: byId("vendorDisplayName").value.trim(),
+        tagline: byId("vendorTagline").value.trim(),
+        order_label: byId("vendorOrderLabel").value.trim(),
+        website_url: byId("vendorWebsiteUrl").value.trim(),
+        logo_url: byId("vendorLogoUrl").value.trim(),
+        hero_image_url: byId("vendorHeroImageUrl").value.trim(),
+        brand_primary_color: byId("brandPrimaryColor").value || "#8B6B3F",
+        brand_secondary_color: byId("brandSecondaryColor").value || "#CBB89D",
+        brand_text_on_primary: byId("brandTextOnPrimary").value || "#FFFFFF"
+      };
+    }
+
+    function populateForm(vendor) {
+      byId("vendorName").value = vendor.name || "";
+      byId("vendorDisplayName").value = vendor.display_name || vendor.name || "";
+      byId("vendorTagline").value = vendor.tagline || "";
+      byId("vendorOrderLabel").value = vendor.order_label || "Order direct";
+      byId("vendorWebsiteUrl").value = vendor.website_url || "";
+      byId("vendorLogoUrl").value = vendor.logo_url || "";
+      byId("vendorHeroImageUrl").value = vendor.hero_image_url || "";
+      byId("brandPrimaryColor").value = vendor.brand_primary_color || "#8B6B3F";
+      byId("brandSecondaryColor").value = vendor.brand_secondary_color || "#CBB89D";
+      byId("brandTextOnPrimary").value = vendor.brand_text_on_primary || "#FFFFFF";
+      syncColourLabels();
+    }
+
+    function syncColourLabels() {
+      byId("brandPrimaryColorText").textContent = (byId("brandPrimaryColor").value || "").toUpperCase();
+      byId("brandSecondaryColorText").textContent = (byId("brandSecondaryColor").value || "").toUpperCase();
+      byId("brandTextOnPrimaryText").textContent = (byId("brandTextOnPrimary").value || "").toUpperCase();
+    }
+
+    function applyPreview() {
+      const form = getFormData();
+      const primary = form.brand_primary_color || "#8B6B3F";
+      const secondary = form.brand_secondary_color || primary;
+      const textOnPrimary = form.brand_text_on_primary || "#FFFFFF";
+      const logoUrl = form.logo_url || "";
+      const heroUrl = form.hero_image_url || "";
+      const displayName = form.display_name || form.name || "Vendor";
+      const tagline = form.tagline || "Freshly made and ready to order";
+      const orderLabel = (form.order_label || "Order direct").toUpperCase();
+      const websiteUrl = form.website_url || "";
+
+      document.documentElement.style.setProperty("--brand-preview-primary", primary);
+      document.documentElement.style.setProperty("--brand-preview-secondary", secondary);
+      document.documentElement.style.setProperty("--brand-preview-text", textOnPrimary);
+      document.documentElement.style.setProperty("--brand-preview-soft", hexToRgba(primary, 0.12));
+      document.documentElement.style.setProperty("--brand-preview-soft-2", hexToRgba(secondary, 0.10));
+
+      byId("summaryEyebrow").textContent = orderLabel;
+      byId("summaryTitle").textContent = displayName;
+      byId("summaryTagline").textContent = tagline;
+      byId("summaryVendorSlug").textContent = state.vendor?.slug || DEFAULT_VENDOR_SLUG;
+
+      const summaryLogo = byId("summaryLogo");
+      const summaryLogoFallback = byId("summaryLogoFallback");
+      if (logoUrl) {
+        summaryLogo.innerHTML = `<img src="${escapeHtml(logoUrl)}" alt="Logo preview" />`;
+      } else {
+        summaryLogo.innerHTML = `<span id="summaryLogoFallback">${escapeHtml(titleInitial(displayName))}</span>`;
+      }
+
+      const summaryWebsiteLink = byId("summaryWebsiteLink");
+      if (websiteUrl) {
+        summaryWebsiteLink.href = websiteUrl;
+        summaryWebsiteLink.style.display = "inline-flex";
+        summaryWebsiteLink.textContent = `Visit ${displayName}`;
+      } else {
+        summaryWebsiteLink.style.display = "none";
+        summaryWebsiteLink.removeAttribute("href");
+      }
+
+      byId("summaryWebsiteStatus").textContent = websiteUrl ? "Set" : "Not set";
+      byId("summaryLogoStatus").textContent = logoUrl ? "Set" : "Not set";
+      byId("summaryHeroStatus").textContent = heroUrl ? "Set" : "Not set";
+
+      byId("swatchPrimary").style.background = primary;
+      byId("swatchSecondary").style.background = secondary;
+      byId("swatchText").style.background = textOnPrimary;
+      byId("swatchPrimaryLabel").textContent = primary.toUpperCase();
+      byId("swatchSecondaryLabel").textContent = secondary.toUpperCase();
+      byId("swatchTextLabel").textContent = textOnPrimary.toUpperCase();
+
+      byId("previewOrderLabel").textContent = orderLabel;
+      byId("previewDisplayName").textContent = displayName;
+      byId("previewTagline").textContent = tagline;
+      byId("previewWebsiteBtn").textContent = websiteUrl ? "Visit site" : "No site set";
+      byId("previewFooterSite").textContent = websiteUrl ? `Visit ${displayName}` : displayName;
+
+      const previewLogo = byId("previewLogo");
+      if (logoUrl) {
+        previewLogo.innerHTML = `<img src="${escapeHtml(logoUrl)}" alt="Logo preview" />`;
+      } else {
+        previewLogo.innerHTML = `<span id="previewLogoFallback">${escapeHtml(titleInitial(displayName))}</span>`;
+      }
+
+      const hero = byId("previewHero");
+      if (heroUrl) {
+        hero.classList.add("hasImage");
+        hero.style.backgroundImage = `linear-gradient(135deg, rgba(32,26,18,0.18), rgba(32,26,18,0.34)), url("${heroUrl}")`;
+      } else {
+        hero.classList.remove("hasImage");
+        hero.style.backgroundImage = "";
+      }
+
+      summaryLogoFallback && (summaryLogoFallback.textContent = titleInitial(displayName));
+    }
+
+    async function loadVendor() {
+      const { data, error } = await supabase
+        .from("vendors")
+        .select("*")
+        .eq("slug", DEFAULT_VENDOR_SLUG)
+        .single();
+
+      if (error) throw error;
+      state.vendor = data;
+    }
+
+    async function refreshAll() {
+      showError("");
+      await loadVendor();
+      populateForm(state.vendor);
+      applyPreview();
+      setSaveState("saved");
+    }
+
+    async function saveVendor() {
+      if (!state.vendor?.id) throw new Error("Vendor not found.");
+
+      const form = getFormData();
+      const payload = {
+        name: form.name || state.vendor.name || "Vendor",
+        display_name: form.display_name || null,
+        tagline: form.tagline || null,
+        order_label: form.order_label || null,
+        website_url: form.website_url || null,
+        logo_url: form.logo_url || null,
+        hero_image_url: form.hero_image_url || null,
+        brand_primary_color: form.brand_primary_color || "#8B6B3F",
+        brand_secondary_color: form.brand_secondary_color || "#CBB89D",
+        brand_text_on_primary: form.brand_text_on_primary || "#FFFFFF"
+      };
+
+      setSaveState("saving");
+
+      const { error } = await supabase
+        .from("vendors")
+        .update(payload)
+        .eq("id", state.vendor.id);
+
+      if (error) {
+        setSaveState("error", error.message || "Save failed");
+        throw error;
+      }
+
+      state.vendor = { ...state.vendor, ...payload };
+      setSaveState("saved");
+      showInlineSuccess("Brand updated");
+      applyPreview();
+    }
+
+    function markDirty() {
+      syncColourLabels();
+      applyPreview();
+      setSaveState("default", "Unsaved changes");
+    }
+
+    function resetColourDefaults() {
+      byId("brandPrimaryColor").value = "#8B6B3F";
+      byId("brandSecondaryColor").value = "#CBB89D";
+      byId("brandTextOnPrimary").value = "#FFFFFF";
+      markDirty();
+    }
+
+    function previewOrderPage() {
+      const slug = state.vendor?.default_preview_drop_slug || "friday-drop";
+      const url = `${ORDER_PAGE_PATH}?drop=${encodeURIComponent(slug)}`;
+      window.open(url, "_blank");
+    }
+
+    function attachEvents() {
+      [
+        "vendorName",
+        "vendorDisplayName",
+        "vendorTagline",
+        "vendorOrderLabel",
+        "vendorWebsiteUrl",
+        "vendorLogoUrl",
+        "vendorHeroImageUrl",
+        "brandPrimaryColor",
+        "brandSecondaryColor",
+        "brandTextOnPrimary"
+      ].forEach((id) => {
+        const el = byId(id);
+        if (!el) return;
+        el.addEventListener("input", markDirty);
+        el.addEventListener("change", markDirty);
+      });
+
+      byId("saveBrandBtnTop").addEventListener("click", async () => {
+        try {
+          await saveVendor();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to save brand.");
+        }
+      });
+
+      byId("saveBrandBtnBottom").addEventListener("click", async () => {
+        try {
+          await saveVendor();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to save brand.");
+        }
+      });
+
+      byId("refreshBrandBtn").addEventListener("click", async () => {
+        try {
+          await refreshAll();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to refresh brand settings.");
+        }
+      });
+
+      byId("resetDefaultsBtn").addEventListener("click", resetColourDefaults);
+
+      byId("previewOrderPageBtn").addEventListener("click", () => {
+        try {
+          previewOrderPage();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to preview ordering page.");
+        }
+      });
+    }
+
+    async function init() {
+      try {
+        if (!window.supabase || !window.supabase.createClient) {
+          throw new Error("Supabase library failed to load.");
+        }
+
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+          throw new Error("Missing Supabase config. Check ./assets/config.js.");
+        }
+
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        attachEvents();
+        await refreshAll();
+      } catch (err) {
+        console.error(err);
+        showError(err.message || "Unable to initialise Brand Hearth.");
+      }
+    }
+
+    init();
+  })();
+</script>
+</body>
+</html>
