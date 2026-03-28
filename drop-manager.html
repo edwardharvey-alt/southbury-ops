@@ -8,6 +8,103 @@
   <link rel="stylesheet" href="./assets/hearth.css?v=30" />
   <script src="./assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .menuStageTools{
+      display:grid;
+      gap:10px;
+      margin-bottom:12px;
+    }
+
+    .menuOrderingNote{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+      padding:12px 14px;
+      border:1px solid rgba(15,23,42,0.08);
+      border-radius:14px;
+      background:rgba(139,107,63,0.04);
+    }
+
+    .menuOrderingNote .helperText{
+      margin:0;
+    }
+
+    .menuOrderingBadge{
+      display:inline-flex;
+      align-items:center;
+      min-height:30px;
+      padding:0 10px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+      border:1px solid rgba(15,23,42,0.10);
+      background:#fff;
+      color:var(--h-text);
+      white-space:nowrap;
+    }
+
+    .assignmentTable tr.isDraggable{
+      cursor:grab;
+    }
+
+    .assignmentTable tr.isDraggable.dragging{
+      opacity:.45;
+    }
+
+    .assignmentTable tr.dragOverTop{
+      box-shadow:inset 0 2px 0 var(--h-accent);
+    }
+
+    .assignmentTable tr.dragOverBottom{
+      box-shadow:inset 0 -2px 0 var(--h-accent);
+    }
+
+    .dragHandleBtn{
+      width:32px;
+      height:32px;
+      border-radius:10px;
+      border:1px solid var(--h-border);
+      background:#fff;
+      color:var(--h-text);
+      font-size:16px;
+      font-weight:900;
+      cursor:grab;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .dragHandleBtn:disabled{
+      opacity:.45;
+      cursor:not-allowed;
+    }
+
+    .orderingValue{
+      font-size:11px;
+      font-weight:700;
+      color:var(--h-muted);
+      margin-top:4px;
+      display:block;
+    }
+
+    .productGroupHeadRow{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-bottom:8px;
+    }
+
+    .productGroupHeadMeta{
+      font-size:11px;
+      color:var(--h-muted);
+      font-weight:700;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -378,14 +475,24 @@
                   <div class="row space" style="margin-bottom:10px; align-items:flex-start;">
                     <div>
                       <div class="stageSectionTitle" style="margin:0 0 4px;">Drop Menu</div>
-                      <div class="helperText">Enable menu items from the catalogue, override prices and manage stock limits for this drop.</div>
+                      <div class="helperText">Enable menu items from the catalogue, override prices, manage stock limits, and control per-drop ordering.</div>
                     </div>
                     <div class="row" style="gap:8px; flex-wrap:wrap;">
                       <a href="drop-menu.html" class="utilityLink">Open Menu Library</a>
                     </div>
                   </div>
 
-                  <div class="helperText" id="menuStageSummary" style="margin-bottom:10px;">Loading menu items…</div>
+                  <div class="menuStageTools">
+                    <div class="helperText" id="menuStageSummary">Loading menu items…</div>
+                    <div class="menuOrderingNote">
+                      <div>
+                        <div style="font-weight:800; margin-bottom:4px;">Per-drop ordering</div>
+                        <p class="helperText">Drag rows within a category to change the order shown on the ordering page for this drop only. Menu Library remains the master default.</p>
+                      </div>
+                      <span class="menuOrderingBadge">Drag within category</span>
+                    </div>
+                  </div>
+
                   <div id="assignmentGroups" style="width:100%;"></div>
                 </div>
               </div>
@@ -631,7 +738,11 @@
       saveState: "saved",
       currentStage: "basics",
       seriesRows: [],
-      showInactiveMenuItems: false
+      showInactiveMenuItems: false,
+      dragState: {
+        key: null,
+        categoryName: null
+      }
     };
 
     function byId(id) {
@@ -807,6 +918,14 @@
       return state.categories.find((c) => c.id === categoryId) || null;
     }
 
+    function getCategorySortValue(categoryId, categoryName) {
+      const category = categoryId ? getCategoryById(categoryId) : null;
+      if (category && category.sort_order != null) return Number(category.sort_order);
+      const byName = state.categories.find((c) => String(c.name || "") === String(categoryName || ""));
+      if (byName && byName.sort_order != null) return Number(byName.sort_order);
+      return 999999;
+    }
+
     function getCategoryBySlugOrName(value) {
       const needle = String(value || "").trim().toLowerCase();
       if (!needle) return null;
@@ -884,11 +1003,11 @@
     }
 
     function normalizeItemType(value) {
-  const v = String(value || "").trim().toLowerCase();
-  if (v === "product" || v === "bundle") return v;
-  return null;
-}
-    
+      const v = String(value || "").trim().toLowerCase();
+      if (v === "product" || v === "bundle") return v;
+      return null;
+    }
+
     function getRepeatPattern() {
       const checked = document.querySelector('input[name="repeatPattern"]:checked');
       return checked ? checked.value : "one_off";
@@ -1267,124 +1386,131 @@
     }
 
     function buildMenuAssignments() {
-  const assignmentMap = new Map(
-    (state.dropMenuItems || []).map((row) => {
-      const itemType = row.menu_item_type || row.item_type;
-      const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
-      return [getMenuItemKey(itemType, refId), row];
-    })
-  );
+      const assignmentMap = new Map(
+        (state.dropMenuItems || []).map((row) => {
+          const itemType = row.menu_item_type || row.item_type;
+          const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
+          return [getMenuItemKey(itemType, refId), row];
+        })
+      );
 
-  const stockMap = new Map(
-    (state.dropMenuItemStock || []).map((row) => {
-      const itemType = row.menu_item_type || row.item_type;
-      const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
-      return [getMenuItemKey(itemType, refId), row];
-    })
-  );
+      const stockMap = new Map(
+        (state.dropMenuItemStock || []).map((row) => {
+          const itemType = row.menu_item_type || row.item_type;
+          const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
+          return [getMenuItemKey(itemType, refId), row];
+        })
+      );
 
-  const catalogueItems = [
-    ...state.products.map((product) => ({
-      menu_item_type: "product",
-      ref_id: product.id,
-      item_id: product.id,
-      name: product.name,
-      description: product.description || null,
-      category_id: product.category_id || null,
-      category_name: categoryNameFromId(product.category_id),
-      base_price_pence: product.price_pence,
-      capacity_units: Number(product.capacity_units || 0),
-      catalogue_is_active: Boolean(product.is_active),
-      sort_order: product.sort_order ?? null
-    })),
-    ...state.bundles.map((bundle) => ({
-      menu_item_type: "bundle",
-      ref_id: bundle.id,
-      item_id: bundle.id,
-      name: bundle.name,
-      description: bundle.description || null,
-      category_id: bundle.category_id || null,
-      category_name: categoryNameFromId(bundle.category_id),
-      base_price_pence: bundle.price_pence,
-      capacity_units: Number(bundle.capacity_units || 0),
-      catalogue_is_active: Boolean(bundle.is_active),
-      sort_order: bundle.sort_order ?? null
-    }))
-  ];
+      const catalogueItems = [
+        ...state.products.map((product) => ({
+          menu_item_type: "product",
+          ref_id: product.id,
+          item_id: product.id,
+          name: product.name,
+          description: product.description || null,
+          category_id: product.category_id || null,
+          category_name: categoryNameFromId(product.category_id),
+          category_sort_order: getCategorySortValue(product.category_id, categoryNameFromId(product.category_id)),
+          base_price_pence: product.price_pence,
+          capacity_units: Number(product.capacity_units || 0),
+          catalogue_is_active: Boolean(product.is_active),
+          sort_order: product.sort_order ?? null
+        })),
+        ...state.bundles.map((bundle) => ({
+          menu_item_type: "bundle",
+          ref_id: bundle.id,
+          item_id: bundle.id,
+          name: bundle.name,
+          description: bundle.description || null,
+          category_id: bundle.category_id || null,
+          category_name: categoryNameFromId(bundle.category_id),
+          category_sort_order: getCategorySortValue(bundle.category_id, categoryNameFromId(bundle.category_id)),
+          base_price_pence: bundle.price_pence,
+          capacity_units: Number(bundle.capacity_units || 0),
+          catalogue_is_active: Boolean(bundle.is_active),
+          sort_order: bundle.sort_order ?? null
+        }))
+      ];
 
-  const missingAssigned = (state.dropMenuItems || [])
-    .filter((row) => {
-      const itemType = row.menu_item_type || row.item_type;
-      const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
-      if (!itemType || !refId) return false;
-      return !catalogueItems.some((item) => item.menu_item_type === itemType && item.ref_id === refId);
-    })
-    .map((row) => {
-      const itemType = row.menu_item_type || row.item_type;
-      const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
-      const stockRow = (state.dropMenuItemStock || []).find((s) => {
-        const sType = s.menu_item_type || s.item_type;
-        const sRefId = sType === "bundle" ? s.bundle_id : s.product_id;
-        return sType === itemType && sRefId === refId;
-      });
+      const missingAssigned = (state.dropMenuItems || [])
+        .filter((row) => {
+          const itemType = row.menu_item_type || row.item_type;
+          const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
+          if (!itemType || !refId) return false;
+          return !catalogueItems.some((item) => item.menu_item_type === itemType && item.ref_id === refId);
+        })
+        .map((row) => {
+          const itemType = row.menu_item_type || row.item_type;
+          const refId = itemType === "bundle" ? row.bundle_id : row.product_id;
+          const stockRow = (state.dropMenuItemStock || []).find((s) => {
+            const sType = s.menu_item_type || s.item_type;
+            const sRefId = sType === "bundle" ? s.bundle_id : s.product_id;
+            return sType === itemType && sRefId === refId;
+          });
 
-      return {
-        menu_item_type: itemType,
-        ref_id: refId,
-        item_id: row.item_id || refId,
-        name: stockRow?.item_name || `Missing ${itemType}`,
-        description: stockRow?.item_description || null,
-        category_id: stockRow?.category_id || null,
-        category_name: stockRow?.category_name || "Uncategorised",
-        base_price_pence: stockRow?.base_price_pence ?? null,
-        capacity_units: Number(stockRow?.capacity_units || 0),
-        catalogue_is_active: false,
-        sort_order: row.sort_order ?? null
-      };
-    });
+          const categoryId = stockRow?.category_id || null;
+          const categoryName = stockRow?.category_name || "Uncategorised";
 
-  return [...catalogueItems, ...missingAssigned]
-    .map((item) => {
-      const key = getMenuItemKey(item.menu_item_type, item.ref_id);
-      const assigned = assignmentMap.get(key);
-      const stock = stockMap.get(key);
+          return {
+            menu_item_type: itemType,
+            ref_id: refId,
+            item_id: row.item_id || refId,
+            name: stockRow?.item_name || `Missing ${itemType}`,
+            description: stockRow?.item_description || null,
+            category_id: categoryId,
+            category_name: categoryName,
+            category_sort_order: getCategorySortValue(categoryId, categoryName),
+            base_price_pence: stockRow?.base_price_pence ?? null,
+            capacity_units: Number(stockRow?.capacity_units || 0),
+            catalogue_is_active: false,
+            sort_order: row.sort_order ?? null
+          };
+        });
 
-      return {
-        key,
-        item_type: item.menu_item_type,
-        menu_item_type: item.menu_item_type,
-        product_id: item.menu_item_type === "product" ? item.ref_id : null,
-        bundle_id: item.menu_item_type === "bundle" ? item.ref_id : null,
-        name: item.name,
-        description: item.description,
-        category_id: item.category_id,
-        category_name: item.category_name,
-        base_price_pence: item.base_price_pence,
-        capacity_units: item.capacity_units,
-        catalogue_is_active: item.catalogue_is_active,
-        sort_order: assigned?.sort_order ?? item.sort_order ?? null,
-        enabled: Boolean(assigned?.is_available),
-        price_override_pence: assigned?.price_override_pence ?? null,
-        stock_limit: assigned?.stock_limit ?? null,
-        qty_ordered: Number(stock?.qty_ordered || 0),
-        stock_remaining: stock?.stock_remaining == null ? null : Number(stock.stock_remaining)
-      };
-    })
-    .filter((item) => item.menu_item_type && (item.product_id || item.bundle_id))
-    .sort((a, b) => {
-      const catCompare = String(a.category_name || "").localeCompare(String(b.category_name || ""));
-      if (catCompare !== 0) return catCompare;
+      return [...catalogueItems, ...missingAssigned]
+        .map((item) => {
+          const key = getMenuItemKey(item.menu_item_type, item.ref_id);
+          const assigned = assignmentMap.get(key);
+          const stock = stockMap.get(key);
 
-      const typeCompare = a.menu_item_type.localeCompare(b.menu_item_type);
-      if (typeCompare !== 0) return typeCompare;
+          return {
+            key,
+            item_type: item.menu_item_type,
+            menu_item_type: item.menu_item_type,
+            product_id: item.menu_item_type === "product" ? item.ref_id : null,
+            bundle_id: item.menu_item_type === "bundle" ? item.ref_id : null,
+            name: item.name,
+            description: item.description,
+            category_id: item.category_id,
+            category_name: item.category_name,
+            category_sort_order: item.category_sort_order,
+            base_price_pence: item.base_price_pence,
+            capacity_units: item.capacity_units,
+            catalogue_is_active: item.catalogue_is_active,
+            sort_order: assigned?.sort_order ?? item.sort_order ?? null,
+            enabled: Boolean(assigned?.is_available),
+            price_override_pence: assigned?.price_override_pence ?? null,
+            stock_limit: assigned?.stock_limit ?? null,
+            qty_ordered: Number(stock?.qty_ordered || 0),
+            stock_remaining: stock?.stock_remaining == null ? null : Number(stock.stock_remaining)
+          };
+        })
+        .filter((item) => item.menu_item_type && (item.product_id || item.bundle_id))
+        .sort((a, b) => {
+          const catSortCompare = Number(a.category_sort_order ?? 999999) - Number(b.category_sort_order ?? 999999);
+          if (catSortCompare !== 0) return catSortCompare;
 
-      const sortA = a.sort_order == null ? 999999 : Number(a.sort_order);
-      const sortB = b.sort_order == null ? 999999 : Number(b.sort_order);
-      if (sortA !== sortB) return sortA - sortB;
+          const catCompare = String(a.category_name || "").localeCompare(String(b.category_name || ""));
+          if (catCompare !== 0) return catCompare;
 
-      return a.name.localeCompare(b.name);
-    });
-}
+          const sortA = a.sort_order == null ? 999999 : Number(a.sort_order);
+          const sortB = b.sort_order == null ? 999999 : Number(b.sort_order);
+          if (sortA !== sortB) return sortA - sortB;
+
+          return String(a.name || "").localeCompare(String(b.name || ""));
+        });
+    }
 
     function getFilteredDrops() {
       const search = state.search.trim().toLowerCase();
@@ -1583,12 +1709,29 @@
       }
 
       const groups = groupByCategory(visibleItems);
-      const categoryOrder = [...new Set(visibleItems.map((item) => item.category_name || "Uncategorised"))];
+
+      const categoryOrder = [...new Set(
+        visibleItems
+          .slice()
+          .sort((a, b) => {
+            const sortCompare = Number(a.category_sort_order ?? 999999) - Number(b.category_sort_order ?? 999999);
+            if (sortCompare !== 0) return sortCompare;
+            return String(a.category_name || "").localeCompare(String(b.category_name || ""));
+          })
+          .map((item) => item.category_name || "Uncategorised")
+      )];
 
       container.innerHTML = categoryOrder
         .filter((cat) => groups.has(cat))
         .map((category) => {
-          const items = groups.get(category);
+          const items = groups.get(category).slice().sort((a, b) => {
+            const sortA = a.sort_order == null ? 999999 : Number(a.sort_order);
+            const sortB = b.sort_order == null ? 999999 : Number(b.sort_order);
+            if (sortA !== sortB) return sortA - sortB;
+            if (a.menu_item_type !== b.menu_item_type) return String(a.menu_item_type).localeCompare(String(b.menu_item_type));
+            return String(a.name || "").localeCompare(String(b.name || ""));
+          });
+
           const rows = items.map((row) => {
             const activeText = row.catalogue_is_active ? "" : ` <span class="miniChip" style="margin-left:6px;">catalogue inactive</span>`;
             const capacityText = Number(row.capacity_units || 0) > 0
@@ -1596,11 +1739,15 @@
               : "No capacity impact";
 
             return `
-              <tr data-menu-key="${escapeHtml(row.key)}">
+              <tr class="isDraggable" draggable="true" data-menu-key="${escapeHtml(row.key)}" data-category-name="${escapeHtml(row.category_name || "Uncategorised")}">
+                <td style="width:58px;">
+                  <button class="dragHandleBtn" type="button" title="Drag to reorder">☰</button>
+                </td>
                 <td style="width:60px;"><input class="js-assign-enabled" type="checkbox" ${row.enabled ? "checked" : ""} /></td>
                 <td>
                   <span class="productName">${escapeHtml(row.name)}</span>${activeText}
                   <span class="subMeta">${escapeHtml(row.menu_item_type)}${row.description ? ` • ${escapeHtml(row.description)}` : ""}</span>
+                  <span class="orderingValue">Order ${row.sort_order == null ? "—" : row.sort_order}</span>
                 </td>
                 <td style="width:85px;">${titleCase(row.menu_item_type)}</td>
                 <td style="width:110px;">${escapeHtml(row.category_name || "Uncategorised")}</td>
@@ -1614,11 +1761,15 @@
           }).join("");
 
           return `
-            <div class="productGroup">
-              <div class="productGroupHead">${escapeHtml(category)}</div>
-              <table class="assignmentTable">
+            <div class="productGroup" data-category-group="${escapeHtml(category)}">
+              <div class="productGroupHeadRow">
+                <div class="productGroupHead">${escapeHtml(category)}</div>
+                <div class="productGroupHeadMeta">${items.length} item${items.length === 1 ? "" : "s"} • drag to reorder within this category</div>
+              </div>
+              <table class="assignmentTable" data-category-table="${escapeHtml(category)}">
                 <thead>
                   <tr>
+                    <th>Order</th>
                     <th>On</th>
                     <th>Menu Item</th>
                     <th>Type</th>
@@ -1635,6 +1786,106 @@
             </div>
           `;
         }).join("");
+
+      initialiseAssignmentDragAndDrop();
+    }
+
+    function clearDragClasses() {
+      document.querySelectorAll(".assignmentTable tr.dragOverTop, .assignmentTable tr.dragOverBottom, .assignmentTable tr.dragging").forEach((row) => {
+        row.classList.remove("dragOverTop", "dragOverBottom", "dragging");
+      });
+    }
+
+    function initialiseAssignmentDragAndDrop() {
+      const rows = Array.from(document.querySelectorAll(".assignmentTable tbody tr.isDraggable"));
+      rows.forEach((row) => {
+        row.addEventListener("dragstart", handleAssignmentDragStart);
+        row.addEventListener("dragover", handleAssignmentDragOver);
+        row.addEventListener("drop", handleAssignmentDrop);
+        row.addEventListener("dragend", handleAssignmentDragEnd);
+      });
+    }
+
+    function handleAssignmentDragStart(e) {
+      const row = e.currentTarget;
+      state.dragState.key = row.dataset.menuKey;
+      state.dragState.categoryName = row.dataset.categoryName || "";
+      row.classList.add("dragging");
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", row.dataset.menuKey || "");
+      }
+    }
+
+    function handleAssignmentDragOver(e) {
+      e.preventDefault();
+      const targetRow = e.currentTarget;
+      const targetCategory = targetRow.dataset.categoryName || "";
+      if (!state.dragState.key || targetCategory !== state.dragState.categoryName) return;
+
+      clearDragClasses();
+      targetRow.classList.add((e.offsetY || 0) < (targetRow.offsetHeight / 2) ? "dragOverTop" : "dragOverBottom");
+    }
+
+    function handleAssignmentDrop(e) {
+      e.preventDefault();
+      const targetRow = e.currentTarget;
+      const targetCategory = targetRow.dataset.categoryName || "";
+      if (!state.dragState.key || targetCategory !== state.dragState.categoryName) {
+        clearDragClasses();
+        return;
+      }
+
+      const tbody = targetRow.closest("tbody");
+      const draggedRow = tbody.querySelector(`tr[data-menu-key="${CSS.escape(state.dragState.key)}"]`);
+      if (!draggedRow || draggedRow === targetRow) {
+        clearDragClasses();
+        return;
+      }
+
+      const insertBefore = (e.offsetY || 0) < (targetRow.offsetHeight / 2);
+      if (insertBefore) {
+        tbody.insertBefore(draggedRow, targetRow);
+      } else {
+        tbody.insertBefore(draggedRow, targetRow.nextSibling);
+      }
+
+      applyAssignmentOrderFromDom(targetCategory, tbody);
+      clearDragClasses();
+      markDirty();
+      renderAssignments();
+      renderContextBar();
+      renderStageBar();
+      renderReview();
+    }
+
+    function handleAssignmentDragEnd() {
+      state.dragState.key = null;
+      state.dragState.categoryName = null;
+      clearDragClasses();
+    }
+
+    function applyAssignmentOrderFromDom(categoryName, tbody) {
+      const domKeys = Array.from(tbody.querySelectorAll("tr[data-menu-key]")).map((row) => row.dataset.menuKey);
+      const categoryAssignments = state.menuAssignments
+        .filter((item) => String(item.category_name || "Uncategorised") === String(categoryName || "Uncategorised"))
+        .slice()
+        .sort((a, b) => {
+          const sortA = a.sort_order == null ? 999999 : Number(a.sort_order);
+          const sortB = b.sort_order == null ? 999999 : Number(b.sort_order);
+          if (sortA !== sortB) return sortA - sortB;
+          return String(a.name || "").localeCompare(String(b.name || ""));
+        });
+
+      const keySet = new Set(domKeys);
+      const ordered = [
+        ...domKeys.map((key) => categoryAssignments.find((item) => item.key === key)).filter(Boolean),
+        ...categoryAssignments.filter((item) => !keySet.has(item.key))
+      ];
+
+      ordered.forEach((item, index) => {
+        item.sort_order = (index + 1) * 10;
+      });
     }
 
     function renderConditionalFields() {
@@ -1747,7 +1998,7 @@
           previews.push({
             date: new Date(d),
             start: row.fulfilment_start,
-            end: row.fulfilment_end
+            end: row.fulment_end || row.fulfilment_end
           });
         });
 
@@ -1942,84 +2193,82 @@
       };
     }
 
- async function saveAssignments() {
-  const enabledRows = getEnabledAssignments();
+    async function saveAssignments() {
+      const enabledRows = getEnabledAssignments();
 
-  const cleanedRows = enabledRows.map((row, index) => {
-    const keyParts = String(row.key || "").split(":");
-    const keyType = normalizeItemType(keyParts[0] || "");
-    const keyId = keyParts[1] || null;
-    const itemType = normalizeItemType(row.menu_item_type || row.item_type || keyType);
+      const cleanedRows = enabledRows.map((row, index) => {
+        const keyParts = String(row.key || "").split(":");
+        const keyType = normalizeItemType(keyParts[0] || "");
+        const keyId = keyParts[1] || null;
+        const itemType = normalizeItemType(row.menu_item_type || row.item_type || keyType);
 
-    const productId =
-      itemType === "product"
-        ? (row.product_id || (keyType === "product" ? keyId : null))
-        : null;
+        const productId =
+          itemType === "product"
+            ? (row.product_id || (keyType === "product" ? keyId : null))
+            : null;
 
-    const bundleId =
-      itemType === "bundle"
-        ? (row.bundle_id || (keyType === "bundle" ? keyId : null))
-        : null;
+        const bundleId =
+          itemType === "bundle"
+            ? (row.bundle_id || (keyType === "bundle" ? keyId : null))
+            : null;
 
-    if (!itemType) {
-      throw new Error(`Enabled menu row is missing item type: ${row.name || row.key || "unknown row"}`);
+        if (!itemType) {
+          throw new Error(`Enabled menu row is missing item type: ${row.name || row.key || "unknown row"}`);
+        }
+
+        if (itemType === "product" && !productId) {
+          throw new Error(`Enabled product row is missing product_id: ${row.name || row.key || "unknown row"}`);
+        }
+
+        if (itemType === "bundle" && !bundleId) {
+          throw new Error(`Enabled bundle row is missing bundle_id: ${row.name || row.key || "unknown row"}`);
+        }
+
+        return {
+          drop_id: state.selectedDropId,
+          item_type: itemType,
+          menu_item_type: itemType,
+          product_id: itemType === "product" ? productId : null,
+          bundle_id: itemType === "bundle" ? bundleId : null,
+          is_available: true,
+          price_override_pence:
+            row.price_override_pence === "" || row.price_override_pence == null
+              ? null
+              : Number(row.price_override_pence),
+          stock_limit:
+            row.stock_limit === "" || row.stock_limit == null
+              ? null
+              : Number(row.stock_limit),
+          sort_order:
+            row.sort_order == null
+              ? (index + 1) * 10
+              : Number(row.sort_order)
+        };
+      });
+
+      const { error: deleteError } = await supabase
+        .from("drop_menu_items")
+        .delete()
+        .eq("drop_id", state.selectedDropId);
+
+      if (deleteError) throw deleteError;
+
+      if (!cleanedRows.length) {
+        return;
+      }
+
+      const { error: insertError } = await supabase
+        .from("drop_menu_items")
+        .insert(cleanedRows);
+
+      if (insertError) {
+        console.error("drop_menu_items insert failed", {
+          cleanedRows,
+          insertError
+        });
+        throw insertError;
+      }
     }
-
-    if (itemType === "product" && !productId) {
-      throw new Error(`Enabled product row is missing product_id: ${row.name || row.key || "unknown row"}`);
-    }
-
-    if (itemType === "bundle" && !bundleId) {
-      throw new Error(`Enabled bundle row is missing bundle_id: ${row.name || row.key || "unknown row"}`);
-    }
-
-    return {
-      drop_id: state.selectedDropId,
-      item_type: itemType,
-      menu_item_type: itemType,
-      product_id: itemType === "product" ? productId : null,
-      bundle_id: itemType === "bundle" ? bundleId : null,
-      is_available: true,
-      price_override_pence:
-        row.price_override_pence === "" || row.price_override_pence == null
-          ? null
-          : Number(row.price_override_pence),
-      stock_limit:
-        row.stock_limit === "" || row.stock_limit == null
-          ? null
-          : Number(row.stock_limit),
-      sort_order:
-        row.sort_order == null
-          ? (index + 1) * 10
-          : Number(row.sort_order)
-    };
-  });
-
-  const { error: deleteError } = await supabase
-    .from("drop_menu_items")
-    .delete()
-    .eq("drop_id", state.selectedDropId);
-
-  if (deleteError) throw deleteError;
-
-  if (!cleanedRows.length) {
-    return;
-  }
-
-  console.log("Saving drop_menu_items rows:", cleanedRows);
-
-  const { error: insertError } = await supabase
-    .from("drop_menu_items")
-    .insert(cleanedRows);
-
-  if (insertError) {
-    console.error("drop_menu_items insert failed", {
-      cleanedRows,
-      insertError
-    });
-    throw insertError;
-  }
-}
 
     async function saveDrop(showSuccess = true) {
       if (!state.selectedDropId || !state.drop) return;
@@ -2137,7 +2386,7 @@
 
       if (insertDropError) throw insertDropError;
 
-       if ((sourceAssignments || []).length) {
+      if ((sourceAssignments || []).length) {
         const rows = sourceAssignments
           .map((row) => {
             const itemType = row.menu_item_type || row.item_type;
@@ -2644,8 +2893,9 @@
       byId("publishBtn").addEventListener("click", async () => {
         try {
           await saveDrop(false);
+          const wasLive = (getLiveDropFromForm()?.status || state.drop?.status) === "live";
           await updateDropStatus("live");
-          showInlineSuccess((getLiveDropFromForm()?.status || state.drop?.status) === "live" ? "Live drop updated" : "Drop is now live");
+          showInlineSuccess(wasLive ? "Live drop updated" : "Drop is now live");
         } catch (err) {
           console.error(err);
           showError(err.message || "Unable to publish drop.");
@@ -2774,6 +3024,6 @@
     init();
   })();
 </script>
- 
+
 </body>
 </html>
