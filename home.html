@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hearth — Home</title>
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=30" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --home-bg:#f7f5f1;
+      --home-card:#ffffff;
+      --home-border:#e9e3d8;
+      --home-text:#1f2937;
+      --home-muted:#6b7280;
+      --home-soft:#faf8f4;
+      --home-accent:var(--h-accent, #8B6B3F);
+      --home-accent-2:var(--h-accent-2, #CBB89D);
+      --home-radius:20px;
+      --home-shadow:0 10px 30px rgba(15,23,42,.05);
+      --home-good:#166534;
+      --home-good-bg:#ecfdf3;
+      --home-warn:#92400e;
+      --home-warn-bg:#fffbeb;
+      --home-neutral-bg:#f3f4f6;
+      --home-neutral:#374151;
+    }
+
+    body{
+      background:var(--home-bg);
+      color:var(--home-text);
+    }
+
+    .home-shell{
+      display:grid;
+      gap:18px;
+      padding-bottom:40px;
+    }
+
+    .home-card{
+      background:var(--home-card);
+      border:1px solid var(--home-border);
+      border-radius:var(--home-radius);
+      box-shadow:var(--home-shadow);
+    }
+
+    .home-pad{ padding:18px; }
+    .home-pad-lg{ padding:24px; }
+
+    .home-topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .home-brandLockup{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+
+    .home-brandMark{
+      width:42px;
+      height:42px;
+      border-radius:14px;
+      background:linear-gradient(180deg, rgba(139,107,63,.16), rgba(203,184,157,.18));
+      display:grid;
+      place-items:center;
+      font-weight:800;
+      color:var(--home-accent);
+      letter-spacing:.02em;
+      flex:0 0 auto;
+    }
+
+    .home-brandText{
+      min-width:0;
+    }
+
+    .home-brandTitle{
+      margin:0;
+      font-size:18px;
+      font-weight:800;
+      letter-spacing:-.02em;
+    }
+
+    .home-brandSub{
+      margin:2px 0 0;
+      color:var(--home-muted);
+      font-size:13px;
+    }
+
+    .home-nav{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .home-nav a,
+    .home-button,
+    .home-button-secondary{
+      appearance:none;
+      border:none;
+      text-decoration:none;
+      min-height:42px;
+      padding:0 14px;
+      border-radius:12px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font:inherit;
+      cursor:pointer;
+      transition:all .18s ease;
+    }
+
+    .home-nav a,
+    .home-button-secondary{
+      background:#fff;
+      border:1px solid var(--home-border);
+      color:var(--home-text);
+    }
+
+    .home-button{
+      background:var(--home-accent);
+      color:#fff;
+      font-weight:700;
+    }
+
+    .home-nav a:hover,
+    .home-button-secondary:hover{
+      border-color:#d8ccb8;
+      background:#fcfbf8;
+    }
+
+    .home-button:hover{
+      filter:brightness(.98);
+    }
+
+    .home-hero{
+      display:grid;
+      grid-template-columns:1.35fr .95fr;
+      gap:16px;
+    }
+
+    .home-heroMain{
+      background:
+        radial-gradient(circle at top right, rgba(203,184,157,.18), transparent 28%),
+        linear-gradient(180deg,#fff,#fcfbf8);
+    }
+
+    .home-eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(139,107,63,.08);
+      color:var(--home-accent);
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.03em;
+      text-transform:uppercase;
+    }
+
+    .home-hero h1{
+      margin:16px 0 8px;
+      font-size:36px;
+      line-height:1.05;
+      letter-spacing:-.04em;
+      max-width:12ch;
+    }
+
+    .home-lead{
+      margin:0;
+      font-size:16px;
+      line-height:1.6;
+      color:var(--home-muted);
+      max-width:60ch;
+    }
+
+    .home-subLead{
+      margin:14px 0 0;
+      color:var(--home-text);
+      font-size:15px;
+      line-height:1.6;
+      max-width:62ch;
+    }
+
+    .home-heroActions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:18px;
+    }
+
+    .home-miniStats{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0,1fr));
+      gap:12px;
+      margin-top:18px;
+    }
+
+    .home-miniStat{
+      border:1px solid var(--home-border);
+      border-radius:16px;
+      background:#fff;
+      padding:14px;
+    }
+
+    .home-miniLabel{
+      color:var(--home-muted);
+      font-size:12px;
+      margin-bottom:6px;
+    }
+
+    .home-miniValue{
+      font-size:24px;
+      font-weight:800;
+      letter-spacing:-.03em;
+    }
+
+    .home-miniMeta{
+      margin-top:6px;
+      font-size:12px;
+      color:var(--home-muted);
+    }
+
+    .home-sidePanel{
+      display:grid;
+      gap:12px;
+    }
+
+    .home-panel{
+      border:1px solid var(--home-border);
+      border-radius:16px;
+      background:#fff;
+      padding:16px;
+    }
+
+    .home-panelTitle{
+      font-size:12px;
+      font-weight:800;
+      color:var(--home-muted);
+      text-transform:uppercase;
+      letter-spacing:.03em;
+      margin-bottom:8px;
+    }
+
+    .home-panelValue{
+      font-size:24px;
+      font-weight:800;
+      letter-spacing:-.03em;
+      margin-bottom:6px;
+    }
+
+    .home-panelText{
+      margin:0;
+      color:var(--home-muted);
+      font-size:14px;
+      line-height:1.55;
+    }
+
+    .home-pulseGrid,
+    .home-workGrid,
+    .home-actionGrid,
+    .home-flowGrid{
+      display:grid;
+      gap:14px;
+    }
+
+    .home-pulseGrid{
+      grid-template-columns:repeat(4,minmax(0,1fr));
+    }
+
+    .home-workGrid{
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+
+    .home-flowGrid{
+      grid-template-columns:repeat(5,minmax(0,1fr));
+    }
+
+    .home-actionGrid{
+      grid-template-columns:repeat(3,minmax(0,1fr));
+    }
+
+    .home-sectionHead{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:flex-end;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+
+    .home-sectionTitle{
+      margin:0;
+      font-size:22px;
+      letter-spacing:-.02em;
+    }
+
+    .home-sectionSub{
+      margin:4px 0 0;
+      color:var(--home-muted);
+      font-size:14px;
+    }
+
+    .home-pill{
+      display:inline-flex;
+      align-items:center;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+
+    .good{ background:var(--home-good-bg); color:var(--home-good); }
+    .warn{ background:var(--home-warn-bg); color:var(--home-warn); }
+    .neutral{ background:var(--home-neutral-bg); color:var(--home-neutral); }
+
+    .home-pulse{
+      padding:16px;
+      border:1px solid var(--home-border);
+      border-radius:16px;
+      background:linear-gradient(180deg,#fff,#fdfcf9);
+    }
+
+    .home-pulseTop{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      align-items:flex-start;
+    }
+
+    .home-pulseLabel{
+      font-size:12px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.03em;
+      color:var(--home-muted);
+    }
+
+    .home-pulseValue{
+      margin-top:10px;
+      font-size:28px;
+      font-weight:800;
+      letter-spacing:-.04em;
+    }
+
+    .home-pulseMeta{
+      margin-top:8px;
+      font-size:13px;
+      color:var(--home-muted);
+      line-height:1.5;
+    }
+
+    .home-work{
+      display:grid;
+      gap:10px;
+      padding:18px;
+      border:1px solid var(--home-border);
+      border-radius:18px;
+      background:linear-gradient(180deg,#fff,#fcfbf8);
+    }
+
+    .home-workTop{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:flex-start;
+    }
+
+    .home-workIcon{
+      width:42px;
+      height:42px;
+      border-radius:14px;
+      display:grid;
+      place-items:center;
+      font-weight:800;
+      color:var(--home-accent);
+      background:rgba(139,107,63,.10);
+      flex:0 0 auto;
+    }
+
+    .home-work h3{
+      margin:0;
+      font-size:18px;
+      letter-spacing:-.02em;
+    }
+
+    .home-work p{
+      margin:0;
+      color:var(--home-muted);
+      line-height:1.55;
+      font-size:14px;
+    }
+
+    .home-workMeta{
+      color:var(--home-text);
+      font-size:13px;
+      line-height:1.5;
+      min-height:40px;
+    }
+
+    .home-workActions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:2px;
+    }
+
+    .home-workLink{
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:40px;
+      padding:0 12px;
+      border-radius:12px;
+      border:1px solid var(--home-border);
+      color:var(--home-text);
+      background:#fff;
+      font-weight:700;
+    }
+
+    .home-workLink.primary{
+      background:var(--home-accent);
+      border-color:var(--home-accent);
+      color:#fff;
+    }
+
+    .home-how{
+      display:grid;
+      grid-template-columns:1.1fr .9fr;
+      gap:16px;
+    }
+
+    .home-howText p{
+      margin:0 0 14px;
+      color:var(--home-muted);
+      line-height:1.65;
+      font-size:15px;
+    }
+
+    .home-howText p:last-child{
+      margin-bottom:0;
+    }
+
+    .home-bulletList{
+      display:grid;
+      gap:10px;
+    }
+
+    .home-bullet{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding:12px 14px;
+      border:1px solid var(--home-border);
+      border-radius:14px;
+      background:#fff;
+    }
+
+    .home-bulletDot{
+      width:10px;
+      height:10px;
+      margin-top:6px;
+      border-radius:999px;
+      background:var(--home-accent);
+      flex:0 0 auto;
+    }
+
+    .home-flow{
+      padding:16px;
+      border:1px solid var(--home-border);
+      border-radius:16px;
+      background:#fff;
+    }
+
+    .home-flowStep{
+      color:var(--home-muted);
+      font-size:12px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.03em;
+      margin-bottom:8px;
+    }
+
+    .home-flow h4{
+      margin:0 0 6px;
+      font-size:16px;
+    }
+
+    .home-flow p{
+      margin:0;
+      color:var(--home-muted);
+      font-size:13px;
+      line-height:1.55;
+    }
+
+    .home-action{
+      padding:16px;
+      border:1px solid var(--home-border);
+      border-radius:16px;
+      background:linear-gradient(180deg,#fff,#fbfaf7);
+    }
+
+    .home-action h4{
+      margin:10px 0 8px;
+      font-size:16px;
+    }
+
+    .home-action p{
+      margin:0;
+      color:var(--home-muted);
+      font-size:14px;
+      line-height:1.55;
+    }
+
+    .home-empty{
+      border:1px dashed #d6cdbc;
+      border-radius:16px;
+      padding:22px;
+      background:#fcfbf8;
+      color:var(--home-muted);
+      text-align:center;
+      font-size:14px;
+      line-height:1.55;
+    }
+
+    .home-footerNote{
+      color:var(--home-muted);
+      font-size:13px;
+      line-height:1.6;
+      margin:0;
+    }
+
+    .home-loading{
+      color:var(--home-muted);
+      font-size:14px;
+    }
+
+    @media (max-width: 1100px){
+      .home-hero,
+      .home-how,
+      .home-pulseGrid,
+      .home-workGrid,
+      .home-flowGrid,
+      .home-actionGrid{
+        grid-template-columns:1fr;
+      }
+
+      .home-miniStats{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media (max-width: 720px){
+      .home-hero h1{
+        font-size:28px;
+      }
+
+      .home-topbar{
+        align-items:flex-start;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="home-shell">
+
+      <!-- TOP BAR -->
+      <section class="home-card home-pad">
+        <div class="home-topbar">
+          <div class="home-brandLockup">
+            <div class="home-brandMark">H</div>
+            <div class="home-brandText">
+              <h1 class="home-brandTitle">Hearth</h1>
+              <p class="home-brandSub" id="topVendorSub">Loading workspace…</p>
+            </div>
+          </div>
+
+          <nav class="home-nav" aria-label="Primary">
+            <a href="./home.html">Home</a>
+            <a href="./index.html">Service Board</a>
+            <a href="./drop-studio.html">Drop Studio</a>
+            <a href="./menu-library.html">Menu Library</a>
+            <a href="./brand-hearth.html">Brand</a>
+            <a href="./insights.html">Insights</a>
+          </nav>
+        </div>
+      </section>
+
+      <!-- HERO -->
+      <section class="home-hero">
+        <div class="home-card home-pad-lg home-heroMain">
+          <div class="home-eyebrow">Platform Home</div>
+          <h1>Planned food moments, shared locally.</h1>
+          <p class="home-lead">
+            Built with and for the communities vendors serve.
+          </p>
+          <p class="home-subLead">
+            Hearth is built around planned drops — not always-on ordering. Each drop is a defined moment, with a set menu, a fixed window and a clear capacity. That gives vendors more control over how they operate, while making it simple for hosts to organise local drops and, where relevant, raise funds for their community.
+          </p>
+
+          <div class="home-heroActions">
+            <a class="home-button" id="primaryCta" href="./drop-studio.html">Create next drop</a>
+            <a class="home-button-secondary" href="#workspaces">Explore workspaces</a>
+          </div>
+
+          <div class="home-miniStats">
+            <div class="home-miniStat">
+              <div class="home-miniLabel">Workspace</div>
+              <div class="home-miniValue" id="heroVendorName">Loading…</div>
+              <div class="home-miniMeta" id="heroVendorMeta">Vendor identity and workspace context</div>
+            </div>
+            <div class="home-miniStat">
+              <div class="home-miniLabel">Current status</div>
+              <div class="home-miniValue" id="heroStatus">—</div>
+              <div class="home-miniMeta" id="heroStatusMeta">Checking drop status</div>
+            </div>
+            <div class="home-miniStat">
+              <div class="home-miniLabel">Next best move</div>
+              <div class="home-miniValue" id="heroNextMove">—</div>
+              <div class="home-miniMeta" id="heroNextMoveMeta">Loading recommendations</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-sidePanel">
+          <div class="home-card home-pad">
+            <div class="home-panelTitle">How Hearth works</div>
+            <div class="home-panelValue">Brand → Menu → Drop → Run → Learn</div>
+            <p class="home-panelText">
+              Build your identity, define your offer, create a drop, run it calmly, then learn what is working over time.
+            </p>
+          </div>
+
+          <div class="home-card home-pad">
+            <div class="home-panelTitle">Why it feels different</div>
+            <p class="home-panelText">
+              No marketplace feed. No always-open pressure. No expensive aggregator dependency. Just well-run local moments, shaped by the vendor and shared through real communities.
+            </p>
+          </div>
+
+          <div class="home-card home-pad">
+            <div class="home-panelTitle">Current signal</div>
+            <p class="home-panelText" id="signalText">
+              Loading recent platform signal…
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- PULSE -->
+      <section class="home-card home-pad-lg">
+        <div class="home-sectionHead">
+          <div>
+            <h2 class="home-sectionTitle">Current operating pulse</h2>
+            <p class="home-sectionSub">A quick view of what is happening now.</p>
+          </div>
+        </div>
+
+        <div class="home-pulseGrid" id="pulseGrid">
+          <div class="home-loading">Loading pulse…</div>
+        </div>
+      </section>
+
+      <!-- WORKSPACES -->
+      <section class="home-card home-pad-lg" id="workspaces">
+        <div class="home-sectionHead">
+          <div>
+            <h2 class="home-sectionTitle">Workspaces</h2>
+            <p class="home-sectionSub">Everything Hearth is built around: prepare, publish, run and improve.</p>
+          </div>
+        </div>
+
+        <div class="home-workGrid" id="workspaceGrid">
+          <div class="home-loading">Loading workspaces…</div>
+        </div>
+      </section>
+
+      <!-- HOW HEARTH WORKS -->
+      <section class="home-card home-pad-lg">
+        <div class="home-sectionHead">
+          <div>
+            <h2 class="home-sectionTitle">How Hearth works</h2>
+            <p class="home-sectionSub">Why the model is different — and why that matters.</p>
+          </div>
+        </div>
+
+        <div class="home-how">
+          <div class="home-howText">
+            <p>
+              Hearth is built around planned drops rather than continuous ordering. Each drop is designed with a clear menu, a fixed order window and declared capacity — so food can be prepared with intent, not pressure.
+            </p>
+            <p>
+              That creates a calmer, more controlled way for vendors to operate. It also makes drops easier for hosts to organise, whether they are neighbourhoods, clubs, schools or other community groups.
+            </p>
+            <p>
+              By removing the need for expensive third-party aggregators, vendors retain more of what they earn — while hosts can use regular drops to bring people together and, where relevant, raise funds locally.
+            </p>
+          </div>
+
+          <div class="home-bulletList">
+            <div class="home-bullet">
+              <div class="home-bulletDot"></div>
+              <div>
+                <strong>Planned drops, not always-on ordering</strong><br />
+                Defined moments create control, rhythm and quality.
+              </div>
+            </div>
+            <div class="home-bullet">
+              <div class="home-bulletDot"></div>
+              <div>
+                <strong>Menus designed for each moment</strong><br />
+                Offers are curated, not endlessly open or operationally messy.
+              </div>
+            </div>
+            <div class="home-bullet">
+              <div class="home-bulletDot"></div>
+              <div>
+                <strong>Shared through real communities</strong><br />
+                Hosts make participation easy and can benefit from the moments they help create.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FLOW -->
+      <section class="home-card home-pad-lg">
+        <div class="home-sectionHead">
+          <div>
+            <h2 class="home-sectionTitle">The Hearth flow</h2>
+            <p class="home-sectionSub">A simple operating rhythm for building repeatable local moments.</p>
+          </div>
+        </div>
+
+        <div class="home-flowGrid">
+          <div class="home-flow">
+            <div class="home-flowStep">Step 1</div>
+            <h4>Brand</h4>
+            <p>Set your identity, imagery and customer-facing feel.</p>
+          </div>
+          <div class="home-flow">
+            <div class="home-flowStep">Step 2</div>
+            <h4>Menu</h4>
+            <p>Build products, bundles and capacity-aware offers.</p>
+          </div>
+          <div class="home-flow">
+            <div class="home-flowStep">Step 3</div>
+            <h4>Drop</h4>
+            <p>Create a defined moment with timing, capacity and host context.</p>
+          </div>
+          <div class="home-flow">
+            <div class="home-flowStep">Step 4</div>
+            <h4>Run</h4>
+            <p>Use Service Board to manage orders and fulfilment calmly.</p>
+          </div>
+          <div class="home-flow">
+            <div class="home-flowStep">Step 5</div>
+            <h4>Learn</h4>
+            <p>Use Insights to understand what is working and what to repeat.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ACTIONS -->
+      <section class="home-card home-pad-lg">
+        <div class="home-sectionHead">
+          <div>
+            <h2 class="home-sectionTitle">Next actions</h2>
+            <p class="home-sectionSub">Suggested next steps based on current platform state.</p>
+          </div>
+        </div>
+
+        <div class="home-actionGrid" id="actionsGrid">
+          <div class="home-loading">Loading actions…</div>
+        </div>
+      </section>
+
+      <!-- FOOTER NOTE -->
+      <section class="home-card home-pad">
+        <p class="home-footerNote">
+          Hearth is designed to help vendors create structured, repeatable food moments — and to make those moments easy for communities to organise, return to and benefit from over time.
+        </p>
+      </section>
+
+    </div>
+  </div>
+
+  <script>
+    const sb = window.supabase.createClient(
+      window.HEARTH_SUPABASE_URL,
+      window.HEARTH_SUPABASE_KEY
+    );
+
+    const state = {
+      vendor: null,
+      drops: [],
+      products: [],
+      bundles: [],
+      summary: null,
+      insightsDrops: [],
+      hosts: []
+    };
+
+    function getUrlParam(name){
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name);
+    }
+
+    function fmtGBP(pence){
+      const n = Number(pence || 0) / 100;
+      return new Intl.NumberFormat('en-GB', {
+        style:'currency',
+        currency:'GBP',
+        maximumFractionDigits: n % 1 === 0 ? 0 : 2
+      }).format(n);
+    }
+
+    function fmtNum(v){
+      return new Intl.NumberFormat('en-GB').format(Number(v || 0));
+    }
+
+    function fmtPct(v){
+      return v == null || Number.isNaN(Number(v)) ? '—' : `${Number(v).toFixed(1)}%`;
+    }
+
+    function fmtDate(v){
+      if (!v) return '—';
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString('en-GB', {
+        day:'numeric',
+        month:'short',
+        year:'numeric'
+      });
+    }
+
+    function escapeHtml(str){
+      return String(str ?? '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+    }
+
+    function titleCase(str){
+      return String(str || '')
+        .replace(/[_-]+/g,' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function pill(cls, text){
+      return `<span class="home-pill ${cls}">${escapeHtml(text)}</span>`;
+    }
+
+    function sum(arr, fn){
+      return arr.reduce((acc, x) => acc + Number(fn ? fn(x) : x || 0), 0);
+    }
+
+    async function resolveVendor(){
+      const explicitVendorId = getUrlParam('vendor_id') || window.HEARTH_VENDOR_ID || null;
+      const explicitSlug = getUrlParam('vendor') || getUrlParam('vendor_slug') || null;
+
+      if (explicitVendorId) {
+        const { data } = await sb.from('vendors').select('*').eq('id', explicitVendorId).maybeSingle();
+        if (data) return data;
+      }
+
+      if (explicitSlug) {
+        for (const field of ['slug', 'vendor_slug']) {
+          try {
+            const { data } = await sb.from('vendors').select('*').eq(field, explicitSlug).maybeSingle();
+            if (data) return data;
+          } catch (e) {}
+        }
+      }
+
+      const { data, error } = await sb.from('vendors').select('*').limit(1);
+      if (error) throw error;
+      return data?.[0] || null;
+    }
+
+    async function loadData(){
+      state.vendor = await resolveVendor();
+      if (!state.vendor) throw new Error('No vendor found');
+
+      const vendorId = state.vendor.id;
+
+      const [
+        dropsRes,
+        productsRes,
+        bundlesRes,
+        summaryRes,
+        insightDropsRes,
+        hostsRes
+      ] = await Promise.all([
+        sb.from('drops').select('*').eq('vendor_id', vendorId).order('delivery_start', { ascending:true }),
+        sb.from('products').select('*').eq('vendor_id', vendorId),
+        sb.from('bundles').select('*').eq('vendor_id', vendorId),
+        sb.from('v_hearth_summary').select('*').eq('vendor_id', vendorId).maybeSingle().catch(() => ({ data:null })),
+        sb.from('v_hearth_drop_stats').select('*').eq('vendor_id', vendorId).order('delivery_start', { ascending:false }).catch(() => ({ data:[] })),
+        sb.from('hosts').select('*').order('name').catch(() => ({ data:[] }))
+      ]);
+
+      state.drops = dropsRes.data || [];
+      state.products = productsRes.data || [];
+      state.bundles = bundlesRes.data || [];
+      state.summary = summaryRes.data || null;
+      state.insightsDrops = insightDropsRes.data || [];
+      state.hosts = hostsRes.data || [];
+    }
+
+    function getStatusModel(){
+      const now = new Date();
+
+      const live = state.drops.find(d => {
+        const status = (d.status || '').toLowerCase();
+        return status === 'live';
+      });
+
+      const scheduled = state.drops
+        .filter(d => {
+          const status = (d.status || '').toLowerCase();
+          const start = d.delivery_start ? new Date(d.delivery_start) : null;
+          return (status === 'scheduled' || status === 'published' || status === 'open') && (!start || start >= now);
+        })
+        .sort((a,b) => new Date(a.delivery_start || 0) - new Date(b.delivery_start || 0))[0];
+
+      const draft = state.drops.find(d => (d.status || '').toLowerCase() === 'draft');
+
+      if (live) {
+        return {
+          key:'live',
+          label:'Live now',
+          meta:`${live.name || 'Active drop'} is currently running.`,
+          ctaLabel:'Open Service Board',
+          ctaHref:'./index.html'
+        };
+      }
+
+      if (scheduled) {
+        return {
+          key:'scheduled',
+          label:'Next drop scheduled',
+          meta:`${scheduled.name || 'Next drop'} is set for ${fmtDate(scheduled.delivery_start)}.`,
+          ctaLabel:'Manage drops',
+          ctaHref:'./drop-studio.html'
+        };
+      }
+
+      if (draft) {
+        return {
+          key:'draft',
+          label:'Draft in progress',
+          meta:`${draft.name || 'A draft drop'} is waiting to be completed.`,
+          ctaLabel:'Continue draft',
+          ctaHref:'./drop-studio.html'
+        };
+      }
+
+      return {
+        key:'empty',
+        label:'Ready to create',
+        meta:'No live or scheduled drop yet.',
+        ctaLabel:'Create next drop',
+        ctaHref:'./drop-studio.html'
+      };
+    }
+
+    function renderHero(){
+      const vendorName =
+        state.vendor.display_name ||
+        state.vendor.name ||
+        'Vendor workspace';
+
+      document.getElementById('topVendorSub').textContent = vendorName;
+      document.getElementById('heroVendorName').textContent = vendorName;
+      document.getElementById('heroVendorMeta').textContent =
+        state.vendor.tagline || 'Vendor-first workspace powered by Hearth';
+
+      const model = getStatusModel();
+      document.getElementById('heroStatus').textContent = model.label;
+      document.getElementById('heroStatusMeta').textContent = model.meta;
+      document.getElementById('primaryCta').textContent = model.ctaLabel;
+      document.getElementById('primaryCta').href = model.ctaHref;
+
+      const nextMove = buildPrimaryNextMove();
+      document.getElementById('heroNextMove').textContent = nextMove.title;
+      document.getElementById('heroNextMoveMeta').textContent = nextMove.text;
+
+      const signalText = buildSignalText();
+      document.getElementById('signalText').textContent = signalText;
+    }
+
+    function renderPulse(){
+      const el = document.getElementById('pulseGrid');
+      const model = getStatusModel();
+
+      const nextDrop = state.drops
+        .filter(d => d.delivery_start)
+        .sort((a,b) => new Date(a.delivery_start) - new Date(b.delivery_start))[0];
+
+      const revenue30 = state.summary?.total_revenue_30d_pence || 0;
+      const drops30 = state.summary?.drops_30d || 0;
+      const avgRev = state.summary?.avg_revenue_per_drop_pence || 0;
+      const avgCap = state.summary?.avg_capacity_utilisation_pct;
+
+      const hostCount = new Set(
+        state.drops.map(d => d.host_id).filter(Boolean)
+      ).size;
+
+      el.innerHTML = [
+        pulseCard(
+          'Platform status',
+          model.label,
+          model.key === 'live' ? pill('good','Active') : pill('neutral','Current'),
+          model.meta
+        ),
+        pulseCard(
+          'Next drop',
+          nextDrop ? fmtDate(nextDrop.delivery_start) : '—',
+          nextDrop ? pill('neutral', titleCase(nextDrop.status || 'planned')) : pill('warn','None'),
+          nextDrop ? `${nextDrop.name || 'Upcoming drop'}` : 'No upcoming drop scheduled'
+        ),
+        pulseCard(
+          'Revenue via Hearth',
+          fmtGBP(revenue30),
+          pill('neutral','Last 30 days'),
+          drops30 ? `${fmtNum(drops30)} drops · ${fmtGBP(avgRev)} average per drop` : 'Signals will build once more drops run'
+        ),
+        pulseCard(
+          'Capacity / community',
+          avgCap == null ? `${fmtNum(hostCount)} host${hostCount === 1 ? '' : 's'}` : fmtPct(avgCap),
+          avgCap == null ? pill('neutral','Coverage') : pill(avgCap >= 75 ? 'good' : 'warn', 'Capacity'),
+          avgCap == null
+            ? `${fmtNum(hostCount)} host contexts linked so far`
+            : `Average declared capacity used in recent drops`
+        )
+      ].join('');
+    }
+
+    function pulseCard(label, value, pillHtml, meta){
+      return `
+        <div class="home-pulse">
+          <div class="home-pulseTop">
+            <div class="home-pulseLabel">${escapeHtml(label)}</div>
+            ${pillHtml || ''}
+          </div>
+          <div class="home-pulseValue">${escapeHtml(String(value))}</div>
+          <div class="home-pulseMeta">${escapeHtml(meta || '')}</div>
+        </div>
+      `;
+    }
+
+    function renderWorkspaces(){
+      const el = document.getElementById('workspaceGrid');
+
+      const liveDrop = state.drops.some(d => (d.status || '').toLowerCase() === 'live');
+      const scheduledCount = state.drops.filter(d => ['scheduled','published','open'].includes((d.status || '').toLowerCase())).length;
+      const draftCount = state.drops.filter(d => (d.status || '').toLowerCase() === 'draft').length;
+
+      const activeProducts = state.products.filter(p => p.is_active !== false).length;
+      const activeBundles = state.bundles.filter(b => b.is_active !== false).length;
+
+      const brandComplete = Boolean(
+        state.vendor.logo_url &&
+        state.vendor.display_name &&
+        state.vendor.brand_primary_color
+      );
+
+      const insightSignal = state.insightsDrops.length >= 3;
+
+      el.innerHTML = [
+        workspaceCard({
+          icon:'SB',
+          title:'Service Board',
+          status: liveDrop ? pill('good','Live now') : pill('neutral','Operations'),
+          description:'Run active drops calmly, track orders, monitor capacity and keep fulfilment clear.',
+          meta: liveDrop
+            ? 'A live drop is active — this is the place to manage it.'
+            : 'Use this workspace when a drop is live or approaching service.',
+          primaryLabel: liveDrop ? 'Open live board' : 'View board',
+          primaryHref:'./index.html'
+        }),
+        workspaceCard({
+          icon:'DS',
+          title:'Drop Studio',
+          status: scheduledCount ? pill('good', `${scheduledCount} scheduled`) : draftCount ? pill('warn', `${draftCount} draft`) : pill('neutral','Planning'),
+          description:'Create and manage drops, assign menus, set timing, capacity, host context and sharing links.',
+          meta: scheduledCount
+            ? `${scheduledCount} upcoming drop${scheduledCount === 1 ? '' : 's'} currently in the system.`
+            : draftCount
+              ? `${draftCount} draft drop${draftCount === 1 ? '' : 's'} waiting to be completed.`
+              : 'No future drop yet — create the next moment here.',
+          primaryLabel: draftCount ? 'Continue planning' : 'Create drop',
+          primaryHref:'./drop-studio.html'
+        }),
+        workspaceCard({
+          icon:'ML',
+          title:'Menu Library',
+          status: activeProducts || activeBundles ? pill('good','Catalogue active') : pill('warn','Needs setup'),
+          description:'Manage products, bundles and capacity-aware offers that can be reused across drops.',
+          meta: activeProducts || activeBundles
+            ? `${fmtNum(activeProducts)} active product${activeProducts === 1 ? '' : 's'} and ${fmtNum(activeBundles)} active bundle${activeBundles === 1 ? '' : 's'}.`
+            : 'Build the catalogue before publishing drops.',
+          primaryLabel: activeProducts || activeBundles ? 'Manage catalogue' : 'Build menu',
+          primaryHref:'./menu-library.html'
+        }),
+        workspaceCard({
+          icon:'BH',
+          title:'Brand Hearth',
+          status: brandComplete ? pill('good','Brand complete') : pill('warn','Needs attention'),
+          description:'Shape how the vendor appears across customer pages, with logo, imagery, colours and identity.',
+          meta: brandComplete
+            ? 'Core identity assets are in place.'
+            : 'Complete key identity fields so the platform and order pages feel polished.',
+          primaryLabel: brandComplete ? 'Edit brand' : 'Complete brand',
+          primaryHref:'./brand-hearth.html'
+        }),
+        workspaceCard({
+          icon:'IN',
+          title:'Insights',
+          status: insightSignal ? pill('good','Signals building') : pill('neutral','Early signal'),
+          description:'Understand how Hearth is contributing to the business through drop performance, rhythm and context.',
+          meta: insightSignal
+            ? 'Enough data exists to start spotting meaningful patterns.'
+            : 'This becomes more valuable as more drops run.',
+          primaryLabel:'Open insights',
+          primaryHref:'./insights.html'
+        }, true)
+      ].join('');
+    }
+
+    function workspaceCard(card, spanFull = false){
+      return `
+        <div class="home-work" style="${spanFull ? 'grid-column:1 / -1;' : ''}">
+          <div class="home-workTop">
+            <div style="display:flex; gap:12px; align-items:flex-start;">
+              <div class="home-workIcon">${escapeHtml(card.icon)}</div>
+              <div>
+                <h3>${escapeHtml(card.title)}</h3>
+                <p>${escapeHtml(card.description)}</p>
+              </div>
+            </div>
+            ${card.status || ''}
+          </div>
+          <div class="home-workMeta">${escapeHtml(card.meta || '')}</div>
+          <div class="home-workActions">
+            <a class="home-workLink primary" href="${card.primaryHref}">${escapeHtml(card.primaryLabel)}</a>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderActions(){
+      const el = document.getElementById('actionsGrid');
+      const actions = buildActions();
+
+      el.innerHTML = actions.map(a => `
+        <div class="home-action">
+          ${pill(a.tone || 'neutral', a.label)}
+          <h4>${escapeHtml(a.title)}</h4>
+          <p>${escapeHtml(a.text)}</p>
+        </div>
+      `).join('');
+    }
+
+    function buildPrimaryNextMove(){
+      const brandComplete = Boolean(
+        state.vendor.logo_url &&
+        state.vendor.display_name &&
+        state.vendor.brand_primary_color
+      );
+
+      const activeProducts = state.products.filter(p => p.is_active !== false).length;
+      const draftDrop = state.drops.find(d => (d.status || '').toLowerCase() === 'draft');
+      const liveDrop = state.drops.find(d => (d.status || '').toLowerCase() === 'live');
+
+      if (!brandComplete) {
+        return {
+          title:'Complete brand',
+          text:'Lock down the workspace identity so Hearth feels consistent across platform and order pages.'
+        };
+      }
+
+      if (!activeProducts) {
+        return {
+          title:'Build menu',
+          text:'Add core products and offers before publishing the next drop.'
+        };
+      }
+
+      if (liveDrop) {
+        return {
+          title:'Run service',
+          text:'Open Service Board and manage the active drop.'
+        };
+      }
+
+      if (draftDrop) {
+        return {
+          title:'Finish draft',
+          text:'Complete timing, capacity and menu assignment in Drop Studio.'
+        };
+      }
+
+      return {
+        title:'Create next drop',
+        text:'Set the next planned moment and keep the rhythm building.'
+      };
+    }
+
+    function buildSignalText(){
+      const dropCount = state.insightsDrops.length;
+      const revenue30 = state.summary?.total_revenue_30d_pence || 0;
+
+      if (!dropCount) {
+        return 'No recent drop signal yet. Once drops begin to run, this workspace will start to reflect operational rhythm and contribution over time.';
+      }
+
+      if (dropCount < 3) {
+        return `Early signal is forming: ${fmtNum(dropCount)} drop${dropCount === 1 ? '' : 's'} and ${fmtGBP(revenue30)} via Hearth recently.`;
+      }
+
+      return `Signals are building: ${fmtNum(dropCount)} recorded drop${dropCount === 1 ? '' : 's'} and ${fmtGBP(revenue30)} of recent Hearth revenue.`;
+    }
+
+    function buildActions(){
+      const actions = [];
+
+      const brandComplete = Boolean(
+        state.vendor.logo_url &&
+        state.vendor.display_name &&
+        state.vendor.brand_primary_color
+      );
+      const activeProducts = state.products.filter(p => p.is_active !== false).length;
+      const scheduled = state.drops.filter(d => ['scheduled','published','open'].includes((d.status || '').toLowerCase()));
+      const draft = state.drops.find(d => (d.status || '').toLowerCase() === 'draft');
+      const live = state.drops.find(d => (d.status || '').toLowerCase() === 'live');
+
+      if (!brandComplete) {
+        actions.push({
+          label:'Brand',
+          tone:'warn',
+          title:'Complete the vendor identity',
+          text:'Add the key brand assets and colour settings so the platform and customer surfaces feel cohesive.'
+        });
+      }
+
+      if (!activeProducts) {
+        actions.push({
+          label:'Menu',
+          tone:'warn',
+          title:'Build the core catalogue',
+          text:'Define products, bundles and capacity-aware offers before planning more drops.'
+        });
+      }
+
+      if (live) {
+        actions.push({
+          label:'Operations',
+          tone:'good',
+          title:'Manage the live drop',
+          text:'Service Board should be the primary workspace while orders are active and fulfilment is underway.'
+        });
+      } else if (draft) {
+        actions.push({
+          label:'Planning',
+          tone:'neutral',
+          title:'Finish the current draft',
+          text:'Complete timing, capacity and menu assignment so the next drop can be published cleanly.'
+        });
+      } else if (!scheduled.length) {
+        actions.push({
+          label:'Planning',
+          tone:'neutral',
+          title:'Schedule the next moment',
+          text:'Create the next planned drop to keep local rhythm and participation building over time.'
+        });
+      }
+
+      if ((state.insightsDrops || []).length >= 3) {
+        actions.push({
+          label:'Learning',
+          tone:'good',
+          title:'Review what is working',
+          text:'Insights now has enough signal to start comparing drop strength, context and contribution over time.'
+        });
+      } else {
+        actions.push({
+          label:'Learning',
+          tone:'neutral',
+          title:'Build more signal',
+          text:'As more drops run, Hearth will start to reveal clearer patterns around momentum, capacity and context.'
+        });
+      }
+
+      if (!actions.length) {
+        actions.push({
+          label:'Next step',
+          tone:'neutral',
+          title:'Keep the rhythm going',
+          text:'Brand, menu, drops, operations and learning are all in place — the next move is consistent execution.'
+        });
+      }
+
+      return actions.slice(0, 3);
+    }
+
+    function render(){
+      renderHero();
+      renderPulse();
+      renderWorkspaces();
+      renderActions();
+    }
+
+    async function init(){
+      try {
+        await loadData();
+        render();
+      } catch (err) {
+        console.error(err);
+        document.querySelector('.home-shell').innerHTML = `
+          <section class="home-card home-pad-lg">
+            <div class="home-empty">
+              Home could not load. Check vendor resolution, Supabase access and page routes.
+              <br><br>
+              <strong>${escapeHtml(err.message || 'Unknown error')}</strong>
+            </div>
+          </section>
+        `;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
