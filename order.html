@@ -2544,65 +2544,116 @@
         return "";
       }
 
-      async function handoffToPayment() {
-        const validationError = validateCheckout();
-        if (validationError) {
-          showCheckoutNotice(validationError, "error");
-          return;
-        }
+async function persistOrder() {
+  const capacityUnitsConsumed = Math.max(1, getBasketCapacityUnits());
 
-        showCheckoutNotice("");
-        const payload = buildCheckoutPayload();
-        const payBtn = byId("payBtn");
-        payBtn.disabled = true;
-        payBtn.textContent = "Preparing payment…";
+  const orderRow = {
+    drop_id:          state.drop.id,
+    customer_name:    byId("customerName").value.trim(),
+    customer_phone:   byId("customerPhone").value.trim(),
+    customer_email:   byId("customerEmail").value.trim() || null,
+    customer_notes:   byId("customerNotes").value.trim() || null,
+    fulfilment_mode:  state.selectedFulfilmentMode || state.drop?.fulfilment_mode || null,
+    delivery_address: byId("customerAddress").value.trim() || null,
+    total_pence:      getGrandTotalPence(),
+    pizzas:           capacityUnitsConsumed,
+  };
 
-        try {
-          const response = await fetch(`${SUPABASE_URL}/functions/v1/${STRIPE_CHECKOUT_FUNCTION}`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: SUPABASE_ANON_KEY,
-              Authorization: "Bearer " + SUPABASE_ANON_KEY
-            },
-            body: JSON.stringify(payload)
-          });
+  const { data: orderData, error: orderError } = await supabase
+    .from("orders")
+    .insert(orderRow)
+    .select("id")
+    .single();
 
-          if (!response.ok) {
-            let message = `Payment handoff failed (${response.status})`;
-            try {
-              const errorBody = await response.json();
-              if (errorBody?.error) message = errorBody.error;
-            } catch (_) {}
-            throw new Error(message);
-          }
+  if (orderError) {
+    throw new Error(`Failed to save order: ${orderError.message}`);
+  }
 
-          const data = await response.json();
+  const orderId = orderData.id;
 
-          if (data?.url) {
-            window.location.href = data.url;
-            return;
-          }
+  for (const item of state.basket) {
+    const itemRow = {
+      order_id:                orderId,
+      item_type:               item.type,
+      product_id:              item.type === "product" ? item.product_id : null,
+      bundle_id:               item.type === "bundle"  ? item.bundle_id  : null,
+      item_name_snapshot:      item.name,
+      qty:                     Number(item.quantity || 1),
+      price_pence:             Number(item.unit_price_pence || 0),
+      capacity_units_snapshot: Number(item.capacity_units || 0),
+    };
 
-          if (data?.message) {
-            showCheckoutNotice(data.message, "warn");
-            return;
-          }
+    const { data: itemData, error: itemError } = await supabase
+      .from("order_items")
+      .insert(itemRow)
+      .select("id")
+      .single();
 
-          showCheckoutNotice("Stripe handoff endpoint responded, but no checkout URL was returned yet.", "warn");
-          console.log("Stripe-ready payload:", payload);
-        } catch (err) {
-          console.error(err);
-          showCheckoutNotice(
-            `${err.message || "Unable to start payment."} Stripe-ready payload has been logged to the console for now.`,
-            "warn"
-          );
-          console.log("Stripe-ready payload:", payload);
-        } finally {
-          payBtn.disabled = false;
-          payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
-        }
+    if (itemError) {
+      throw new Error(`Failed to save order item "${item.name}": ${itemError.message}`);
+    }
+
+    const orderItemId = itemData.id;
+
+    if (item.type === "bundle" && item.selections && item.selections.length > 0) {
+      const selectionRows = item.selections.map((s) => ({
+        order_item_id:       orderItemId,
+        bundle_line_id:      s.bundle_line_id,
+        selected_product_id: s.selected_product_id,
+        quantity:            Number(s.quantity || 1),
+      }));
+
+      const { error: selectionsError } = await supabase
+        .from("order_item_selections")
+        .insert(selectionRows);
+
+      if (selectionsError) {
+        throw new Error(`Failed to save bundle selections for "${item.name}": ${selectionsError.message}`);
       }
+    }
+  }
+
+  return orderId;
+}
+
+async function handoffToPayment() {
+  const validationError = validateCheckout();
+  if (validationError) {
+    showCheckoutNotice(validationError, "error");
+    return;
+  }
+
+  showCheckoutNotice("");
+  const payBtn = byId("payBtn");
+  payBtn.disabled = true;
+
+  let orderId = null;
+
+  try {
+    payBtn.textContent = "Saving order…";
+    orderId = await persistOrder();
+
+    showCheckoutNotice(
+      `Order received — thank you. We'll be in touch shortly with confirmation. (Ref: ${orderId})`,
+      ""
+    );
+    payBtn.textContent = "Order placed";
+    console.log("Order persisted successfully. ID:", orderId);
+
+  } catch (err) {
+    console.error(err);
+    const context = orderId
+      ? `Order was saved (ID: ${orderId}) but something went wrong after.`
+      : "Order could not be saved.";
+    showCheckoutNotice(`${context} ${err.message || "Please try again."}`, "error");
+
+  } finally {
+    if (!orderId) {
+      payBtn.disabled = false;
+      payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
+    }
+  }
+}
 
       function renderAll() {
         renderHero();
