@@ -591,8 +591,8 @@
           <nav class="home-nav" aria-label="Primary">
             <a href="./home.html">Home</a>
             <a href="./index.html">Service Board</a>
-            <a href="./drop-studio.html">Drop Studio</a>
-            <a href="./menu-library.html">Menu Library</a>
+            <a href="./drop-manager.html">Drop Studio</a>
+            <a href="./drop-menu.html">Menu Library</a>
             <a href="./brand-hearth.html">Brand</a>
             <a href="./insights.html">Insights</a>
           </nav>
@@ -612,7 +612,7 @@
           </p>
 
           <div class="home-heroActions">
-            <a class="home-button" id="primaryCta" href="./drop-studio.html">Create next drop</a>
+            <a class="home-button" id="primaryCta" href="./drop-manager.html">Create next drop</a>
             <a class="home-button-secondary" href="#workspaces">Explore workspaces</a>
           </div>
 
@@ -800,8 +800,8 @@
 
   <script>
     const sb = window.supabase.createClient(
-      window.HEARTH_SUPABASE_URL,
-      window.HEARTH_SUPABASE_KEY
+      window.HEARTH_CONFIG.SUPABASE_URL,
+      window.HEARTH_CONFIG.SUPABASE_ANON_KEY
     );
 
     const state = {
@@ -957,7 +957,7 @@
           label:'Next drop scheduled',
           meta:`${scheduled.name || 'Next drop'} is set for ${fmtDate(scheduled.delivery_start)}.`,
           ctaLabel:'Manage drops',
-          ctaHref:'./drop-studio.html'
+          ctaHref:'./drop-manager.html'
         };
       }
 
@@ -967,7 +967,7 @@
           label:'Draft in progress',
           meta:`${draft.name || 'A draft drop'} is waiting to be completed.`,
           ctaLabel:'Continue draft',
-          ctaHref:'./drop-studio.html'
+          ctaHref:'./drop-manager.html'
         };
       }
 
@@ -976,7 +976,7 @@
         label:'Ready to create',
         meta:'No live or scheduled drop yet.',
         ctaLabel:'Create next drop',
-        ctaHref:'./drop-studio.html'
+        ctaHref:'./drop-manager.html'
       };
     }
 
@@ -1106,7 +1106,7 @@
               ? `${draftCount} draft drop${draftCount === 1 ? '' : 's'} waiting to be completed.`
               : 'No future drop yet — create the next moment here.',
           primaryLabel: draftCount ? 'Continue planning' : 'Create drop',
-          primaryHref:'./drop-studio.html'
+          primaryHref:'./drop-manager.html'
         }),
         workspaceCard({
           icon:'ML',
@@ -1117,7 +1117,7 @@
             ? `${fmtNum(activeProducts)} active product${activeProducts === 1 ? '' : 's'} and ${fmtNum(activeBundles)} active bundle${activeBundles === 1 ? '' : 's'}.`
             : 'Build the catalogue before publishing drops.',
           primaryLabel: activeProducts || activeBundles ? 'Manage catalogue' : 'Build menu',
-          primaryHref:'./menu-library.html'
+          primaryHref:'./drop-menu.html'
         }),
         workspaceCard({
           icon:'BH',
