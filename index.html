@@ -526,23 +526,20 @@
     }
 
     function isCapacityItem(row) {
-      const categoryKey = getCapacityCategoryKey();
-      const categoryName = String(
-        state.dropSummary?.capacity_category_name || state.drop?.capacity_category_name || ""
-      ).trim().toLowerCase();
+      const capacityCategoryId =
+        state.dropSummary?.capacity_category_id ||
+        state.drop?.capacity_category_id ||
+        null;
 
-      if (!categoryKey && !categoryName) return false;
+      if (!capacityCategoryId) return false;
 
-      // Use pre-computed _item_category if available (set by buildOrderModels), otherwise resolve fresh
-      const itemCategory = String(row._item_category || getItemCategory(row) || "").trim().toLowerCase();
-
-      if (itemCategory) {
-        return itemCategory === categoryKey || (categoryName && itemCategory === categoryName);
+      // Primary: UUID comparison — reliable regardless of name or slug formatting
+      if (row.category_id) {
+        return row.category_id === capacityCategoryId;
       }
 
-      // View returned no category data — fall back to capacity_units_snapshot as a proxy.
-      // Items that consume capacity units are capacity items by definition.
-      console.warn("[Service Board] item has no category field — falling back to capacity_units_snapshot for:", getItemName(row));
+      // Fallback: view did not return category_id (legacy view in use).
+      // Items with capacity_units_snapshot > 0 are capacity items by definition.
       return Number(row.capacity_units_snapshot ?? row.capacity_units ?? 0) > 0;
     }
 
@@ -1031,17 +1028,17 @@
     }
 
     async function loadExpandedOrderDetails(dropId) {
-      const expanded = await supabase
-        .from("v_order_item_detail_expanded")
+      const v2 = await supabase
+        .from("v_order_item_detail_v2")
         .select("*")
         .eq("drop_id", dropId)
         .order("created_at", { ascending: true });
 
-      if (!expanded.error) return expanded.data || [];
+      if (!v2.error) return v2.data || [];
 
       console.warn(
-        "[Service Board] v_order_item_detail_expanded unavailable (" + (expanded.error?.message || "unknown error") + ") — falling back to v_order_item_detail. " +
-        "Category matching and bundle item display may be degraded."
+        "[Service Board] v_order_item_detail_v2 unavailable (" + (v2.error?.message || "unknown error") + ") — falling back to v_order_item_detail. " +
+        "Category matching will use capacity_units_snapshot fallback."
       );
 
       const legacy = await supabase
