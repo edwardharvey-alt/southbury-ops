@@ -228,7 +228,7 @@
 
     .heroBodyCard{
       padding:14px 16px 16px;
-      display:grid;
+      display:none;
       gap:12px;
       background:#fff;
     }
@@ -1277,15 +1277,27 @@
         return document.getElementById(id);
       }
 
+      function syncHeroBodyCard() {
+        const notice = byId("pageStatusNotice");
+        const error  = byId("errorBox");
+        const card   = notice && notice.closest(".heroBodyCard");
+        if (!card) return;
+        const noticeVisible = notice && !notice.classList.contains("hidden") && notice.textContent.trim();
+        const errorVisible  = error  && error.style.display !== "none" && error.textContent.trim();
+        card.style.display  = (noticeVisible || errorVisible) ? "grid" : "none";
+      }
+
       function showError(message) {
         const el = byId("errorBox");
         if (!message) {
           el.style.display = "none";
           el.textContent = "";
+          syncHeroBodyCard();
           return;
         }
         el.style.display = "block";
         el.textContent = message;
+        syncHeroBodyCard();
       }
 
       function showNotice(message, type = "") {
@@ -1293,10 +1305,12 @@
         if (!message) {
           el.className = "statusNotice hidden";
           el.textContent = "";
+          syncHeroBodyCard();
           return;
         }
         el.className = `statusNotice ${type || ""}`;
         el.textContent = message;
+        syncHeroBodyCard();
       }
 
       function showCheckoutNotice(message, type = "") {
