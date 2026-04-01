@@ -910,9 +910,9 @@
         sb.from('drops').select('*').eq('vendor_id', vendorId).order('delivery_start', { ascending:true }),
         sb.from('products').select('*').eq('vendor_id', vendorId),
         sb.from('bundles').select('*').eq('vendor_id', vendorId),
-        sb.from('v_hearth_summary').select('*').eq('vendor_id', vendorId).maybeSingle().catch(() => ({ data:null })),
-        sb.from('v_hearth_drop_stats').select('*').eq('vendor_id', vendorId).order('delivery_start', { ascending:false }).catch(() => ({ data:[] })),
-        sb.from('hosts').select('*').order('name').catch(() => ({ data:[] }))
+        (async () => { try { return await sb.from('v_hearth_summary').select('*').eq('vendor_id', vendorId).maybeSingle(); } catch(e) { return { data: null }; } })(),
+        (async () => { try { return await sb.from('v_hearth_drop_stats').select('*').eq('vendor_id', vendorId).order('delivery_start', { ascending: false }); } catch(e) { return { data: [] }; } })(),
+        (async () => { try { return await sb.from('hosts').select('*').order('name'); } catch(e) { return { data: [] }; } })()
       ]);
 
       state.drops = dropsRes.data || [];
