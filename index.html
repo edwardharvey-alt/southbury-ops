@@ -139,7 +139,6 @@
 
           <div class="execRight">
             <span class="realtimePill" id="realtimeIndicator">Live</span>
-            <a href="order-entry.html" class="utilityLink">Test Order</a>
             <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
           </div>
         </div>
@@ -187,7 +186,7 @@
           <div class="row space" style="margin-bottom:12px;">
             <div>
               <h3 class="sectionTitle">Next items to make</h3>
-              <p class="sectionSub">Items driving the current drop’s operational capacity</p>
+              <p class="sectionSub" id="queueSectionSub">Items driving the current drop’s operational capacity</p>
             </div>
           </div>
           <div class="queueGrid" id="queueGrid"></div>
@@ -328,7 +327,7 @@
                   <th>Units</th>
                   <th>Status</th>
                   <th>Total</th>
-                  <th>Capacity items</th>
+                  <th id="thCapacityItems">Capacity items</th>
                   <th>Other items</th>
                 </tr>
               </thead>
@@ -519,11 +518,32 @@
     }
 
     function getItemCategory(row) {
-      return row.item_category || row.product_category || row.category_name || row.category || null;
+      return row.item_category || row.product_category || row.category_name || row.category_slug || row.category || null;
     }
 
     function getItemQty(row) {
       return Number(row.capacity_qty ?? row.expanded_qty ?? row.qty ?? row.quantity ?? 0);
+    }
+
+    function isCapacityItem(row) {
+      const categoryKey = getCapacityCategoryKey();
+      const categoryName = String(
+        state.dropSummary?.capacity_category_name || state.drop?.capacity_category_name || ""
+      ).trim().toLowerCase();
+
+      if (!categoryKey && !categoryName) return false;
+
+      // Use pre-computed _item_category if available (set by buildOrderModels), otherwise resolve fresh
+      const itemCategory = String(row._item_category || getItemCategory(row) || "").trim().toLowerCase();
+
+      if (itemCategory) {
+        return itemCategory === categoryKey || (categoryName && itemCategory === categoryName);
+      }
+
+      // View returned no category data — fall back to capacity_units_snapshot as a proxy.
+      // Items that consume capacity units are capacity items by definition.
+      console.warn("[Service Board] item has no category field — falling back to capacity_units_snapshot for:", getItemName(row));
+      return Number(row.capacity_units_snapshot ?? row.capacity_units ?? 0) > 0;
     }
 
     function groupItemDetailsByOrder(items) {
@@ -547,11 +567,9 @@
         }));
 
         const grouped = { capacity: [], extras: [] };
-        const capacityCategoryKey = getCapacityCategoryKey();
 
         lines.forEach((line) => {
-          const lineCategoryKey = String(line._item_category || "").trim().toLowerCase();
-          if (capacityCategoryKey && lineCategoryKey === capacityCategoryKey) {
+          if (isCapacityItem(line)) {
             grouped.capacity.push(line);
           } else {
             grouped.extras.push(line);
@@ -644,6 +662,8 @@
         byId("capacityCopyLeft").textContent = "0 / 0 units";
         byId("capacityCopyRight").textContent = "0% full";
         byId("capacityFill").style.width = "0%";
+        byId("queueSectionSub").textContent = "Items driving the current drop's operational capacity";
+        byId("thCapacityItems").textContent = "Capacity items";
         return;
       }
 
@@ -667,6 +687,10 @@
       byId("capacityCopyRight").textContent = `${pct}% full`;
       byId("capacityFill").style.width = `${pct}%`;
       byId("capacitySummaryTitle").textContent = `${capacityLabel || "Capacity"} items`;
+      byId("queueSectionSub").textContent = capacityLabel
+        ? `Confirmed ${capacityLabel} items queued for preparation`
+        : "Items driving the current drop's operational capacity";
+      byId("thCapacityItems").textContent = `${capacityLabel || "Capacity"} items`;
     }
 
     function renderQueue() {
@@ -678,12 +702,10 @@
         return;
       }
 
-      const capacityCategoryKey = getCapacityCategoryKey();
       const capacityCategoryLabel = getCapacityCategoryLabel();
 
       const relevant = state.itemDetails.filter((row) =>
-        normaliseStatus(row.status) === "confirmed" &&
-        String(getItemCategory(row) || "").trim().toLowerCase() === capacityCategoryKey
+        normaliseStatus(row.status) === "confirmed" && isCapacityItem(row)
       );
 
       const counts = new Map();
@@ -761,14 +783,12 @@
     function renderConsolidatedView() {
       const capacityMap = new Map();
       const otherMap = new Map();
-      const capacityCategoryKey = getCapacityCategoryKey();
 
       state.itemDetails.forEach((line) => {
         const name = getItemName(line);
         const qty = getItemQty(line);
-        const categoryKey = String(getItemCategory(line) || "").trim().toLowerCase();
 
-        if (capacityCategoryKey && categoryKey === capacityCategoryKey) {
+        if (isCapacityItem(line)) {
           capacityMap.set(name, (capacityMap.get(name) || 0) + qty);
         } else {
           otherMap.set(name, (otherMap.get(name) || 0) + qty);
@@ -1018,6 +1038,11 @@
         .order("created_at", { ascending: true });
 
       if (!expanded.error) return expanded.data || [];
+
+      console.warn(
+        "[Service Board] v_order_item_detail_expanded unavailable (" + (expanded.error?.message || "unknown error") + ") — falling back to v_order_item_detail. " +
+        "Category matching and bundle item display may be degraded."
+      );
 
       const legacy = await supabase
         .from("v_order_item_detail")
