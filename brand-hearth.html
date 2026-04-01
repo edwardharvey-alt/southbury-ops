@@ -470,6 +470,69 @@
       display:none !important;
     }
 
+    .assetUploadWidget{
+      display:grid;
+      gap:10px;
+    }
+
+    .assetUploadPreview{
+      width:80px;
+      height:80px;
+      border-radius:16px;
+      border:1px solid var(--h-border-2);
+      background:rgba(15,23,42,0.03);
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .assetUploadPreview.heroPreview{
+      width:100%;
+      height:100px;
+      border-radius:12px;
+    }
+
+    .assetUploadPreview img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    .assetUploadPlaceholder{
+      font-size:11px;
+      font-weight:700;
+      color:var(--h-muted);
+      text-align:center;
+      padding:0 8px;
+    }
+
+    .assetUploadControls{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .assetUploadStatus{
+      font-size:12px;
+      font-weight:700;
+      color:var(--h-muted);
+    }
+
+    .assetUploadStatus.uploading{
+      color:var(--h-accent);
+    }
+
+    .assetUploadStatus.done{
+      color:#16a34a;
+    }
+
+    .assetUploadStatus.error{
+      color:#dc2626;
+    }
+
     @media (max-width: 1080px){
       .brandWorkspace{
         grid-template-columns:1fr;
@@ -663,20 +726,41 @@
             <div class="brandSectionHead">
               <div>
                 <h4 class="brandSectionTitle">Brand Assets</h4>
-                <p class="brandSectionSub">Add the images that shape your storefront.</p>
+                <p class="brandSectionSub">Upload the images that shape your storefront.</p>
               </div>
             </div>
 
+            <input type="hidden" id="vendorLogoUrl" />
+            <input type="hidden" id="vendorHeroImageUrl" />
+
             <div class="studioGrid2">
               <div class="field">
-                <label for="vendorLogoUrl">Logo URL</label>
-                <input id="vendorLogoUrl" type="url" placeholder="https://..." />
+                <label>Logo</label>
+                <div class="assetUploadWidget">
+                  <div class="assetUploadPreview" id="logoPreview">
+                    <span class="assetUploadPlaceholder">No logo set</span>
+                  </div>
+                  <div class="assetUploadControls">
+                    <button class="btnGhost" type="button" id="logoUploadBtn">Choose file</button>
+                    <span class="assetUploadStatus" id="logoUploadStatus"></span>
+                  </div>
+                  <input type="file" id="logoFileInput" accept="image/*" style="display:none;" />
+                </div>
                 <div class="helperText">Square or near-square image works best.</div>
               </div>
 
               <div class="field">
-                <label for="vendorHeroImageUrl">Hero Image URL</label>
-                <input id="vendorHeroImageUrl" type="url" placeholder="https://..." />
+                <label>Hero Image</label>
+                <div class="assetUploadWidget">
+                  <div class="assetUploadPreview heroPreview" id="heroPreview">
+                    <span class="assetUploadPlaceholder">No hero image set</span>
+                  </div>
+                  <div class="assetUploadControls">
+                    <button class="btnGhost" type="button" id="heroUploadBtn">Choose file</button>
+                    <span class="assetUploadStatus" id="heroUploadStatus"></span>
+                  </div>
+                  <input type="file" id="heroFileInput" accept="image/*" style="display:none;" />
+                </div>
                 <div class="helperText">Wide, atmospheric image for the top of the order page.</div>
               </div>
             </div>
@@ -951,6 +1035,17 @@
       };
     }
 
+    function updateAssetPreview(previewId, url) {
+      const el = byId(previewId);
+      if (!el) return;
+      if (url) {
+        el.innerHTML = `<img src="${escapeHtml(url)}" alt="Asset preview" />`;
+      } else {
+        const label = previewId === "logoPreview" ? "No logo set" : "No hero image set";
+        el.innerHTML = `<span class="assetUploadPlaceholder">${escapeHtml(label)}</span>`;
+      }
+    }
+
     function populateForm(vendor) {
       byId("vendorName").value = vendor.name || "";
       byId("vendorDisplayName").value = vendor.display_name || vendor.name || "";
@@ -963,6 +1058,70 @@
       byId("brandSecondaryColor").value = vendor.brand_secondary_color || "#CBB89D";
       byId("brandTextOnPrimary").value = vendor.brand_text_on_primary || "#FFFFFF";
       syncColourLabels();
+      updateAssetPreview("logoPreview", vendor.logo_url || "");
+      updateAssetPreview("heroPreview", vendor.hero_image_url || "");
+    }
+
+    async function uploadAsset(file, assetType) {
+      const slug = state.vendor?.slug;
+      if (!slug) throw new Error("Vendor not loaded.");
+
+      const path = `${slug}/${assetType}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("vendor-assets")
+        .upload(path, file, { upsert: true, contentType: file.type });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from("vendor-assets")
+        .getPublicUrl(path);
+
+      return data.publicUrl;
+    }
+
+    async function handleAssetUpload(file, assetType) {
+      const statusId = assetType === "logo" ? "logoUploadStatus" : "heroUploadStatus";
+      const previewId = assetType === "logo" ? "logoPreview" : "heroPreview";
+      const hiddenId = assetType === "logo" ? "vendorLogoUrl" : "vendorHeroImageUrl";
+      const statusEl = byId(statusId);
+
+      statusEl.textContent = "Uploading…";
+      statusEl.className = "assetUploadStatus uploading";
+
+      try {
+        const publicUrl = await uploadAsset(file, assetType);
+
+        byId(hiddenId).value = publicUrl;
+        updateAssetPreview(previewId, publicUrl);
+
+        const dbField = assetType === "logo" ? "logo_url" : "hero_image_url";
+        const { error: dbError } = await supabase
+          .from("vendors")
+          .update({ [dbField]: publicUrl })
+          .eq("id", state.vendor.id);
+
+        if (dbError) throw dbError;
+
+        state.vendor = { ...state.vendor, [dbField]: publicUrl };
+
+        statusEl.textContent = "Uploaded";
+        statusEl.className = "assetUploadStatus done";
+
+        applyPreview();
+        setSaveState("saved");
+        showInlineSuccess("Image uploaded and saved");
+
+        setTimeout(() => {
+          statusEl.textContent = "";
+          statusEl.className = "assetUploadStatus";
+        }, 3000);
+      } catch (err) {
+        statusEl.textContent = err.message || "Upload failed";
+        statusEl.className = "assetUploadStatus error";
+        showError(err.message || "Image upload failed.");
+      }
     }
 
     function syncColourLabels() {
@@ -1285,8 +1444,6 @@
         "vendorTagline",
         "vendorOrderLabel",
         "vendorWebsiteUrl",
-        "vendorLogoUrl",
-        "vendorHeroImageUrl",
         "brandPrimaryColor",
         "brandSecondaryColor",
         "brandTextOnPrimary"
@@ -1295,6 +1452,28 @@
         if (!el) return;
         el.addEventListener("input", markDirty);
         el.addEventListener("change", markDirty);
+      });
+
+      byId("logoUploadBtn").addEventListener("click", () => {
+        byId("logoFileInput").click();
+      });
+
+      byId("heroUploadBtn").addEventListener("click", () => {
+        byId("heroFileInput").click();
+      });
+
+      byId("logoFileInput").addEventListener("change", (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        handleAssetUpload(file, "logo");
+        e.target.value = "";
+      });
+
+      byId("heroFileInput").addEventListener("change", (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        handleAssetUpload(file, "hero");
+        e.target.value = "";
       });
 
       byId("saveBrandBtnTop").addEventListener("click", async () => {
