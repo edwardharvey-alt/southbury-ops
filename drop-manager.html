@@ -960,7 +960,6 @@
 
     function getDefaultCapacityCategory() {
       return (
-        getCategoryBySlugOrName("pizza") ||
         state.categories.find((c) => c.is_active) ||
         state.categories[0] ||
         null
@@ -1568,7 +1567,7 @@
               <div class="dropCardMeta">${escapeHtml(formatTimeOnly(drop.delivery_start))}–${escapeHtml(formatTimeOnly(drop.delivery_end))}</div>
 
               <div class="dropCardStats">
-                <span class="miniChip">${Number(drop.capacity_units_used || 0)} / ${Number(drop.capacity_units_total || 0)} ${escapeHtml(titleCase(drop.capacity_category || "units"))}</span>
+                <span class="miniChip">${Number(drop.capacity_units_used || 0)} / ${Number(drop.capacity_units_total || 0)} ${escapeHtml(getCapacityCategoryLabel(drop))}</span>
                 <span class="miniChip">${Number(drop.order_count || 0)} orders</span>
               </div>
             </div>
@@ -2327,7 +2326,7 @@
         centre_postcode: null,
         radius_km: null,
         capacity_category_id: defaultCapacityCategory?.id || null,
-        capacity_category: defaultCapacityCategory?.slug || "pizza",
+        capacity_category: defaultCapacityCategory?.slug || null,
         capacity_units_total: 40,
         opens_at: null,
         closes_at: closesAt.toISOString(),
