@@ -2643,17 +2643,25 @@ async function handoffToPayment() {
   payBtn.disabled = true;
 
   let orderId = null;
+  let orderPersisted = false;
 
   try {
-    payBtn.textContent = "Saving order…";
+    payBtn.textContent = "Preparing payment…";
     orderId = await persistOrder();
+
+    // Order is in the database — permanently disable the button to prevent double-submit.
+    // This must happen before any Stripe handoff attempt.
+    orderPersisted = true;
+    payBtn.disabled = true;
+    payBtn.textContent = "Order placed";
 
     showCheckoutNotice(
       `Order received — thank you. We'll be in touch shortly with confirmation. (Ref: ${orderId})`,
       ""
     );
-    payBtn.textContent = "Order placed";
     console.log("Order persisted successfully. ID:", orderId);
+
+    // TODO: Stripe handoff — insert call here once Stripe is connected.
 
   } catch (err) {
     console.error(err);
@@ -2663,7 +2671,7 @@ async function handoffToPayment() {
     showCheckoutNotice(`${context} ${err.message || "Please try again."}`, "error");
 
   } finally {
-    if (!orderId) {
+    if (!orderPersisted) {
       payBtn.disabled = false;
       payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
     }
