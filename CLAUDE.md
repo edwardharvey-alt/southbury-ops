@@ -229,6 +229,27 @@ T4-7: Service Board — order notes and fulfilment details
 Surface customer notes, delivery address, and fulfilment mode on order
 cards. Essential for delivery drops.
 
+T4-8: Demand signal — interest registration per drop
+Before ordering opens, allow customers to register interest in a drop. Show
+vendor a demand indicator on Drop Studio. Eventually gate drop launch on
+minimum signal threshold. Addresses underfilled drop risk.
+
+T4-9: Host activation assets
+Auto-generate host-specific promotion assets per drop — WhatsApp message
+with host context, fundraising copy, shareable drop card. Accessible from
+Drop Studio after publish.
+
+T4-10: Drop performance scorecard in Insights
+Per-drop metrics: fill rate, on-time percentage, repeat customer percentage,
+issue rate. The metrics that determine whether a drop should run again.
+
+T4-11: Drop Promotion Centre
+Auto-generated promotion assets per drop on publish. Includes WhatsApp copy,
+SMS, email, social captions, shareable drop card image, poster PDF. Vendor
+and host variants. Smart capacity-triggered messages (orders open, halfway,
+last few left, full). Lives in Drop Studio as Promote this drop tab. Makes
+demand generation effortless and is a key platform differentiator.
+
 ### Tier 5 — Strategic platform features
 
 T5-1: Delivery optimisation
@@ -255,6 +276,11 @@ first drop → publish. No self-serve onboarding exists yet.
 T5-6: Customer accounts
 Order history, saved addresses, preferred drops. Builds repeat
 participation central to the Hearth model.
+
+T5-7: Vendor scorecard
+Aggregate vendor performance tracking: fill rate trend, customer
+satisfaction, lateness, issue rate. Informs vendor curation and onboarding
+decisions at scale.
 
 ## Recommended next session order
 
