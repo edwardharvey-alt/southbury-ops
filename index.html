@@ -8,6 +8,49 @@
   <link rel="stylesheet" href="./assets/hearth.css?v=30" />
   <script src="./assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .dropHeroTopRight {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .heroToggleBtn {
+      font-size: 13px;
+      padding: 4px 10px;
+      white-space: nowrap;
+    }
+    .realtimePill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #2d8c4e;
+      background: #e8f5ed;
+      padding: 3px 9px;
+      border-radius: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s;
+    }
+    .realtimePill::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #2d8c4e;
+      animation: realtimePulse 2s infinite;
+    }
+    .realtimePill.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    @keyframes realtimePulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -21,10 +64,12 @@
       </div>
 
       <div class="nav">
-        <a href="index.html" class="active">Service Board</a>
-        <a href="drop-manager.html">Drop Studio</a>
+        <a href="home.html">Home</a>
+        <a href="brand-hearth.html">Brand Hearth</a>
         <a href="drop-menu.html">Menu Library</a>
-        <a href="#">Insights</a>
+        <a href="drop-manager.html">Drop Studio</a>
+        <a href="index.html" class="active">Service Board</a>
+        <a href="insights.html">Insights</a>
       </div>
     </div>
 
@@ -36,9 +81,13 @@
             <p class="dropMeta" id="dropMeta">Connecting to Supabase</p>
           </div>
 
-          <div class="pill" id="dropStatusPill">
-            <span class="dot" id="dropStatusDot"></span>
-            <span id="dropStatusText">—</span>
+          <div class="dropHeroTopRight">
+            <div class="pill" id="dropStatusPill">
+              <span class="dot" id="dropStatusDot"></span>
+              <span id="dropStatusText">—</span>
+            </div>
+            <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
+            <button class="btnGhost heroToggleBtn" id="heroToggleBtn" type="button">Hide summary</button>
           </div>
         </div>
 
@@ -52,7 +101,7 @@
               <div class="boardFilterHint" id="dropFilterResultText">Loading drops…</div>
             </div>
 
-            <div class="execField boardFilterPopoverWrap">
+            <div class="execField boardFilterPopoverWrap heroCollapsible">
               <label>Status filter</label>
               <button class="filterSummaryBtn" id="boardStatusFilterBtn" type="button">
                 <span id="boardStatusFilterSummary">Live, Scheduled, Draft</span>
@@ -78,7 +127,7 @@
               </div>
             </div>
 
-            <div class="execField">
+            <div class="execField heroCollapsible">
               <label for="boardTypeFilter">Drop type</label>
               <select id="boardTypeFilter">
                 <option value="all">All types</option>
@@ -90,12 +139,11 @@
           </div>
 
           <div class="execRight">
-            <a href="order-entry.html" class="utilityLink">Test Order</a>
-            <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
+            <span class="realtimePill" id="realtimeIndicator">Live</span>
           </div>
         </div>
 
-        <div class="heroGrid">
+        <div class="heroGrid heroCollapsible">
           <div class="heroTile">
             <div class="heroLabel">Orders</div>
             <div class="heroValue" id="kpiOrders">0</div>
@@ -122,7 +170,7 @@
           </div>
         </div>
 
-        <div class="capacityRow">
+        <div class="capacityRow heroCollapsible">
           <div class="capacityCopy" id="capacityCopyLeft">0 / 0 units</div>
           <div class="capacityCopy" id="capacityCopyRight">0% full</div>
           <div class="capacityBar">
@@ -138,7 +186,7 @@
           <div class="row space" style="margin-bottom:12px;">
             <div>
               <h3 class="sectionTitle">Next items to make</h3>
-              <p class="sectionSub">Items driving the current drop’s operational capacity</p>
+              <p class="sectionSub" id="queueSectionSub">Items driving the current drop’s operational capacity</p>
             </div>
           </div>
           <div class="queueGrid" id="queueGrid"></div>
@@ -279,7 +327,7 @@
                   <th>Units</th>
                   <th>Status</th>
                   <th>Total</th>
-                  <th>Capacity items</th>
+                  <th id="thCapacityItems">Capacity items</th>
                   <th>Other items</th>
                 </tr>
               </thead>
@@ -306,6 +354,8 @@
     const ALL_DROP_STATUSES = ["live", "scheduled", "draft", "closed", "completed", "cancelled", "archived"];
 
     let supabase = null;
+    let realtimeChannel = null;
+    let realtimeSubscribedDropId = null;
 
     const state = {
       drops: [],
@@ -320,6 +370,7 @@
       tableSearch: "",
       ordersPanelOpen: false,
       summaryPanelOpen: true,
+      heroCollapsed: false,
       boardStatusFilters: [...ACTIVE_DEFAULT_STATUSES],
       boardTypeFilter: "all"
     };
@@ -467,11 +518,29 @@
     }
 
     function getItemCategory(row) {
-      return row.item_category || row.product_category || row.category_name || row.category || null;
+      return row.item_category || row.product_category || row.category_name || row.category_slug || row.category || null;
     }
 
     function getItemQty(row) {
       return Number(row.capacity_qty ?? row.expanded_qty ?? row.qty ?? row.quantity ?? 0);
+    }
+
+    function isCapacityItem(row) {
+      const capacityCategoryId =
+        state.dropSummary?.capacity_category_id ||
+        state.drop?.capacity_category_id ||
+        null;
+
+      if (!capacityCategoryId) return false;
+
+      // Primary: UUID comparison — reliable regardless of name or slug formatting
+      if (row.category_id) {
+        return row.category_id === capacityCategoryId;
+      }
+
+      // Fallback: view did not return category_id (legacy view in use).
+      // Items with capacity_units_snapshot > 0 are capacity items by definition.
+      return Number(row.capacity_units_snapshot ?? row.capacity_units ?? 0) > 0;
     }
 
     function groupItemDetailsByOrder(items) {
@@ -495,11 +564,9 @@
         }));
 
         const grouped = { capacity: [], extras: [] };
-        const capacityCategoryKey = getCapacityCategoryKey();
 
         lines.forEach((line) => {
-          const lineCategoryKey = String(line._item_category || "").trim().toLowerCase();
-          if (capacityCategoryKey && lineCategoryKey === capacityCategoryKey) {
+          if (isCapacityItem(line)) {
             grouped.capacity.push(line);
           } else {
             grouped.extras.push(line);
@@ -592,6 +659,8 @@
         byId("capacityCopyLeft").textContent = "0 / 0 units";
         byId("capacityCopyRight").textContent = "0% full";
         byId("capacityFill").style.width = "0%";
+        byId("queueSectionSub").textContent = "Items driving the current drop's operational capacity";
+        byId("thCapacityItems").textContent = "Capacity items";
         return;
       }
 
@@ -615,6 +684,10 @@
       byId("capacityCopyRight").textContent = `${pct}% full`;
       byId("capacityFill").style.width = `${pct}%`;
       byId("capacitySummaryTitle").textContent = `${capacityLabel || "Capacity"} items`;
+      byId("queueSectionSub").textContent = capacityLabel
+        ? `Confirmed ${capacityLabel} items queued for preparation`
+        : "Items driving the current drop's operational capacity";
+      byId("thCapacityItems").textContent = `${capacityLabel || "Capacity"} items`;
     }
 
     function renderQueue() {
@@ -626,12 +699,10 @@
         return;
       }
 
-      const capacityCategoryKey = getCapacityCategoryKey();
       const capacityCategoryLabel = getCapacityCategoryLabel();
 
       const relevant = state.itemDetails.filter((row) =>
-        normaliseStatus(row.status) === "confirmed" &&
-        String(getItemCategory(row) || "").trim().toLowerCase() === capacityCategoryKey
+        normaliseStatus(row.status) === "confirmed" && isCapacityItem(row)
       );
 
       const counts = new Map();
@@ -709,14 +780,12 @@
     function renderConsolidatedView() {
       const capacityMap = new Map();
       const otherMap = new Map();
-      const capacityCategoryKey = getCapacityCategoryKey();
 
       state.itemDetails.forEach((line) => {
         const name = getItemName(line);
         const qty = getItemQty(line);
-        const categoryKey = String(getItemCategory(line) || "").trim().toLowerCase();
 
-        if (capacityCategoryKey && categoryKey === capacityCategoryKey) {
+        if (isCapacityItem(line)) {
           capacityMap.set(name, (capacityMap.get(name) || 0) + qty);
         } else {
           otherMap.set(name, (otherMap.get(name) || 0) + qty);
@@ -921,6 +990,19 @@
       btn.textContent = state.summaryPanelOpen ? "Hide" : "Show";
     }
 
+    function renderHeroCollapseState() {
+      const isCollapsed = state.heroCollapsed;
+      const btn = byId("heroToggleBtn");
+
+      document.querySelectorAll(".heroCollapsible").forEach(function (el) {
+        el.style.display = isCollapsed ? "none" : "";
+      });
+
+      if (btn) {
+        btn.textContent = isCollapsed ? "Show summary" : "Hide summary";
+      }
+    }
+
     async function loadDrops() {
       const { data, error } = await supabase
         .from("v_drop_summary")
@@ -938,18 +1020,26 @@
         ? saved
         : ((state.drops.find((d) => d.status === "live") || state.drops[0] || {}).drop_id || null);
 
+      const hasLiveDrop = state.drops.some((d) => normaliseStatus(d.status) === "live");
+      state.heroCollapsed = hasLiveDrop;
+
       ensureSelectedDropStillValid();
       renderDropSelect();
     }
 
     async function loadExpandedOrderDetails(dropId) {
-      const expanded = await supabase
-        .from("v_order_item_detail_expanded")
+      const v2 = await supabase
+        .from("v_order_item_detail_v2")
         .select("*")
         .eq("drop_id", dropId)
         .order("created_at", { ascending: true });
 
-      if (!expanded.error) return expanded.data || [];
+      if (!v2.error) return v2.data || [];
+
+      console.warn(
+        "[Service Board] v_order_item_detail_v2 unavailable (" + (v2.error?.message || "unknown error") + ") — falling back to v_order_item_detail. " +
+        "Category matching will use capacity_units_snapshot fallback."
+      );
 
       const legacy = await supabase
         .from("v_order_item_detail")
@@ -1037,6 +1127,7 @@
       updateBoardStatusFilterSummary();
       renderDropSelect();
       renderHeader();
+      renderHeroCollapseState();
       renderQueue();
       renderWorkflowCounts();
       renderConsolidatedView();
@@ -1049,6 +1140,7 @@
     async function refreshData() {
       showError("");
       ensureSelectedDropStillValid();
+      maybeResubscribe();
       renderDropSelect();
       await loadSelectedDropData();
       renderEverything();
@@ -1058,6 +1150,48 @@
       state.expandedOrders.clear();
       ensureSelectedDropStillValid();
       await refreshData();
+    }
+
+    function setRealtimeIndicator(active) {
+      const el = byId("realtimeIndicator");
+      if (el) el.classList.toggle("active", active);
+    }
+
+    function subscribeToDropOrders(dropId) {
+      if (realtimeChannel) {
+        supabase.removeChannel(realtimeChannel);
+        realtimeChannel = null;
+      }
+      setRealtimeIndicator(false);
+
+      if (!dropId) return;
+
+      realtimeChannel = supabase
+        .channel("orders-drop-" + dropId)
+        .on("postgres_changes", {
+          event: "*",
+          schema: "public",
+          table: "orders",
+          filter: "drop_id=eq." + dropId
+        }, async function () {
+          try {
+            await loadSelectedDropData();
+            renderEverything();
+          } catch (err) {
+            console.error("Realtime refresh failed:", err);
+          }
+        })
+        .subscribe(function (status) {
+          setRealtimeIndicator(status === "SUBSCRIBED");
+        });
+
+      realtimeSubscribedDropId = dropId;
+    }
+
+    function maybeResubscribe() {
+      if (realtimeSubscribedDropId !== state.selectedDropId) {
+        subscribeToDropOrders(state.selectedDropId);
+      }
     }
 
     function attachEvents() {
@@ -1177,6 +1311,11 @@
         renderSummaryPanelState();
       });
 
+      byId("heroToggleBtn").addEventListener("click", function () {
+        state.heroCollapsed = !state.heroCollapsed;
+        renderHeroCollapseState();
+      });
+
       document.querySelectorAll(".filterChip").forEach((btn) => {
         btn.addEventListener("click", function () {
           state.tableStatusFilter = btn.dataset.statusFilter;
@@ -1232,6 +1371,7 @@
         attachEvents();
         await loadDrops();
         await refreshData();
+        subscribeToDropOrders(state.selectedDropId);
       } catch (err) {
         console.error(err);
         showError(err.message || "Unable to initialise Service Board.");

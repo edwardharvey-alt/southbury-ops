@@ -53,6 +53,7 @@
     .heroMedia.hasImage{
       background-size:cover;
       background-position:center;
+      background-repeat:no-repeat;
     }
 
     .heroMedia::after{
@@ -227,7 +228,7 @@
 
     .heroBodyCard{
       padding:14px 16px 16px;
-      display:grid;
+      display:none;
       gap:12px;
       background:#fff;
     }
@@ -793,6 +794,12 @@
       font-weight:950;
       cursor:pointer;
       box-shadow:0 12px 22px color-mix(in srgb, var(--order-brand-primary) 26%, transparent);
+      transition:opacity 0.2s, box-shadow 0.2s;
+    }
+    .payButton:disabled{
+      opacity:0.45;
+      cursor:not-allowed;
+      box-shadow:none;
     }
 
     .payHelper{
@@ -1276,15 +1283,27 @@
         return document.getElementById(id);
       }
 
+      function syncHeroBodyCard() {
+        const notice = byId("pageStatusNotice");
+        const error  = byId("errorBox");
+        const card   = notice && notice.closest(".heroBodyCard");
+        if (!card) return;
+        const noticeVisible = notice && !notice.classList.contains("hidden") && notice.textContent.trim();
+        const errorVisible  = error  && error.style.display !== "none" && error.textContent.trim();
+        card.style.display  = (noticeVisible || errorVisible) ? "grid" : "none";
+      }
+
       function showError(message) {
         const el = byId("errorBox");
         if (!message) {
           el.style.display = "none";
           el.textContent = "";
+          syncHeroBodyCard();
           return;
         }
         el.style.display = "block";
         el.textContent = message;
+        syncHeroBodyCard();
       }
 
       function showNotice(message, type = "") {
@@ -1292,10 +1311,12 @@
         if (!message) {
           el.className = "statusNotice hidden";
           el.textContent = "";
+          syncHeroBodyCard();
           return;
         }
         el.className = `statusNotice ${type || ""}`;
         el.textContent = message;
+        syncHeroBodyCard();
       }
 
       function showCheckoutNotice(message, type = "") {
@@ -2628,17 +2649,25 @@ async function handoffToPayment() {
   payBtn.disabled = true;
 
   let orderId = null;
+  let orderPersisted = false;
 
   try {
-    payBtn.textContent = "Saving order…";
+    payBtn.textContent = "Preparing payment…";
     orderId = await persistOrder();
+
+    // Order is in the database — permanently disable the button to prevent double-submit.
+    // This must happen before any Stripe handoff attempt.
+    orderPersisted = true;
+    payBtn.disabled = true;
+    payBtn.textContent = "Order placed";
 
     showCheckoutNotice(
       `Order received — thank you. We'll be in touch shortly with confirmation. (Ref: ${orderId})`,
       ""
     );
-    payBtn.textContent = "Order placed";
     console.log("Order persisted successfully. ID:", orderId);
+
+    // TODO: Stripe handoff — insert call here once Stripe is connected.
 
   } catch (err) {
     console.error(err);
@@ -2648,7 +2677,7 @@ async function handoffToPayment() {
     showCheckoutNotice(`${context} ${err.message || "Please try again."}`, "error");
 
   } finally {
-    if (!orderId) {
+    if (!orderPersisted) {
       payBtn.disabled = false;
       payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
     }

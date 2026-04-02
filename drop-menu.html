@@ -16,15 +16,17 @@
         <div class="brandMark">H</div>
         <div>
           <div class="brandTitle">Hearth — Menu Library</div>
-          <div class="brandSubtitle">Manage products, bundles and categories</div>
+          <div class="brandSubtitle" id="headerVendorSub">Manage products, bundles and categories</div>
         </div>
       </div>
 
       <div class="nav">
-        <a href="index.html">Service Board</a>
-        <a href="drop-manager.html">Drop Studio</a>
+        <a href="home.html">Home</a>
+        <a href="brand-hearth.html">Brand Hearth</a>
         <a href="drop-menu.html" class="active">Menu Library</a>
-        <a href="#">Insights</a>
+        <a href="drop-manager.html">Drop Studio</a>
+        <a href="index.html">Service Board</a>
+        <a href="insights.html">Insights</a>
       </div>
     </div>
 
@@ -663,12 +665,12 @@
       const CONFIG = window.HEARTH_CONFIG || {};
       const SUPABASE_URL = CONFIG.SUPABASE_URL;
       const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
-      const DEFAULT_VENDOR_SLUG = "southbury-farm-pizza";
 
       let supabase = null;
       let successTimer = null;
 
       const state = {
+        vendor: null,
         vendorId: null,
         currentTab: "categories",
         selectedTypes: ["category", "product", "bundle"],
@@ -838,15 +840,40 @@
         }
       }
 
-      async function loadVendorId() {
-        const { data, error } = await supabase
-          .from("vendors")
-          .select("id")
-          .eq("slug", DEFAULT_VENDOR_SLUG)
-          .single();
+      function getUrlParam(name) {
+        return new URLSearchParams(window.location.search).get(name);
+      }
 
+      async function resolveVendor() {
+        const explicitVendorId = getUrlParam('vendor_id') || window.HEARTH_VENDOR_ID || null;
+        const explicitSlug = getUrlParam('vendor') || getUrlParam('vendor_slug') || null;
+
+        if (explicitVendorId) {
+          const { data } = await supabase.from('vendors').select('*').eq('id', explicitVendorId).maybeSingle();
+          if (data) return data;
+        }
+
+        if (explicitSlug) {
+          for (const field of ['slug', 'vendor_slug']) {
+            try {
+              const { data } = await supabase.from('vendors').select('*').eq(field, explicitSlug).maybeSingle();
+              if (data) return data;
+            } catch (e) {}
+          }
+        }
+
+        const { data, error } = await supabase.from('vendors').select('*').limit(1);
         if (error) throw error;
-        state.vendorId = data.id;
+        return data?.[0] || null;
+      }
+
+      async function loadVendorId() {
+        const vendor = await resolveVendor();
+        if (!vendor) throw new Error('No vendor found');
+        state.vendor = vendor;
+        state.vendorId = vendor.id;
+        const el = byId('headerVendorSub');
+        if (el) el.textContent = vendor.display_name || vendor.name || 'Vendor workspace';
       }
 
       async function loadAllData() {
