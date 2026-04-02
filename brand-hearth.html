@@ -1347,37 +1347,11 @@
       setSaveState("saved");
     }
 
-    async function trySavePayloads(payloadVariants) {
-      let lastError = null;
-
-      for (const payload of payloadVariants) {
-        const { error } = await supabase
-          .from("vendors")
-          .update(payload)
-          .eq("id", state.vendor.id);
-
-        if (!error) return payload;
-        lastError = error;
-
-        const message = String(error.message || "").toLowerCase();
-        const isMissingColumnError =
-          message.includes("schema cache") ||
-          message.includes("could not find the") ||
-          message.includes("column");
-
-        if (!isMissingColumnError) {
-          throw error;
-        }
-      }
-
-      throw lastError || new Error("Unable to save vendor.");
-    }
-
     async function saveVendor() {
       if (!state.vendor?.id) throw new Error("Vendor not found.");
 
       const form = getFormData();
-      const basePayload = {
+      const payload = {
         name: form.name || state.vendor.name || "Vendor",
         display_name: form.display_name || null,
         tagline: form.tagline || null,
@@ -1390,48 +1364,21 @@
         brand_text_on_primary: form.brand_text_on_primary || "#FFFFFF"
       };
 
-      const fallbackPayloadOne = {
-        name: basePayload.name,
-        display_name: basePayload.display_name,
-        tagline: basePayload.tagline,
-        order_label: basePayload.order_label,
-        website_url: basePayload.website_url,
-        logo_url: basePayload.logo_url,
-        hero_image_url: basePayload.hero_image_url,
-        brand_primary_color: basePayload.brand_primary_color,
-        brand_secondary_color: basePayload.brand_secondary_color
-      };
-
-      const fallbackPayloadTwo = {
-        name: basePayload.name,
-        display_name: basePayload.display_name,
-        tagline: basePayload.tagline,
-        order_label: basePayload.order_label,
-        logo_url: basePayload.logo_url,
-        hero_image_url: basePayload.hero_image_url,
-        brand_primary_color: basePayload.brand_primary_color,
-        brand_secondary_color: basePayload.brand_secondary_color
-      };
-
       setSaveState("saving");
 
       try {
-        const savedPayload = await trySavePayloads([
-          basePayload,
-          fallbackPayloadOne,
-          fallbackPayloadTwo
-        ]);
+        const { error } = await supabase
+          .from("vendors")
+          .update(payload)
+          .eq("id", state.vendor.id);
 
-        state.vendor = { ...state.vendor, ...savedPayload };
+        if (error) throw error;
+
+        state.vendor = { ...state.vendor, ...payload };
         setSaveState("saved");
         showInlineSuccess("Brand updated");
+        showError("");
         applyPreview();
-
-        if (!("brand_text_on_primary" in savedPayload)) {
-          showError("Saved, but one or more new vendor columns may still be waiting on Supabase schema refresh.");
-        } else {
-          showError("");
-        }
       } catch (error) {
         setSaveState("error", error.message || "Save failed");
         throw error;
