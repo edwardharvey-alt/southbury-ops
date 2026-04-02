@@ -1298,6 +1298,7 @@
       });
 
       byId("saveBrandBtnTop").addEventListener("click", async () => {
+        console.log("Save Brand clicked");
         try {
           await saveVendor();
         } catch (err) {
@@ -1307,6 +1308,7 @@
       });
 
       byId("saveBrandBtnBottom").addEventListener("click", async () => {
+        console.log("Save Brand clicked");
         try {
           await saveVendor();
         } catch (err) {
@@ -1337,6 +1339,8 @@
     }
 
     async function init() {
+      attachEvents();
+
       try {
         if (!window.supabase || !window.supabase.createClient) {
           throw new Error("Supabase library failed to load.");
@@ -1347,7 +1351,6 @@
         }
 
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        attachEvents();
         await refreshAll();
       } catch (err) {
         console.error(err);
