@@ -114,15 +114,15 @@
         align-items: stretch;
         gap: 10px;
       }
-      /* Row 1: status pill + Realtime indicator. Row 2: action buttons via heroButtonRow. */
+      /* Single row: compact status pill + Refresh + Show/Hide summary */
       .dropHeroTopRight {
         flex-direction: row;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 8px;
         align-items: center;
       }
       .dropHeroTopRight .pill {
-        flex: 1;
+        flex: 0 0 auto;
         min-height: 36px;
         display: flex;
         align-items: center;
@@ -130,11 +130,11 @@
       /* Realtime dot — show on mobile */
       .realtimeDot { display: inline-block; }
 
-      /* Button row: Refresh + Show/Hide summary side-by-side, full row width */
+      /* Button row: fills remaining space after pill */
       .heroButtonRow {
         display: flex;
         gap: 8px;
-        width: 100%;
+        flex: 1;
       }
       .heroButtonRow button {
         flex: 1;
