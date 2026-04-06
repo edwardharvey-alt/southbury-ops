@@ -50,6 +50,236 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.35; }
     }
+
+    /* ================================================================
+       Mobile Service Board — max-width: 768px
+       All layout changes via CSS media queries only.
+       Desktop layout (>768px) is completely unchanged.
+       ================================================================ */
+
+    /* Mobile-only element — hidden on desktop */
+    .mobileBoardTabs { display: none; }
+
+    @media (max-width: 768px) {
+
+      /* --- 1. Header bar: stack brand and nav vertically --- */
+      .headerBar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 14px;
+      }
+
+      /* --- 2. Navigation: horizontally scrollable, no wrapping --- */
+      .nav {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+        flex-wrap: nowrap;
+        gap: 2px;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+        justify-content: flex-start;
+      }
+      .nav::-webkit-scrollbar { display: none; }
+      .nav a {
+        flex-shrink: 0;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      /* --- 3. Drop hero top: stack vertically, full-width controls --- */
+      .dropHeroTop {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .dropHeroTopRight {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+      }
+      .dropHeroTopRight .pill {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .dropHeroTopRight button {
+        min-height: 44px;
+        width: 100%;
+      }
+
+      /* --- 4. execBar: full-width fields, 44px touch targets --- */
+      .execBar {
+        grid-template-columns: 1fr !important;
+        gap: 10px;
+      }
+      .execField {
+        width: 100%;
+      }
+      .execField select,
+      .execField .filterSummaryBtn {
+        height: 44px;
+        min-height: 44px;
+        width: 100%;
+      }
+      .execRight {
+        grid-column: auto !important;
+        justify-content: flex-start;
+        min-height: auto;
+      }
+
+      /* --- Show summary toggle and Live indicator: visible, full-width row --- */
+      .realtimePill {
+        padding: 8px 14px;
+        min-height: 36px;
+      }
+      .heroToggleBtn {
+        min-height: 44px;
+        width: 100%;
+        padding: 0 14px;
+      }
+
+      /* --- 5. KPI summary section: 2-column grid (6 tiles = 3 rows of 2) --- */
+      .heroGrid {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+
+      /* --- 6. Next items to make + Live workflow counts: single column --- */
+      .midGrid {
+        grid-template-columns: 1fr !important;
+      }
+
+      /* --- 7. Workflow counts: single column --- */
+      .statusGrid {
+        grid-template-columns: 1fr !important;
+      }
+      .statusTile {
+        padding: 14px 16px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      /* --- 8. Consolidated drop view: full width, stacks below --- */
+      .summaryPanel {
+        width: 100%;
+      }
+      .summaryGrid {
+        grid-template-columns: 1fr !important;
+      }
+
+      /* --- 9. Mobile Kanban tab bar --- */
+      .mobileBoardTabs {
+        display: flex;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 6px;
+        padding: 0 0 6px;
+        margin-bottom: 10px;
+        scrollbar-width: none;
+      }
+      .mobileBoardTabs::-webkit-scrollbar { display: none; }
+
+      .mobileTab {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 14px;
+        min-height: 44px;
+        border: 1.5px solid var(--h-border);
+        border-radius: 22px;
+        background: var(--h-surface);
+        color: var(--h-muted);
+        font-size: 13px;
+        font-weight: 500;
+        font-family: var(--sans);
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: background 0.15s, color 0.15s, border-color 0.15s;
+      }
+
+      .mobileTab.active {
+        background: var(--h-accent);
+        color: #fff;
+        border-color: var(--h-accent);
+      }
+
+      .mobileTabBadge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 5px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.3);
+        color: inherit;
+      }
+
+      .mobileTab:not(.active) .mobileTabBadge {
+        background: var(--h-border-2);
+        color: var(--h-text);
+      }
+
+      /* --- 10. Kanban board: tab-driven visibility --- */
+      .boardGrid {
+        grid-template-columns: 1fr !important;
+        gap: 0 !important;
+      }
+
+      /* Hide all columns; only the active tab's column is shown */
+      .boardGrid .boardCol {
+        display: none !important;
+      }
+      .boardGrid[data-active-tab="placed"]    .boardCol.placed,
+      .boardGrid[data-active-tab="confirmed"] .boardCol.confirmed,
+      .boardGrid[data-active-tab="baking"]    .boardCol.baking,
+      .boardGrid[data-active-tab="ready"]     .boardCol.ready,
+      .boardGrid[data-active-tab="delivered"] .boardCol.delivered {
+        display: flex !important;
+        width: 100%;
+      }
+
+      .boardColBody {
+        height: auto !important;
+        max-height: none !important;
+        min-height: 200px;
+      }
+
+      /* --- 11. Order cards: full width, comfortable padding --- */
+      .orderCard {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .orderCardInner {
+        padding: 14px 12px;
+      }
+      .orderCustomer {
+        font-size: 15px;
+      }
+      .cardActionsInline {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 6px;
+      }
+      .actionQty {
+        grid-column: 1 / -1;
+        justify-self: start;
+      }
+      .actionBtnEdge,
+      .actionBtnDetail {
+        width: 100%;
+        min-height: 44px;
+        height: 44px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -246,6 +476,14 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <div class="mobileBoardTabs" id="mobileBoardTabs" role="tablist" aria-label="Order status tabs">
+        <button class="mobileTab" data-tab="placed" role="tab" type="button">Placed <span class="mobileTabBadge" id="mobileTabBadgePlaced">0</span></button>
+        <button class="mobileTab" data-tab="confirmed" role="tab" type="button">Confirmed <span class="mobileTabBadge" id="mobileTabBadgeConfirmed">0</span></button>
+        <button class="mobileTab" data-tab="baking" role="tab" type="button">Baking <span class="mobileTabBadge" id="mobileTabBadgeBaking">0</span></button>
+        <button class="mobileTab" data-tab="ready" role="tab" type="button">Ready <span class="mobileTabBadge" id="mobileTabBadgeReady">0</span></button>
+        <button class="mobileTab" data-tab="delivered" role="tab" type="button">Delivered <span class="mobileTabBadge" id="mobileTabBadgeDelivered">0</span></button>
       </div>
 
       <div class="boardGrid">
@@ -1123,6 +1361,59 @@
       renderBoard();
     }
 
+    // ---- Mobile Kanban tab state ----
+    // null = not yet auto-selected on load
+    let mobileActiveTab = null;
+
+    function updateMobileTabBadges() {
+      const map = {
+        placed:    "mobileTabBadgePlaced",
+        confirmed: "mobileTabBadgeConfirmed",
+        baking:    "mobileTabBadgeBaking",
+        ready:     "mobileTabBadgeReady",
+        delivered: "mobileTabBadgeDelivered"
+      };
+      const src = {
+        placed:    "countPlaced",
+        confirmed: "countConfirmed",
+        baking:    "countBaking",
+        ready:     "countReady",
+        delivered: "countDelivered"
+      };
+      STATUS_ORDER.forEach(function (status) {
+        const badge = byId(map[status]);
+        const count = byId(src[status]);
+        if (badge && count) badge.textContent = count.textContent;
+      });
+    }
+
+    function setMobileActiveTab(tab) {
+      mobileActiveTab = tab;
+      const boardGrid = document.querySelector(".boardGrid");
+      if (boardGrid) boardGrid.setAttribute("data-active-tab", tab);
+      document.querySelectorAll(".mobileTab").forEach(function (btn) {
+        btn.classList.toggle("active", btn.dataset.tab === tab);
+      });
+    }
+
+    function maybeSelectDefaultMobileTab() {
+      updateMobileTabBadges();
+      if (mobileActiveTab !== null) {
+        // Re-apply to keep boardGrid attr and active class in sync after re-render
+        setMobileActiveTab(mobileActiveTab);
+        return;
+      }
+      // Initial load: pick first non-empty status, fallback to "confirmed"
+      const counts = {};
+      STATUS_ORDER.forEach(function (s) {
+        const el = byId("count" + s.charAt(0).toUpperCase() + s.slice(1));
+        counts[s] = el ? Number(el.textContent) : 0;
+      });
+      const firstNonEmpty = STATUS_ORDER.find(function (s) { return counts[s] > 0; });
+      setMobileActiveTab(firstNonEmpty || "confirmed");
+    }
+    // ---- End mobile Kanban tab state ----
+
     function renderEverything() {
       updateBoardStatusFilterSummary();
       renderDropSelect();
@@ -1135,6 +1426,7 @@
       renderOrdersPanelState();
       renderAllOrders();
       renderBoard();
+      maybeSelectDefaultMobileTab();
     }
 
     async function refreshData() {
@@ -1329,6 +1621,12 @@
       byId("orderSearch").addEventListener("input", function (e) {
         state.tableSearch = e.target.value || "";
         renderAllOrders();
+      });
+
+      byId("mobileBoardTabs").addEventListener("click", function (e) {
+        const tab = e.target.closest(".mobileTab");
+        if (!tab) return;
+        setMobileActiveTab(tab.dataset.tab);
       });
 
       document.body.addEventListener("click", async function (e) {
