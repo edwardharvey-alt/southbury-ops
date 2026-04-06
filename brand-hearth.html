@@ -593,17 +593,22 @@
       }
 
       .nav{
-        flex-wrap:nowrap;
         overflow-x:auto;
-        justify-content:flex-start;
         -webkit-overflow-scrolling:touch;
-        scrollbar-width:none;
-        gap:6px;
+        white-space:nowrap;
+        flex-wrap:nowrap;
+        gap:2px;
         padding-bottom:2px;
+        scrollbar-width:none;
+        justify-content:flex-start;
       }
-
-      .nav::-webkit-scrollbar{
-        display:none;
+      .nav::-webkit-scrollbar{ display:none; }
+      .nav a{
+        flex-shrink:0;
+        white-space:nowrap;
+        min-height:44px;
+        display:inline-flex;
+        align-items:center;
       }
 
       /* Top card — stack title row and actions vertically */
