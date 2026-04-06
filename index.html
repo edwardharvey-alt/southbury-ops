@@ -61,6 +61,9 @@
     .mobileBoardTabs { display: none; }
     .mobileLivePill  { display: none; }
 
+    /* heroButtonRow: transparent on desktop so children sit inline in dropHeroTopRight */
+    .heroButtonRow { display: contents; }
+
     @media (max-width: 768px) {
 
       /* --- 1. Header bar: stack brand and nav vertically --- */
@@ -96,7 +99,7 @@
         align-items: stretch;
         gap: 10px;
       }
-      /* Status pill + Live indicator on row 1; Refresh + toggle on row 2 */
+      /* Row 1: status pill + Realtime indicator. Row 2: action buttons via heroButtonRow. */
       .dropHeroTopRight {
         flex-direction: row;
         flex-wrap: wrap;
@@ -109,18 +112,23 @@
         display: flex;
         align-items: center;
       }
-      /* mobile Live indicator — shown next to drop status */
+      /* Realtime connection indicator — compact and subtle; visually distinct from drop status pill */
       .mobileLivePill {
         display: inline-flex !important;
         flex-shrink: 0;
-        padding: 6px 10px;
+        font-size: 10px !important;
+        padding: 3px 8px !important;
+        border-radius: 20px;
       }
-      /* Refresh and toggle: side-by-side, smaller, not full-width */
-      .dropHeroTopRight #refreshBtn,
-      .dropHeroTopRight .heroToggleBtn {
-        flex: 1 1 calc(50% - 4px);
+      /* Button row: Refresh + Show/Hide summary side-by-side, full row width */
+      .heroButtonRow {
+        display: flex;
+        gap: 8px;
+        width: 100%;
+      }
+      .heroButtonRow button {
+        flex: 1;
         min-height: 44px;
-        width: auto;
         font-size: 12px;
         padding: 0 10px;
       }
@@ -139,15 +147,9 @@
         min-height: 44px;
         width: 100%;
       }
-      /* Hide execRight on mobile — Live indicator moved to dropHeroTopRight */
+      /* Hide execRight on mobile — Realtime indicator lives in dropHeroTopRight */
       .execRight {
         display: none !important;
-      }
-
-      /* heroToggleBtn standalone style on mobile */
-      .heroToggleBtn {
-        font-size: 12px;
-        padding: 0 10px;
       }
 
       /* --- 5. KPI summary section: 2-column grid (6 tiles = 3 rows of 2) --- */
@@ -180,16 +182,18 @@
         grid-template-columns: 1fr !important;
       }
 
-      /* --- 9. Mobile Kanban tab bar --- */
+      /* --- 9. Mobile Kanban tab bar — horizontally scrollable, all 5 tabs reachable --- */
       .mobileBoardTabs {
         display: flex;
         flex-wrap: nowrap;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+        width: 100%;
         gap: 6px;
-        padding: 0 0 6px;
+        padding: 0 0 8px;
         margin-bottom: 10px;
         scrollbar-width: none;
+        -ms-overflow-style: none;
       }
       .mobileBoardTabs::-webkit-scrollbar { display: none; }
 
@@ -324,9 +328,11 @@
               <span class="dot" id="dropStatusDot"></span>
               <span id="dropStatusText">—</span>
             </div>
-            <span class="realtimePill mobileLivePill" id="realtimeIndicatorMobile">Live</span>
-            <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
-            <button class="btnGhost heroToggleBtn" id="heroToggleBtn" type="button">Hide summary</button>
+            <span class="realtimePill mobileLivePill" id="realtimeIndicatorMobile">Realtime</span>
+            <div class="heroButtonRow">
+              <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
+              <button class="btnGhost heroToggleBtn" id="heroToggleBtn" type="button">Hide summary</button>
+            </div>
           </div>
         </div>
 
@@ -733,7 +739,7 @@
     }
 
     function getCapacityLabel(count = 1) {
-      return `${count} ${getCapacityCategoryLabel()}`;
+      return `${count} × ${getCapacityCategoryLabel()}`;
     }
 
     function getNextStatus(status) {
