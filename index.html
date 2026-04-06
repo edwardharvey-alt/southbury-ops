@@ -162,9 +162,9 @@
         grid-template-columns: 1fr !important;
       }
 
-      /* --- 7. Workflow counts: single column --- */
+      /* --- 7. Workflow counts: 2-column grid; Delivered spans full width --- */
       .statusGrid {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: 1fr 1fr !important;
       }
       .statusTile {
         padding: 14px 16px;
@@ -172,6 +172,9 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+      }
+      .statusTile.delivered {
+        grid-column: 1 / -1;
       }
 
       /* --- 8. Consolidated drop view: full width, stacks below --- */
@@ -182,7 +185,7 @@
         grid-template-columns: 1fr !important;
       }
 
-      /* --- 9. Mobile Kanban tab bar — horizontally scrollable, all 5 tabs reachable --- */
+      /* --- 9. Mobile Kanban tab bar — horizontally scrollable, right-fade hint --- */
       .mobileBoardTabs {
         display: flex;
         flex-wrap: nowrap;
@@ -194,6 +197,10 @@
         margin-bottom: 10px;
         scrollbar-width: none;
         -ms-overflow-style: none;
+        /* Fade applied to the element's border box — stays fixed at the right
+           edge regardless of scroll position, hinting at off-screen tabs */
+        -webkit-mask-image: linear-gradient(to right, #000 75%, transparent 100%);
+        mask-image: linear-gradient(to right, #000 75%, transparent 100%);
       }
       .mobileBoardTabs::-webkit-scrollbar { display: none; }
 
