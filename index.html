@@ -59,7 +59,22 @@
 
     /* Mobile-only elements — hidden on desktop */
     .mobileBoardTabs { display: none; }
-    .mobileLivePill  { display: none; }
+
+    /* Realtime dot — hidden on desktop; shown on mobile only */
+    .realtimeDot {
+      display: none;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #2d8c4e;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .realtimeDot.active { opacity: 1; }
+
+    /* dropMetaRow: wraps the meta text and the realtime dot inline */
+    .dropMetaRow { display: flex; align-items: center; gap: 6px; }
 
     /* heroButtonRow: transparent on desktop so children sit inline in dropHeroTopRight */
     .heroButtonRow { display: contents; }
@@ -112,14 +127,9 @@
         display: flex;
         align-items: center;
       }
-      /* Realtime connection indicator — compact and subtle; visually distinct from drop status pill */
-      .mobileLivePill {
-        display: inline-flex !important;
-        flex-shrink: 0;
-        font-size: 10px !important;
-        padding: 3px 8px !important;
-        border-radius: 20px;
-      }
+      /* Realtime dot — show on mobile */
+      .realtimeDot { display: inline-block; }
+
       /* Button row: Refresh + Show/Hide summary side-by-side, full row width */
       .heroButtonRow {
         display: flex;
@@ -327,7 +337,10 @@
         <div class="dropHeroTop">
           <div>
             <h1 class="dropName" id="dropName">Loading drops…</h1>
-            <p class="dropMeta" id="dropMeta">Connecting to Supabase</p>
+            <div class="dropMetaRow">
+              <p class="dropMeta" id="dropMeta">Connecting to Supabase</p>
+              <span id="realtimeDot" class="realtimeDot"></span>
+            </div>
           </div>
 
           <div class="dropHeroTopRight">
@@ -335,7 +348,6 @@
               <span class="dot" id="dropStatusDot"></span>
               <span id="dropStatusText">—</span>
             </div>
-            <span class="realtimePill mobileLivePill" id="realtimeIndicatorMobile">Realtime</span>
             <div class="heroButtonRow">
               <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
               <button class="btnGhost heroToggleBtn" id="heroToggleBtn" type="button">Hide summary</button>
@@ -746,7 +758,11 @@
     }
 
     function getCapacityLabel(count = 1) {
-      return `${count} × ${getCapacityCategoryLabel()}`;
+      let label = getCapacityCategoryLabel();
+      if (count === 1 && label.endsWith("s")) {
+        label = label.slice(0, -1);
+      }
+      return `${count} × ${label}`;
     }
 
     function getNextStatus(status) {
@@ -1469,8 +1485,8 @@
     function setRealtimeIndicator(active) {
       const el = byId("realtimeIndicator");
       if (el) el.classList.toggle("active", active);
-      const elMobile = byId("realtimeIndicatorMobile");
-      if (elMobile) elMobile.classList.toggle("active", active);
+      const dot = byId("realtimeDot");
+      if (dot) dot.classList.toggle("active", active);
     }
 
     function subscribeToDropOrders(dropId) {
