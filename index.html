@@ -57,8 +57,9 @@
        Desktop layout (>768px) is completely unchanged.
        ================================================================ */
 
-    /* Mobile-only element — hidden on desktop */
+    /* Mobile-only elements — hidden on desktop */
     .mobileBoardTabs { display: none; }
+    .mobileLivePill  { display: none; }
 
     @media (max-width: 768px) {
 
@@ -89,27 +90,39 @@
         align-items: center;
       }
 
-      /* --- 3. Drop hero top: stack vertically, full-width controls --- */
+      /* --- 3. Drop hero top: stack vertically --- */
       .dropHeroTop {
         flex-direction: column;
         align-items: stretch;
         gap: 10px;
       }
+      /* Status pill + Live indicator on row 1; Refresh + toggle on row 2 */
       .dropHeroTopRight {
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: wrap;
         gap: 8px;
-        align-items: stretch;
+        align-items: center;
       }
       .dropHeroTopRight .pill {
-        min-height: 44px;
+        flex: 1;
+        min-height: 36px;
         display: flex;
         align-items: center;
-        width: 100%;
-        box-sizing: border-box;
       }
-      .dropHeroTopRight button {
+      /* mobile Live indicator — shown next to drop status */
+      .mobileLivePill {
+        display: inline-flex !important;
+        flex-shrink: 0;
+        padding: 6px 10px;
+      }
+      /* Refresh and toggle: side-by-side, smaller, not full-width */
+      .dropHeroTopRight #refreshBtn,
+      .dropHeroTopRight .heroToggleBtn {
+        flex: 1 1 calc(50% - 4px);
         min-height: 44px;
-        width: 100%;
+        width: auto;
+        font-size: 12px;
+        padding: 0 10px;
       }
 
       /* --- 4. execBar: full-width fields, 44px touch targets --- */
@@ -126,21 +139,15 @@
         min-height: 44px;
         width: 100%;
       }
+      /* Hide execRight on mobile — Live indicator moved to dropHeroTopRight */
       .execRight {
-        grid-column: auto !important;
-        justify-content: flex-start;
-        min-height: auto;
+        display: none !important;
       }
 
-      /* --- Show summary toggle and Live indicator: visible, full-width row --- */
-      .realtimePill {
-        padding: 8px 14px;
-        min-height: 36px;
-      }
+      /* heroToggleBtn standalone style on mobile */
       .heroToggleBtn {
-        min-height: 44px;
-        width: 100%;
-        padding: 0 14px;
+        font-size: 12px;
+        padding: 0 10px;
       }
 
       /* --- 5. KPI summary section: 2-column grid (6 tiles = 3 rows of 2) --- */
@@ -176,6 +183,7 @@
       /* --- 9. Mobile Kanban tab bar --- */
       .mobileBoardTabs {
         display: flex;
+        flex-wrap: nowrap;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         gap: 6px;
@@ -316,6 +324,7 @@
               <span class="dot" id="dropStatusDot"></span>
               <span id="dropStatusText">—</span>
             </div>
+            <span class="realtimePill mobileLivePill" id="realtimeIndicatorMobile">Live</span>
             <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
             <button class="btnGhost heroToggleBtn" id="heroToggleBtn" type="button">Hide summary</button>
           </div>
@@ -1155,7 +1164,7 @@
 
     function renderOrderCard(order) {
       const isExpanded = state.expandedOrders.has(order.order_id);
-      const unitsLabel = getCapacityLabel(Number(order.capacity_units_in_order || 0));
+      const unitsLabel = getCapacityLabel(Number(order.capacity_units_in_order || order.pizzas || 0));
       const capacityTitle = String(getCapacityCategoryLabel() || "Capacity items").toUpperCase();
 
       const wrapper = document.createElement("div");
@@ -1447,6 +1456,8 @@
     function setRealtimeIndicator(active) {
       const el = byId("realtimeIndicator");
       if (el) el.classList.toggle("active", active);
+      const elMobile = byId("realtimeIndicatorMobile");
+      if (elMobile) elMobile.classList.toggle("active", active);
     }
 
     function subscribeToDropOrders(dropId) {
