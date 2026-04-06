@@ -199,6 +199,27 @@ T3-8: Stripe integration
 When ready for go-live. Order ID generated, payload structured, TODO
 comment marks exact insertion point.
 
+T3-9: Order page — customer data capture and consent
+At checkout capture customer name, email, and postcode. Write to a new
+customers table and link to the order via customer_id. Consent language:
+"We'll use your details to notify you about this and similar local food
+moments. You can opt out any time." Foundation of the demand intelligence
+model — T4-12, T4-13, T5-8, T5-9, T5-11 all depend on this. Schema to
+be created by Edward before implementation: customers (id, name, email,
+postcode, created_at) and customer_relationships (id, customer_id,
+owner_type, owner_id, consent_status, source, created_at). Anon INSERT
+RLS policies required on both tables.
+
+T3-10: Order ready notification
+When operator marks order as Ready on Service Board, prompt with customer
+phone number pre-filled for manual SMS notification. Full automation via
+Twilio in T5-11. No dependency.
+
+T3-11: Menu Library — delivery and collection suitability flags
+Add per-item flags: travels well for delivery, suitable for collection,
+prep complexity. Helps vendors build delivery-appropriate menus and feeds
+future fulfilment intelligence.
+
 ### Tier 4 — Enhancements that will impress
 
 T4-1: Recurring series — actually create drops
@@ -229,6 +250,41 @@ T4-7: Service Board — order notes and fulfilment details
 Surface customer notes, delivery address, and fulfilment mode on order
 cards. Essential for delivery drops.
 
+T4-12: Post-drop vendor scorecard — pushed Home dashboard summary
+When drop closes, display summary card on Home: fill rate, total revenue,
+fastest-selling item, repeat customer count, one plain-English nudge.
+Dependency: T3-9 for repeat customer count.
+
+T4-13: Minimal host-facing view
+Read-only page via drop shareable link. Content: drop name, date, time,
+live order count via Realtime, capacity fill bar, revenue share calculated
+in real time. No login. Display only.
+
+T4-14: Vendor customer data import
+Allow vendors to upload existing customer list via CSV (name, email,
+postcode). Confirm lawful basis before import. Write to customers and
+customer_relationships with source = import. Accelerates recommendation
+engine for data-rich vendors. Dependency: T3-9 schema.
+
+T4-15: Multiple drops within a single event
+Allow vendor to create multiple drops linked to the same host context with
+different time windows — e.g. food truck running 12–2pm and 6–8pm at same
+event. Drop Studio to offer "Create another window" option when drop is
+host-linked, pre-populating vendor, host, and menu. Capacity and ordering
+windows remain separate per drop.
+
+T4-16: Host onboarding — host as first-class entity
+Expand hosts beyond contextual drop attachment. Hosts need: full profile
+with type, location, audience size, communication channels, service windows
+they want to fill, revenue share willingness, performance history. Simple
+host management page accessible from Drop Studio. Foundation for T5-4
+and T5-9.
+
+T4-17: Drop Studio — audience targeting and demand preview
+When creating a drop, surface: known customers in target area, estimated
+demand range from historical data, suggested host if one exists nearby.
+Pre-drop confidence indicator. Dependency: T3-9.
+
 ### Tier 5 — Strategic platform features
 
 T5-1: Delivery optimisation
@@ -256,15 +312,76 @@ T5-6: Customer accounts
 Order history, saved addresses, preferred drops. Builds repeat
 participation central to the Hearth model.
 
+T5-8: Interest registration — signals mechanic
+Pre-live state on order page before opens_at. Customer registers interest
+with name and email. Writes to customer_relationships with source =
+interest. Vendor sees interest count in Drop Studio labelled "Signals
+building". Dependency: T3-9.
+
+T5-9: Recommendation engine V1
+Deterministic demand scoring on Home and Drop Studio. Cluster customers by
+outward postcode, score by count plus recency and frequency boosts, check
+for nearby hosts, generate plain-English recommendation cards (maximum 3)
+each with Create drop CTA. Show "Signals are building" if insufficient
+data. Dependency: meaningful customer data from real drops.
+
+T5-11: Comms engine V1
+Event-driven email and SMS. Triggers: drop_published, order_confirmed,
+order_ready, drop_closing_soon, drop_completed. Maximum 2 messages per
+customer per drop. Stack: Postmark for email, Twilio for SMS, Supabase
+Edge Functions. Dependency: T3-9 and T5-6.
+
+T5-12: Vendor customer data import — advanced
+Extend T4-14 to support connections to existing vendor systems: email
+platforms, booking systems, POS exports. Two vendor pathways: data-rich
+vendors fast-track to recommendations, data-light vendors build through
+drops.
+
+T5-13: Vendor onboarding — two distinct pathways
+Structured onboarding that forks by vendor type. Replaces and expands
+T5-5. Data-rich pathway: fast-track to customer import and recommendation
+engine, suggested first drop from existing data. Data-light pathway:
+host-first approach, conservative capacity, audience building through
+drops.
+
+T5-14: Home page — demand orchestration dashboard
+Major evolution from workspace landing to decision dashboard. Above fold:
+audience size, strongest demand cluster, next recommended drop, drop
+health, action status. Replace conceptual panels with tactical signals.
+Add workspace cards for Audience, Hosts, Comms. Dependency: T3-9,
+T4-16, T5-9.
+
+T5-15: Insights — demand and audience intelligence layer
+Major evolution beyond drop performance. Add: customer growth, repeat rate
+trend, postcode cluster analysis, strongest areas, host performance, vendor
+vs host sourced demand, recommended next actions. Dependency: T3-9, T4-16.
+
 ## Recommended next session order
 
-1.  T1-3 — Home page vendor resolution error
-2.  T1-4 — Order page hero white strip
-3.  T1-1 — Double-submit protection
-4.  T2-1 — Global navigation consistency
-5.  T2-2 + T2-3 — Service Board layout and Realtime
-6.  T2-7 — Brand Hearth file upload
-7.  T2-8 — Vendor slug decoupling
-8.  T2-4 + T2-5 — Tile spacing fixes
-9.  T2-6 — Brand Hearth edge positioning
-10. T3-1 — Mobile responsiveness sweep
+All Tier 1 and Tier 2 items are complete.
+
+1.  T3-1  — Mobile responsiveness (Service Board done; remaining: Brand Hearth,
+            Drop Studio, Menu Library, Home, Insights)
+2.  T3-2  — Drop Studio saveAssignments defensive pattern
+3.  T3-3  — Menu Library saveSortOrderBatch performance
+4.  T3-4  — Insights Supabase chaining pattern
+5.  T3-5  — Drop Studio unsaved changes warning
+6.  T3-6  — Service Board confirmation on status changes
+7.  T3-7  — Order page real-time capacity update
+8.  T3-8  — Stripe integration
+9.  T3-9  — Order page customer data capture and consent
+10. T3-10 — Order ready notification
+11. T3-11 — Menu Library delivery and collection suitability flags
+12. T4-1  — Recurring series drop generation
+13. T4-2  — Order confirmation page
+14. T4-3  — Insights complete build
+15. T4-4  — Home dashboard complete build
+16. T4-5  — Drop Studio duplicate drop improvement
+17. T4-6  — Menu Library delete with safety check
+18. T4-7  — Service Board order notes and fulfilment details
+19. T4-12 — Post-drop vendor scorecard
+20. T4-13 — Minimal host-facing view
+21. T4-14 — Vendor customer data import
+22. T4-15 — Multiple drops within a single event
+23. T4-16 — Host onboarding as first-class entity
+24. T4-17 — Drop Studio audience targeting and demand preview
