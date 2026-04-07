@@ -11,6 +11,7 @@
 
   <style>
     @media (max-width: 768px){
+      /* ── Header / Navigation ── */
       .headerBar{
         flex-direction:column;
         align-items:stretch;
@@ -35,6 +36,95 @@
         min-height:44px;
         display:inline-flex;
         align-items:center;
+      }
+
+      /* ── Stat tiles: 2×2 grid ── */
+      .menuStats{
+        grid-template-columns:1fr 1fr;
+      }
+
+      /* ── Workspace tab buttons: equal-width 3-col row ── */
+      .workspaceTabs{
+        grid-template-columns:repeat(3, minmax(0, 1fr));
+      }
+      .workspaceTabs .stagePill{
+        min-height:44px;
+        height:44px;
+      }
+
+      /* ── Workspace header: stack on mobile ── */
+      .workspaceHeader{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:12px;
+      }
+
+      /* ── Action buttons: full width, 44px touch target ── */
+      .menuHeaderActions{
+        flex-direction:column;
+        align-items:stretch;
+        width:100%;
+      }
+      .menuHeaderActions .btnAccent,
+      .menuHeaderActions .btnGhost{
+        width:100%;
+        min-height:44px;
+        height:44px;
+        font-size:13px;
+      }
+      .menuEditorActions .btnAccent,
+      .menuEditorActions .btnGhost{
+        min-height:44px;
+        height:44px;
+      }
+
+      /* ── Form inputs: full width, 44px min-height ── */
+      select,
+      input[type="text"],
+      input[type="number"],
+      input[type="email"],
+      input[type="search"]{
+        width:100%;
+        min-width:0;
+        min-height:44px;
+        height:auto;
+        box-sizing:border-box;
+      }
+      textarea{
+        width:100%;
+        min-width:0;
+        box-sizing:border-box;
+      }
+
+      /* ── studioGrid2 / studioGrid3: single column ── */
+      .studioGrid2,
+      .studioGrid3{
+        grid-template-columns:1fr;
+      }
+
+      /* ── Drag handles: adequate touch target ── */
+      .dragHandle{
+        min-width:44px;
+        min-height:44px;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+      }
+
+      /* ── Sort ordering bar: full-width category select ── */
+      #orderingCategoryField{
+        min-width:0 !important;
+        width:100% !important;
+      }
+
+      /* ── Toolbar: single column ── */
+      .menuToolbar{
+        grid-template-columns:1fr;
+      }
+
+      /* ── Workspace grid: single column (safety net) ── */
+      .menuWorkspaceGrid{
+        grid-template-columns:1fr;
       }
     }
   </style>
