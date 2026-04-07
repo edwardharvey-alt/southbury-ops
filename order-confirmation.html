@@ -307,11 +307,6 @@
   </div>
 
   <script>
-    const supabase = window.supabase.createClient(
-      window.HEARTH_CONFIG.SUPABASE_URL,
-      window.HEARTH_CONFIG.SUPABASE_ANON_KEY
-    );
-
     function getQueryParam(name) {
       return new URLSearchParams(window.location.search).get(name);
     }
@@ -360,10 +355,29 @@
     }
 
     async function loadOrder() {
+      const page = document.getElementById('confPage');
+
       const orderId = getQueryParam("order_id");
 
       if (!orderId) {
-        document.getElementById('confPage').innerHTML = `<div style="padding:32px;font-family:monospace;color:#991b1b;">No order_id in URL</div>`;
+        page.innerHTML = `<div style="padding:32px;font-family:monospace;color:#991b1b;">No order_id in URL</div>`;
+        return;
+      }
+
+      let supabase;
+      try {
+        supabase = window.supabase.createClient(
+          window.HEARTH_CONFIG.SUPABASE_URL,
+          window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+        );
+      } catch (initErr) {
+        page.innerHTML = `
+          <div style="padding:32px;font-family:monospace;font-size:13px;color:#991b1b;background:#fef2f2;border-radius:12px;margin:16px;word-break:break-all;">
+            <strong>Config/init error:</strong> ${initErr.message || JSON.stringify(initErr)}<br><br>
+            window.supabase: ${typeof window.supabase}<br>
+            window.HEARTH_CONFIG: ${JSON.stringify(window.HEARTH_CONFIG)}
+          </div>
+        `;
         return;
       }
 
@@ -375,11 +389,11 @@
           .maybeSingle();
 
         if (orderError) {
-          document.getElementById('confPage').innerHTML = `<div style="padding:32px;font-family:monospace;color:#991b1b;">Orders query error: ${JSON.stringify(orderError)}</div>`;
+          page.innerHTML = `<div style="padding:32px;font-family:monospace;color:#991b1b;">Orders query error: ${JSON.stringify(orderError)}</div>`;
           return;
         }
         if (!order) {
-          document.getElementById('confPage').innerHTML = `<div style="padding:32px;font-family:monospace;color:#991b1b;">No order found for id: ${orderId}</div>`;
+          page.innerHTML = `<div style="padding:32px;font-family:monospace;color:#991b1b;">No order found for id: ${orderId}</div>`;
           return;
         }
 
@@ -419,7 +433,7 @@
         }
 
       } catch (err) {
-        document.getElementById('confPage').innerHTML = `
+        page.innerHTML = `
           <div style="padding:32px;font-family:monospace;font-size:13px;color:#991b1b;background:#fef2f2;border-radius:12px;margin:16px;word-break:break-all;">
             <strong>Error:</strong> ${err.message || JSON.stringify(err)}<br><br>
             <strong>Stack:</strong> ${err.stack || 'none'}
