@@ -502,6 +502,20 @@
                       </select>
                     </div>
 
+                    <div class="field hidden" id="collectionPointDescriptionField" style="grid-column:1 / -1;">
+                      <label for="collectionPointDescription">Collection point</label>
+                      <textarea id="collectionPointDescription" placeholder="e.g. Main entrance of The Bell pub"></textarea>
+                    </div>
+
+                    <div class="field hidden" id="deliveryAreaDescriptionField" style="grid-column:1 / -1;">
+                      <label for="deliveryAreaDescription">Delivery area</label>
+                      <textarea id="deliveryAreaDescription" placeholder="e.g. Southbury Road and surrounding streets"></textarea>
+                    </div>
+
+                    <div class="field" style="grid-column:1 / -1;">
+                      <label><input id="customerNotesEnabled" type="checkbox" checked /> Allow customer notes</label>
+                    </div>
+
                     <div class="field">
                       <label for="centrePostcode">Centre Postcode</label>
                       <input id="centrePostcode" type="text" placeholder="RG10 0JP" />
@@ -1848,6 +1862,9 @@
       byId("notesInternal").value = d.notes_internal || "";
 
       byId("fulfilmentMode").value = d.fulfilment_mode || "";
+      byId("collectionPointDescription").value = d.collection_point_description || "";
+      byId("deliveryAreaDescription").value = d.delivery_area_description || "";
+      byId("customerNotesEnabled").checked = d.customer_notes_enabled !== false;
       byId("centrePostcode").value = d.centre_postcode || "";
       byId("radiusKm").value = d.radius_km ?? "";
       populateCapacityCategoryOptions(d.capacity_category_id, d.capacity_category);
@@ -2109,6 +2126,10 @@
     }
 
     function renderConditionalFields() {
+      const fulfilmentMode = byId("fulfilmentMode").value;
+      byId("collectionPointDescriptionField").classList.toggle("hidden", fulfilmentMode !== "collection" && fulfilmentMode !== "mixed");
+      byId("deliveryAreaDescriptionField").classList.toggle("hidden", fulfilmentMode !== "delivery" && fulfilmentMode !== "mixed");
+
       const fundraisingEnabled = byId("fundraisingEnabled").checked;
       const fundraisingModel = byId("fundraisingModel").value;
       byId("fundraisingFields").classList.toggle("hidden", !fundraisingEnabled);
@@ -2342,6 +2363,9 @@
         notes_internal: byId("notesInternal").value.trim() || null,
 
         fulfilment_mode: byId("fulfilmentMode").value || null,
+        collection_point_description: byId("collectionPointDescription").value.trim() || null,
+        delivery_area_description: byId("deliveryAreaDescription").value.trim() || null,
+        customer_notes_enabled: byId("customerNotesEnabled").checked,
         centre_postcode: byId("centrePostcode").value.trim() || null,
         radius_km: byId("radiusKm").value === "" ? null : Number(byId("radiusKm").value),
         capacity_category_id: capacityCategoryId,
@@ -2387,6 +2411,9 @@
         drop_type: dropData.drop_type,
         status: dropData.status,
         fulfilment_mode: dropData.fulfilment_mode,
+        collection_point_description: dropData.collection_point_description,
+        delivery_area_description: dropData.delivery_area_description,
+        customer_notes_enabled: dropData.customer_notes_enabled,
         centre_postcode: dropData.centre_postcode,
         radius_km: dropData.radius_km,
         capacity_category_id: dropData.capacity_category_id,
@@ -2994,7 +3021,8 @@
 
       [
         "dropType", "dropStatus", "hostSelect", "notesInternal",
-        "fulfilmentMode", "centrePostcode", "radiusKm", "capacityCategory", "capacityTotal",
+        "fulfilmentMode", "collectionPointDescription", "deliveryAreaDescription", "customerNotesEnabled",
+        "centrePostcode", "radiusKm", "capacityCategory", "capacityTotal",
         "deliveryStartTime", "deliveryEndTime",
         "opensAtDate", "opensAtTime", "closesAtDate", "closesAtTime",
         "fundraisingEnabled", "fundraisingModel", "fundraisingPercentage", "fundraisingPerOrderPence", "fundraisingDisplayText",

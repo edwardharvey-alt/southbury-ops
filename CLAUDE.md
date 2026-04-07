@@ -45,7 +45,9 @@ Core belief: great local food should strengthen communities, not bypass them.
 ## Database — key tables
 
 - vendors — vendor identity and brand settings
-- drops — the core unit: each drop has slug, timing, capacity, host, status
+- drops — the core unit: each drop has slug, timing, capacity, host, status,
+  collection_point_description (text), delivery_area_description (text),
+  customer_notes_enabled (boolean, default true)
 - drop_menu_items — items enabled for a specific drop (product or bundle)
 - products — catalogue products (vendor-scoped)
 - bundles — catalogue bundles with bundle_lines and bundle_line_choice_products
