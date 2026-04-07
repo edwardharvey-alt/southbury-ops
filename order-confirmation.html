@@ -361,6 +361,7 @@
 
     async function loadOrder() {
       const orderId = getQueryParam("order_id");
+      console.error("[DEBUG] order_id from URL:", orderId);
 
       if (!orderId) {
         renderEmpty("No order reference found.", "Check the link you received and try again, or contact the vendor directly.");
@@ -368,12 +369,14 @@
       }
 
       try {
-        const { data: order, error: orderError } = await supabase
+        const orderRes = await supabase
           .from("orders")
           .select("id, customer_name, fulfilment_mode, delivery_address, total_pence, created_at, drop_id")
           .eq("id", orderId)
           .maybeSingle();
+        console.error("[DEBUG] orders query — data:", orderRes.data, "error:", orderRes.error);
 
+        const { data: order, error: orderError } = orderRes;
         if (orderError) throw orderError;
 
         if (!order) {
@@ -396,24 +399,28 @@
             .eq("order_id", orderId)
             .order("created_at", { ascending: true }),
         ]);
+        console.error("[DEBUG] drops query — data:", dropRes.data, "error:", dropRes.error);
+        console.error("[DEBUG] order_items query — data:", itemsRes.data, "error:", itemsRes.error);
 
         if (dropRes.error) throw dropRes.error;
         const drop = dropRes.data;
 
         const items = itemsRes.data || [];
 
-        const { data: vendor, error: vendorError } = await supabase
+        const vendorRes = await supabase
           .from("vendors")
           .select("id, name, display_name, website_url, powered_by_hearth_visible")
           .eq("id", drop.vendor_id)
           .single();
+        console.error("[DEBUG] vendors query — data:", vendorRes.data, "error:", vendorRes.error);
 
+        const { data: vendor, error: vendorError } = vendorRes;
         if (vendorError) throw vendorError;
 
         renderConfirmation(order, drop, vendor, items);
 
       } catch (err) {
-        console.error("Order confirmation load error:", err);
+        console.error("[DEBUG] loadOrder caught error:", err);
         renderEmpty(
           "Something went wrong loading your order.",
           "Please try refreshing the page. If the problem persists, contact the vendor with your reference."
