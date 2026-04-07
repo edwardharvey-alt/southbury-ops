@@ -226,9 +226,10 @@ T4-1: Recurring series — actually create drops
 Drop Studio has full recurring series UI but no generation function.
 Build createSeriesDrops() — critical for vendors running weekly drops.
 
-T4-2: Order confirmation page
+T4-2: Order confirmation page ✓ COMPLETE
 Post-order destination showing order details, reference number, and
-fulfilment information. Currently no page exists after order insert.
+fulfilment information. order-confirmation.html created; order.html
+redirects to it after successful insert.
 
 T4-3: Insights — complete build
 Fix demand curve chart (buckets by hour not datetime), complete all
@@ -371,7 +372,7 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 10. T3-10 — Order ready notification
 11. T3-11 — Menu Library delivery and collection suitability flags
 12. T4-1  — Recurring series drop generation
-13. T4-2  — Order confirmation page
+13. T4-2  — Order confirmation page ✓ COMPLETE
 14. T4-3  — Insights complete build
 15. T4-4  — Home dashboard complete build
 16. T4-5  — Drop Studio duplicate drop improvement

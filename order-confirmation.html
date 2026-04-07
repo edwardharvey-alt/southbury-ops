@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hearth — Order Confirmed</title>
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=30" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --conf-brand-primary: var(--h-accent, #8B6B3F);
+      --conf-brand-secondary: var(--h-accent-2, #CBB89D);
+      --conf-brand-soft: rgba(139,107,63,0.10);
+      --conf-brand-soft-2: rgba(203,184,157,0.08);
+    }
+
+    body.confBody{
+      background:
+        radial-gradient(1200px 600px at 15% -10%, var(--conf-brand-soft), rgba(249,115,22,0) 60%),
+        radial-gradient(900px 450px at 90% 0%, var(--conf-brand-soft-2), rgba(251,146,60,0) 55%),
+        var(--h-bg);
+      min-height:100vh;
+    }
+
+    .confPage{
+      max-width:600px;
+      margin:0 auto;
+      padding:32px 16px 80px;
+      display:grid;
+      gap:16px;
+    }
+
+    /* Confirmation banner */
+    .confBanner{
+      background:linear-gradient(135deg, var(--conf-brand-primary, #8B6B3F), var(--conf-brand-secondary, #CBB89D));
+      border-radius:24px;
+      padding:28px 24px 24px;
+      color:#fff;
+      display:grid;
+      gap:10px;
+    }
+
+    .confBannerIcon{
+      font-size:32px;
+      line-height:1;
+    }
+
+    .confBannerTitle{
+      font-size:28px;
+      font-weight:950;
+      letter-spacing:-0.04em;
+      line-height:1;
+      margin:0;
+    }
+
+    .confBannerSub{
+      font-size:14px;
+      font-weight:600;
+      line-height:1.5;
+      opacity:.88;
+      margin:0;
+    }
+
+    /* Reference pill */
+    .confRefRow{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:4px;
+    }
+
+    .confRefLabel{
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      opacity:.80;
+    }
+
+    .confRefValue{
+      font-size:13px;
+      font-weight:900;
+      font-family:var(--mono);
+      background:rgba(255,255,255,0.18);
+      border:1px solid rgba(255,255,255,0.22);
+      border-radius:8px;
+      padding:3px 10px;
+      letter-spacing:.04em;
+    }
+
+    /* Detail cards */
+    .confCard{
+      background:#fff;
+      border:1px solid var(--h-border-2);
+      border-radius:20px;
+      box-shadow:0 2px 10px rgba(15,23,42,0.04);
+      overflow:hidden;
+    }
+
+    .confCardHead{
+      padding:14px 18px 12px;
+      border-bottom:1px solid rgba(15,23,42,0.05);
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .confCardHeadIcon{
+      font-size:16px;
+      flex:0 0 auto;
+    }
+
+    .confCardHeadTitle{
+      font-size:13px;
+      font-weight:900;
+      letter-spacing:.02em;
+      text-transform:uppercase;
+      color:var(--h-muted);
+      margin:0;
+    }
+
+    .confCardBody{
+      padding:16px 18px;
+      display:grid;
+      gap:10px;
+    }
+
+    .confDetailRow{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+    }
+
+    .confDetailLabel{
+      font-size:13px;
+      font-weight:700;
+      color:var(--h-muted);
+      flex:0 0 auto;
+    }
+
+    .confDetailValue{
+      font-size:13px;
+      font-weight:800;
+      color:var(--h-text);
+      text-align:right;
+    }
+
+    .confDetailValue.mono{
+      font-family:var(--mono);
+      font-size:12px;
+    }
+
+    /* Order items */
+    .confItemList{
+      display:grid;
+      gap:0;
+    }
+
+    .confItem{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+      padding:12px 18px;
+    }
+
+    .confItem + .confItem{
+      border-top:1px solid rgba(15,23,42,0.05);
+    }
+
+    .confItemLeft{
+      min-width:0;
+      flex:1;
+    }
+
+    .confItemName{
+      font-size:15px;
+      font-weight:900;
+      color:var(--h-text);
+      letter-spacing:-0.015em;
+      margin:0;
+    }
+
+    .confItemQty{
+      font-size:12px;
+      font-weight:700;
+      color:var(--h-muted);
+      margin-top:3px;
+    }
+
+    .confItemPrice{
+      font-size:15px;
+      font-weight:950;
+      color:var(--h-text);
+      letter-spacing:-0.02em;
+      flex:0 0 auto;
+      text-align:right;
+    }
+
+    /* Total row */
+    .confTotalRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      padding:14px 18px;
+      border-top:1px solid rgba(15,23,42,0.08);
+      background:rgba(15,23,42,0.015);
+    }
+
+    .confTotalLabel{
+      font-size:15px;
+      font-weight:900;
+      color:var(--h-text);
+    }
+
+    .confTotalValue{
+      font-size:22px;
+      font-weight:950;
+      color:var(--h-text);
+      letter-spacing:-0.03em;
+    }
+
+    /* Fulfilment badge */
+    .confModeBadge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      background:rgba(15,23,42,0.06);
+      color:var(--h-text);
+      border:1px solid var(--h-border-2);
+    }
+
+    /* Footer */
+    .confFooter{
+      text-align:center;
+      font-size:12px;
+      font-weight:700;
+      color:var(--h-muted-2);
+      padding-top:8px;
+    }
+
+    .confFooter a{
+      color:var(--h-muted);
+      text-decoration:underline;
+    }
+
+    /* Loading / empty states */
+    .confState{
+      text-align:center;
+      padding:64px 24px;
+      display:grid;
+      gap:14px;
+      justify-items:center;
+    }
+
+    .confStateIcon{
+      font-size:40px;
+    }
+
+    .confStateTitle{
+      font-size:22px;
+      font-weight:950;
+      letter-spacing:-0.03em;
+      color:var(--h-text);
+      margin:0;
+    }
+
+    .confStateSub{
+      font-size:14px;
+      font-weight:600;
+      color:var(--h-muted);
+      max-width:36ch;
+      line-height:1.5;
+      margin:0;
+    }
+
+    @media(max-width:600px){
+      .confPage{
+        padding:20px 12px 64px;
+      }
+      .confBannerTitle{
+        font-size:24px;
+      }
+    }
+  </style>
+</head>
+<body class="confBody">
+
+  <div class="confPage" id="confPage">
+    <!-- content rendered by JS -->
+    <div class="confState" id="loadingState">
+      <div class="confStateIcon">⏳</div>
+      <h2 class="confStateTitle">Loading your order…</h2>
+    </div>
+  </div>
+
+  <script>
+    const supabase = window.supabase.createClient(
+      window.HEARTH_CONFIG.SUPABASE_URL,
+      window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+    );
+
+    function getQueryParam(name) {
+      return new URLSearchParams(window.location.search).get(name);
+    }
+
+    function formatMoneyPence(pence) {
+      if (pence == null || isNaN(pence)) return "—";
+      return "£" + (Number(pence) / 100).toFixed(2);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function formatDropDate(value) {
+      if (!value) return null;
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return null;
+      return d.toLocaleDateString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+    }
+
+    function formatTime(value) {
+      if (!value) return null;
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return null;
+      return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+    }
+
+    function formatFulfilmentMode(mode) {
+      if (!mode) return null;
+      return mode.charAt(0).toUpperCase() + mode.slice(1).toLowerCase();
+    }
+
+    function shortId(uuid) {
+      if (!uuid) return "—";
+      return uuid.split("-")[0].toUpperCase();
+    }
+
+    async function loadOrder() {
+      const orderId = getQueryParam("order_id");
+
+      if (!orderId) {
+        renderEmpty("No order reference found.", "Check the link you received and try again, or contact the vendor directly.");
+        return;
+      }
+
+      try {
+        const { data: order, error: orderError } = await supabase
+          .from("orders")
+          .select("id, customer_name, fulfilment_mode, delivery_address, total_pence, created_at, drop_id")
+          .eq("id", orderId)
+          .maybeSingle();
+
+        if (orderError) throw orderError;
+
+        if (!order) {
+          renderEmpty(
+            "We couldn't find that order.",
+            "If you placed an order recently, it may take a moment to appear. If this persists, please contact the vendor with your reference."
+          );
+          return;
+        }
+
+        const [dropRes, itemsRes] = await Promise.all([
+          supabase
+            .from("drops")
+            .select("id, name, opens_at, closes_at, fulfilment_mode, host_id, vendor_id, collection_point_description, delivery_area_description")
+            .eq("id", order.drop_id)
+            .single(),
+          supabase
+            .from("order_items")
+            .select("id, item_name_snapshot, qty, price_pence, item_type")
+            .eq("order_id", orderId)
+            .order("created_at", { ascending: true }),
+        ]);
+
+        if (dropRes.error) throw dropRes.error;
+        const drop = dropRes.data;
+
+        const items = itemsRes.data || [];
+
+        const { data: vendor, error: vendorError } = await supabase
+          .from("vendors")
+          .select("id, name, display_name, website_url, powered_by_hearth_visible")
+          .eq("id", drop.vendor_id)
+          .single();
+
+        if (vendorError) throw vendorError;
+
+        renderConfirmation(order, drop, vendor, items);
+
+      } catch (err) {
+        console.error("Order confirmation load error:", err);
+        renderEmpty(
+          "Something went wrong loading your order.",
+          "Please try refreshing the page. If the problem persists, contact the vendor with your reference."
+        );
+      }
+    }
+
+    function renderConfirmation(order, drop, vendor, items) {
+      const page = document.getElementById("confPage");
+
+      const vendorName = vendor.display_name || vendor.name || "the vendor";
+      const dropName = drop.name || "this drop";
+      const fulfilmentMode = order.fulfilment_mode || drop.fulfilment_mode;
+      const refDisplay = shortId(order.id);
+      const totalPence = Number(order.total_pence || 0);
+
+      // Build fulfilment detail
+      let fulfilmentDetail = "";
+      if (fulfilmentMode === "delivery") {
+        if (order.delivery_address) {
+          fulfilmentDetail = `<div class="confDetailRow">
+            <span class="confDetailLabel">Delivery address</span>
+            <span class="confDetailValue">${escapeHtml(order.delivery_address)}</span>
+          </div>`;
+        } else if (drop.delivery_area_description) {
+          fulfilmentDetail = `<div class="confDetailRow">
+            <span class="confDetailLabel">Delivery area</span>
+            <span class="confDetailValue">${escapeHtml(drop.delivery_area_description)}</span>
+          </div>`;
+        }
+      } else if (fulfilmentMode === "collection") {
+        if (drop.collection_point_description) {
+          fulfilmentDetail = `<div class="confDetailRow">
+            <span class="confDetailLabel">Collection point</span>
+            <span class="confDetailValue">${escapeHtml(drop.collection_point_description)}</span>
+          </div>`;
+        }
+      }
+
+      // Build drop timing
+      let timingDetail = "";
+      const closesAt = drop.closes_at ? formatDropDate(drop.closes_at) : null;
+      const closesTime = drop.closes_at ? formatTime(drop.closes_at) : null;
+      if (closesAt) {
+        timingDetail = `<div class="confDetailRow">
+          <span class="confDetailLabel">Collection / delivery</span>
+          <span class="confDetailValue">${escapeHtml(closesAt)}${closesTime ? " by " + escapeHtml(closesTime) : ""}</span>
+        </div>`;
+      }
+
+      // Build item rows
+      const itemRows = items.map((item) => {
+        const lineTotal = Number(item.price_pence || 0) * Number(item.qty || 1);
+        return `<div class="confItem">
+          <div class="confItemLeft">
+            <p class="confItemName">${escapeHtml(item.item_name_snapshot || "Item")}</p>
+            ${Number(item.qty) > 1 ? `<p class="confItemQty">Qty ${escapeHtml(String(item.qty))}</p>` : ""}
+          </div>
+          <span class="confItemPrice">${formatMoneyPence(lineTotal)}</span>
+        </div>`;
+      }).join("");
+
+      // Footer brand text
+      const footerParts = [];
+      if (vendor.website_url) {
+        footerParts.push(`<a href="${escapeHtml(vendor.website_url)}" target="_blank" rel="noopener noreferrer">Visit ${escapeHtml(vendorName)}</a>`);
+      }
+      if (vendor.powered_by_hearth_visible !== false) {
+        footerParts.push("Powered by Hearth");
+      }
+
+      page.innerHTML = `
+        <div class="confBanner">
+          <div class="confBannerIcon">✓</div>
+          <h1 class="confBannerTitle">You're confirmed.</h1>
+          <p class="confBannerSub">Your order with ${escapeHtml(vendorName)} is placed. We look forward to seeing you.</p>
+          <div class="confRefRow">
+            <span class="confRefLabel">Reference</span>
+            <span class="confRefValue">${escapeHtml(refDisplay)}</span>
+          </div>
+        </div>
+
+        <div class="confCard">
+          <div class="confCardHead">
+            <span class="confCardHeadIcon">📦</span>
+            <h2 class="confCardHeadTitle">Order details</h2>
+          </div>
+          <div class="confCardBody">
+            <div class="confDetailRow">
+              <span class="confDetailLabel">Name</span>
+              <span class="confDetailValue">${escapeHtml(order.customer_name || "—")}</span>
+            </div>
+            <div class="confDetailRow">
+              <span class="confDetailLabel">Drop</span>
+              <span class="confDetailValue">${escapeHtml(dropName)}</span>
+            </div>
+            <div class="confDetailRow">
+              <span class="confDetailLabel">Vendor</span>
+              <span class="confDetailValue">${escapeHtml(vendorName)}</span>
+            </div>
+            ${fulfilmentMode ? `<div class="confDetailRow">
+              <span class="confDetailLabel">Fulfilment</span>
+              <span class="confDetailValue">
+                <span class="confModeBadge">${escapeHtml(formatFulfilmentMode(fulfilmentMode))}</span>
+              </span>
+            </div>` : ""}
+            ${fulfilmentDetail}
+            ${timingDetail}
+            <div class="confDetailRow">
+              <span class="confDetailLabel">Reference</span>
+              <span class="confDetailValue mono">${escapeHtml(order.id)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="confCard">
+          <div class="confCardHead">
+            <span class="confCardHeadIcon">🛒</span>
+            <h2 class="confCardHeadTitle">What you ordered</h2>
+          </div>
+          <div class="confItemList">
+            ${itemRows || `<div class="confItem"><div class="confItemLeft"><p class="confItemName" style="color:var(--h-muted)">No items found</p></div></div>`}
+          </div>
+          <div class="confTotalRow">
+            <span class="confTotalLabel">Total</span>
+            <span class="confTotalValue">${formatMoneyPence(totalPence)}</span>
+          </div>
+        </div>
+
+        <div class="confFooter">
+          ${footerParts.join(" &middot; ")}
+        </div>
+      `;
+    }
+
+    function renderEmpty(title, sub) {
+      document.getElementById("confPage").innerHTML = `
+        <div class="confState">
+          <div class="confStateIcon">🔍</div>
+          <h2 class="confStateTitle">${escapeHtml(title)}</h2>
+          <p class="confStateSub">${escapeHtml(sub)}</p>
+        </div>
+      `;
+    }
+
+    loadOrder();
+  </script>
+</body>
+</html>
