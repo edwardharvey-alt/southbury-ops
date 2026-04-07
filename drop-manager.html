@@ -106,6 +106,7 @@
     }
 
     @media (max-width: 768px){
+      /* --- 1. Header & Navigation --- */
       .headerBar{
         flex-direction:column;
         align-items:stretch;
@@ -130,6 +131,136 @@
         min-height:44px;
         display:inline-flex;
         align-items:center;
+      }
+
+      /* --- 2. Drop cards band — vertical stack --- */
+      .dropBandWrap{
+        overflow-x:visible !important;
+        overflow-y:visible !important;
+      }
+      .dropBand{
+        flex-direction:column !important;
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        gap:10px !important;
+      }
+      .dropCard{
+        width:100% !important;
+        min-width:0 !important;
+        max-width:none !important;
+        flex:none !important;
+        box-sizing:border-box;
+      }
+
+      /* --- 3. Filter controls (browserToolbar) — full width, stacked --- */
+      .browserToolbar{
+        grid-template-columns:1fr !important;
+      }
+      .browserToolbar .btnAccent,
+      .browserToolbar .btnGhost{
+        width:100%;
+        min-height:44px;
+        height:44px;
+      }
+      .browserToolbar input,
+      .browserToolbar select{
+        min-height:44px;
+        height:44px;
+      }
+
+      /* --- 4. Context bar — single column --- */
+      .contextBar{
+        flex-direction:column;
+        align-items:stretch;
+        gap:8px;
+      }
+      .contextChips{
+        flex-wrap:wrap;
+      }
+
+      /* --- 5. Setup steps tabs — horizontally scrollable --- */
+      .stagePills{
+        display:flex !important;
+        flex-direction:row !important;
+        overflow-x:auto !important;
+        -webkit-overflow-scrolling:touch !important;
+        scrollbar-width:none !important;
+        gap:6px !important;
+        padding-bottom:4px !important;
+        grid-template-columns:unset !important;
+      }
+      .stagePills::-webkit-scrollbar{ display:none; }
+      .stagePill{
+        flex:0 0 auto !important;
+        min-width:90px !important;
+        white-space:nowrap !important;
+      }
+
+      /* --- 6. Stage bar top — stack on mobile --- */
+      .stageBarTop{
+        flex-direction:column;
+        gap:8px;
+      }
+      .saveStateInline{
+        max-width:none;
+        align-self:flex-start;
+      }
+
+      /* --- 7. Form inputs — full width, 44px min height --- */
+      select{
+        min-width:0 !important;
+        width:100%;
+      }
+      .stagePane input,
+      .stagePane select,
+      .stagePane textarea,
+      .modalCard input,
+      .modalCard select,
+      .modalCard textarea{
+        width:100%;
+        min-height:44px;
+        box-sizing:border-box;
+      }
+
+      /* --- 8. Two-column form grids — single column --- */
+      .studioGrid2,
+      .studioGrid3,
+      .reviewGrid{
+        grid-template-columns:1fr !important;
+      }
+
+      /* --- 9. Action buttons — full width --- */
+      .stageFooter .btnGhost,
+      .stageFooter .btnAccent{
+        width:100%;
+        min-height:44px;
+        height:44px;
+      }
+      .stageFooterLeft,
+      .stageFooterRight{
+        width:100%;
+        flex-direction:column;
+      }
+      .workspaceHeaderActions{
+        width:100%;
+      }
+      .workspaceHeaderActions .btnGhost,
+      .workspaceHeaderActions .btnAccent{
+        width:100%;
+        min-height:44px;
+      }
+
+      /* --- 10. Drop card duplicate button — 44px touch target --- */
+      .dropCardActions .btnSmall{
+        min-height:44px;
+        font-size:12px;
+      }
+
+      /* --- stageShell — don't sticky on mobile (avoids double-scroll UX) --- */
+      .stageShell{
+        position:relative;
+        top:auto;
       }
     }
   </style>
