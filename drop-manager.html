@@ -148,14 +148,14 @@
       .dropBand{
         display:flex !important;
         flex-direction:row !important;
-        width:max-content !important;
-        gap:10px !important;
+        width:auto !important;
+        gap:0 !important;
       }
       .dropCard{
-        width:85vw !important;
-        min-width:0 !important;
-        max-width:85vw !important;
-        flex:0 0 85vw !important;
+        width:100% !important;
+        min-width:100% !important;
+        max-width:100% !important;
+        flex:0 0 100% !important;
         scroll-snap-align:start;
         box-sizing:border-box !important;
       }
@@ -200,7 +200,7 @@
         flex-wrap:wrap;
       }
 
-      /* --- 5. Setup steps tabs — horizontally scrollable --- */
+      /* --- 5. Setup steps tabs — horizontally scrollable with right-fade hint --- */
       .stagePills{
         display:flex !important;
         flex-direction:row !important;
@@ -210,6 +210,9 @@
         gap:6px !important;
         padding-bottom:4px !important;
         grid-template-columns:unset !important;
+        /* Fade right edge to hint at off-screen tabs */
+        -webkit-mask-image:linear-gradient(to right, #000 80%, transparent 100%);
+        mask-image:linear-gradient(to right, #000 80%, transparent 100%);
       }
       .stagePills::-webkit-scrollbar{ display:none; }
       .stagePill{
@@ -2711,6 +2714,9 @@
       state.currentStage = stage;
       renderStageBar();
       updateWorkspaceHeader();
+      // Scroll active pill into view on mobile (no-op on desktop where all pills are visible)
+      const activePill = document.querySelector(`.stagePill[data-stage="${stage}"]`);
+      if (activePill) activePill.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
     }
 
     function goNextStage() {
