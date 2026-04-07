@@ -250,7 +250,7 @@ T4-6: Menu Library — delete products, bundles, categories
 Add permanent delete with safety check — warn if item is used in any
 drop menu before allowing deletion.
 
-T4-7: Service Board — order notes and fulfilment details
+T4-7: Service Board — order notes and fulfilment details ✓ COMPLETE
 Surface customer notes, delivery address, and fulfilment mode on order
 cards. Essential for delivery drops.
 
@@ -380,7 +380,7 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 15. T4-4  — Home dashboard complete build
 16. T4-5  — Drop Studio duplicate drop improvement ✓ COMPLETE
 17. T4-6  — Menu Library delete with safety check
-18. T4-7  — Service Board order notes and fulfilment details
+18. T4-7  — Service Board order notes and fulfilment details ✓ COMPLETE
 19. T4-12 — Post-drop vendor scorecard
 20. T4-13 — Minimal host-facing view
 21. T4-14 — Vendor customer data import

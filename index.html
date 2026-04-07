@@ -309,6 +309,73 @@
         height: 44px;
       }
     }
+
+    /* ================================================================
+       Order card — fulfilment and notes additions (T4-7)
+       ================================================================ */
+    .orderFulfilmentRow {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      margin: 5px 0 3px;
+      flex-wrap: wrap;
+    }
+
+    .orderFulfilmentBadge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 9px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: 20px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .orderFulfilmentBadge.collection {
+      background: rgba(15,23,42,0.04);
+      color: var(--h-muted);
+      border: 1px solid var(--h-border-2);
+    }
+
+    .orderFulfilmentBadge.delivery {
+      background: rgba(249,115,22,0.10);
+      color: var(--h-accent-ink);
+      border: 1px solid rgba(249,115,22,0.22);
+    }
+
+    .orderDeliveryAddress {
+      font-size: 10px;
+      color: var(--h-muted);
+      font-weight: 500;
+      line-height: 1.35;
+      word-break: break-word;
+      padding-top: 2px;
+    }
+
+    .orderNotesBlock {
+      margin: 5px 0 3px;
+      padding: 6px 9px;
+      background: rgba(249,115,22,0.06);
+      border-left: 2px solid rgba(249,115,22,0.35);
+      border-radius: 0 8px 8px 0;
+      font-size: 10px;
+      color: var(--h-text);
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .orderNotesLabel {
+      font-size: 8px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--h-accent-ink);
+      display: block;
+      margin-bottom: 3px;
+    }
   </style>
 </head>
 <body>
@@ -1191,6 +1258,28 @@
       `;
     }
 
+    function renderFulfilmentRow(order) {
+      const mode = String(order.fulfilment_mode || "").toLowerCase();
+      if (!mode) return "";
+
+      const label = mode === "delivery" ? "Delivery" : mode === "collection" ? "Collection" : titleCase(mode);
+      const badgeClass = mode === "delivery" ? "delivery" : "collection";
+
+      let html = `<div class="orderFulfilmentRow"><span class="orderFulfilmentBadge ${badgeClass}">${label}</span>`;
+
+      if (mode === "delivery" && order.delivery_address) {
+        html += `<span class="orderDeliveryAddress">${order.delivery_address}</span>`;
+      }
+
+      html += `</div>`;
+      return html;
+    }
+
+    function renderNotesBlock(notes) {
+      if (!notes) return "";
+      return `<div class="orderNotesBlock"><span class="orderNotesLabel">Notes</span>${notes}</div>`;
+    }
+
     function renderOrderCard(order) {
       const isExpanded = state.expandedOrders.has(order.order_id);
       const unitsLabel = getCapacityLabel(Number(order.capacity_units_in_order || order.pizzas || 0));
@@ -1209,6 +1298,9 @@
           </div>
 
           ${renderActionRow(order.order_id, normaliseStatus(order.status), unitsLabel)}
+
+          ${renderFulfilmentRow(order)}
+          ${renderNotesBlock(order.customer_notes)}
 
           <div class="detailsWrap ${isExpanded ? "open" : ""}">
             <div class="detailsScroller">
