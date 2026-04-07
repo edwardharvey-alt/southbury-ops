@@ -423,6 +423,7 @@
             </div>
 
             <div class="inlineSuccess" id="inlineSuccess"></div>
+            <div class="inlineSuccess" id="duplicateBanner" style="display:none; border-color:rgba(249,115,22,0.3); background:rgba(249,115,22,0.07); color:var(--h-accent-ink);"></div>
             <div class="errorBox" id="errorBox"></div>
 
             <div class="stagePane active" id="pane-basics">
@@ -963,6 +964,38 @@
         el.style.display = "none";
         el.textContent = "";
       }, 2500);
+    }
+
+    const TIMING_FIELD_IDS = ["deliveryDate", "deliveryStartTime", "deliveryEndTime", "closesAtDate", "closesAtTime"];
+
+    function showDuplicateBanner() {
+      const el = byId("duplicateBanner");
+      el.textContent = "New draft created — please set the date and time before publishing";
+      el.style.display = "block";
+      TIMING_FIELD_IDS.forEach((id) => {
+        const field = byId(id);
+        if (field) {
+          field.style.outline = "2px solid var(--h-accent)";
+          field.style.boxShadow = "0 0 0 3px rgba(249,115,22,0.15)";
+        }
+      });
+      const first = byId("deliveryDate");
+      if (first) first.focus();
+    }
+
+    function clearDuplicateBanner() {
+      const el = byId("duplicateBanner");
+      if (el) {
+        el.style.display = "none";
+        el.textContent = "";
+      }
+      TIMING_FIELD_IDS.forEach((id) => {
+        const field = byId(id);
+        if (field) {
+          field.style.outline = "";
+          field.style.boxShadow = "";
+        }
+      });
     }
 
     function setSaveState(status, text) {
@@ -2554,6 +2587,7 @@
         await saveAssignments();
         await loadDrops();
         await loadSelectedDrop();
+        clearDuplicateBanner();
         renderEverything();
         setSaveState("saved");
         if (showSuccess) showInlineSuccess("Changes saved successfully");
@@ -2635,7 +2669,11 @@
         name: `${sourceDrop.name} Copy`,
         status: "draft",
         series_id: null,
-        series_position: null
+        series_position: null,
+        opens_at: null,
+        closes_at: null,
+        delivery_start: null,
+        delivery_end: null
       };
 
       const { data: insertedDrop, error: insertDropError } = await supabase
@@ -2679,9 +2717,9 @@
       }
 
       state.selectedDropId = insertedDrop.id;
-      state.currentStage = "basics";
+      state.currentStage = "timing";
       await refreshAll();
-      showInlineSuccess("Drop duplicated");
+      showDuplicateBanner();
     }
 
     async function updateDropStatus(status) {
@@ -3044,11 +3082,19 @@
       });
 
       byId("deliveryDate").addEventListener("change", () => {
+        clearDuplicateBanner();
         ensureRecurringStartDateFromDropDate();
         ensureSeriesDayMatchesDropDateIfDefault();
         renderConditionalFields();
         renderSeriesPreview();
         markDirty();
+      });
+
+      ["deliveryStartTime", "deliveryEndTime", "closesAtDate", "closesAtTime"].forEach((id) => {
+        const el = byId(id);
+        if (!el) return;
+        el.addEventListener("change", clearDuplicateBanner);
+        el.addEventListener("input", clearDuplicateBanner);
       });
 
       document.querySelectorAll('input[name="openPattern"]').forEach((radio) => {
