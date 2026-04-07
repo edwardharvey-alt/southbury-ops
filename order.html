@@ -2661,13 +2661,12 @@ async function handoffToPayment() {
     payBtn.disabled = true;
     payBtn.textContent = "Order placed";
 
-    showCheckoutNotice(
-      `Order received — thank you. We'll be in touch shortly with confirmation. (Ref: ${orderId})`,
-      ""
-    );
     console.log("Order persisted successfully. ID:", orderId);
 
     // TODO: Stripe handoff — insert call here once Stripe is connected.
+
+    // Redirect to confirmation page
+    window.location.href = `order-confirmation.html?order_id=${encodeURIComponent(orderId)}`;
 
   } catch (err) {
     console.error(err);
