@@ -653,6 +653,45 @@
       .home-pulseGrid{
         grid-template-columns:repeat(2, minmax(0,1fr));
       }
+
+      /* --- Prevent horizontal overflow on body --- */
+      body{ overflow-x:hidden; }
+
+      /* --- All grid and card containers: border-box sizing, no overflow --- */
+      .home-hero,
+      .home-miniStats,
+      .home-sidePanel,
+      .home-how,
+      .home-pulseGrid,
+      .home-workGrid,
+      .home-flowGrid,
+      .home-actionGrid,
+      .home-card,
+      .home-panel{
+        box-sizing:border-box;
+        max-width:100%;
+      }
+
+      /* --- Hero: explicit single column so side panel stacks below main content --- */
+      .home-hero{
+        grid-template-columns:1fr;
+      }
+
+      /* --- Mini-stats row: explicit single column to prevent overflow --- */
+      .home-miniStats{
+        grid-template-columns:1fr;
+      }
+
+      /* --- Panel value: wrap long unbreakable strings --- */
+      .home-panelValue{
+        word-break:break-word;
+        overflow-wrap:break-word;
+      }
+
+      /* --- Reduce large padding to 16px on mobile --- */
+      .home-pad-lg{
+        padding:16px;
+      }
     }
   </style>
 </head>

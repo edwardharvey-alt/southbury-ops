@@ -561,16 +561,62 @@
         gap:8px;
       }
 
-      /* --- KPI and signal grids: 2×2 on mobile (same pattern as Service Board heroGrid) --- */
-      .ins-grid-4,
-      .ins-signalGrid{
-        grid-template-columns:repeat(2, minmax(0,1fr));
-      }
-
       /* --- Tables: already overflow:auto + min-width:760px; add right-fade hint --- */
       .ins-tableWrap{
         -webkit-mask-image:linear-gradient(to right, #000 85%, transparent 100%);
         mask-image:linear-gradient(to right, #000 85%, transparent 100%);
+      }
+
+      /* --- Prevent horizontal overflow on body --- */
+      body{ overflow-x:hidden; }
+
+      /* --- All grid and card containers: border-box sizing, no overflow --- */
+      .ins-hero,
+      .ins-heroStats,
+      .ins-grid-4,
+      .ins-grid-3,
+      .ins-grid-2,
+      .ins-signalGrid,
+      .ins-deepGrid,
+      .ins-controlGrid,
+      .ins-card,
+      .ins-kpi,
+      .ins-chartCard,
+      .ins-signal{
+        box-sizing:border-box;
+        max-width:100%;
+      }
+
+      /* --- Hero: explicit single column so Filters panel stacks below stats --- */
+      .ins-hero{
+        grid-template-columns:1fr;
+      }
+
+      /* --- All multi-column grids: collapse to single column on mobile --- */
+      .ins-grid-4,
+      .ins-grid-3,
+      .ins-grid-2,
+      .ins-signalGrid,
+      .ins-deepGrid,
+      .ins-controlGrid{
+        grid-template-columns:1fr;
+      }
+
+      /* --- Hero stats: keep 2-col at 480px–768px (overrides 720px single-col rule) --- */
+      .ins-heroStats{
+        grid-template-columns:repeat(2, minmax(0,1fr));
+      }
+
+      /* --- Reduce large padding to 16px on mobile --- */
+      .ins-pad-lg{
+        padding:16px;
+      }
+    }
+
+    /* Hero stats: drop to single column below 480px */
+    @media (max-width: 480px){
+      .ins-heroStats{
+        grid-template-columns:1fr;
       }
     }
   </style>
