@@ -1179,14 +1179,19 @@
           <input id="customerEmail" type="email" placeholder="you@example.com" />
         </div>
 
+        <div class="field">
+          <label for="customerPostcode">Postcode</label>
+          <input id="customerPostcode" type="text" placeholder="e.g. RG10 0JP" />
+        </div>
+
         <div class="field hidden" id="fulfilmentChoiceWrap">
           <label>How would you like to receive this order?</label>
           <div class="checkoutChoice" id="fulfilmentChoice"></div>
         </div>
 
-        <div class="field hidden" id="addressWrap">
-          <label for="customerAddress">Delivery address</label>
-          <textarea id="customerAddress" placeholder="House name / number, street, town, postcode"></textarea>
+        <div class="field" id="addressWrap">
+          <label for="customerAddress" id="addressLabel">Delivery address</label>
+          <textarea id="customerAddress" placeholder="Your full delivery address including house number and street"></textarea>
         </div>
 
         <div class="checkoutGrid hidden" id="tableWrap">
@@ -1212,6 +1217,15 @@
         </div>
 
         <div class="statusNotice hidden" id="checkoutNotice"></div>
+
+        <div class="field" id="marketingOptInWrap">
+          <label class="choiceCard" for="contactOptIn">
+            <input type="checkbox" id="contactOptIn" />
+            <div>
+              <div class="choiceCardTitle" id="marketingOptInLabel">Yes — keep me informed about future drops. No spam, ever.</div>
+            </div>
+          </label>
+        </div>
 
         <div class="checkoutFooter">
           <button class="payButton" id="payBtn" type="button">Pay £0.00</button>
@@ -1807,7 +1821,7 @@
 
       function getDefaultSelectedFulfilmentMode() {
         const raw = String(state.drop?.fulfilment_mode || "").toLowerCase();
-        if (raw === "mixed") return "delivery";
+        if (raw === "mixed" || raw === "both") return "delivery";
         if (raw === "delivery") return "delivery";
         if (raw === "collection") return "collection";
         return null;
@@ -2220,7 +2234,7 @@
         const wrap = byId("fulfilmentChoiceWrap");
         const choice = byId("fulfilmentChoice");
 
-        if (fulfilmentMode === "mixed") {
+        if (fulfilmentMode === "mixed" || fulfilmentMode === "both") {
           wrap.classList.remove("hidden");
           choice.innerHTML = `
             <label class="choiceCard ${state.selectedFulfilmentMode === "delivery" ? "active" : ""}">
@@ -2249,12 +2263,27 @@
         const canUseTable = inferCanUseTable();
         const isCollection = (state.selectedFulfilmentMode || fulfilmentMode) === "collection";
 
-        byId("addressWrap").classList.toggle("hidden", !needsAddress);
+        // Address field is always visible; required only for delivery
+        byId("customerAddress").required = needsAddress;
+        const addressLabelEl = byId("addressLabel");
+        if (addressLabelEl) {
+          addressLabelEl.textContent = needsAddress ? "Delivery address" : "Delivery address (optional)";
+        }
         byId("tableWrap").classList.toggle("hidden", !canUseTable);
         byId("collectionWrap").classList.toggle("hidden", !isCollection);
 
-        const hostName = state.host?.name || state.dropSummary?.host_name || state.vendor?.display_name || state.vendor?.name || "the location";
-        byId("collectionNotice").textContent = `Collection instructions: please collect from ${hostName} during the stated service window.`;
+        const locationName = state.host?.name || state.dropSummary?.host_name || state.vendor?.display_name || state.vendor?.name || "the location";
+        byId("collectionNotice").textContent = `Collection instructions: please collect from ${locationName} during the stated service window.`;
+
+        // Marketing opt-in label — populate with vendor and host names
+        const vendorDisplayName = state.vendor?.display_name || state.vendor?.name || "this vendor";
+        const hostDisplayName = state.host?.name || state.dropSummary?.host_name || "";
+        const optInLabelEl = byId("marketingOptInLabel");
+        if (optInLabelEl) {
+          optInLabelEl.textContent = hostDisplayName
+            ? `Yes — keep me informed about future drops from ${vendorDisplayName} and at ${hostDisplayName}. No spam, ever.`
+            : `Yes — keep me informed about future drops from ${vendorDisplayName}. No spam, ever.`;
+        }
 
         const remaining = getCapacityRemainingAfterBasket();
         if (remaining < 0) {
@@ -2483,10 +2512,12 @@
         const customerName = byId("customerName").value.trim();
         const customerPhone = byId("customerPhone").value.trim();
         const customerEmail = byId("customerEmail").value.trim();
+        const customerPostcode = byId("customerPostcode").value.trim();
         const customerAddress = byId("customerAddress").value.trim();
         const customerNotes = byId("customerNotes").value.trim();
         const tableNumber = byId("tableNumber").value.trim();
         const tableNotes = byId("tableNotes").value.trim();
+        const contactOptIn = byId("contactOptIn").checked;
 
         const selectedFulfilmentMode = state.selectedFulfilmentMode || state.drop?.fulfilment_mode;
 
@@ -2504,7 +2535,10 @@
             name: customerName,
             phone: customerPhone,
             email: customerEmail || null,
-            notes: customerNotes || null
+            postcode: customerPostcode || null,
+            notes: customerNotes || null,
+            contact_opt_in: contactOptIn,
+            contact_opt_in_scope: contactOptIn ? "both" : null
           },
 
           fulfilment: {
@@ -2557,6 +2591,9 @@
         if (!customerName) return "Please enter your name.";
         if (!customerPhone) return "Please enter your phone number.";
 
+        const customerPostcodeVal = byId("customerPostcode").value.trim();
+        if (!customerPostcodeVal) return "Please enter your postcode.";
+
         if (inferNeedsAddress()) {
           const address = byId("customerAddress").value.trim();
           if (!address) return "Please enter your delivery address.";
@@ -2568,16 +2605,20 @@
 async function persistOrder() {
   const capacityUnitsConsumed = Math.max(1, getBasketCapacityUnits());
 
+  const contactOptIn = byId("contactOptIn").checked;
   const orderRow = {
-    drop_id:          state.drop.id,
-    customer_name:    byId("customerName").value.trim(),
-    customer_phone:   byId("customerPhone").value.trim(),
-    customer_email:   byId("customerEmail").value.trim() || null,
-    customer_notes:   byId("customerNotes").value.trim() || null,
-    fulfilment_mode:  state.selectedFulfilmentMode || state.drop?.fulfilment_mode || null,
-    delivery_address: byId("customerAddress").value.trim() || null,
-    total_pence:      getGrandTotalPence(),
-    pizzas:           capacityUnitsConsumed,
+    drop_id:              state.drop.id,
+    customer_name:        byId("customerName").value.trim(),
+    customer_phone:       byId("customerPhone").value.trim(),
+    customer_email:       byId("customerEmail").value.trim() || null,
+    customer_notes:       byId("customerNotes").value.trim() || null,
+    customer_postcode:    byId("customerPostcode").value.trim() || null,
+    fulfilment_mode:      state.selectedFulfilmentMode || state.drop?.fulfilment_mode || null,
+    delivery_address:     byId("customerAddress").value.trim() || null,
+    contact_opt_in:       contactOptIn,
+    contact_opt_in_scope: contactOptIn ? "both" : null,
+    total_pence:          getGrandTotalPence(),
+    pizzas:               capacityUnitsConsumed,
   };
 
   const { data: orderData, error: orderError } = await supabase
