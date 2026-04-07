@@ -632,8 +632,9 @@
         align-items:center;
         /* Override desktop button appearance to match global nav style */
         background:transparent;
-        border-color:transparent;
+        border:1px solid transparent;
         font-size:13px;
+        font-weight:normal;
         padding:7px 10px;
         color:var(--home-muted);
       }
@@ -660,9 +661,9 @@
         justify-content:center;
       }
 
-      /* --- Pulse grid: 2×2 on mobile (4 KPI tiles, same pattern as Service Board heroGrid) --- */
+      /* --- Pulse grid: single column on mobile so card content is not cramped --- */
       .home-pulseGrid{
-        grid-template-columns:repeat(2, minmax(0,1fr));
+        grid-template-columns:1fr;
       }
 
       /* --- Prevent horizontal overflow --- */
@@ -721,7 +722,7 @@
           <div class="home-brandLockup">
             <div class="home-brandMark">H</div>
             <div class="home-brandText">
-              <h1 class="home-brandTitle">Hearth</h1>
+              <h1 class="home-brandTitle">Hearth — Home</h1>
               <p class="home-brandSub" id="topVendorSub">Loading workspace…</p>
             </div>
           </div>
