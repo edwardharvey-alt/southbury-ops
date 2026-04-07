@@ -363,7 +363,7 @@
       const orderId = getQueryParam("order_id");
 
       if (!orderId) {
-        renderEmpty("No order reference found.", "Check the link you received and try again, or contact the vendor directly.");
+        document.getElementById('confPage').innerHTML = `<div style="padding:32px;font-family:monospace;color:#991b1b;">No order_id in URL</div>`;
         return;
       }
 
@@ -374,13 +374,12 @@
           .eq("id", orderId)
           .maybeSingle();
 
-        if (orderError) throw orderError;
-
+        if (orderError) {
+          document.getElementById('confPage').innerHTML = `<div style="padding:32px;font-family:monospace;color:#991b1b;">Orders query error: ${JSON.stringify(orderError)}</div>`;
+          return;
+        }
         if (!order) {
-          renderEmpty(
-            "We couldn't find that order.",
-            "If you placed an order recently, it may take a moment to appear. If this persists, please contact the vendor with your reference."
-          );
+          document.getElementById('confPage').innerHTML = `<div style="padding:32px;font-family:monospace;color:#991b1b;">No order found for id: ${orderId}</div>`;
           return;
         }
 
@@ -420,10 +419,12 @@
         }
 
       } catch (err) {
-        renderEmpty(
-          "Something went wrong loading your order.",
-          "Please try refreshing the page. If the problem persists, contact the vendor with your reference."
-        );
+        document.getElementById('confPage').innerHTML = `
+          <div style="padding:32px;font-family:monospace;font-size:13px;color:#991b1b;background:#fef2f2;border-radius:12px;margin:16px;word-break:break-all;">
+            <strong>Error:</strong> ${err.message || JSON.stringify(err)}<br><br>
+            <strong>Stack:</strong> ${err.stack || 'none'}
+          </div>
+        `;
       }
     }
 
