@@ -612,11 +612,12 @@
         gap:10px;
       }
 
-      /* --- Home nav: horizontally scrollable with right-fade hint --- */
+      /* --- Home nav: horizontally scrollable, no wrapping, plain link appearance --- */
       .home-nav{
         overflow-x:auto;
         -webkit-overflow-scrolling:touch;
         flex-wrap:nowrap;
+        white-space:nowrap;
         gap:4px;
         padding-bottom:2px;
         scrollbar-width:none;
@@ -630,18 +631,18 @@
         min-height:44px;
         display:inline-flex;
         align-items:center;
-        /* Override desktop button appearance to match global nav style */
-        background:transparent;
-        border:1px solid transparent;
+        border:none;
+        background:none;
+        padding:0 8px;
         font-size:13px;
         font-weight:normal;
-        padding:7px 10px;
         color:var(--home-muted);
       }
       .home-nav a.active{
-        background:var(--home-soft);
-        border-color:var(--home-border);
+        border:none;
+        background:none;
         color:var(--home-text);
+        font-weight:600;
       }
 
       /* --- Hero: h1 reduced for mobile (720px handles ≤720; this covers 721–768) --- */
