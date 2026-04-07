@@ -171,9 +171,9 @@ drop-manager.html, drop-menu.html, brand-hearth.html hardcode
 
 ### Tier 3 — Should be done before regular use
 
-T3-1: Mobile responsiveness — operator pages
-Priority order: Service Board → Brand Hearth → Drop Studio →
-Menu Library → Home → Insights.
+T3-1: Mobile responsiveness — operator pages ✓ COMPLETE
+All six operator pages have max-width: 768px treatment:
+Service Board, Brand Hearth, Drop Studio, Menu Library, Home, Insights.
 
 T3-2: Drop Studio — saveAssignments defensive pattern
 Replace destructive delete-then-insert with safer upsert pattern.
@@ -358,11 +358,9 @@ vs host sourced demand, recommended next actions. Dependency: T3-9, T4-16.
 
 ## Recommended next session order
 
-All Tier 1 and Tier 2 items are complete.
+All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 
-1.  T3-1  — Mobile responsiveness (Service Board done; remaining: Brand Hearth,
-            Drop Studio, Menu Library, Home, Insights)
-2.  T3-2  — Drop Studio saveAssignments defensive pattern
+1.  T3-2  — Drop Studio saveAssignments defensive pattern
 3.  T3-3  — Menu Library saveSortOrderBatch performance
 4.  T3-4  — Insights Supabase chaining pattern
 5.  T3-5  — Drop Studio unsaved changes warning

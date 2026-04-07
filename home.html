@@ -571,7 +571,14 @@
       }
     }
 
+    /* ================================================================
+       Mobile Home — max-width: 768px
+       All layout changes via CSS media queries only.
+       Desktop layout (>768px) is completely unchanged.
+       ================================================================ */
     @media (max-width: 768px){
+
+      /* --- Shared headerBar / nav (hearth.css classes) --- */
       .headerBar{
         flex-direction:column;
         align-items:stretch;
@@ -596,6 +603,55 @@
         min-height:44px;
         display:inline-flex;
         align-items:center;
+      }
+
+      /* --- Top bar: stack brand lockup and nav vertically --- */
+      .home-topbar{
+        flex-direction:column;
+        align-items:stretch;
+        gap:10px;
+      }
+
+      /* --- Home nav: horizontally scrollable with right-fade hint --- */
+      .home-nav{
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+        flex-wrap:nowrap;
+        gap:4px;
+        padding-bottom:2px;
+        scrollbar-width:none;
+        -webkit-mask-image:linear-gradient(to right, #000 80%, transparent 100%);
+        mask-image:linear-gradient(to right, #000 80%, transparent 100%);
+      }
+      .home-nav::-webkit-scrollbar{ display:none; }
+      .home-nav a{
+        flex-shrink:0;
+        white-space:nowrap;
+        min-height:44px;
+        display:inline-flex;
+        align-items:center;
+      }
+
+      /* --- Hero: h1 reduced for mobile (720px handles ≤720; this covers 721–768) --- */
+      .home-hero h1{
+        font-size:26px;
+        letter-spacing:-.02em;
+      }
+
+      /* --- Hero action buttons: full-width, stacked vertically --- */
+      .home-heroActions{
+        flex-direction:column;
+        align-items:stretch;
+      }
+      .home-heroActions .home-button,
+      .home-heroActions .home-button-secondary{
+        width:100%;
+        justify-content:center;
+      }
+
+      /* --- Pulse grid: 2×2 on mobile (4 KPI tiles, same pattern as Service Board heroGrid) --- */
+      .home-pulseGrid{
+        grid-template-columns:repeat(2, minmax(0,1fr));
       }
     }
   </style>

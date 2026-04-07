@@ -505,7 +505,14 @@
       .ins-heroStats{ grid-template-columns:1fr; }
     }
 
+    /* ================================================================
+       Mobile Insights — max-width: 768px
+       All layout changes via CSS media queries only.
+       Desktop layout (>768px) is completely unchanged.
+       ================================================================ */
     @media (max-width: 768px){
+
+      /* --- Navigation: horizontally scrollable, no wrapping --- */
       .headerBar{
         flex-direction:column;
         align-items:stretch;
@@ -530,6 +537,40 @@
         min-height:44px;
         display:inline-flex;
         align-items:center;
+      }
+
+      /* --- Hero h1: reduced for mobile (720px handles ≤720; this covers 721–768) --- */
+      .ins-hero h1{
+        font-size:26px;
+      }
+
+      /* --- Toolbars: stack title and button vertically --- */
+      .ins-toolbar{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:10px;
+      }
+      .ins-toolbar .ins-button{
+        width:100%;
+      }
+
+      /* --- Deep dive header: stack title and meta info --- */
+      .ins-deepHeader{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:8px;
+      }
+
+      /* --- KPI and signal grids: 2×2 on mobile (same pattern as Service Board heroGrid) --- */
+      .ins-grid-4,
+      .ins-signalGrid{
+        grid-template-columns:repeat(2, minmax(0,1fr));
+      }
+
+      /* --- Tables: already overflow:auto + min-width:760px; add right-fade hint --- */
+      .ins-tableWrap{
+        -webkit-mask-image:linear-gradient(to right, #000 85%, transparent 100%);
+        mask-image:linear-gradient(to right, #000 85%, transparent 100%);
       }
     }
   </style>
