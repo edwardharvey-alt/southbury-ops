@@ -105,6 +105,9 @@
       font-weight:700;
     }
 
+    /* Hidden on desktop, shown only in mobile media query below */
+    .dropCarouselIndicator{ display:none; }
+
     @media (max-width: 768px){
       /* --- 1. Header & Navigation --- */
       .headerBar{
@@ -133,24 +136,42 @@
         align-items:center;
       }
 
-      /* --- 2. Drop cards band — vertical stack --- */
+      /* --- 2. Drop cards band — horizontal carousel --- */
       .dropBandWrap{
-        overflow-x:visible !important;
-        overflow-y:visible !important;
+        overflow-x:auto !important;
+        overflow-y:hidden !important;
+        scroll-snap-type:x mandatory;
+        -webkit-overflow-scrolling:touch;
+        scrollbar-width:none;
       }
+      .dropBandWrap::-webkit-scrollbar{ display:none; }
       .dropBand{
-        flex-direction:column !important;
-        width:100% !important;
-        max-width:100% !important;
-        min-width:0 !important;
+        display:flex !important;
+        flex-direction:row !important;
+        width:max-content !important;
         gap:10px !important;
       }
       .dropCard{
-        width:100% !important;
+        width:85vw !important;
         min-width:0 !important;
-        max-width:none !important;
-        flex:none !important;
-        box-sizing:border-box;
+        max-width:85vw !important;
+        flex:0 0 85vw !important;
+        scroll-snap-align:start;
+        box-sizing:border-box !important;
+      }
+      /* Hide duplicate button on mobile — accessible via editor panel when drop selected */
+      .dropCardActions{
+        display:none !important;
+      }
+      /* Carousel position indicator */
+      .dropCarouselIndicator{
+        display:flex;
+        justify-content:center;
+        margin-top:8px;
+        font-size:11px;
+        font-weight:700;
+        color:var(--h-muted);
+        letter-spacing:0.03em;
       }
 
       /* --- 3. Filter controls (browserToolbar) — full width, stacked --- */
@@ -251,12 +272,6 @@
         min-height:44px;
       }
 
-      /* --- 10. Drop card duplicate button — 44px touch target --- */
-      .dropCardActions .btnSmall{
-        min-height:44px;
-        font-size:12px;
-      }
-
       /* --- stageShell — don't sticky on mobile (avoids double-scroll UX) --- */
       .stageShell{
         position:relative;
@@ -343,9 +358,10 @@
           <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
         </div>
 
-        <div class="dropBandWrap">
+        <div class="dropBandWrap" id="dropBandWrap">
           <div class="dropBand" id="dropBand"></div>
         </div>
+        <div class="dropCarouselIndicator" id="dropCarouselIndicator"></div>
       </div>
 
       <div class="stageShell">
@@ -1721,12 +1737,26 @@
       });
     }
 
+    function updateCarouselIndicator() {
+      const wrap = byId("dropBandWrap");
+      const indicator = byId("dropCarouselIndicator");
+      if (!wrap || !indicator) return;
+      const cards = wrap.querySelectorAll(".dropCard");
+      if (!cards.length) { indicator.textContent = ""; return; }
+      const cardWidth = cards[0].offsetWidth;
+      const gap = 10;
+      const index = Math.round(wrap.scrollLeft / (cardWidth + gap));
+      const current = Math.min(index + 1, cards.length);
+      indicator.textContent = `${current} of ${cards.length}`;
+    }
+
     function renderDropBand() {
       const band = byId("dropBand");
       const drops = getFilteredDrops();
 
       if (!drops.length) {
         band.innerHTML = `<div class="emptyState" style="min-width:280px;">No drops found.</div>`;
+        updateCarouselIndicator();
         return;
       }
 
@@ -1762,6 +1792,8 @@
           </div>
         `;
       }).join("");
+
+      updateCarouselIndicator();
     }
 
     function renderHostOptions() {
@@ -2825,6 +2857,10 @@
     }
 
     function attachEvents() {
+      byId("dropBandWrap").addEventListener("scroll", () => {
+        updateCarouselIndicator();
+      }, { passive: true });
+
       byId("dropSearch").addEventListener("input", (e) => {
         state.search = e.target.value || "";
         renderDropBand();
