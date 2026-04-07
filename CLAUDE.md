@@ -175,10 +175,10 @@ T3-1: Mobile responsiveness — operator pages ✓ COMPLETE
 All six operator pages have max-width: 768px treatment:
 Service Board, Brand Hearth, Drop Studio, Menu Library, Home, Insights.
 
-T3-2: Drop Studio — saveAssignments defensive pattern
+T3-2: Drop Studio — saveAssignments defensive pattern ✓ COMPLETE
 Replace destructive delete-then-insert with safer upsert pattern.
 
-T3-3: Menu Library — saveSortOrderBatch performance
+T3-3: Menu Library — saveSortOrderBatch performance ✓ COMPLETE
 Replace sequential per-row updates with single upsert array call.
 
 T3-4: Insights — fix Supabase chaining pattern
@@ -360,8 +360,8 @@ vs host sourced demand, recommended next actions. Dependency: T3-9, T4-16.
 
 All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 
-1.  T3-2  — Drop Studio saveAssignments defensive pattern
-3.  T3-3  — Menu Library saveSortOrderBatch performance
+1.  T3-2  — Drop Studio saveAssignments defensive pattern ✓ COMPLETE
+3.  T3-3  — Menu Library saveSortOrderBatch performance ✓ COMPLETE
 4.  T3-4  — Insights Supabase chaining pattern
 5.  T3-5  — Drop Studio unsaved changes warning
 6.  T3-6  — Service Board confirmation on status changes

@@ -2466,27 +2466,40 @@
         };
       });
 
-      const { error: deleteError } = await supabase
-        .from("drop_menu_items")
-        .delete()
-        .eq("drop_id", state.selectedDropId);
+      if (cleanedRows.length) {
+        const { error: upsertError } = await supabase
+          .from("drop_menu_items")
+          .upsert(cleanedRows, { onConflict: "drop_id,product_id,bundle_id" });
 
-      if (deleteError) throw deleteError;
-
-      if (!cleanedRows.length) {
-        return;
+        if (upsertError) {
+          console.error("drop_menu_items upsert failed", {
+            cleanedRows,
+            upsertError
+          });
+          throw upsertError;
+        }
       }
 
-      const { error: insertError } = await supabase
-        .from("drop_menu_items")
-        .insert(cleanedRows);
+      const enabledProductIds = new Set(cleanedRows.filter((r) => r.product_id).map((r) => r.product_id));
+      const enabledBundleIds = new Set(cleanedRows.filter((r) => r.bundle_id).map((r) => r.bundle_id));
 
-      if (insertError) {
-        console.error("drop_menu_items insert failed", {
-          cleanedRows,
-          insertError
-        });
-        throw insertError;
+      const idsToDelete = (state.dropMenuItems || [])
+        .filter((row) => {
+          const itemType = row.menu_item_type || row.item_type;
+          if (itemType === "product") return row.product_id && !enabledProductIds.has(row.product_id);
+          if (itemType === "bundle") return row.bundle_id && !enabledBundleIds.has(row.bundle_id);
+          return false;
+        })
+        .map((row) => row.id)
+        .filter(Boolean);
+
+      if (idsToDelete.length) {
+        const { error: deleteError } = await supabase
+          .from("drop_menu_items")
+          .delete()
+          .in("id", idsToDelete);
+
+        if (deleteError) throw deleteError;
       }
     }
 
