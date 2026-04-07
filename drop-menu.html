@@ -1707,12 +1707,9 @@
       }
 
       async function saveSortOrderBatch(tableName, orderedIds) {
-        for (let i = 0; i < orderedIds.length; i += 1) {
-          const id = orderedIds[i];
-          const sortOrder = (i + 1) * 10;
-          const { error } = await supabase.from(tableName).update({ sort_order: sortOrder }).eq("id", id);
-          if (error) throw error;
-        }
+        const rows = orderedIds.map((id, i) => ({ id, sort_order: (i + 1) * 10 }));
+        const { error } = await supabase.from(tableName).upsert(rows, { onConflict: "id" });
+        if (error) throw error;
       }
 
       function renderPrimaryActionState() {
