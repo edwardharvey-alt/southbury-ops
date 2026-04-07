@@ -181,7 +181,7 @@ Replace destructive delete-then-insert with safer upsert pattern.
 T3-3: Menu Library — saveSortOrderBatch performance ✓ COMPLETE
 Replace sequential per-row updates with single upsert array call.
 
-T3-4: Insights — fix Supabase chaining pattern
+T3-4: Insights — fix Supabase chaining pattern ✓ COMPLETE
 Audit and fix all Supabase query chains to use proper async/await try/catch.
 
 T3-5: Drop Studio — unsaved changes warning
@@ -362,7 +362,7 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 
 1.  T3-2  — Drop Studio saveAssignments defensive pattern ✓ COMPLETE
 3.  T3-3  — Menu Library saveSortOrderBatch performance ✓ COMPLETE
-4.  T3-4  — Insights Supabase chaining pattern
+4.  T3-4  — Insights Supabase chaining pattern ✓ COMPLETE
 5.  T3-5  — Drop Studio unsaved changes warning
 6.  T3-6  — Service Board confirmation on status changes
 7.  T3-7  — Order page real-time capacity update
