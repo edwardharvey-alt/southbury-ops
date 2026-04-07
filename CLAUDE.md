@@ -241,9 +241,10 @@ T4-4: Home dashboard — complete build
 After T1-3 fix: enhance dynamic next actions, live pulse data, workspace
 status cards fully wired to real platform state.
 
-T4-5: Drop Studio — duplicate drop improvement
-Currently duplicates timing directly. Should prompt operator to set new
-date explicitly rather than copying old date.
+T4-5: Drop Studio — duplicate drop improvement ✓ COMPLETE
+Timing fields (opens_at, closes_at, delivery_start, delivery_end) set to
+null on duplicate. Form opens on timing pane with persistent notice and
+highlighted date/time fields.
 
 T4-6: Menu Library — delete products, bundles, categories
 Add permanent delete with safety check — warn if item is used in any
@@ -377,7 +378,7 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 13. T4-2  — Order confirmation page ✓ COMPLETE
 14. T4-3  — Insights complete build
 15. T4-4  — Home dashboard complete build
-16. T4-5  — Drop Studio duplicate drop improvement
+16. T4-5  — Drop Studio duplicate drop improvement ✓ COMPLETE
 17. T4-6  — Menu Library delete with safety check
 18. T4-7  — Service Board order notes and fulfilment details
 19. T4-12 — Post-drop vendor scorecard
