@@ -621,8 +621,6 @@
         gap:4px;
         padding-bottom:2px;
         scrollbar-width:none;
-        -webkit-mask-image:linear-gradient(to right, #000 80%, transparent 100%);
-        mask-image:linear-gradient(to right, #000 80%, transparent 100%);
       }
       .home-nav::-webkit-scrollbar{ display:none; }
       .home-nav a{
@@ -708,6 +706,16 @@
       /* --- Reduce large padding to 16px on mobile --- */
       .home-pad-lg{
         padding:16px;
+      }
+
+      /* --- Workspace card top row: allow pill to wrap so text column is not squeezed --- */
+      .home-workTop{
+        flex-wrap:wrap;
+        gap:8px;
+      }
+      .home-workTop > div:first-child{
+        flex:1 1 auto;
+        min-width:0;
       }
     }
   </style>
