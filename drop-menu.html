@@ -127,34 +127,115 @@
         grid-template-columns:1fr;
       }
 
-      /* ── Catalogue table: horizontally scrollable with right-fade hint ── */
+      /* ── Catalogue table: card layout (replaces horizontal scroll) ── */
+
+      /* Hide the column header row */
+      .menuTableWrap thead{ display:none; }
+
+      /* Reset the right-fade mask — card layout doesn't scroll horizontally */
       .menuTableWrap{
-        overflow-x:auto;
-        -webkit-overflow-scrolling:touch;
-        scrollbar-width:none;
-        /* Right-fade mask matches the Kanban and Drop Studio tab row pattern */
-        -webkit-mask-image:linear-gradient(to right, #000 80%, transparent 100%);
-        mask-image:linear-gradient(to right, #000 80%, transparent 100%);
+        -webkit-mask-image:none;
+        mask-image:none;
       }
-      .menuTableWrap::-webkit-scrollbar{ display:none; }
-
-      /* Products/Bundles tab has 9 columns — needs more room than Categories (5) */
       .menuTableWrap table{
-        min-width:650px;
+        display:block;
+        min-width:0;
+        width:100%;
+      }
+      .menuTableWrap tbody{
+        display:flex;
+        flex-direction:column;
+        gap:8px;
       }
 
-      .menuTableWrap th,
-      .menuTableWrap td{
-        white-space:nowrap;
+      /* Each row becomes a self-contained card */
+      .menuTableWrap tr.menuLibraryRow{
+        display:flex;
+        flex-direction:column;
+        position:relative;
+        padding:12px;
+        border:1px solid var(--h-border-2);
+        border-radius:12px;
+        background:var(--h-surface);
+        cursor:pointer;
+        width:100%;
+        box-sizing:border-box;
+      }
+      .menuTableWrap tr.menuLibraryRow.active{
+        border-color:rgba(249,115,22,0.34);
+        background:rgba(249,115,22,0.05);
       }
 
-      /* Drag handle column: fixed narrow width, touch target enforced by .dragHandle rule */
-      .menuTableWrap td:first-child,
-      .menuTableWrap th:first-child{
+      /* Drag handle: absolute top-right so it doesn't disrupt the card flow */
+      .menuTableWrap td.menuRowDrag{
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        position:absolute;
+        top:8px;
+        right:8px;
         width:44px;
-        min-width:44px;
-        max-width:44px;
+        height:44px;
+        min-width:0;
+        max-width:none;
+        padding:0;
+        border:none;
       }
+
+      /* Name cell: prominent, with right clearance for the drag handle */
+      .menuTableWrap td.menuRowName{
+        display:block;
+        padding:0 52px 10px 0;
+        margin-bottom:8px;
+        border:none;
+        border-bottom:1px solid var(--h-border-2);
+        white-space:normal;
+      }
+      .menuTableWrap td.menuRowName .productName{
+        font-size:14px;
+        font-weight:700;
+        line-height:1.3;
+        margin-bottom:3px;
+      }
+      .menuTableWrap td.menuRowName .subMeta{
+        font-size:11px;
+        white-space:normal;
+      }
+
+      /* Label-value pairs: each td shows its column label via ::before */
+      .menuTableWrap td[data-label]{
+        display:flex;
+        align-items:center;
+        gap:8px;
+        padding:3px 0;
+        border:none;
+        white-space:normal;
+        font-size:12px;
+      }
+      .menuTableWrap td[data-label]::before{
+        content:attr(data-label);
+        font-size:10px;
+        font-weight:700;
+        color:var(--h-muted);
+        min-width:68px;
+        flex-shrink:0;
+        text-transform:uppercase;
+        letter-spacing:0.3px;
+      }
+
+      /* Empty-state row */
+      .menuTableWrap tr:not(.menuLibraryRow){
+        display:block;
+      }
+      .menuTableWrap tr:not(.menuLibraryRow) td{
+        display:block;
+        border:none;
+        white-space:normal;
+      }
+
+      /* Reset the nowrap rule set by the previous table-scroll block */
+      .menuTableWrap th,
+      .menuTableWrap td{ white-space:normal; }
 
       /* ── Bundle lines table: same horizontal-scroll treatment ── */
       .stageSection .tableWrap{
@@ -1453,16 +1534,16 @@
                 data-item-id="${row.item_id}"
                 ${canDrag ? 'draggable="true"' : ""}
               >
-                <td>
+                <td class="menuRowDrag">
                   <button class="dragHandle" type="button" title="${canDrag ? "Drag to reorder" : "Reordering unavailable"}" ${canDrag ? "" : "disabled"} style="border:0; background:none; cursor:${canDrag ? "grab" : "not-allowed"}; font-size:18px; line-height:1;">☰</button>
                 </td>
-                <td>
+                <td class="menuRowName">
                   <div class="productName">${escapeHtml(row.name)}</div>
                   <div class="subMeta">Sort order: ${row.sort_order ?? "—"}</div>
                 </td>
-                <td><span class="badgeStatus ${row.is_active ? "ready" : "delivered"}">${row.is_active ? "active" : "inactive"}</span></td>
-                <td>${escapeHtml(String(row.product_count || 0))}</td>
-                <td>${escapeHtml(String(row.bundle_count || 0))}</td>
+                <td data-label="Status"><span class="badgeStatus ${row.is_active ? "ready" : "delivered"}">${row.is_active ? "active" : "inactive"}</span></td>
+                <td data-label="Products">${escapeHtml(String(row.product_count || 0))}</td>
+                <td data-label="Bundles">${escapeHtml(String(row.bundle_count || 0))}</td>
               </tr>
             `;
           }).join("");
@@ -1481,20 +1562,20 @@
                 data-category-id="${row.category_id || ""}"
                 ${canDrag ? 'draggable="true"' : ""}
               >
-                <td>
+                <td class="menuRowDrag">
                   <button class="dragHandle" type="button" title="${canDrag ? "Drag to reorder" : "Reordering unavailable"}" ${canDrag ? "" : "disabled"} style="border:0; background:none; cursor:${canDrag ? "grab" : "not-allowed"}; font-size:18px; line-height:1;">☰</button>
                 </td>
-                <td>
+                <td class="menuRowName">
                   <div class="productName">${escapeHtml(row.name)}</div>
                   <div class="subMeta">${escapeHtml(row.description || "No description")} • Sort order: ${row.sort_order ?? "—"}</div>
                 </td>
-                <td><span class="miniChip">${escapeHtml(row.item_type)}</span></td>
-                <td>${escapeHtml(row.category_name || "—")}</td>
-                <td>${row.price_pence == null ? "—" : formatMoneyPence(row.price_pence)}</td>
-                <td>${row.capacity_units == null ? "—" : escapeHtml(String(row.capacity_units))}</td>
-                <td><span class="badgeStatus ${row.is_active ? "ready" : "delivered"}">${row.is_active ? "active" : "inactive"}</span></td>
-                <td>${escapeHtml(String(analytics.units_sold || 0))}</td>
-                <td>${formatMoneyPence(analytics.revenue_pence || 0)}</td>
+                <td data-label="Type"><span class="miniChip">${escapeHtml(row.item_type)}</span></td>
+                <td data-label="Category">${escapeHtml(row.category_name || "—")}</td>
+                <td data-label="Price">${row.price_pence == null ? "—" : formatMoneyPence(row.price_pence)}</td>
+                <td data-label="Capacity">${row.capacity_units == null ? "—" : escapeHtml(String(row.capacity_units))}</td>
+                <td data-label="Status"><span class="badgeStatus ${row.is_active ? "ready" : "delivered"}">${row.is_active ? "active" : "inactive"}</span></td>
+                <td data-label="Sold">${escapeHtml(String(analytics.units_sold || 0))}</td>
+                <td data-label="Revenue">${formatMoneyPence(analytics.revenue_pence || 0)}</td>
               </tr>
             `;
           }).join("");
