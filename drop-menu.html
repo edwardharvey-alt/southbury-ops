@@ -126,6 +126,54 @@
       .menuWorkspaceGrid{
         grid-template-columns:1fr;
       }
+
+      /* ── Catalogue table: horizontally scrollable with right-fade hint ── */
+      .menuTableWrap{
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+        scrollbar-width:none;
+        /* Right-fade mask matches the Kanban and Drop Studio tab row pattern */
+        -webkit-mask-image:linear-gradient(to right, #000 80%, transparent 100%);
+        mask-image:linear-gradient(to right, #000 80%, transparent 100%);
+      }
+      .menuTableWrap::-webkit-scrollbar{ display:none; }
+
+      /* Products/Bundles tab has 9 columns — needs more room than Categories (5) */
+      .menuTableWrap table{
+        min-width:650px;
+      }
+
+      .menuTableWrap th,
+      .menuTableWrap td{
+        white-space:nowrap;
+      }
+
+      /* Drag handle column: fixed narrow width, touch target enforced by .dragHandle rule */
+      .menuTableWrap td:first-child,
+      .menuTableWrap th:first-child{
+        width:44px;
+        min-width:44px;
+        max-width:44px;
+      }
+
+      /* ── Bundle lines table: same horizontal-scroll treatment ── */
+      .stageSection .tableWrap{
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+        scrollbar-width:none;
+        -webkit-mask-image:linear-gradient(to right, #000 80%, transparent 100%);
+        mask-image:linear-gradient(to right, #000 80%, transparent 100%);
+      }
+      .stageSection .tableWrap::-webkit-scrollbar{ display:none; }
+
+      .stageSection .tableWrap table{
+        min-width:520px;
+      }
+
+      .stageSection .tableWrap th,
+      .stageSection .tableWrap td{
+        white-space:nowrap;
+      }
     }
   </style>
 </head>
