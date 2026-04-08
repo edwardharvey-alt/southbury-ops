@@ -1310,6 +1310,7 @@
 
       let supabase = null;
       let countdownTimer = null;
+      let realtimeChannel = null;
 
       const state = {
         dropSlug: null,
@@ -2207,7 +2208,13 @@
         byId("basketSummarySub").textContent = "View basket";
         byId("basketSummaryPrice").textContent = formatMoneyPence(getGrandTotalPence());
 
-        byId("payBtn").textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
+        const payBtn = byId("payBtn");
+        if (getCapacityRemainingRaw() <= 0) {
+          payBtn.disabled = true;
+          payBtn.textContent = "Ordering closed — capacity reached";
+        } else {
+          payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
+        }
       }
 
       function renderBasketSheet() {
@@ -2827,6 +2834,54 @@ async function handoffToPayment() {
         renderBasketSheet();
       }
 
+      async function refreshCapacity() {
+        if (!state.drop?.id) return;
+        try {
+          const summaryRes = await supabase
+            .from("v_drop_summary")
+            .select("*")
+            .eq("drop_id", state.drop.id)
+            .single();
+
+          if (summaryRes.error) return;
+
+          const prevBasketExceeded = state.basket.length > 0 && getCapacityRemainingAfterBasket() < 0;
+
+          state.dropSummary = summaryRes.data;
+
+          const nowExceedsCapacity = state.basket.length > 0 && getCapacityRemainingAfterBasket() < 0;
+
+          renderAll();
+
+          if (!prevBasketExceeded && nowExceedsCapacity) {
+            showCheckoutNotice(
+              "Some items in your basket are no longer available — capacity has been updated.",
+              "warn"
+            );
+          }
+        } catch (err) {
+          console.warn("Capacity refresh failed:", err);
+        }
+      }
+
+      function subscribeToCapacityUpdates() {
+        if (!state.drop?.id) return;
+
+        realtimeChannel = supabase
+          .channel(`capacity-watch-${state.drop.id}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "orders",
+              filter: `drop_id=eq.${state.drop.id}`
+            },
+            () => { refreshCapacity(); }
+          )
+          .subscribe();
+      }
+
       function tickCountdown() {
         renderHero();
         renderBasketBar();
@@ -2963,6 +3018,14 @@ async function handoffToPayment() {
 
           clearInterval(countdownTimer);
           countdownTimer = setInterval(tickCountdown, 60000);
+
+          subscribeToCapacityUpdates();
+
+          window.addEventListener("beforeunload", () => {
+            if (realtimeChannel && supabase) {
+              supabase.removeChannel(realtimeChannel);
+            }
+          });
         } catch (err) {
           console.error(err);
           showError(err.message || "Unable to load this ordering page.");
