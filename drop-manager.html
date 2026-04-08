@@ -911,6 +911,7 @@
     let supabase = null;
     let successTimer = null;
     let manualSlugEdited = false;
+    let isDirty = false;
 
     const state = {
       vendor: null,
@@ -2606,6 +2607,7 @@
         await loadSelectedDrop();
         clearDuplicateBanner();
         renderEverything();
+        isDirty = false;
         setSaveState("saved");
         if (showSuccess) showInlineSuccess("Changes saved successfully");
       } catch (err) {
@@ -3331,6 +3333,21 @@
 
       byId("hostModal").addEventListener("click", (e) => {
         if (e.target === byId("hostModal")) closeModal("hostModal");
+      });
+
+      document.addEventListener("input", (e) => {
+        if (e.target.closest(".stagePane")) isDirty = true;
+      });
+
+      document.addEventListener("change", (e) => {
+        if (e.target.closest(".stagePane")) isDirty = true;
+      });
+
+      window.addEventListener("beforeunload", (e) => {
+        if (isDirty) {
+          e.preventDefault();
+          e.returnValue = "";
+        }
       });
     }
 
