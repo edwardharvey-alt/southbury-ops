@@ -1185,25 +1185,19 @@
         <div class="checkoutGrid">
           <div class="field">
             <label for="customerName">Name</label>
-            <input id="customerName" type="text" placeholder="Your name" />
+            <input id="customerName" type="text" placeholder="Your name" autocomplete="name" />
           </div>
 
           <div class="field">
             <label for="customerPhone">Phone</label>
-            <input id="customerPhone" type="tel" placeholder="07..." />
+            <input id="customerPhone" type="tel" placeholder="07..." autocomplete="tel" />
             <div class="fieldError hidden" id="customerPhoneError"></div>
           </div>
         </div>
 
         <div class="field">
           <label for="customerEmail">Email (optional)</label>
-          <input id="customerEmail" type="email" placeholder="you@example.com" />
-        </div>
-
-        <div class="field">
-          <label for="customerPostcode">Postcode</label>
-          <input id="customerPostcode" type="text" placeholder="e.g. RG10 0JP" />
-          <div class="fieldError hidden" id="customerPostcodeError"></div>
+          <input id="customerEmail" type="email" placeholder="you@example.com" autocomplete="email" />
         </div>
 
         <div class="field hidden" id="fulfilmentChoiceWrap">
@@ -1215,19 +1209,23 @@
           <p class="addressGroupLabel">Your address</p>
           <div class="addressGroup">
             <div class="field">
-              <label for="addrHouse">House number or name</label>
-              <input id="addrHouse" type="text" placeholder="e.g. 12 or Rose Cottage" />
-              <div class="fieldError hidden" id="addrHouseError"></div>
+              <label for="addrLine1">Address line 1</label>
+              <input id="addrLine1" type="text" placeholder="e.g. 12 Southbury Road" autocomplete="address-line1" />
+              <div class="fieldError hidden" id="addrLine1Error"></div>
             </div>
             <div class="field">
-              <label for="addrStreet">Street</label>
-              <input id="addrStreet" type="text" placeholder="e.g. Southbury Road" />
-              <div class="fieldError hidden" id="addrStreetError"></div>
+              <label for="addrLine2">Address line 2 (optional)</label>
+              <input id="addrLine2" type="text" placeholder="e.g. Flat 3 or apartment number" autocomplete="address-line2" />
             </div>
             <div class="field">
               <label for="addrTown">Town or city</label>
-              <input id="addrTown" type="text" placeholder="e.g. Wokingham" />
+              <input id="addrTown" type="text" placeholder="e.g. Wokingham" autocomplete="address-level2" />
               <div class="fieldError hidden" id="addrTownError"></div>
+            </div>
+            <div class="field">
+              <label for="customerPostcode">Postcode</label>
+              <input id="customerPostcode" type="text" placeholder="e.g. RG10 0JP" autocomplete="postal-code" />
+              <div class="fieldError hidden" id="customerPostcodeError"></div>
             </div>
           </div>
         </div>
@@ -2565,10 +2563,10 @@
         const customerEmail = byId("customerEmail").value.trim();
         const rawPostcode = byId("customerPostcode").value.trim();
         const customerPostcode = rawPostcode ? formatPostcode(rawPostcode) : "";
-        const addrHouse = byId("addrHouse").value.trim();
-        const addrStreet = byId("addrStreet").value.trim();
+        const addrLine1 = byId("addrLine1").value.trim();
+        const addrLine2 = byId("addrLine2").value.trim();
         const addrTown = byId("addrTown").value.trim();
-        const deliveryAddress = [addrHouse, addrStreet, addrTown, customerPostcode].filter(Boolean).join(", ");
+        const deliveryAddress = [addrLine1, addrLine2, addrTown, customerPostcode].filter(Boolean).join(", ");
         const customerNotes = byId("customerNotes").value.trim();
         const tableNumber = byId("tableNumber").value.trim();
         const tableNotes = byId("tableNotes").value.trim();
@@ -2643,8 +2641,7 @@
         // Clear all inline field errors before re-validating
         clearFieldError("customerPhoneError");
         clearFieldError("customerPostcodeError");
-        clearFieldError("addrHouseError");
-        clearFieldError("addrStreetError");
+        clearFieldError("addrLine1Error");
         clearFieldError("addrTownError");
 
         let hasFieldError = false;
@@ -2676,17 +2673,12 @@
           hasFieldError = true;
         }
 
-        // Address fields — always required
-        const addrHouse = byId("addrHouse").value.trim();
-        const addrStreet = byId("addrStreet").value.trim();
+        // Address fields — line 1 and town required; line 2 optional
+        const addrLine1 = byId("addrLine1").value.trim();
         const addrTown = byId("addrTown").value.trim();
 
-        if (!addrHouse) {
-          showFieldError("addrHouse", "addrHouseError", "Please enter your house number or name.");
-          hasFieldError = true;
-        }
-        if (!addrStreet) {
-          showFieldError("addrStreet", "addrStreetError", "Please enter your street.");
+        if (!addrLine1) {
+          showFieldError("addrLine1", "addrLine1Error", "Please enter your address.");
           hasFieldError = true;
         }
         if (!addrTown) {
@@ -2705,10 +2697,10 @@ async function persistOrder() {
   const contactOptIn = byId("contactOptIn").checked;
   const rawPostcode = byId("customerPostcode").value.trim();
   const formattedPostcode = rawPostcode ? formatPostcode(rawPostcode) : null;
-  const addrHouse = byId("addrHouse").value.trim();
-  const addrStreet = byId("addrStreet").value.trim();
+  const addrLine1 = byId("addrLine1").value.trim();
+  const addrLine2 = byId("addrLine2").value.trim();
   const addrTown = byId("addrTown").value.trim();
-  const deliveryAddress = [addrHouse, addrStreet, addrTown, formattedPostcode].filter(Boolean).join(", ");
+  const deliveryAddress = [addrLine1, addrLine2, addrTown, formattedPostcode].filter(Boolean).join(", ");
 
   const orderRow = {
     drop_id:              state.drop.id,
@@ -2925,8 +2917,7 @@ async function handoffToPayment() {
         const fieldErrorPairs = [
           ["customerPhone",   "customerPhoneError"],
           ["customerPostcode","customerPostcodeError"],
-          ["addrHouse",       "addrHouseError"],
-          ["addrStreet",      "addrStreetError"],
+          ["addrLine1",       "addrLine1Error"],
           ["addrTown",        "addrTownError"],
         ];
         fieldErrorPairs.forEach(([inputId, errorId]) => {
