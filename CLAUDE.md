@@ -112,9 +112,21 @@ Core belief: great local food should strengthen communities, not bypass them.
 
 Order persistence is complete. order.html writes to:
 - orders (with pizzas legacy field populated from capacity units, minimum 1)
+  Fields captured: customer_name, customer_phone, customer_email,
+  customer_postcode (always required), delivery_address (always shown,
+  required for delivery mode only), fulfilment_mode, customer_notes,
+  contact_opt_in (boolean, default false), contact_opt_in_scope ('both'
+  when opted in), total_pence, drop_id.
 - order_items (item_type, product_id or bundle_id, qty, price_pence,
   capacity_units_snapshot, item_name_snapshot)
 - order_item_selections (for bundle choice selections)
+
+Fulfilment mode selection: shown to customer when drop.fulfilment_mode is
+'mixed' or 'both'. Single-mode drops silently write the drop's mode.
+
+Marketing opt-in: unticked checkbox on checkout form. Label populated
+dynamically with vendor name and host name (if present). Maps to
+contact_opt_in and contact_opt_in_scope on orders table.
 
 Stripe integration is next. Order ID is generated, payload is structured,
 TODO comment marks exact insertion point in handoffToPayment().
