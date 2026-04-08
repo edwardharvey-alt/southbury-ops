@@ -295,12 +295,8 @@
         font-size: 15px;
       }
       .cardActionsInline {
-        grid-template-columns: 1fr 1fr !important;
+        grid-template-columns: 1fr 1fr 1fr !important;
         gap: 6px;
-      }
-      .actionQty {
-        grid-column: 1 / -1;
-        justify-self: start;
       }
       .actionBtnEdge,
       .actionBtnDetail {
@@ -437,6 +433,22 @@
     @keyframes toastCountdown {
       from { transform: scaleX(1); }
       to   { transform: scaleX(0); }
+    }
+
+    /* Fix 1: card layout — min-height, item summary line, 3-col action row */
+    .orderCard { min-height: 120px; }
+    .orderItemSummary {
+      font-size: 12px;
+      color: var(--h-muted);
+      font-weight: 600;
+      margin-top: 3px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* Desktop: 3 columns now that units chip moves to its own line */
+    .cardActionsInline {
+      grid-template-columns: 1fr 52px 1fr;
     }
 
     /* Fix 4: total value chip replaces time chip on order cards */
@@ -1318,7 +1330,7 @@
       `;
     }
 
-    function renderActionRow(orderId, status, unitsLabel) {
+    function renderActionRow(orderId, status) {
       const prev = getPrevStatus(status);
       const next = getNextStatus(status);
 
@@ -1328,8 +1340,6 @@
             ? `<button class="btnGhost js-prev actionBtn actionBtnEdge" type="button" data-id="${orderId}" data-status="${prev}">${getBackLabel()}</button>`
             : `<div class="btnPlaceholder actionBtn actionBtnEdge"></div>`
           }
-
-          <span class="metaChip actionQty">${unitsLabel}</span>
 
           <button class="btnSmall js-toggle-details actionBtn actionBtnDetail" type="button" data-id="${orderId}">Details</button>
 
@@ -1377,11 +1387,12 @@
             <div class="orderHeaderLeft" style="min-width:0;">
               <div class="orderId">Order #${String(order.order_id).slice(-8)}</div>
               <div class="orderCustomer" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${order.customer_name || "Customer"}</div>
+              <div class="orderItemSummary">${unitsLabel}</div>
             </div>
             <div class="orderTotalChip">${totalValue}</div>
           </div>
 
-          ${renderActionRow(order.order_id, normaliseStatus(order.status), unitsLabel)}
+          ${renderActionRow(order.order_id, normaliseStatus(order.status))}
 
           ${renderFulfilmentRow(order)}
           ${renderNotesBlock(order.customer_notes)}
@@ -1757,6 +1768,7 @@
 
     // config: { heading: string, smsText: fn(customerName, vendorName) => string }
     function openNotifyModal(order, config, onComplete) {
+      console.log("Modal showing:", config && config.heading);
       const vendorName =
         state.dropSummary?.vendor_name ||
         state.drop?.vendor_name ||
