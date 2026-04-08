@@ -2702,6 +2702,8 @@ async function persistOrder() {
   const capacityUnitsConsumed = Math.max(1, getBasketCapacityUnits());
 
   const contactOptIn = byId("contactOptIn").checked;
+  const customerName = byId("customerName").value.trim();
+  const customerEmail = byId("customerEmail").value.trim() || null;
   const rawPostcode = byId("customerPostcode").value.trim();
   const formattedPostcode = rawPostcode ? formatPostcode(rawPostcode) : null;
   const addrLine1 = byId("addrLine1").value.trim();
@@ -2709,11 +2711,59 @@ async function persistOrder() {
   const addrTown = byId("addrTown").value.trim();
   const deliveryAddress = [addrLine1, addrLine2, addrTown, formattedPostcode].filter(Boolean).join(", ");
 
+  // Step 1 — upsert customer record (non-blocking: errors are logged but never surface to the customer)
+  let customerId = null;
+  if (customerEmail) {
+    try {
+      const { data: customerData, error: customerError } = await supabase
+        .from("customers")
+        .upsert(
+          { name: customerName, email: customerEmail, postcode: formattedPostcode },
+          { onConflict: "email", ignoreDuplicates: false }
+        )
+        .select("id")
+        .single();
+
+      if (customerError) {
+        console.error("Customer upsert failed:", customerError);
+      } else {
+        customerId = customerData?.id || null;
+      }
+    } catch (err) {
+      console.error("Customer upsert threw:", err);
+    }
+  }
+
+  // Step 2 — record customer_relationship (non-blocking)
+  if (customerId && state.vendor?.id) {
+    try {
+      const { error: relError } = await supabase
+        .from("customer_relationships")
+        .upsert(
+          {
+            customer_id:    customerId,
+            owner_type:     "vendor",
+            owner_id:       state.vendor.id,
+            consent_status: contactOptIn ? "granted" : "pending",
+            source:         "order"
+          },
+          { onConflict: "customer_id,owner_id", ignoreDuplicates: true }
+        );
+
+      if (relError) {
+        console.error("Customer relationship insert failed:", relError);
+      }
+    } catch (err) {
+      console.error("Customer relationship insert threw:", err);
+    }
+  }
+
+  // Step 3 — insert order
   const orderRow = {
     drop_id:              state.drop.id,
-    customer_name:        byId("customerName").value.trim(),
+    customer_name:        customerName,
     customer_phone:       byId("customerPhone").value.trim().replace(/[\s-]/g, ""),
-    customer_email:       byId("customerEmail").value.trim() || null,
+    customer_email:       customerEmail,
     customer_notes:       byId("customerNotes").value.trim() || null,
     customer_postcode:    formattedPostcode,
     fulfilment_mode:      state.selectedFulfilmentMode || state.drop?.fulfilment_mode || null,
@@ -2723,6 +2773,10 @@ async function persistOrder() {
     total_pence:          getGrandTotalPence(),
     pizzas:               capacityUnitsConsumed,
   };
+
+  if (customerId) {
+    orderRow.customer_id = customerId;
+  }
 
   const { data: orderData, error: orderError } = await supabase
     .from("orders")
