@@ -98,7 +98,7 @@
     .home-nav{
       display:flex;
       gap:8px;
-      flex-wrap:wrap;
+      flex-wrap:nowrap;
     }
 
     .home-nav a,
@@ -570,6 +570,156 @@
         align-items:flex-start;
       }
     }
+
+    /* ================================================================
+       Mobile Home — max-width: 768px
+       All layout changes via CSS media queries only.
+       Desktop layout (>768px) is completely unchanged.
+       ================================================================ */
+    @media (max-width: 768px){
+
+      /* --- Shared headerBar / nav (hearth.css classes) --- */
+      .headerBar{
+        flex-direction:column;
+        align-items:stretch;
+        gap:10px;
+        padding:14px;
+      }
+      .brand{ min-width:0; }
+      .nav{
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+        white-space:nowrap;
+        flex-wrap:nowrap;
+        gap:2px;
+        padding-bottom:2px;
+        scrollbar-width:none;
+        justify-content:flex-start;
+      }
+      .nav::-webkit-scrollbar{ display:none; }
+      .nav a{
+        flex-shrink:0;
+        white-space:nowrap;
+        min-height:44px;
+        display:inline-flex;
+        align-items:center;
+      }
+
+      /* --- Top bar: stack brand lockup and nav vertically --- */
+      .home-topbar{
+        flex-direction:column;
+        align-items:stretch;
+        gap:10px;
+        overflow:hidden;
+      }
+
+      /* --- Home nav: horizontally scrollable, no wrapping, plain link appearance --- */
+      .home-nav{
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+        flex-wrap:nowrap;
+        white-space:nowrap;
+        gap:4px;
+        padding-bottom:2px;
+        scrollbar-width:none;
+        width:100%;
+      }
+      .home-nav::-webkit-scrollbar{ display:none; }
+      .home-nav a{
+        flex-shrink:0;
+        white-space:nowrap;
+        min-height:44px;
+        display:inline-flex;
+        align-items:center;
+        border:none;
+        background:none;
+        padding:0 8px;
+        font-size:13px;
+        font-weight:normal;
+        color:var(--home-muted);
+      }
+      .home-nav a.active{
+        border:none;
+        background:none;
+        color:var(--home-text);
+        font-weight:600;
+      }
+
+      /* --- Hero: h1 reduced for mobile (720px handles ≤720; this covers 721–768) --- */
+      .home-hero h1{
+        font-size:26px;
+        letter-spacing:-.02em;
+      }
+
+      /* --- Hero action buttons: full-width, stacked vertically --- */
+      .home-heroActions{
+        flex-direction:column;
+        align-items:stretch;
+      }
+      .home-heroActions .home-button,
+      .home-heroActions .home-button-secondary{
+        width:100%;
+        justify-content:center;
+      }
+
+      /* --- Pulse grid: single column on mobile so card content is not cramped --- */
+      .home-pulseGrid{
+        grid-template-columns:1fr;
+      }
+
+      /* --- Prevent horizontal overflow --- */
+      *{ box-sizing:border-box; }
+      body{ overflow-x:hidden; }
+      .container{ max-width:100vw; overflow-x:hidden; }
+
+      /* --- All grid and card containers: fully constrained within viewport --- */
+      .home-hero,
+      .home-miniStats,
+      .home-sidePanel,
+      .home-how,
+      .home-pulseGrid,
+      .home-workGrid,
+      .home-flowGrid,
+      .home-actionGrid,
+      .home-card,
+      .home-panel{
+        box-sizing:border-box;
+        max-width:100%;
+        width:100%;
+        min-width:0;
+      }
+
+      /* --- Hero: explicit single column so side panel stacks below main content --- */
+      .home-hero{
+        grid-template-columns:1fr;
+      }
+
+      /* --- Mini-stats row: explicit single column to prevent overflow --- */
+      .home-miniStats{
+        grid-template-columns:1fr;
+      }
+
+      /* --- Panel value: wrap long unbreakable strings --- */
+      .home-panelValue{
+        word-break:break-word;
+        overflow-wrap:break-word;
+      }
+
+      /* --- Reduce large padding to 16px on mobile --- */
+      .home-pad-lg{
+        padding:16px;
+      }
+
+      /* --- Workspace card top row: allow pill to wrap so text column is not squeezed --- */
+      .home-workTop{
+        flex-wrap:wrap;
+        gap:8px;
+      }
+      .home-workTop > div:first-child{
+        flex:1 1 auto;
+        min-width:0;
+      }
+    }
   </style>
 </head>
 
@@ -583,7 +733,7 @@
           <div class="home-brandLockup">
             <div class="home-brandMark">H</div>
             <div class="home-brandText">
-              <h1 class="home-brandTitle">Hearth</h1>
+              <h1 class="home-brandTitle">Hearth — Home</h1>
               <p class="home-brandSub" id="topVendorSub">Loading workspace…</p>
             </div>
           </div>

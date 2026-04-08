@@ -962,6 +962,26 @@
       display:none !important;
     }
 
+    .fieldError{
+      font-size:11px;
+      font-weight:700;
+      color:#991b1b;
+      margin-top:4px;
+      line-height:1.35;
+    }
+
+    .addressGroup{
+      display:grid;
+      gap:8px;
+    }
+
+    .addressGroupLabel{
+      font-size:13px;
+      font-weight:900;
+      color:var(--h-text);
+      margin:0 0 2px;
+    }
+
     @media (max-width:720px){
       .orderPage{
         gap:14px;
@@ -1165,18 +1185,19 @@
         <div class="checkoutGrid">
           <div class="field">
             <label for="customerName">Name</label>
-            <input id="customerName" type="text" placeholder="Your name" />
+            <input id="customerName" type="text" placeholder="Your name" autocomplete="name" />
           </div>
 
           <div class="field">
             <label for="customerPhone">Phone</label>
-            <input id="customerPhone" type="tel" placeholder="07..." />
+            <input id="customerPhone" type="tel" placeholder="07..." autocomplete="tel" />
+            <div class="fieldError hidden" id="customerPhoneError"></div>
           </div>
         </div>
 
         <div class="field">
           <label for="customerEmail">Email (optional)</label>
-          <input id="customerEmail" type="email" placeholder="you@example.com" />
+          <input id="customerEmail" type="email" placeholder="you@example.com" autocomplete="email" />
         </div>
 
         <div class="field hidden" id="fulfilmentChoiceWrap">
@@ -1184,9 +1205,29 @@
           <div class="checkoutChoice" id="fulfilmentChoice"></div>
         </div>
 
-        <div class="field hidden" id="addressWrap">
-          <label for="customerAddress">Delivery address</label>
-          <textarea id="customerAddress" placeholder="House name / number, street, town, postcode"></textarea>
+        <div id="addressWrap">
+          <p class="addressGroupLabel">Your address</p>
+          <div class="addressGroup">
+            <div class="field">
+              <label for="addrLine1">Address line 1</label>
+              <input id="addrLine1" type="text" placeholder="e.g. 12 Southbury Road" autocomplete="address-line1" />
+              <div class="fieldError hidden" id="addrLine1Error"></div>
+            </div>
+            <div class="field">
+              <label for="addrLine2">Address line 2 (optional)</label>
+              <input id="addrLine2" type="text" placeholder="e.g. Flat 3 or apartment number" autocomplete="address-line2" />
+            </div>
+            <div class="field">
+              <label for="addrTown">Town or city</label>
+              <input id="addrTown" type="text" placeholder="e.g. Wokingham" autocomplete="address-level2" />
+              <div class="fieldError hidden" id="addrTownError"></div>
+            </div>
+            <div class="field">
+              <label for="customerPostcode">Postcode</label>
+              <input id="customerPostcode" type="text" placeholder="e.g. RG10 0JP" autocomplete="postal-code" />
+              <div class="fieldError hidden" id="customerPostcodeError"></div>
+            </div>
+          </div>
         </div>
 
         <div class="checkoutGrid hidden" id="tableWrap">
@@ -1207,11 +1248,20 @@
         </div>
 
         <div class="field">
-          <label for="customerNotes">Notes (optional)</label>
-          <textarea id="customerNotes" placeholder="Allergies, gate code, delivery note, or anything else helpful"></textarea>
+          <label for="customerNotes">Delivery / collection notes</label>
+          <textarea id="customerNotes" placeholder="e.g. Please leave at the gate, or any access information we should know."></textarea>
         </div>
 
         <div class="statusNotice hidden" id="checkoutNotice"></div>
+
+        <div class="field" id="marketingOptInWrap">
+          <label class="choiceCard" for="contactOptIn">
+            <input type="checkbox" id="contactOptIn" />
+            <div>
+              <div class="choiceCardTitle" id="marketingOptInLabel">Yes — keep me informed about future drops. No spam, ever.</div>
+            </div>
+          </label>
+        </div>
 
         <div class="checkoutFooter">
           <button class="payButton" id="payBtn" type="button">Pay £0.00</button>
@@ -1260,6 +1310,7 @@
 
       let supabase = null;
       let countdownTimer = null;
+      let realtimeChannel = null;
 
       const state = {
         dropSlug: null,
@@ -1807,7 +1858,7 @@
 
       function getDefaultSelectedFulfilmentMode() {
         const raw = String(state.drop?.fulfilment_mode || "").toLowerCase();
-        if (raw === "mixed") return "delivery";
+        if (raw === "mixed" || raw === "both") return "delivery";
         if (raw === "delivery") return "delivery";
         if (raw === "collection") return "collection";
         return null;
@@ -2157,7 +2208,13 @@
         byId("basketSummarySub").textContent = "View basket";
         byId("basketSummaryPrice").textContent = formatMoneyPence(getGrandTotalPence());
 
-        byId("payBtn").textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
+        const payBtn = byId("payBtn");
+        if (getCapacityRemainingRaw() <= 0) {
+          payBtn.disabled = true;
+          payBtn.textContent = "Ordering closed — capacity reached";
+        } else {
+          payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
+        }
       }
 
       function renderBasketSheet() {
@@ -2220,7 +2277,7 @@
         const wrap = byId("fulfilmentChoiceWrap");
         const choice = byId("fulfilmentChoice");
 
-        if (fulfilmentMode === "mixed") {
+        if (fulfilmentMode === "mixed" || fulfilmentMode === "both") {
           wrap.classList.remove("hidden");
           choice.innerHTML = `
             <label class="choiceCard ${state.selectedFulfilmentMode === "delivery" ? "active" : ""}">
@@ -2249,12 +2306,21 @@
         const canUseTable = inferCanUseTable();
         const isCollection = (state.selectedFulfilmentMode || fulfilmentMode) === "collection";
 
-        byId("addressWrap").classList.toggle("hidden", !needsAddress);
         byId("tableWrap").classList.toggle("hidden", !canUseTable);
         byId("collectionWrap").classList.toggle("hidden", !isCollection);
 
-        const hostName = state.host?.name || state.dropSummary?.host_name || state.vendor?.display_name || state.vendor?.name || "the location";
-        byId("collectionNotice").textContent = `Collection instructions: please collect from ${hostName} during the stated service window.`;
+        const locationName = state.host?.name || state.dropSummary?.host_name || state.vendor?.display_name || state.vendor?.name || "the location";
+        byId("collectionNotice").textContent = `Collection instructions: please collect from ${locationName} during the stated service window.`;
+
+        // Marketing opt-in label — populate with vendor and host names
+        const vendorDisplayName = state.vendor?.display_name || state.vendor?.name || "this vendor";
+        const hostDisplayName = state.host?.name || state.dropSummary?.host_name || "";
+        const optInLabelEl = byId("marketingOptInLabel");
+        if (optInLabelEl) {
+          optInLabelEl.textContent = hostDisplayName
+            ? `Yes — keep me informed about future drops from ${vendorDisplayName} and at ${hostDisplayName}. No spam, ever.`
+            : `Yes — keep me informed about future drops from ${vendorDisplayName}. No spam, ever.`;
+        }
 
         const remaining = getCapacityRemainingAfterBasket();
         if (remaining < 0) {
@@ -2479,14 +2545,39 @@
         byId("bundleModalSub").textContent = validationMessage || (getBundleById(state.bundleDraft.bundle_id)?.description || "Choose what goes inside this bundle");
       }
 
+      function formatPostcode(raw) {
+        const stripped = raw.replace(/\s/g, "").toUpperCase();
+        if (stripped.length < 4) return stripped;
+        return stripped.slice(0, -3) + " " + stripped.slice(-3);
+      }
+
+      function showFieldError(inputId, errorId, message) {
+        const errorEl = byId(errorId);
+        if (errorEl) {
+          errorEl.textContent = message;
+          errorEl.classList.remove("hidden");
+        }
+      }
+
+      function clearFieldError(errorId) {
+        const errorEl = byId(errorId);
+        if (errorEl) errorEl.classList.add("hidden");
+      }
+
       function buildCheckoutPayload() {
         const customerName = byId("customerName").value.trim();
         const customerPhone = byId("customerPhone").value.trim();
         const customerEmail = byId("customerEmail").value.trim();
-        const customerAddress = byId("customerAddress").value.trim();
+        const rawPostcode = byId("customerPostcode").value.trim();
+        const customerPostcode = rawPostcode ? formatPostcode(rawPostcode) : "";
+        const addrLine1 = byId("addrLine1").value.trim();
+        const addrLine2 = byId("addrLine2").value.trim();
+        const addrTown = byId("addrTown").value.trim();
+        const deliveryAddress = [addrLine1, addrLine2, addrTown, customerPostcode].filter(Boolean).join(", ");
         const customerNotes = byId("customerNotes").value.trim();
         const tableNumber = byId("tableNumber").value.trim();
         const tableNotes = byId("tableNotes").value.trim();
+        const contactOptIn = byId("contactOptIn").checked;
 
         const selectedFulfilmentMode = state.selectedFulfilmentMode || state.drop?.fulfilment_mode;
 
@@ -2504,12 +2595,15 @@
             name: customerName,
             phone: customerPhone,
             email: customerEmail || null,
-            notes: customerNotes || null
+            postcode: customerPostcode || null,
+            notes: customerNotes || null,
+            contact_opt_in: contactOptIn,
+            contact_opt_in_scope: contactOptIn ? "both" : null
           },
 
           fulfilment: {
             mode: selectedFulfilmentMode,
-            address: customerAddress || null,
+            address: deliveryAddress || null,
             table_number: tableNumber || null,
             table_notes: tableNotes || null
           },
@@ -2551,16 +2645,55 @@
           return `Your basket exceeds the remaining ${getCategoryDisplayName()} capacity for this service.`;
         }
 
+        // Clear all inline field errors before re-validating
+        clearFieldError("customerPhoneError");
+        clearFieldError("customerPostcodeError");
+        clearFieldError("addrLine1Error");
+        clearFieldError("addrTownError");
+
+        let hasFieldError = false;
+
         const customerName = byId("customerName").value.trim();
-        const customerPhone = byId("customerPhone").value.trim();
-
         if (!customerName) return "Please enter your name.";
-        if (!customerPhone) return "Please enter your phone number.";
 
-        if (inferNeedsAddress()) {
-          const address = byId("customerAddress").value.trim();
-          if (!address) return "Please enter your delivery address.";
+        // Phone: strip spaces and hyphens, validate format
+        const rawPhone = byId("customerPhone").value;
+        const normalizedPhone = rawPhone.replace(/[\s-]/g, "");
+        const phoneRegex = /^(0[0-9]{10}|\+[0-9]{7,15})$/;
+        if (!normalizedPhone) {
+          showFieldError("customerPhone", "customerPhoneError", "Please enter your phone number.");
+          hasFieldError = true;
+        } else if (!phoneRegex.test(normalizedPhone)) {
+          showFieldError("customerPhone", "customerPhoneError", "Please enter a valid UK number (e.g. 07700 900000) or international number starting with +");
+          hasFieldError = true;
         }
+
+        // Postcode: strip spaces, validate, reformat
+        const rawPostcode = byId("customerPostcode").value.trim();
+        const strippedPostcode = rawPostcode.replace(/\s/g, "");
+        const postcodeRegex = /^[A-Z]{1,2}[0-9][0-9A-Z]?[0-9][A-Z]{2}$/i;
+        if (!strippedPostcode) {
+          showFieldError("customerPostcode", "customerPostcodeError", "Please enter your postcode.");
+          hasFieldError = true;
+        } else if (!postcodeRegex.test(strippedPostcode)) {
+          showFieldError("customerPostcode", "customerPostcodeError", "Please enter a valid UK postcode.");
+          hasFieldError = true;
+        }
+
+        // Address fields — line 1 and town required; line 2 optional
+        const addrLine1 = byId("addrLine1").value.trim();
+        const addrTown = byId("addrTown").value.trim();
+
+        if (!addrLine1) {
+          showFieldError("addrLine1", "addrLine1Error", "Please enter your address.");
+          hasFieldError = true;
+        }
+        if (!addrTown) {
+          showFieldError("addrTown", "addrTownError", "Please enter your town or city.");
+          hasFieldError = true;
+        }
+
+        if (hasFieldError) return "Please correct the highlighted fields.";
 
         return "";
       }
@@ -2568,17 +2701,82 @@
 async function persistOrder() {
   const capacityUnitsConsumed = Math.max(1, getBasketCapacityUnits());
 
+  const contactOptIn = byId("contactOptIn").checked;
+  const customerName = byId("customerName").value.trim();
+  const customerEmail = byId("customerEmail").value.trim() || null;
+  const rawPostcode = byId("customerPostcode").value.trim();
+  const formattedPostcode = rawPostcode ? formatPostcode(rawPostcode) : null;
+  const addrLine1 = byId("addrLine1").value.trim();
+  const addrLine2 = byId("addrLine2").value.trim();
+  const addrTown = byId("addrTown").value.trim();
+  const deliveryAddress = [addrLine1, addrLine2, addrTown, formattedPostcode].filter(Boolean).join(", ");
+
+  // Step 1 — upsert customer record (non-blocking: errors are logged but never surface to the customer)
+  let customerId = null;
+  if (customerEmail) {
+    try {
+      const { data: customerData, error: customerError } = await supabase
+        .from("customers")
+        .upsert(
+          { name: customerName, email: customerEmail, postcode: formattedPostcode, phone: byId("customerPhone").value.trim().replace(/[\s-]/g, "") || null },
+          { onConflict: "email", ignoreDuplicates: false }
+        )
+        .select("id")
+        .single();
+
+      if (customerError) {
+        console.error("Customer upsert failed:", customerError);
+      } else {
+        customerId = customerData?.id ?? null;
+      }
+    } catch (err) {
+      console.error("Customer upsert threw:", err);
+    }
+  }
+
+  // Step 2 — record customer_relationship (non-blocking)
+  if (customerId && state.drop?.vendor_id) {
+    try {
+      const { error: relError } = await supabase
+        .from("customer_relationships")
+        .upsert(
+          {
+            customer_id:    customerId,
+            owner_type:     "vendor",
+            owner_id:       state.drop.vendor_id,
+            consent_status: contactOptIn ? "granted" : "pending",
+            source:         "order"
+          },
+          { onConflict: "customer_id,owner_id", ignoreDuplicates: true }
+        );
+
+      if (relError) {
+        console.error("Customer relationship insert failed:", relError);
+      }
+    } catch (err) {
+      console.error("Customer relationship insert threw:", err);
+    }
+  }
+
+  // Step 3 — insert order
   const orderRow = {
-    drop_id:          state.drop.id,
-    customer_name:    byId("customerName").value.trim(),
-    customer_phone:   byId("customerPhone").value.trim(),
-    customer_email:   byId("customerEmail").value.trim() || null,
-    customer_notes:   byId("customerNotes").value.trim() || null,
-    fulfilment_mode:  state.selectedFulfilmentMode || state.drop?.fulfilment_mode || null,
-    delivery_address: byId("customerAddress").value.trim() || null,
-    total_pence:      getGrandTotalPence(),
-    pizzas:           capacityUnitsConsumed,
+    drop_id:              state.drop.id,
+    customer_name:        customerName,
+    customer_phone:       byId("customerPhone").value.trim().replace(/[\s-]/g, ""),
+    customer_email:       customerEmail,
+    customer_notes:       byId("customerNotes").value.trim() || null,
+    customer_postcode:    formattedPostcode,
+    fulfilment_mode:      state.selectedFulfilmentMode || state.drop?.fulfilment_mode || null,
+    delivery_address:     deliveryAddress || null,
+    contact_opt_in:       contactOptIn,
+    contact_opt_in_scope: contactOptIn ? "both" : null,
+    total_pence:          getGrandTotalPence(),
+    pizzas:               capacityUnitsConsumed,
   };
+
+  if (customerId) {
+    orderRow.customer_id = customerId;
+  }
 
   const { data: orderData, error: orderError } = await supabase
     .from("orders")
@@ -2661,13 +2859,12 @@ async function handoffToPayment() {
     payBtn.disabled = true;
     payBtn.textContent = "Order placed";
 
-    showCheckoutNotice(
-      `Order received — thank you. We'll be in touch shortly with confirmation. (Ref: ${orderId})`,
-      ""
-    );
     console.log("Order persisted successfully. ID:", orderId);
 
     // TODO: Stripe handoff — insert call here once Stripe is connected.
+
+    // Redirect to confirmation page
+    window.location.href = `order-confirmation.html?order_id=${encodeURIComponent(orderId)}`;
 
   } catch (err) {
     console.error(err);
@@ -2689,6 +2886,54 @@ async function handoffToPayment() {
         renderMenu();
         renderBasketBar();
         renderBasketSheet();
+      }
+
+      async function refreshCapacity() {
+        if (!state.drop?.id) return;
+        try {
+          const summaryRes = await supabase
+            .from("v_drop_summary")
+            .select("*")
+            .eq("drop_id", state.drop.id)
+            .single();
+
+          if (summaryRes.error) return;
+
+          const prevBasketExceeded = state.basket.length > 0 && getCapacityRemainingAfterBasket() < 0;
+
+          state.dropSummary = summaryRes.data;
+
+          const nowExceedsCapacity = state.basket.length > 0 && getCapacityRemainingAfterBasket() < 0;
+
+          renderAll();
+
+          if (!prevBasketExceeded && nowExceedsCapacity) {
+            showCheckoutNotice(
+              "Some items in your basket are no longer available — capacity has been updated.",
+              "warn"
+            );
+          }
+        } catch (err) {
+          console.warn("Capacity refresh failed:", err);
+        }
+      }
+
+      function subscribeToCapacityUpdates() {
+        if (!state.drop?.id) return;
+
+        realtimeChannel = supabase
+          .channel(`capacity-watch-${state.drop.id}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "orders",
+              filter: `drop_id=eq.${state.drop.id}`
+            },
+            () => { refreshCapacity(); }
+          )
+          .subscribe();
       }
 
       function tickCountdown() {
@@ -2777,6 +3022,18 @@ async function handoffToPayment() {
           }
         });
 
+        // Clear inline field errors as customer corrects each field
+        const fieldErrorPairs = [
+          ["customerPhone",   "customerPhoneError"],
+          ["customerPostcode","customerPostcodeError"],
+          ["addrLine1",       "addrLine1Error"],
+          ["addrTown",        "addrTownError"],
+        ];
+        fieldErrorPairs.forEach(([inputId, errorId]) => {
+          const el = byId(inputId);
+          if (el) el.addEventListener("input", () => clearFieldError(errorId));
+        });
+
         byId("openBasketBtn").addEventListener("click", openBasket);
         byId("closeBasketBtn").addEventListener("click", closeBasket);
         byId("basketBackdrop").addEventListener("click", (e) => {
@@ -2815,6 +3072,14 @@ async function handoffToPayment() {
 
           clearInterval(countdownTimer);
           countdownTimer = setInterval(tickCountdown, 60000);
+
+          subscribeToCapacityUpdates();
+
+          window.addEventListener("beforeunload", () => {
+            if (realtimeChannel && supabase) {
+              supabase.removeChannel(realtimeChannel);
+            }
+          });
         } catch (err) {
           console.error(err);
           showError(err.message || "Unable to load this ordering page.");

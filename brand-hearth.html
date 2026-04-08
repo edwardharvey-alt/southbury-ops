@@ -573,6 +573,117 @@
         font-size:24px;
       }
     }
+
+    /* ======================================
+       MOBILE — 768px and below
+       Desktop layout is completely untouched.
+       ====================================== */
+    @media (max-width: 768px){
+
+      /* Navigation — horizontally scrollable, no wrapping */
+      .headerBar{
+        flex-direction:column;
+        align-items:stretch;
+        gap:10px;
+        padding:12px 14px;
+      }
+
+      .brand{
+        min-width:0;
+      }
+
+      .nav{
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+        white-space:nowrap;
+        flex-wrap:nowrap;
+        gap:2px;
+        padding-bottom:2px;
+        scrollbar-width:none;
+        justify-content:flex-start;
+      }
+      .nav::-webkit-scrollbar{ display:none; }
+      .nav a{
+        flex-shrink:0;
+        white-space:nowrap;
+        min-height:44px;
+        display:inline-flex;
+        align-items:center;
+      }
+
+      /* Top card — stack title row and actions vertically */
+      .brandTopCard{
+        padding:14px;
+      }
+
+      .brandTopCard > .row.space{
+        flex-direction:column;
+        align-items:stretch;
+        gap:10px;
+      }
+
+      /* brandSummaryBar — single column (820px rule covers this,
+         but restate here for clarity and full-width assurance) */
+      .brandSummaryBar{
+        grid-template-columns:1fr;
+      }
+
+      .brandSummaryMain,
+      .brandSummaryMeta{
+        width:100%;
+      }
+
+      /* brandSection cards — reduce padding on mobile */
+      .brandSection{
+        padding:14px;
+        border-radius:18px;
+      }
+
+      /* Form inputs — full width and 44px min-height */
+      .field input,
+      .field select{
+        min-height:44px;
+        font-size:14px;
+      }
+
+      /* Colour picker inputs — ensure 44px height */
+      .field input[type="color"]{
+        height:44px;
+        min-height:44px;
+        width:100%;
+        padding:4px 6px;
+      }
+
+      /* Asset upload widgets — full width, comfortable tap targets */
+      .assetUploadWidget{
+        width:100%;
+      }
+
+      .assetUploadControls{
+        flex-direction:column;
+        align-items:stretch;
+      }
+
+      .assetUploadControls .btnGhost{
+        width:100%;
+        min-height:44px;
+        font-size:13px;
+        border-radius:12px;
+      }
+
+      /* brandActions — full width, stacked vertically */
+      .brandActions{
+        flex-direction:column;
+        align-items:stretch;
+        justify-content:flex-start;
+      }
+
+      .brandActions button{
+        width:100%;
+        min-height:44px;
+        font-size:13px;
+      }
+    }
   </style>
 </head>
 <body>
