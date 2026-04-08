@@ -59,7 +59,22 @@
 
     /* Mobile-only elements — hidden on desktop */
     .mobileBoardTabs { display: none; }
-    .mobileLivePill  { display: none; }
+
+    /* Realtime dot — hidden on desktop; shown on mobile only */
+    .realtimeDot {
+      display: none;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #2d8c4e;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .realtimeDot.active { opacity: 1; }
+
+    /* dropMetaRow: wraps the meta text and the realtime dot inline */
+    .dropMetaRow { display: flex; align-items: center; gap: 6px; }
 
     /* heroButtonRow: transparent on desktop so children sit inline in dropHeroTopRight */
     .heroButtonRow { display: contents; }
@@ -99,32 +114,27 @@
         align-items: stretch;
         gap: 10px;
       }
-      /* Row 1: status pill + Realtime indicator. Row 2: action buttons via heroButtonRow. */
+      /* Single row: compact status pill + Refresh + Show/Hide summary */
       .dropHeroTopRight {
         flex-direction: row;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 8px;
         align-items: center;
       }
       .dropHeroTopRight .pill {
-        flex: 1;
+        flex: 0 0 auto;
         min-height: 36px;
         display: flex;
         align-items: center;
       }
-      /* Realtime connection indicator — compact and subtle; visually distinct from drop status pill */
-      .mobileLivePill {
-        display: inline-flex !important;
-        flex-shrink: 0;
-        font-size: 10px !important;
-        padding: 3px 8px !important;
-        border-radius: 20px;
-      }
-      /* Button row: Refresh + Show/Hide summary side-by-side, full row width */
+      /* Realtime dot — show on mobile */
+      .realtimeDot { display: inline-block; }
+
+      /* Button row: fills remaining space after pill */
       .heroButtonRow {
         display: flex;
         gap: 8px;
-        width: 100%;
+        flex: 1;
       }
       .heroButtonRow button {
         flex: 1;
@@ -297,92 +307,132 @@
     }
 
     /* ================================================================
-       T3-10: Order ready notification bottom sheet
+       Order card — fulfilment and notes additions (T4-7)
        ================================================================ */
-    #readyNotifyOverlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.45);
-      z-index: 1000;
-      align-items: flex-end;
-      justify-content: center;
-    }
-    #readyNotifyOverlay.open {
+    .orderFulfilmentRow {
       display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      margin: 5px 0 3px;
+      flex-wrap: wrap;
     }
-    #readyNotifySheet {
-      background: var(--h-surface);
-      border-radius: 16px 16px 0 0;
-      padding: 28px 24px 40px;
-      width: 100%;
-      max-width: 480px;
-      box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
-      animation: sheetSlideUp 0.2s ease;
+
+    .orderFulfilmentBadge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 9px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: 20px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
-    @keyframes sheetSlideUp {
-      from { transform: translateY(40px); opacity: 0; }
-      to   { transform: translateY(0);   opacity: 1; }
-    }
-    @media (min-width: 769px) {
-      #readyNotifyOverlay { align-items: center; }
-      #readyNotifySheet { border-radius: 14px; max-width: 400px; }
-    }
-    #readyNotifySheet h2 {
-      font-size: 20px;
-      font-weight: 600;
-      margin: 0 0 16px;
-      color: var(--h-text);
-    }
-    .readyNotifyMeta {
-      margin: 0 0 24px;
-    }
-    .readyNotifyCustomer {
-      font-size: 17px;
-      font-weight: 600;
-      color: var(--h-text);
-      margin: 0 0 3px;
-    }
-    .readyNotifyPhone {
-      font-size: 15px;
+
+    .orderFulfilmentBadge.collection {
+      background: rgba(15,23,42,0.04);
       color: var(--h-muted);
+      border: 1px solid var(--h-border-2);
     }
-    .readyNotifyActions {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+
+    .orderFulfilmentBadge.delivery {
+      background: rgba(249,115,22,0.10);
+      color: var(--h-accent-ink);
+      border: 1px solid rgba(249,115,22,0.22);
     }
-    .readyNotifyBtn {
+
+    .orderDeliveryAddress {
+      font-size: 10px;
+      color: var(--h-muted);
+      font-weight: 500;
+      line-height: 1.35;
+      word-break: break-word;
+      padding-top: 2px;
+    }
+
+    .orderNotesBlock {
+      margin: 5px 0 3px;
+      padding: 6px 9px;
+      background: rgba(249,115,22,0.06);
+      border-left: 2px solid rgba(249,115,22,0.35);
+      border-radius: 0 8px 8px 0;
+      font-size: 10px;
+      color: var(--h-text);
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .orderNotesLabel {
+      font-size: 8px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--h-accent-ink);
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    /* ================================================================
+       Undo toast — Service Board only (not in hearth.css)
+       ================================================================ */
+    #undoToast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      min-width: 280px;
+      max-width: calc(100vw - 32px);
+      background: #5c2d12;
+      color: #fff;
+      border-radius: 12px;
+      padding: 12px 16px 14px;
       display: flex;
       align-items: center;
-      justify-content: center;
-      width: 100%;
-      min-height: 52px;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: 500;
-      font-family: var(--sans);
-      cursor: pointer;
-      border: none;
-      text-decoration: none;
-      box-sizing: border-box;
-      transition: opacity 0.15s;
-    }
-    .readyNotifyBtn:active { opacity: 0.8; }
-    .readyNotifyBtnCall {
-      background: var(--h-accent);
-      color: #fff;
-    }
-    .readyNotifyBtnSms {
-      background: var(--h-surface);
-      color: var(--h-accent);
-      border: 1.5px solid var(--h-accent) !important;
-    }
-    .readyNotifyBtnSkip {
-      background: transparent;
-      color: var(--h-muted);
+      gap: 12px;
       font-size: 14px;
-      min-height: 44px;
+      font-weight: 500;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.28);
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.22s ease, opacity 0.22s ease;
+      overflow: hidden;
+    }
+    #undoToast.visible {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #undoToastMsg {
+      flex: 1;
+      line-height: 1.3;
+    }
+    #undoToastBtn {
+      background: none;
+      border: none;
+      color: #f97316;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 4px 0 4px 4px;
+      text-decoration: underline;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    #undoToastBtn:hover { color: #fb923c; }
+    #undoToastProgress {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      width: 100%;
+      background: rgba(255,255,255,0.35);
+      transform-origin: left center;
+    }
+    @keyframes toastCountdown {
+      from { transform: scaleX(1); }
+      to   { transform: scaleX(0); }
     }
 
     /* Fix 1: card layout — min-height, item summary line, 3-col action row */
@@ -442,7 +492,10 @@
         <div class="dropHeroTop">
           <div>
             <h1 class="dropName" id="dropName">Loading drops…</h1>
-            <p class="dropMeta" id="dropMeta">Connecting to Supabase</p>
+            <div class="dropMetaRow">
+              <p class="dropMeta" id="dropMeta">Connecting to Supabase</p>
+              <span id="realtimeDot" class="realtimeDot"></span>
+            </div>
           </div>
 
           <div class="dropHeroTopRight">
@@ -450,7 +503,6 @@
               <span class="dot" id="dropStatusDot"></span>
               <span id="dropStatusText">—</span>
             </div>
-            <span class="realtimePill mobileLivePill" id="realtimeIndicatorMobile">Realtime</span>
             <div class="heroButtonRow">
               <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
               <button class="btnGhost heroToggleBtn" id="heroToggleBtn" type="button">Hide summary</button>
@@ -718,20 +770,10 @@
     </div>
   </div>
 
-  <!-- T3-10: Order ready notification bottom sheet -->
-  <div id="readyNotifyOverlay" role="dialog" aria-modal="true" aria-labelledby="readyNotifyHeading">
-    <div id="readyNotifySheet">
-      <h2 id="readyNotifyHeading">Notify customer?</h2>
-      <div class="readyNotifyMeta">
-        <div class="readyNotifyCustomer" id="readyNotifyName">—</div>
-        <div class="readyNotifyPhone" id="readyNotifyPhoneDisplay">—</div>
-      </div>
-      <div class="readyNotifyActions">
-        <a class="readyNotifyBtn readyNotifyBtnCall" id="readyNotifyCallBtn" href="#">Call</a>
-        <a class="readyNotifyBtn readyNotifyBtnSms" id="readyNotifySmsBtn" href="#">Send SMS</a>
-        <button class="readyNotifyBtn readyNotifyBtnSkip" id="readyNotifySkipBtn" type="button">Skip — I'll notify them another way</button>
-      </div>
-    </div>
+  <div id="undoToast" role="status" aria-live="assertive" aria-atomic="true">
+    <span id="undoToastMsg"></span>
+    <button type="button" id="undoToastBtn">Undo</button>
+    <div id="undoToastProgress"></div>
   </div>
 
   <script>
@@ -747,6 +789,7 @@
     let supabase = null;
     let realtimeChannel = null;
     let realtimeSubscribedDropId = null;
+    let pendingChange = null;
 
     const state = {
       drops: [],
@@ -877,7 +920,11 @@
     }
 
     function getCapacityLabel(count = 1) {
-      return `${count} × ${getCapacityCategoryLabel()}`;
+      let label = getCapacityCategoryLabel();
+      if (count === 1 && label.endsWith("s")) {
+        label = label.slice(0, -1);
+      }
+      return `${count} × ${label}`;
     }
 
     function getNextStatus(status) {
@@ -1304,6 +1351,28 @@
       `;
     }
 
+    function renderFulfilmentRow(order) {
+      const mode = String(order.fulfilment_mode || "").toLowerCase();
+      if (!mode) return "";
+
+      const label = mode === "delivery" ? "Delivery" : mode === "collection" ? "Collection" : titleCase(mode);
+      const badgeClass = mode === "delivery" ? "delivery" : "collection";
+
+      let html = `<div class="orderFulfilmentRow"><span class="orderFulfilmentBadge ${badgeClass}">${label}</span>`;
+
+      if (mode === "delivery" && order.delivery_address) {
+        html += `<span class="orderDeliveryAddress">${order.delivery_address}</span>`;
+      }
+
+      html += `</div>`;
+      return html;
+    }
+
+    function renderNotesBlock(notes) {
+      if (!notes) return "";
+      return `<div class="orderNotesBlock"><span class="orderNotesLabel">Notes</span>${notes}</div>`;
+    }
+
     function renderOrderCard(order) {
       const isExpanded = state.expandedOrders.has(order.order_id);
       const unitsLabel = getCapacityLabel(Number(order.capacity_units_in_order || order.pizzas || 0));
@@ -1324,6 +1393,9 @@
           </div>
 
           ${renderActionRow(order.order_id, normaliseStatus(order.status))}
+
+          ${renderFulfilmentRow(order)}
+          ${renderNotesBlock(order.customer_notes)}
 
           <div class="detailsWrap ${isExpanded ? "open" : ""}">
             <div class="detailsScroller">
@@ -1486,23 +1558,73 @@
       if (error) throw error;
     }
 
-    async function updateOrderStatus(orderId, toStatus) {
+    // ---- Optimistic status change with undo toast ----
+
+    function applyStatusOptimistically(orderId, toStatus) {
+      const order = state.ordersSummary.find((o) => o.order_id === orderId);
+      if (order) order.status = toStatus;
+      renderBoard();
+      renderWorkflowCounts();
+      maybeSelectDefaultMobileTab();
+    }
+
+    function showUndoToast(orderRef, toStatus) {
+      const toast = byId("undoToast");
+      const msg = byId("undoToastMsg");
+      const progress = byId("undoToastProgress");
+
+      const labelMap = {
+        confirmed: "Confirmed",
+        baking: "Preparing",
+        ready: "Ready",
+        delivered: "Delivered",
+        placed: "Placed"
+      };
+      msg.textContent = "Order #" + orderRef + " marked as " + (labelMap[toStatus] || toStatus) + ".";
+
+      // Restart the countdown animation
+      progress.style.animation = "none";
+      void progress.offsetWidth; // force reflow
+      progress.style.animation = "toastCountdown 5s linear forwards";
+
+      toast.classList.add("visible");
+    }
+
+    function hideUndoToast() {
+      byId("undoToast").classList.remove("visible");
+    }
+
+    async function commitPending(skipRefresh) {
+      if (!pendingChange || pendingChange.committed) return;
+      const pc = pendingChange;
+      pc.committed = true;
+      clearTimeout(pc.timerHandle);
+      pendingChange = null;
+      hideUndoToast();
       showError("");
 
-      const order = state.ordersSummary.find((o) => o.order_id === orderId);
-      if (!order) throw new Error("Order not found in current state.");
+      try {
+        const { error: updateError } = await supabase
+          .from("orders")
+          .update({ status: pc.toStatus })
+          .eq("id", pc.orderId);
+        if (updateError) throw updateError;
+        await writeStatusEvent(pc.orderSnapshot, pc.fromStatus, pc.toStatus);
+        if (!skipRefresh) await refreshData();
+      } catch (err) {
+        console.error(err);
+        showError(err.message || "Status update failed.");
+        applyStatusOptimistically(pc.orderId, pc.fromStatus);
+      }
+    }
 
-      const fromStatus = normaliseStatus(order.status);
-
-      const { error: updateError } = await supabase
-        .from("orders")
-        .update({ status: toStatus })
-        .eq("id", orderId);
-
-      if (updateError) throw updateError;
-
-      await writeStatusEvent(order, fromStatus, toStatus);
-      await refreshData();
+    function undoPending() {
+      if (!pendingChange) return;
+      const pc = pendingChange;
+      clearTimeout(pc.timerHandle);
+      pendingChange = null;
+      hideUndoToast();
+      applyStatusOptimistically(pc.orderId, pc.fromStatus);
     }
 
     function toggleDetails(orderId) {
@@ -1600,8 +1722,8 @@
     function setRealtimeIndicator(active) {
       const el = byId("realtimeIndicator");
       if (el) el.classList.toggle("active", active);
-      const elMobile = byId("realtimeIndicatorMobile");
-      if (elMobile) elMobile.classList.toggle("active", active);
+      const dot = byId("realtimeDot");
+      if (dot) dot.classList.toggle("active", active);
     }
 
     function subscribeToDropOrders(dropId) {
@@ -1834,6 +1956,12 @@
         const nextBtn = e.target.closest(".js-next");
         const prevBtn = e.target.closest(".js-prev");
         const toggleBtn = e.target.closest(".js-toggle-details");
+        const undoBtn = e.target.closest("#undoToastBtn");
+
+        if (undoBtn) {
+          undoPending();
+          return;
+        }
 
         if (toggleBtn) {
           toggleDetails(toggleBtn.dataset.id);
@@ -1842,49 +1970,41 @@
 
         if (!nextBtn && !prevBtn) return;
 
-        try {
-          if (nextBtn) {
-            const toStatus = nextBtn.dataset.status;
-            const orderId = nextBtn.dataset.id;
+        const btn = nextBtn || prevBtn;
+        const orderId = btn.dataset.id;
+        const toStatus = btn.dataset.status;
 
-            if (toStatus === "ready" || toStatus === "baking") {
-              console.log("Ready/Baking button clicked:", toStatus);
-              const order = state.ordersSummary.find((o) => o.order_id === orderId);
-              const customerName = (order && order.customer_name) || "Customer";
-
-              const config = toStatus === "ready"
-                ? {
-                    heading: "Notify customer?",
-                    smsText: function (name, vendor) {
-                      return "Hi " + name + ", your order is ready for collection. See you soon \u2014 " + vendor;
-                    }
-                  }
-                : {
-                    heading: "Let " + customerName + " know?",
-                    smsText: function (name, vendor) {
-                      return "Hi " + name + ", your order is now being prepared. It will be ready soon \u2014 " + vendor;
-                    }
-                  };
-
-              openNotifyModal(order, config, async function () {
-                try {
-                  await updateOrderStatus(orderId, toStatus);
-                } catch (err) {
-                  console.error(err);
-                  showError(err.message || "Status update failed.");
-                }
-              });
-              return;
-            }
-
-            await updateOrderStatus(orderId, nextBtn.dataset.status);
-          } else if (prevBtn) {
-            await updateOrderStatus(prevBtn.dataset.id, prevBtn.dataset.status);
-          }
-        } catch (err) {
-          console.error(err);
-          showError(err.message || "Status update failed.");
+        // Commit any in-flight change immediately before starting a new one
+        if (pendingChange) {
+          await commitPending(true);
         }
+
+        const order = state.ordersSummary.find((o) => o.order_id === orderId);
+        if (!order) return;
+
+        const fromStatus = normaliseStatus(order.status);
+        const orderRef = String(orderId).slice(0, 8);
+        const orderSnapshot = { ...order };
+
+        // Optimistically move the card
+        applyStatusOptimistically(orderId, toStatus);
+
+        // Schedule the DB write for 5 s from now
+        const timerHandle = setTimeout(async function () {
+          await commitPending(false);
+        }, 5000);
+
+        pendingChange = {
+          orderId,
+          fromStatus,
+          toStatus,
+          orderRef,
+          orderSnapshot,
+          timerHandle,
+          committed: false
+        };
+
+        showUndoToast(orderRef, toStatus);
       });
 
       // T3-10: Notification modal button handlers
