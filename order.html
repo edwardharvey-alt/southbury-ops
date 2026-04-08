@@ -2718,7 +2718,7 @@ async function persistOrder() {
       const { data: customerData, error: customerError } = await supabase
         .from("customers")
         .upsert(
-          { name: customerName, email: customerEmail, postcode: formattedPostcode },
+          { name: customerName, email: customerEmail, postcode: formattedPostcode, phone: byId("customerPhone").value.trim().replace(/[\s-]/g, "") || null },
           { onConflict: "email", ignoreDuplicates: false }
         )
         .select("id")
