@@ -1834,19 +1834,15 @@
       });
 
       // T3-10: Notification modal button handlers
-      byId("readyNotifyCallBtn").addEventListener("click", function () {
-        closeReadyNotifyModal();
-      });
-      byId("readyNotifySmsBtn").addEventListener("click", function () {
-        closeReadyNotifyModal();
-      });
-      byId("readyNotifySkipBtn").addEventListener("click", function () {
-        closeReadyNotifyModal();
-      });
-      byId("readyNotifyOverlay").addEventListener("click", function (e) {
-        if (e.target === byId("readyNotifyOverlay")) {
-          closeReadyNotifyModal();
-        }
+      var _callBtn       = byId("readyNotifyCallBtn");
+      var _smsBtn        = byId("readyNotifySmsBtn");
+      var _skipBtn       = byId("readyNotifySkipBtn");
+      var _notifyOverlay = byId("readyNotifyOverlay");
+      if (_callBtn)       _callBtn.addEventListener("click", function () { closeReadyNotifyModal(); });
+      if (_smsBtn)        _smsBtn.addEventListener("click", function () { closeReadyNotifyModal(); });
+      if (_skipBtn)       _skipBtn.addEventListener("click", function () { closeReadyNotifyModal(); });
+      if (_notifyOverlay) _notifyOverlay.addEventListener("click", function (e) {
+        if (e.target === _notifyOverlay) closeReadyNotifyModal();
       });
     }
 
