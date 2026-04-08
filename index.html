@@ -299,6 +299,95 @@
         height: 44px;
       }
     }
+
+    /* ================================================================
+       T3-10: Order ready notification bottom sheet
+       ================================================================ */
+    #readyNotifyOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 1000;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    #readyNotifyOverlay.open {
+      display: flex;
+    }
+    #readyNotifySheet {
+      background: var(--h-surface);
+      border-radius: 16px 16px 0 0;
+      padding: 28px 24px 40px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
+      animation: sheetSlideUp 0.2s ease;
+    }
+    @keyframes sheetSlideUp {
+      from { transform: translateY(40px); opacity: 0; }
+      to   { transform: translateY(0);   opacity: 1; }
+    }
+    @media (min-width: 769px) {
+      #readyNotifyOverlay { align-items: center; }
+      #readyNotifySheet { border-radius: 14px; max-width: 400px; }
+    }
+    #readyNotifySheet h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 0 0 16px;
+      color: var(--h-text);
+    }
+    .readyNotifyMeta {
+      margin: 0 0 24px;
+    }
+    .readyNotifyCustomer {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--h-text);
+      margin: 0 0 3px;
+    }
+    .readyNotifyPhone {
+      font-size: 15px;
+      color: var(--h-muted);
+    }
+    .readyNotifyActions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .readyNotifyBtn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 52px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 500;
+      font-family: var(--sans);
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      box-sizing: border-box;
+      transition: opacity 0.15s;
+    }
+    .readyNotifyBtn:active { opacity: 0.8; }
+    .readyNotifyBtnCall {
+      background: var(--h-accent);
+      color: #fff;
+    }
+    .readyNotifyBtnSms {
+      background: var(--h-surface);
+      color: var(--h-accent);
+      border: 1.5px solid var(--h-accent) !important;
+    }
+    .readyNotifyBtnSkip {
+      background: transparent;
+      color: var(--h-muted);
+      font-size: 14px;
+      min-height: 44px;
+    }
   </style>
 </head>
 <body>
@@ -599,6 +688,22 @@
             </table>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- T3-10: Order ready notification bottom sheet -->
+  <div id="readyNotifyOverlay" role="dialog" aria-modal="true" aria-labelledby="readyNotifyHeading">
+    <div id="readyNotifySheet">
+      <h2 id="readyNotifyHeading">Notify customer?</h2>
+      <div class="readyNotifyMeta">
+        <div class="readyNotifyCustomer" id="readyNotifyName">—</div>
+        <div class="readyNotifyPhone" id="readyNotifyPhoneDisplay">—</div>
+      </div>
+      <div class="readyNotifyActions">
+        <a class="readyNotifyBtn readyNotifyBtnCall" id="readyNotifyCallBtn" href="#">Call</a>
+        <a class="readyNotifyBtn readyNotifyBtnSms" id="readyNotifySmsBtn" href="#">Send SMS</a>
+        <button class="readyNotifyBtn readyNotifyBtnSkip" id="readyNotifySkipBtn" type="button">Skip — I'll notify them another way</button>
       </div>
     </div>
   </div>
@@ -1510,6 +1615,38 @@
       }
     }
 
+    // ---- T3-10: Order ready notification ----
+    let readyNotifyCallback = null;
+
+    function openReadyNotifyModal(order, onComplete) {
+      const vendorName =
+        state.dropSummary?.vendor_name ||
+        state.drop?.vendor_name ||
+        "Hearth";
+      const customerName = order.customer_name || "Customer";
+      const phone = order.customer_phone || order.phone || "";
+      const smsBody = encodeURIComponent(
+        `Hi ${customerName}, your order is ready for collection. See you soon — ${vendorName}`
+      );
+
+      byId("readyNotifyName").textContent = customerName;
+      byId("readyNotifyPhoneDisplay").textContent = phone;
+      byId("readyNotifyCallBtn").textContent = `Call ${phone}`;
+      byId("readyNotifyCallBtn").href = `tel:${phone}`;
+      byId("readyNotifySmsBtn").href = `sms:${phone}?body=${smsBody}`;
+
+      readyNotifyCallback = onComplete;
+      byId("readyNotifyOverlay").classList.add("open");
+    }
+
+    function closeReadyNotifyModal() {
+      byId("readyNotifyOverlay").classList.remove("open");
+      const cb = readyNotifyCallback;
+      readyNotifyCallback = null;
+      if (cb) cb();
+    }
+    // ---- End T3-10 ----
+
     function attachEvents() {
       const boardStatusFilterBtn = byId("boardStatusFilterBtn");
       const boardStatusFilterPopover = byId("boardStatusFilterPopover");
@@ -1667,13 +1804,48 @@
 
         try {
           if (nextBtn) {
-            await updateOrderStatus(nextBtn.dataset.id, nextBtn.dataset.status);
+            const toStatus = nextBtn.dataset.status;
+            const orderId = nextBtn.dataset.id;
+
+            if (toStatus === "ready") {
+              const order = state.ordersSummary.find((o) => o.order_id === orderId);
+              const phone = order && (order.customer_phone || order.phone);
+              if (phone) {
+                openReadyNotifyModal(order, async function () {
+                  try {
+                    await updateOrderStatus(orderId, toStatus);
+                  } catch (err) {
+                    console.error(err);
+                    showError(err.message || "Status update failed.");
+                  }
+                });
+                return;
+              }
+            }
+
+            await updateOrderStatus(orderId, nextBtn.dataset.status);
           } else if (prevBtn) {
             await updateOrderStatus(prevBtn.dataset.id, prevBtn.dataset.status);
           }
         } catch (err) {
           console.error(err);
           showError(err.message || "Status update failed.");
+        }
+      });
+
+      // T3-10: Notification modal button handlers
+      byId("readyNotifyCallBtn").addEventListener("click", function () {
+        closeReadyNotifyModal();
+      });
+      byId("readyNotifySmsBtn").addEventListener("click", function () {
+        closeReadyNotifyModal();
+      });
+      byId("readyNotifySkipBtn").addEventListener("click", function () {
+        closeReadyNotifyModal();
+      });
+      byId("readyNotifyOverlay").addEventListener("click", function (e) {
+        if (e.target === byId("readyNotifyOverlay")) {
+          closeReadyNotifyModal();
         }
       });
     }
