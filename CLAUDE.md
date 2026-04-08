@@ -225,7 +225,7 @@ T3-8: Stripe integration
 When ready for go-live. Order ID generated, payload structured, TODO
 comment marks exact insertion point.
 
-T3-9: Order page — customer data capture and consent
+T3-9: Order page — customer data capture and consent ✓ COMPLETE
 At checkout capture customer name, email, and postcode. Write to a new
 customers table and link to the order via customer_id. Consent language:
 "We'll use your details to notify you about this and similar local food
@@ -400,7 +400,7 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 6.  T3-6  — Service Board confirmation on status changes
 7.  T3-7  — Order page real-time capacity update
 8.  T3-8  — Stripe integration
-9.  T3-9  — Order page customer data capture and consent
+9.  T3-9  — Order page customer data capture and consent ✓ COMPLETE
 10. T3-10 — Order ready notification
 11. T3-11 — Menu Library delivery and collection suitability flags
 12. T4-1  — Recurring series drop generation
