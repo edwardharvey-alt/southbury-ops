@@ -281,6 +281,7 @@
         height: auto !important;
         max-height: none !important;
         min-height: 200px;
+        overflow-y: auto;
       }
 
       /* --- 11. Order cards: full width, comfortable padding --- */
@@ -465,9 +466,10 @@
       align-self: flex-start;
     }
 
-    /* Fix 3: reinforce independent per-column scroll on desktop */
+    /* Fix 4: independent per-column scroll on desktop with bounded height */
     @media (min-width: 769px) {
       .boardColBody {
+        max-height: calc(100vh - 400px);
         overflow-y: auto;
       }
     }
@@ -978,13 +980,18 @@
 
       if (!capacityCategoryId) return false;
 
-      // Primary: UUID comparison — reliable regardless of name or slug formatting
+      // Primary: category_id UUID match — reliable regardless of name or slug formatting
       if (row.category_id) {
         return row.category_id === capacityCategoryId;
       }
 
-      // Fallback: view did not return category_id (legacy view in use).
-      // Items with capacity_units_snapshot > 0 are capacity items by definition.
+      // Secondary: capacity_impact — enriched from products table for bundle components
+      // that don't carry category_id through the expanded view
+      if (row.capacity_impact !== null && row.capacity_impact !== undefined) {
+        return Number(row.capacity_impact) > 0;
+      }
+
+      // Fallback: legacy view — items with capacity_units_snapshot > 0 are capacity items
       return Number(row.capacity_units_snapshot ?? row.capacity_units ?? 0) > 0;
     }
 
@@ -1537,6 +1544,48 @@
       renderDropSelect();
     }
 
+    // Fix 1 — enrich bundle component rows with capacity_impact from the products table.
+    // v_order_item_detail_expanded returns one row per bundle component but does not
+    // carry category_id or capacity_impact for those components.  We fetch those fields
+    // from products and merge them so isCapacityItem() can classify correctly.
+    async function enrichItemDetailsWithProductData(items) {
+      if (!items || !items.length) return items;
+
+      const missingIds = [...new Set(
+        items
+          .filter((row) => (row.category_id === null || row.category_id === undefined) && row.product_id)
+          .map((row) => String(row.product_id))
+      )];
+
+      if (!missingIds.length) return items;
+
+      const { data: products, error } = await supabase
+        .from("products")
+        .select("id, category_id, capacity_impact")
+        .in("id", missingIds);
+
+      if (error || !products || !products.length) {
+        console.warn("[Service Board] Could not enrich item details with product data:", error?.message || "no products returned");
+        return items;
+      }
+
+      const productMap = new Map(products.map((p) => [String(p.id), p]));
+
+      return items.map((row) => {
+        if ((row.category_id === null || row.category_id === undefined) && row.product_id) {
+          const product = productMap.get(String(row.product_id));
+          if (product) {
+            return {
+              ...row,
+              category_id: product.category_id,
+              capacity_impact: product.capacity_impact
+            };
+          }
+        }
+        return row;
+      });
+    }
+
     async function loadExpandedOrderDetails(dropId) {
       const expanded = await supabase
         .from("v_order_item_detail_expanded")
@@ -1597,7 +1646,7 @@
       state.drop = dropRes.data;
       state.dropSummary = summaryRes.data;
       state.ordersSummary = ordersRes.data || [];
-      state.itemDetails = items || [];
+      state.itemDetails = await enrichItemDetailsWithProductData(items || []);
     }
 
     async function writeStatusEvent(order, fromStatus, toStatus) {
@@ -1619,7 +1668,7 @@
     // ---- Optimistic status change with undo toast ----
 
     function applyStatusOptimistically(orderId, toStatus) {
-      const order = state.ordersSummary.find((o) => o.order_id === orderId);
+      const order = state.ordersSummary.find((o) => String(o.order_id) === String(orderId));
       if (order) order.status = toStatus;
       renderBoard();
       renderWorkflowCounts();
@@ -1821,6 +1870,48 @@
       }
     }
 
+    // Fix 2 — define updateOrderStatus so direct card listeners and handleNextStatus
+    // can trigger status changes through the optimistic/undo-toast path.
+    // The body-level delegation handler (lines below in attachEvents) handles the same
+    // path for events that reach it, but direct listeners stop propagation before that.
+    async function updateOrderStatus(orderId, toStatus) {
+      console.log("[updateOrderStatus] orderId:", orderId, "| type:", typeof orderId, "| toStatus:", toStatus);
+
+      if (pendingChange) await commitPending(true);
+
+      const order = state.ordersSummary.find((o) => String(o.order_id) === String(orderId));
+      console.log(
+        "[updateOrderStatus] match result:",
+        order
+          ? "FOUND (id=" + order.order_id + ", type=" + typeof order.order_id + ")"
+          : "NOT FOUND | state sample=" + JSON.stringify(state.ordersSummary.slice(0, 3).map((o) => ({ id: o.order_id, t: typeof o.order_id })))
+      );
+
+      if (!order) throw new Error("Order not found in current state.");
+
+      const fromStatus = normaliseStatus(order.status);
+      const orderRef = String(orderId).slice(0, 8);
+      const orderSnapshot = { ...order };
+
+      applyStatusOptimistically(orderId, toStatus);
+
+      const timerHandle = setTimeout(async function () {
+        await commitPending(false);
+      }, 5000);
+
+      pendingChange = {
+        orderId,
+        fromStatus,
+        toStatus,
+        orderRef,
+        orderSnapshot,
+        timerHandle,
+        committed: false
+      };
+
+      showUndoToast(orderRef, toStatus);
+    }
+
     // ---- T3-10: Order notification modal ----
     let notifyCallback = null;
 
@@ -1866,6 +1957,7 @@
     }
 
     async function handleNextStatus(orderId, toStatus) {
+      console.log("[handleNextStatus] orderId:", orderId, "| type:", typeof orderId, "| toStatus:", toStatus);
       if (toStatus === "ready" || toStatus === "baking") {
         var order = state.ordersSummary.find(function (o) { return String(o.order_id) === String(orderId); });
         var customerName = (order && order.customer_name) || "Customer";
