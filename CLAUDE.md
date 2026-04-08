@@ -191,6 +191,9 @@ Service Board, Brand Hearth, Drop Studio, Menu Library, Home, Insights.
 
 T3-2: Drop Studio — saveAssignments defensive pattern ✓ COMPLETE
 Replace destructive delete-then-insert with safer upsert pattern.
+Upsert split into two calls — products use onConflict:'drop_id,product_id',
+bundles use onConflict:'drop_id,bundle_id' — matching the two separate
+unique constraints on drop_menu_items.
 
 T3-3: Menu Library — saveSortOrderBatch performance ✓ COMPLETE
 Replace sequential per-row updates with single upsert array call.
