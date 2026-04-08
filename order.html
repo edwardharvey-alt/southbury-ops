@@ -962,6 +962,26 @@
       display:none !important;
     }
 
+    .fieldError{
+      font-size:11px;
+      font-weight:700;
+      color:#991b1b;
+      margin-top:4px;
+      line-height:1.35;
+    }
+
+    .addressGroup{
+      display:grid;
+      gap:8px;
+    }
+
+    .addressGroupLabel{
+      font-size:13px;
+      font-weight:900;
+      color:var(--h-text);
+      margin:0 0 2px;
+    }
+
     @media (max-width:720px){
       .orderPage{
         gap:14px;
@@ -1171,6 +1191,7 @@
           <div class="field">
             <label for="customerPhone">Phone</label>
             <input id="customerPhone" type="tel" placeholder="07..." />
+            <div class="fieldError hidden" id="customerPhoneError"></div>
           </div>
         </div>
 
@@ -1182,6 +1203,7 @@
         <div class="field">
           <label for="customerPostcode">Postcode</label>
           <input id="customerPostcode" type="text" placeholder="e.g. RG10 0JP" />
+          <div class="fieldError hidden" id="customerPostcodeError"></div>
         </div>
 
         <div class="field hidden" id="fulfilmentChoiceWrap">
@@ -1189,9 +1211,25 @@
           <div class="checkoutChoice" id="fulfilmentChoice"></div>
         </div>
 
-        <div class="field" id="addressWrap">
-          <label for="customerAddress" id="addressLabel">Delivery address</label>
-          <textarea id="customerAddress" placeholder="Your full delivery address including house number and street"></textarea>
+        <div id="addressWrap">
+          <p class="addressGroupLabel">Your address</p>
+          <div class="addressGroup">
+            <div class="field">
+              <label for="addrHouse">House number or name</label>
+              <input id="addrHouse" type="text" placeholder="e.g. 12 or Rose Cottage" />
+              <div class="fieldError hidden" id="addrHouseError"></div>
+            </div>
+            <div class="field">
+              <label for="addrStreet">Street</label>
+              <input id="addrStreet" type="text" placeholder="e.g. Southbury Road" />
+              <div class="fieldError hidden" id="addrStreetError"></div>
+            </div>
+            <div class="field">
+              <label for="addrTown">Town or city</label>
+              <input id="addrTown" type="text" placeholder="e.g. Wokingham" />
+              <div class="fieldError hidden" id="addrTownError"></div>
+            </div>
+          </div>
         </div>
 
         <div class="checkoutGrid hidden" id="tableWrap">
@@ -2263,12 +2301,6 @@
         const canUseTable = inferCanUseTable();
         const isCollection = (state.selectedFulfilmentMode || fulfilmentMode) === "collection";
 
-        // Address field is always visible; required only for delivery
-        byId("customerAddress").required = needsAddress;
-        const addressLabelEl = byId("addressLabel");
-        if (addressLabelEl) {
-          addressLabelEl.textContent = needsAddress ? "Delivery address" : "Delivery address (optional)";
-        }
         byId("tableWrap").classList.toggle("hidden", !canUseTable);
         byId("collectionWrap").classList.toggle("hidden", !isCollection);
 
@@ -2508,12 +2540,35 @@
         byId("bundleModalSub").textContent = validationMessage || (getBundleById(state.bundleDraft.bundle_id)?.description || "Choose what goes inside this bundle");
       }
 
+      function formatPostcode(raw) {
+        const stripped = raw.replace(/\s/g, "").toUpperCase();
+        if (stripped.length < 4) return stripped;
+        return stripped.slice(0, -3) + " " + stripped.slice(-3);
+      }
+
+      function showFieldError(inputId, errorId, message) {
+        const errorEl = byId(errorId);
+        if (errorEl) {
+          errorEl.textContent = message;
+          errorEl.classList.remove("hidden");
+        }
+      }
+
+      function clearFieldError(errorId) {
+        const errorEl = byId(errorId);
+        if (errorEl) errorEl.classList.add("hidden");
+      }
+
       function buildCheckoutPayload() {
         const customerName = byId("customerName").value.trim();
         const customerPhone = byId("customerPhone").value.trim();
         const customerEmail = byId("customerEmail").value.trim();
-        const customerPostcode = byId("customerPostcode").value.trim();
-        const customerAddress = byId("customerAddress").value.trim();
+        const rawPostcode = byId("customerPostcode").value.trim();
+        const customerPostcode = rawPostcode ? formatPostcode(rawPostcode) : "";
+        const addrHouse = byId("addrHouse").value.trim();
+        const addrStreet = byId("addrStreet").value.trim();
+        const addrTown = byId("addrTown").value.trim();
+        const deliveryAddress = [addrHouse, addrStreet, addrTown, customerPostcode].filter(Boolean).join(", ");
         const customerNotes = byId("customerNotes").value.trim();
         const tableNumber = byId("tableNumber").value.trim();
         const tableNotes = byId("tableNotes").value.trim();
@@ -2543,7 +2598,7 @@
 
           fulfilment: {
             mode: selectedFulfilmentMode,
-            address: customerAddress || null,
+            address: deliveryAddress || null,
             table_number: tableNumber || null,
             table_notes: tableNotes || null
           },
@@ -2585,19 +2640,61 @@
           return `Your basket exceeds the remaining ${getCategoryDisplayName()} capacity for this service.`;
         }
 
+        // Clear all inline field errors before re-validating
+        clearFieldError("customerPhoneError");
+        clearFieldError("customerPostcodeError");
+        clearFieldError("addrHouseError");
+        clearFieldError("addrStreetError");
+        clearFieldError("addrTownError");
+
+        let hasFieldError = false;
+
         const customerName = byId("customerName").value.trim();
-        const customerPhone = byId("customerPhone").value.trim();
-
         if (!customerName) return "Please enter your name.";
-        if (!customerPhone) return "Please enter your phone number.";
 
-        const customerPostcodeVal = byId("customerPostcode").value.trim();
-        if (!customerPostcodeVal) return "Please enter your postcode.";
-
-        if (inferNeedsAddress()) {
-          const address = byId("customerAddress").value.trim();
-          if (!address) return "Please enter your delivery address.";
+        // Phone: strip spaces and hyphens, validate format
+        const rawPhone = byId("customerPhone").value;
+        const normalizedPhone = rawPhone.replace(/[\s-]/g, "");
+        const phoneRegex = /^(0[0-9]{10}|\+[0-9]{7,15})$/;
+        if (!normalizedPhone) {
+          showFieldError("customerPhone", "customerPhoneError", "Please enter your phone number.");
+          hasFieldError = true;
+        } else if (!phoneRegex.test(normalizedPhone)) {
+          showFieldError("customerPhone", "customerPhoneError", "Please enter a valid UK number (e.g. 07700 900000) or international number starting with +");
+          hasFieldError = true;
         }
+
+        // Postcode: strip spaces, validate, reformat
+        const rawPostcode = byId("customerPostcode").value.trim();
+        const strippedPostcode = rawPostcode.replace(/\s/g, "");
+        const postcodeRegex = /^[A-Z]{1,2}[0-9][0-9A-Z]?[0-9][A-Z]{2}$/i;
+        if (!strippedPostcode) {
+          showFieldError("customerPostcode", "customerPostcodeError", "Please enter your postcode.");
+          hasFieldError = true;
+        } else if (!postcodeRegex.test(strippedPostcode)) {
+          showFieldError("customerPostcode", "customerPostcodeError", "Please enter a valid UK postcode.");
+          hasFieldError = true;
+        }
+
+        // Address fields — always required
+        const addrHouse = byId("addrHouse").value.trim();
+        const addrStreet = byId("addrStreet").value.trim();
+        const addrTown = byId("addrTown").value.trim();
+
+        if (!addrHouse) {
+          showFieldError("addrHouse", "addrHouseError", "Please enter your house number or name.");
+          hasFieldError = true;
+        }
+        if (!addrStreet) {
+          showFieldError("addrStreet", "addrStreetError", "Please enter your street.");
+          hasFieldError = true;
+        }
+        if (!addrTown) {
+          showFieldError("addrTown", "addrTownError", "Please enter your town or city.");
+          hasFieldError = true;
+        }
+
+        if (hasFieldError) return "Please correct the highlighted fields.";
 
         return "";
       }
@@ -2606,15 +2703,22 @@ async function persistOrder() {
   const capacityUnitsConsumed = Math.max(1, getBasketCapacityUnits());
 
   const contactOptIn = byId("contactOptIn").checked;
+  const rawPostcode = byId("customerPostcode").value.trim();
+  const formattedPostcode = rawPostcode ? formatPostcode(rawPostcode) : null;
+  const addrHouse = byId("addrHouse").value.trim();
+  const addrStreet = byId("addrStreet").value.trim();
+  const addrTown = byId("addrTown").value.trim();
+  const deliveryAddress = [addrHouse, addrStreet, addrTown, formattedPostcode].filter(Boolean).join(", ");
+
   const orderRow = {
     drop_id:              state.drop.id,
     customer_name:        byId("customerName").value.trim(),
-    customer_phone:       byId("customerPhone").value.trim(),
+    customer_phone:       byId("customerPhone").value.trim().replace(/[\s-]/g, ""),
     customer_email:       byId("customerEmail").value.trim() || null,
     customer_notes:       byId("customerNotes").value.trim() || null,
-    customer_postcode:    byId("customerPostcode").value.trim() || null,
+    customer_postcode:    formattedPostcode,
     fulfilment_mode:      state.selectedFulfilmentMode || state.drop?.fulfilment_mode || null,
-    delivery_address:     byId("customerAddress").value.trim() || null,
+    delivery_address:     deliveryAddress || null,
     contact_opt_in:       contactOptIn,
     contact_opt_in_scope: contactOptIn ? "both" : null,
     total_pence:          getGrandTotalPence(),
@@ -2815,6 +2919,19 @@ async function handoffToPayment() {
 
             syncBundleDraftFromUi();
           }
+        });
+
+        // Clear inline field errors as customer corrects each field
+        const fieldErrorPairs = [
+          ["customerPhone",   "customerPhoneError"],
+          ["customerPostcode","customerPostcodeError"],
+          ["addrHouse",       "addrHouseError"],
+          ["addrStreet",      "addrStreetError"],
+          ["addrTown",        "addrTownError"],
+        ];
+        fieldErrorPairs.forEach(([inputId, errorId]) => {
+          const el = byId(inputId);
+          if (el) el.addEventListener("input", () => clearFieldError(errorId));
         });
 
         byId("openBasketBtn").addEventListener("click", openBasket);

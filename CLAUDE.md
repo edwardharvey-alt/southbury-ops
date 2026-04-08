@@ -128,8 +128,17 @@ Marketing opt-in: unticked checkbox on checkout form. Label populated
 dynamically with vendor name and host name (if present). Maps to
 contact_opt_in and contact_opt_in_scope on orders table.
 
+Address capture: checkout form collects house number/name, street, town/city,
+and postcode as separate structured fields. These are concatenated into a
+single string ([house], [street], [town], [postcode]) and written to
+delivery_address. Postcode is also stored separately in customer_postcode
+(reformatted with a single canonical space). Phone is stored normalised
+(spaces and hyphens stripped).
+
 Stripe integration is next. Order ID is generated, payload is structured,
 TODO comment marks exact insertion point in handoffToPayment().
+When configuring the Stripe Payment Element, set it to skip address
+collection — Hearth captures the full address at order time.
 
 ## Development backlog
 
