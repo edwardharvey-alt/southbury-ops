@@ -414,6 +414,13 @@
       white-space: nowrap;
       align-self: flex-start;
     }
+
+    /* Fix 3: reinforce independent per-column scroll on desktop */
+    @media (min-width: 769px) {
+      .boardColBody {
+        overflow-y: auto;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1305,7 +1312,7 @@
     }
 
     function renderOrderCard(order) {
-      const isExpanded = state.expandedOrders.has(order.order_id);
+      const isExpanded = state.expandedOrders.has(String(order.order_id));
       const unitsLabel = getCapacityLabel(Number(order.capacity_units_in_order || order.pizzas || 0));
       const capacityTitle = String(getCapacityCategoryLabel() || "Capacity items").toUpperCase();
       const totalValue = formatMoneyPence(order.total_price_pence);
@@ -1361,7 +1368,15 @@
       if (toggleEl) {
         toggleEl.addEventListener("click", function (e) {
           e.stopPropagation();
-          toggleDetails(toggleEl.dataset.id);
+          var id = String(toggleEl.dataset.id);
+          var detailsEl = wrapper.querySelector(".detailsWrap");
+          if (state.expandedOrders.has(id)) {
+            state.expandedOrders.delete(id);
+            if (detailsEl) detailsEl.classList.remove("open");
+          } else {
+            state.expandedOrders.add(id);
+            if (detailsEl) detailsEl.classList.add("open");
+          }
         });
       }
 
@@ -1451,6 +1466,18 @@
     }
 
     async function loadExpandedOrderDetails(dropId) {
+      const expanded = await supabase
+        .from("v_order_item_detail_expanded")
+        .select("*")
+        .eq("drop_id", dropId)
+        .order("created_at", { ascending: true });
+
+      if (!expanded.error) return expanded.data || [];
+
+      console.warn(
+        "[Service Board] v_order_item_detail_expanded unavailable (" + (expanded.error?.message || "unknown error") + ") — falling back to v_order_item_detail_v2."
+      );
+
       const v2 = await supabase
         .from("v_order_item_detail_v2")
         .select("*")
@@ -1460,8 +1487,7 @@
       if (!v2.error) return v2.data || [];
 
       console.warn(
-        "[Service Board] v_order_item_detail_v2 unavailable (" + (v2.error?.message || "unknown error") + ") — falling back to v_order_item_detail. " +
-        "Category matching will use capacity_units_snapshot fallback."
+        "[Service Board] v_order_item_detail_v2 unavailable (" + (v2.error?.message || "unknown error") + ") — falling back to v_order_item_detail."
       );
 
       const legacy = await supabase
@@ -1521,7 +1547,7 @@
     async function updateOrderStatus(orderId, toStatus) {
       showError("");
 
-      const order = state.ordersSummary.find((o) => o.order_id === orderId);
+      const order = state.ordersSummary.find((o) => String(o.order_id) === String(orderId));
       if (!order) throw new Error("Order not found in current state.");
 
       const fromStatus = normaliseStatus(order.status);
@@ -1719,7 +1745,7 @@
 
     async function handleNextStatus(orderId, toStatus) {
       if (toStatus === "ready" || toStatus === "baking") {
-        var order = state.ordersSummary.find(function (o) { return o.order_id === orderId; });
+        var order = state.ordersSummary.find(function (o) { return String(o.order_id) === String(orderId); });
         var customerName = (order && order.customer_name) || "Customer";
         var config = toStatus === "ready"
           ? {
