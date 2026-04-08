@@ -438,6 +438,20 @@
       from { transform: scaleX(1); }
       to   { transform: scaleX(0); }
     }
+
+    /* Fix 4: total value chip replaces time chip on order cards */
+    .orderTotalChip {
+      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--h-text);
+      background: var(--h-bg);
+      border: 1px solid var(--h-border-2);
+      border-radius: 6px;
+      padding: 2px 7px;
+      white-space: nowrap;
+      align-self: flex-start;
+    }
   </style>
 </head>
 <body>
@@ -1353,17 +1367,18 @@
       const isExpanded = state.expandedOrders.has(order.order_id);
       const unitsLabel = getCapacityLabel(Number(order.capacity_units_in_order || order.pizzas || 0));
       const capacityTitle = String(getCapacityCategoryLabel() || "Capacity items").toUpperCase();
+      const totalValue = formatMoneyPence(order.total_price_pence);
 
       const wrapper = document.createElement("div");
       wrapper.className = "orderCard";
       wrapper.innerHTML = `
         <div class="orderCardInner">
           <div class="orderCardTop">
-            <div class="orderHeaderLeft">
-              <div class="orderId">Order #${String(order.order_id).slice(0, 8)}</div>
-              <div class="orderCustomer">${order.customer_name || "Customer"}</div>
+            <div class="orderHeaderLeft" style="min-width:0;">
+              <div class="orderId">Order #${String(order.order_id).slice(-8)}</div>
+              <div class="orderCustomer" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${order.customer_name || "Customer"}</div>
             </div>
-            <div class="timeChip">${formatShortTime(order.created_at)}</div>
+            <div class="orderTotalChip">${totalValue}</div>
           </div>
 
           ${renderActionRow(order.order_id, normaliseStatus(order.status), unitsLabel)}
@@ -1737,34 +1752,47 @@
       }
     }
 
-    // ---- T3-10: Order ready notification ----
-    let readyNotifyCallback = null;
+    // ---- T3-10: Order notification modal ----
+    let notifyCallback = null;
 
-    function openReadyNotifyModal(order, onComplete) {
+    // config: { heading: string, smsText: fn(customerName, vendorName) => string }
+    function openNotifyModal(order, config, onComplete) {
       const vendorName =
         state.dropSummary?.vendor_name ||
         state.drop?.vendor_name ||
         "Hearth";
-      const customerName = order.customer_name || "Customer";
-      const phone = order.customer_phone || order.phone || "";
-      const smsBody = encodeURIComponent(
-        `Hi ${customerName}, your order is ready for collection. See you soon — ${vendorName}`
-      );
+      const customerName = (order && order.customer_name) || "Customer";
+      const phone = (order && (order.customer_phone || order.phone)) || "";
 
-      byId("readyNotifyName").textContent = customerName;
-      byId("readyNotifyPhoneDisplay").textContent = phone;
-      byId("readyNotifyCallBtn").textContent = `Call ${phone}`;
-      byId("readyNotifyCallBtn").href = `tel:${phone}`;
-      byId("readyNotifySmsBtn").href = `sms:${phone}?body=${smsBody}`;
+      var headingEl   = byId("readyNotifyHeading");
+      var nameEl      = byId("readyNotifyName");
+      var phoneEl     = byId("readyNotifyPhoneDisplay");
+      var callBtn     = byId("readyNotifyCallBtn");
+      var smsBtn      = byId("readyNotifySmsBtn");
 
-      readyNotifyCallback = onComplete;
-      byId("readyNotifyOverlay").classList.add("open");
+      if (headingEl) headingEl.textContent = config.heading || "Notify customer?";
+      if (nameEl)    nameEl.textContent = customerName;
+
+      if (phone) {
+        if (phoneEl)  phoneEl.textContent = phone;
+        if (callBtn)  { callBtn.textContent = "Call " + phone; callBtn.href = "tel:" + phone; callBtn.style.display = ""; }
+        if (smsBtn)   { smsBtn.href = "sms:" + phone + "?body=" + encodeURIComponent(config.smsText(customerName, vendorName)); smsBtn.style.display = ""; }
+      } else {
+        if (phoneEl)  phoneEl.textContent = "No phone number on file";
+        if (callBtn)  callBtn.style.display = "none";
+        if (smsBtn)   smsBtn.style.display = "none";
+      }
+
+      notifyCallback = onComplete;
+      var overlay = byId("readyNotifyOverlay");
+      if (overlay) overlay.classList.add("open");
     }
 
-    function closeReadyNotifyModal() {
-      byId("readyNotifyOverlay").classList.remove("open");
-      const cb = readyNotifyCallback;
-      readyNotifyCallback = null;
+    function closeNotifyModal() {
+      var overlay = byId("readyNotifyOverlay");
+      if (overlay) overlay.classList.remove("open");
+      var cb = notifyCallback;
+      notifyCallback = null;
       if (cb) cb();
     }
     // ---- End T3-10 ----
@@ -1972,11 +2000,11 @@
       var _smsBtn        = byId("readyNotifySmsBtn");
       var _skipBtn       = byId("readyNotifySkipBtn");
       var _notifyOverlay = byId("readyNotifyOverlay");
-      if (_callBtn)       _callBtn.addEventListener("click", function () { closeReadyNotifyModal(); });
-      if (_smsBtn)        _smsBtn.addEventListener("click", function () { closeReadyNotifyModal(); });
-      if (_skipBtn)       _skipBtn.addEventListener("click", function () { closeReadyNotifyModal(); });
+      if (_callBtn)       _callBtn.addEventListener("click", function () { closeNotifyModal(); });
+      if (_smsBtn)        _smsBtn.addEventListener("click", function () { closeNotifyModal(); });
+      if (_skipBtn)       _skipBtn.addEventListener("click", function () { closeNotifyModal(); });
       if (_notifyOverlay) _notifyOverlay.addEventListener("click", function (e) {
-        if (e.target === _notifyOverlay) closeReadyNotifyModal();
+        if (e.target === _notifyOverlay) closeNotifyModal();
       });
     }
 
