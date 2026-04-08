@@ -45,7 +45,9 @@ Core belief: great local food should strengthen communities, not bypass them.
 ## Database — key tables
 
 - vendors — vendor identity and brand settings
-- drops — the core unit: each drop has slug, timing, capacity, host, status
+- drops — the core unit: each drop has slug, timing, capacity, host, status,
+  collection_point_description (text), delivery_area_description (text),
+  customer_notes_enabled (boolean, default true)
 - drop_menu_items — items enabled for a specific drop (product or bundle)
 - products — catalogue products (vendor-scoped)
 - bundles — catalogue bundles with bundle_lines and bundle_line_choice_products
@@ -110,12 +112,33 @@ Core belief: great local food should strengthen communities, not bypass them.
 
 Order persistence is complete. order.html writes to:
 - orders (with pizzas legacy field populated from capacity units, minimum 1)
+  Fields captured: customer_name, customer_phone, customer_email,
+  customer_postcode (always required), delivery_address (always shown,
+  required for delivery mode only), fulfilment_mode, customer_notes,
+  contact_opt_in (boolean, default false), contact_opt_in_scope ('both'
+  when opted in), total_pence, drop_id.
 - order_items (item_type, product_id or bundle_id, qty, price_pence,
   capacity_units_snapshot, item_name_snapshot)
 - order_item_selections (for bundle choice selections)
 
+Fulfilment mode selection: shown to customer when drop.fulfilment_mode is
+'mixed' or 'both'. Single-mode drops silently write the drop's mode.
+
+Marketing opt-in: unticked checkbox on checkout form. Label populated
+dynamically with vendor name and host name (if present). Maps to
+contact_opt_in and contact_opt_in_scope on orders table.
+
+Address capture: checkout form collects house number/name, street, town/city,
+and postcode as separate structured fields. These are concatenated into a
+single string ([house], [street], [town], [postcode]) and written to
+delivery_address. Postcode is also stored separately in customer_postcode
+(reformatted with a single canonical space). Phone is stored normalised
+(spaces and hyphens stripped).
+
 Stripe integration is next. Order ID is generated, payload is structured,
 TODO comment marks exact insertion point in handoffToPayment().
+When configuring the Stripe Payment Element, set it to skip address
+collection — Hearth captures the full address at order time.
 
 ## Development backlog
 
@@ -171,17 +194,20 @@ drop-manager.html, drop-menu.html, brand-hearth.html hardcode
 
 ### Tier 3 — Should be done before regular use
 
-T3-1: Mobile responsiveness — operator pages
-Priority order: Service Board → Brand Hearth → Drop Studio →
-Menu Library → Home → Insights.
+T3-1: Mobile responsiveness — operator pages ✓ COMPLETE
+All six operator pages have max-width: 768px treatment:
+Service Board, Brand Hearth, Drop Studio, Menu Library, Home, Insights.
 
-T3-2: Drop Studio — saveAssignments defensive pattern
+T3-2: Drop Studio — saveAssignments defensive pattern ✓ COMPLETE
 Replace destructive delete-then-insert with safer upsert pattern.
+Upsert split into two calls — products use onConflict:'drop_id,product_id',
+bundles use onConflict:'drop_id,bundle_id' — matching the two separate
+unique constraints on drop_menu_items.
 
-T3-3: Menu Library — saveSortOrderBatch performance
+T3-3: Menu Library — saveSortOrderBatch performance ✓ COMPLETE
 Replace sequential per-row updates with single upsert array call.
 
-T3-4: Insights — fix Supabase chaining pattern
+T3-4: Insights — fix Supabase chaining pattern ✓ COMPLETE
 Audit and fix all Supabase query chains to use proper async/await try/catch.
 
 T3-5: Drop Studio — unsaved changes warning
@@ -199,7 +225,7 @@ T3-8: Stripe integration
 When ready for go-live. Order ID generated, payload structured, TODO
 comment marks exact insertion point.
 
-T3-9: Order page — customer data capture and consent
+T3-9: Order page — customer data capture and consent ✓ COMPLETE
 At checkout capture customer name, email, and postcode. Write to a new
 customers table and link to the order via customer_id. Consent language:
 "We'll use your details to notify you about this and similar local food
@@ -226,9 +252,10 @@ T4-1: Recurring series — actually create drops
 Drop Studio has full recurring series UI but no generation function.
 Build createSeriesDrops() — critical for vendors running weekly drops.
 
-T4-2: Order confirmation page
+T4-2: Order confirmation page ✓ COMPLETE
 Post-order destination showing order details, reference number, and
-fulfilment information. Currently no page exists after order insert.
+fulfilment information. order-confirmation.html created; order.html
+redirects to it after successful insert.
 
 T4-3: Insights — complete build
 Fix demand curve chart (buckets by hour not datetime), complete all
@@ -238,17 +265,23 @@ T4-4: Home dashboard — complete build
 After T1-3 fix: enhance dynamic next actions, live pulse data, workspace
 status cards fully wired to real platform state.
 
-T4-5: Drop Studio — duplicate drop improvement
-Currently duplicates timing directly. Should prompt operator to set new
-date explicitly rather than copying old date.
+T4-5: Drop Studio — duplicate drop improvement ✓ COMPLETE
+Timing fields (opens_at, closes_at, delivery_start, delivery_end) set to
+null on duplicate. Form opens on timing pane with persistent notice and
+highlighted date/time fields.
 
 T4-6: Menu Library — delete products, bundles, categories
 Add permanent delete with safety check — warn if item is used in any
 drop menu before allowing deletion.
 
-T4-7: Service Board — order notes and fulfilment details
+T4-7: Service Board — order notes and fulfilment details ✓ COMPLETE
 Surface customer notes, delivery address, and fulfilment mode on order
 cards. Essential for delivery drops.
+
+T4-8: Order form enhancements ✓ COMPLETE
+Address fields (line 1, line 2, town/city, postcode), phone number validation,
+marketing opt-in checkbox. Written to delivery_address and customer_postcode
+on orders table.
 
 T4-12: Post-drop vendor scorecard — pushed Home dashboard summary
 When drop closes, display summary card on Home: fill rate, total revenue,
@@ -396,30 +429,29 @@ reserved exclusively for community members. Dependency: T5-19, T5-11.
 
 ## Recommended next session order
 
-All Tier 1 and Tier 2 items are complete.
+All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 
-1.  T3-1  — Mobile responsiveness (Service Board done; remaining: Brand Hearth,
-            Drop Studio, Menu Library, Home, Insights)
-2.  T3-2  — Drop Studio saveAssignments defensive pattern
-3.  T3-3  — Menu Library saveSortOrderBatch performance
-4.  T3-4  — Insights Supabase chaining pattern
+1.  T3-2  — Drop Studio saveAssignments defensive pattern ✓ COMPLETE
+3.  T3-3  — Menu Library saveSortOrderBatch performance ✓ COMPLETE
+4.  T3-4  — Insights Supabase chaining pattern ✓ COMPLETE
 5.  T3-5  — Drop Studio unsaved changes warning
 6.  T3-6  — Service Board confirmation on status changes
 7.  T3-7  — Order page real-time capacity update
 8.  T3-8  — Stripe integration
-9.  T3-9  — Order page customer data capture and consent
+9.  T3-9  — Order page customer data capture and consent ✓ COMPLETE
 10. T3-10 — Order ready notification
 11. T3-11 — Menu Library delivery and collection suitability flags
 12. T4-1  — Recurring series drop generation
-13. T4-2  — Order confirmation page
+13. T4-2  — Order confirmation page ✓ COMPLETE
 14. T4-3  — Insights complete build
 15. T4-4  — Home dashboard complete build
-16. T4-5  — Drop Studio duplicate drop improvement
+16. T4-5  — Drop Studio duplicate drop improvement ✓ COMPLETE
 17. T4-6  — Menu Library delete with safety check
-18. T4-7  — Service Board order notes and fulfilment details
-19. T4-12 — Post-drop vendor scorecard
-20. T4-13 — Minimal host-facing view
-21. T4-14 — Vendor customer data import
-22. T4-15 — Multiple drops within a single event
-23. T4-16 — Host onboarding as first-class entity
-24. T4-17 — Drop Studio audience targeting and demand preview
+18. T4-7  — Service Board order notes and fulfilment details ✓ COMPLETE
+19. T4-8  — Order form enhancements ✓ COMPLETE
+20. T4-12 — Post-drop vendor scorecard
+21. T4-13 — Minimal host-facing view
+22. T4-14 — Vendor customer data import
+23. T4-15 — Multiple drops within a single event
+24. T4-16 — Host onboarding as first-class entity
+25. T4-17 — Drop Studio audience targeting and demand preview

@@ -504,6 +504,125 @@
       .ins-hero h1{ font-size:26px; }
       .ins-heroStats{ grid-template-columns:1fr; }
     }
+
+    /* ================================================================
+       Mobile Insights — max-width: 768px
+       All layout changes via CSS media queries only.
+       Desktop layout (>768px) is completely unchanged.
+       ================================================================ */
+    @media (max-width: 768px){
+
+      /* --- Navigation: horizontally scrollable, no wrapping --- */
+      .headerBar{
+        flex-direction:column;
+        align-items:stretch;
+        gap:10px;
+        padding:14px;
+      }
+      .brand{ min-width:0; }
+      .nav{
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+        white-space:nowrap;
+        flex-wrap:nowrap;
+        gap:2px;
+        padding-bottom:2px;
+        scrollbar-width:none;
+        justify-content:flex-start;
+      }
+      .nav::-webkit-scrollbar{ display:none; }
+      .nav a{
+        flex-shrink:0;
+        white-space:nowrap;
+        min-height:44px;
+        display:inline-flex;
+        align-items:center;
+      }
+
+      /* --- Hero h1: reduced for mobile (720px handles ≤720; this covers 721–768) --- */
+      .ins-hero h1{
+        font-size:26px;
+      }
+
+      /* --- Toolbars: stack title and button vertically --- */
+      .ins-toolbar{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:10px;
+      }
+      .ins-toolbar .ins-button{
+        width:100%;
+      }
+
+      /* --- Deep dive header: stack title and meta info --- */
+      .ins-deepHeader{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:8px;
+      }
+
+      /* --- Tables: already overflow:auto + min-width:760px; add right-fade hint --- */
+      .ins-tableWrap{
+        -webkit-mask-image:linear-gradient(to right, #000 85%, transparent 100%);
+        mask-image:linear-gradient(to right, #000 85%, transparent 100%);
+      }
+
+      /* --- Prevent horizontal overflow --- */
+      *{ box-sizing:border-box; }
+      body{ overflow-x:hidden; }
+      .container{ max-width:100vw; overflow-x:hidden; }
+
+      /* --- All grid and card containers: fully constrained within viewport --- */
+      .ins-hero,
+      .ins-heroStats,
+      .ins-grid-4,
+      .ins-grid-3,
+      .ins-grid-2,
+      .ins-signalGrid,
+      .ins-deepGrid,
+      .ins-controlGrid,
+      .ins-card,
+      .ins-kpi,
+      .ins-chartCard,
+      .ins-signal{
+        box-sizing:border-box;
+        max-width:100%;
+        width:100%;
+        min-width:0;
+      }
+
+      /* --- Hero: explicit single column so Filters panel stacks below stats --- */
+      .ins-hero{
+        grid-template-columns:1fr;
+      }
+
+      /* --- All multi-column grids: collapse to single column on mobile --- */
+      .ins-grid-4,
+      .ins-grid-3,
+      .ins-grid-2,
+      .ins-signalGrid,
+      .ins-deepGrid,
+      .ins-controlGrid{
+        grid-template-columns:1fr;
+      }
+
+      /* --- Hero stats: keep 2-col at 480px–768px (overrides 720px single-col rule) --- */
+      .ins-heroStats{
+        grid-template-columns:repeat(2, minmax(0,1fr));
+      }
+
+      /* --- Reduce large padding to 16px on mobile --- */
+      .ins-pad-lg{
+        padding:16px;
+      }
+    }
+
+    /* Hero stats: drop to single column below 480px */
+    @media (max-width: 480px){
+      .ins-heroStats{
+        grid-template-columns:1fr;
+      }
+    }
   </style>
 </head>
 
@@ -945,12 +1064,12 @@
       return data?.[0] || null;
     }
 
-    async function fetchAllPages(baseQuery, key='id'){
+    async function fetchAllPages(queryFactory, key='id'){
       let rows = [];
       let from = 0;
       const pageSize = 1000;
       while (true) {
-        const { data, error } = await baseQuery.range(from, from + pageSize - 1);
+        const { data, error } = await queryFactory().range(from, from + pageSize - 1);
         if (error) throw error;
         rows = rows.concat(data || []);
         if (!data || data.length < pageSize) break;
@@ -970,10 +1089,10 @@
       const vendorId = state.vendorId;
 
       const [drops, revenue, items, hosts] = await Promise.all([
-        fetchAllPages(sb.from('v_hearth_drop_stats').select('*').eq('vendor_id', vendorId).order('delivery_start', { ascending:false })),
-        fetchAllPages(sb.from('v_hearth_revenue_over_time').select('*').eq('vendor_id', vendorId).order('order_date', { ascending:true })),
-        fetchAllPages(sb.from('v_item_sales').select('*').eq('vendor_id', vendorId)),
-        fetchAllPages(sb.from('v_host_performance').select('*').eq('vendor_id', vendorId))
+        fetchAllPages(() => sb.from('v_hearth_drop_stats').select('*').eq('vendor_id', vendorId).order('delivery_start', { ascending:false })),
+        fetchAllPages(() => sb.from('v_hearth_revenue_over_time').select('*').eq('vendor_id', vendorId).order('order_date', { ascending:true })),
+        fetchAllPages(() => sb.from('v_item_sales').select('*').eq('vendor_id', vendorId)),
+        fetchAllPages(() => sb.from('v_host_performance').select('*').eq('vendor_id', vendorId))
       ]);
 
       state.allDrops = drops || [];
@@ -986,7 +1105,7 @@
       const dropIds = state.allDrops.map(d => d.drop_id).filter(Boolean);
       state.allOrders = dropIds.length
         ? await fetchAllPages(
-            sb.from('orders')
+            () => sb.from('orders')
               .select('id, drop_id, created_at')
               .in('drop_id', dropIds)
               .order('created_at', { ascending:true })
