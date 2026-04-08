@@ -552,6 +552,33 @@
                       </div>
                     </div>
 
+                    <div class="stageSection" style="margin-top:16px; padding:0;">
+                      <h4 class="stageSectionTitle">Fulfilment suitability</h4>
+                      <p class="stageSectionSub">Helps build delivery-appropriate menus and feeds future fulfilment intelligence</p>
+                      <div class="studioGrid2" style="margin-top:8px;">
+                        <div class="field">
+                          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                            <input type="checkbox" id="productTravelsWell" />
+                            Travels well for delivery
+                          </label>
+                        </div>
+                        <div class="field">
+                          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                            <input type="checkbox" id="productSuitableForCollection" />
+                            Suitable for collection
+                          </label>
+                        </div>
+                        <div class="field">
+                          <label for="productPrepComplexity">Prep complexity</label>
+                          <select id="productPrepComplexity">
+                            <option value="simple">Simple</option>
+                            <option value="standard">Standard</option>
+                            <option value="complex">Complex</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
                     <div class="menuEditorActions">
                       <button class="btnAccent" id="saveProductBtn" type="button">Save Product</button>
                     </div>
@@ -2061,6 +2088,9 @@
           byId("productPricePence").value = "";
           byId("productCapacityUnits").value = "";
           byId("productIsActive").value = "true";
+          byId("productTravelsWell").checked = true;
+          byId("productSuitableForCollection").checked = true;
+          byId("productPrepComplexity").value = "standard";
           byId("toggleProductActiveBtn").textContent = "Deactivate";
           byId("productSelectionLabel").textContent = "No product selected";
           byId("productSelectionMetrics").innerHTML = "";
@@ -2074,6 +2104,9 @@
         byId("productPricePence").value = Number(product.price_pence || 0);
         byId("productCapacityUnits").value = product.capacity_units ?? 0;
         byId("productIsActive").value = String(Boolean(product.is_active));
+        byId("productTravelsWell").checked = product.travels_well !== false;
+        byId("productSuitableForCollection").checked = product.suitable_for_collection !== false;
+        byId("productPrepComplexity").value = product.prep_complexity || "standard";
         byId("toggleProductActiveBtn").textContent = product.is_active ? "Deactivate" : "Activate";
 
         byId("productSelectionLabel").textContent = `${product.name} • ${product.category_name || "No category"} • ${product.is_active ? "active" : "inactive"} • sort ${product.sort_order ?? "—"}`;
@@ -2259,7 +2292,10 @@
           price_pence: Number(byId("productPricePence").value || 0),
           capacity_units: Number(byId("productCapacityUnits").value || 0),
           sort_order: product.sort_order ?? 10,
-          is_active: byId("productIsActive").value === "true"
+          is_active: byId("productIsActive").value === "true",
+          travels_well: byId("productTravelsWell").checked,
+          suitable_for_collection: byId("productSuitableForCollection").checked,
+          prep_complexity: byId("productPrepComplexity").value
         };
 
         if (!payload.name) throw new Error("Product Name is required.");
