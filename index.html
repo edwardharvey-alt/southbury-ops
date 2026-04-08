@@ -1405,6 +1405,38 @@
           </div>
         </div>
       `;
+
+      // Attach direct listeners so clicks don't rely on body-level delegation.
+      // stopPropagation prevents any ancestor from consuming the event first.
+      var nextEl   = wrapper.querySelector(".js-next");
+      var prevEl   = wrapper.querySelector(".js-prev");
+      var toggleEl = wrapper.querySelector(".js-toggle-details");
+
+      if (nextEl) {
+        nextEl.addEventListener("click", function (e) {
+          e.stopPropagation();
+          handleNextStatus(nextEl.dataset.id, nextEl.dataset.status).catch(function (err) {
+            console.error(err);
+            showError(err.message || "Status update failed.");
+          });
+        });
+      }
+      if (prevEl) {
+        prevEl.addEventListener("click", function (e) {
+          e.stopPropagation();
+          updateOrderStatus(prevEl.dataset.id, prevEl.dataset.status).catch(function (err) {
+            console.error(err);
+            showError(err.message || "Status update failed.");
+          });
+        });
+      }
+      if (toggleEl) {
+        toggleEl.addEventListener("click", function (e) {
+          e.stopPropagation();
+          toggleDetails(toggleEl.dataset.id);
+        });
+      }
+
       return wrapper;
     }
 
@@ -1768,7 +1800,6 @@
 
     // config: { heading: string, smsText: fn(customerName, vendorName) => string }
     function openNotifyModal(order, config, onComplete) {
-      console.log("Modal showing:", config && config.heading);
       const vendorName =
         state.dropSummary?.vendor_name ||
         state.drop?.vendor_name ||
@@ -1806,6 +1837,36 @@
       var cb = notifyCallback;
       notifyCallback = null;
       if (cb) cb();
+    }
+
+    async function handleNextStatus(orderId, toStatus) {
+      if (toStatus === "ready" || toStatus === "baking") {
+        var order = state.ordersSummary.find(function (o) { return o.order_id === orderId; });
+        var customerName = (order && order.customer_name) || "Customer";
+        var config = toStatus === "ready"
+          ? {
+              heading: "Notify customer?",
+              smsText: function (name, vendor) {
+                return "Hi " + name + ", your order is ready for collection. See you soon \u2014 " + vendor;
+              }
+            }
+          : {
+              heading: "Let " + customerName + " know?",
+              smsText: function (name, vendor) {
+                return "Hi " + name + ", your order is now being prepared. It will be ready soon \u2014 " + vendor;
+              }
+            };
+        openNotifyModal(order, config, async function () {
+          try {
+            await updateOrderStatus(orderId, toStatus);
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Status update failed.");
+          }
+        });
+        return;
+      }
+      await updateOrderStatus(orderId, toStatus);
     }
     // ---- End T3-10 ----
 
