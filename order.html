@@ -2735,11 +2735,9 @@ async function persistOrder() {
   }
 
   // Step 2 — record customer_relationship (non-blocking)
-  console.log('Attempting relationship insert. customerId:', customerId, 'vendor id check:', state.drop?.vendor_id);
-  console.log('Relationship condition result:', !!(customerId && state.drop?.vendor_id));
   if (customerId && state.drop?.vendor_id) {
     try {
-      const { data: relData, error: relError } = await supabase
+      const { error: relError } = await supabase
         .from("customer_relationships")
         .upsert(
           {
@@ -2752,7 +2750,6 @@ async function persistOrder() {
           { onConflict: "customer_id,owner_id", ignoreDuplicates: true }
         );
 
-      console.log('Relationship insert result:', relData, 'error:', relError);
       if (relError) {
         console.error("Customer relationship insert failed:", relError);
       }
