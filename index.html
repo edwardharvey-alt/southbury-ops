@@ -1737,6 +1737,38 @@
       }
     }
 
+    // ---- T3-10: Order ready notification ----
+    let readyNotifyCallback = null;
+
+    function openReadyNotifyModal(order, onComplete) {
+      const vendorName =
+        state.dropSummary?.vendor_name ||
+        state.drop?.vendor_name ||
+        "Hearth";
+      const customerName = order.customer_name || "Customer";
+      const phone = order.customer_phone || order.phone || "";
+      const smsBody = encodeURIComponent(
+        `Hi ${customerName}, your order is ready for collection. See you soon — ${vendorName}`
+      );
+
+      byId("readyNotifyName").textContent = customerName;
+      byId("readyNotifyPhoneDisplay").textContent = phone;
+      byId("readyNotifyCallBtn").textContent = `Call ${phone}`;
+      byId("readyNotifyCallBtn").href = `tel:${phone}`;
+      byId("readyNotifySmsBtn").href = `sms:${phone}?body=${smsBody}`;
+
+      readyNotifyCallback = onComplete;
+      byId("readyNotifyOverlay").classList.add("open");
+    }
+
+    function closeReadyNotifyModal() {
+      byId("readyNotifyOverlay").classList.remove("open");
+      const cb = readyNotifyCallback;
+      readyNotifyCallback = null;
+      if (cb) cb();
+    }
+    // ---- End T3-10 ----
+
     function attachEvents() {
       const boardStatusFilterBtn = byId("boardStatusFilterBtn");
       const boardStatusFilterPopover = byId("boardStatusFilterPopover");
@@ -1933,6 +1965,22 @@
         };
 
         showUndoToast(orderRef, toStatus);
+      });
+
+      // T3-10: Notification modal button handlers
+      byId("readyNotifyCallBtn").addEventListener("click", function () {
+        closeReadyNotifyModal();
+      });
+      byId("readyNotifySmsBtn").addEventListener("click", function () {
+        closeReadyNotifyModal();
+      });
+      byId("readyNotifySkipBtn").addEventListener("click", function () {
+        closeReadyNotifyModal();
+      });
+      byId("readyNotifyOverlay").addEventListener("click", function (e) {
+        if (e.target === byId("readyNotifyOverlay")) {
+          closeReadyNotifyModal();
+        }
       });
     }
 
