@@ -278,6 +278,11 @@ T4-7: Service Board — order notes and fulfilment details ✓ COMPLETE
 Surface customer notes, delivery address, and fulfilment mode on order
 cards. Essential for delivery drops.
 
+T4-8: Order form enhancements ✓ COMPLETE
+Address fields (line 1, line 2, town/city, postcode), phone number validation,
+marketing opt-in checkbox. Written to delivery_address and customer_postcode
+on orders table.
+
 T4-12: Post-drop vendor scorecard — pushed Home dashboard summary
 When drop closes, display summary card on Home: fill rate, total revenue,
 fastest-selling item, repeat customer count, one plain-English nudge.
@@ -405,9 +410,10 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 16. T4-5  — Drop Studio duplicate drop improvement ✓ COMPLETE
 17. T4-6  — Menu Library delete with safety check
 18. T4-7  — Service Board order notes and fulfilment details ✓ COMPLETE
-19. T4-12 — Post-drop vendor scorecard
-20. T4-13 — Minimal host-facing view
-21. T4-14 — Vendor customer data import
-22. T4-15 — Multiple drops within a single event
-23. T4-16 — Host onboarding as first-class entity
-24. T4-17 — Drop Studio audience targeting and demand preview
+19. T4-8  — Order form enhancements ✓ COMPLETE
+20. T4-12 — Post-drop vendor scorecard
+21. T4-13 — Minimal host-facing view
+22. T4-14 — Vendor customer data import
+23. T4-15 — Multiple drops within a single event
+24. T4-16 — Host onboarding as first-class entity
+25. T4-17 — Drop Studio audience targeting and demand preview
