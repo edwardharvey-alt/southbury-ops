@@ -311,7 +311,10 @@ Expand hosts beyond contextual drop attachment. Hosts need: full profile
 with type, location, audience size, communication channels, service windows
 they want to fill, revenue share willingness, performance history. Simple
 host management page accessible from Drop Studio. Foundation for T5-4
-and T5-9.
+and T5-9. hosts table must include a host_type field (pub, school,
+sports_club, gym, office, neighbourhood, event_space, other) and a
+has_community boolean flag indicating whether this host also has a
+targetable audience beyond the physical event.
 
 T4-17: Drop Studio — audience targeting and demand preview
 When creating a drop, surface: known customers in target area, estimated
@@ -388,6 +391,41 @@ T5-15: Insights — demand and audience intelligence layer
 Major evolution beyond drop performance. Add: customer growth, repeat rate
 trend, postcode cluster analysis, strongest areas, host performance, vendor
 vs host sourced demand, recommended next actions. Dependency: T3-9, T4-16.
+
+T5-16: Organisations — shared entity for hosts and communities
+Introduce an organisations table as the parent entity for both hosts and
+communities. Fields: id, name, type (host/community/both), category,
+location, audience_size, description, contact details, created_at.
+Existing hosts table gains organisation_id foreign key. Communities
+reference the same table. Schema and migration only, no UI required at
+this stage. Dependency: T4-16.
+
+T5-17: Communities — first-class entity
+Community profile: name, parent organisation, audience size, type, dietary
+context, communication channels, collaboration terms, revenue share
+willingness. Community management page in operator nav under new
+Organisations section. Vendors can view communities and express interest
+in collaborating. Dependency: T5-16.
+
+T5-18: Community consent and permissions model
+Consent chain required before vendor can target a community: organisation
+consent plus individual member consent tracked via customer_relationships
+with source = community_invite. Consent status field on community record
+(pending/active/suspended). No vendor can access a community audience
+without active consent status. GDPR compliance is a hard requirement.
+Dependency: T5-17.
+
+T5-19: Community-to-vendor matching and discovery
+Vendor-facing discovery interface surfacing relevant communities by food
+type, location, drop history. Match score based on proximity, category
+alignment, audience size, consent status. Vendor can express interest —
+triggers notification to community contact. Dependency: T5-18.
+
+T5-20: Community-sourced drops
+Drop Studio gains community targeting option alongside host linking. Drop
+communications go to consented community members through available
+channels. Community context shown on drop card. Capacity optionally
+reserved exclusively for community members. Dependency: T5-19, T5-11.
 
 ## Recommended next session order
 
