@@ -2727,7 +2727,7 @@ async function persistOrder() {
       if (customerError) {
         console.error("Customer upsert failed:", customerError);
       } else {
-        customerId = customerData?.id || null;
+        customerId = customerData?.id ?? null;
       }
     } catch (err) {
       console.error("Customer upsert threw:", err);
