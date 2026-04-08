@@ -2526,17 +2526,34 @@
         };
       });
 
-      if (cleanedRows.length) {
-        const { error: upsertError } = await supabase
-          .from("drop_menu_items")
-          .upsert(cleanedRows, { onConflict: "drop_id,product_id,bundle_id" });
+      const productRows = cleanedRows.filter((r) => r.item_type === "product");
+      const bundleRows  = cleanedRows.filter((r) => r.item_type === "bundle");
 
-        if (upsertError) {
-          console.error("drop_menu_items upsert failed", {
-            cleanedRows,
-            upsertError
+      if (productRows.length) {
+        const { error: productUpsertError } = await supabase
+          .from("drop_menu_items")
+          .upsert(productRows, { onConflict: "drop_id,product_id" });
+
+        if (productUpsertError) {
+          console.error("drop_menu_items product upsert failed", {
+            productRows,
+            productUpsertError
           });
-          throw upsertError;
+          throw productUpsertError;
+        }
+      }
+
+      if (bundleRows.length) {
+        const { error: bundleUpsertError } = await supabase
+          .from("drop_menu_items")
+          .upsert(bundleRows, { onConflict: "drop_id,bundle_id" });
+
+        if (bundleUpsertError) {
+          console.error("drop_menu_items bundle upsert failed", {
+            bundleRows,
+            bundleUpsertError
+          });
+          throw bundleUpsertError;
         }
       }
 
