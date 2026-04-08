@@ -2735,7 +2735,7 @@ async function persistOrder() {
   }
 
   // Step 2 — record customer_relationship (non-blocking)
-  if (customerId && state.vendor?.id) {
+  if (customerId && state.drop?.vendor_id) {
     try {
       const { error: relError } = await supabase
         .from("customer_relationships")
@@ -2743,7 +2743,7 @@ async function persistOrder() {
           {
             customer_id:    customerId,
             owner_type:     "vendor",
-            owner_id:       state.vendor.id,
+            owner_id:       state.drop.vendor_id,
             consent_status: contactOptIn ? "granted" : "pending",
             source:         "order"
           },
