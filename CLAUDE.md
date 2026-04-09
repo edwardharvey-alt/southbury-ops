@@ -481,6 +481,90 @@ you already work with a pub or venue — add them as a host and create
 your first drop together." Links to the host creation flow and new drop
 creation. Disappears once the vendor has at least one drop.
 
+T4-24: Customer privacy policy — order page
+
+A privacy policy must be accessible from the order page before any real
+customer data is collected. This is a legal requirement under UK GDPR:
+customers providing name, phone, email, and postcode must be able to
+access a clear privacy notice at the point of data collection.
+
+Two parts:
+
+Part 1 — Privacy policy page
+Create a new static page privacy.html. Content should cover: what data
+is collected at order time (name, phone, email, postcode), why it is
+collected (order fulfilment, drop notifications if opted in), who holds
+it (Hearth as data controller, vendor as data processor for their own
+drops), how long it is retained, and how a customer can request
+deletion. Language must be plain English — not legal boilerplate.
+Consistent with Hearth's calm, considered voice.
+
+Part 2 — Link from order page
+Add a quiet link to privacy.html in the footer of order.html, alongside
+the existing "Powered by Hearth" treatment. Also add a link adjacent to
+the marketing opt-in checkbox so customers can read the policy before
+consenting. Link text: "Privacy policy".
+
+Note: Anthropic cannot provide legal advice. The privacy policy content
+should be reviewed by a qualified legal professional before Hearth
+processes real customer data at scale. This ticket covers the platform
+implementation; legal review is a separate obligation.
+
+T4-25: Vendor terms of participation
+
+Before a vendor can go live with a real drop, they must have accepted
+Hearth's terms of participation. This covers: Hearth's commission model,
+the drop discipline non-negotiables (fixed windows, declared capacity,
+no parallel ordering during a drop), data handling obligations toward
+customers, and community commitments.
+
+Two parts:
+
+Part 1 — Terms page
+Create a new static page vendor-terms.html. Content should cover: what
+Hearth provides, what the vendor commits to, the commercial model (10%
+of drop GMV), data responsibilities, and the right to participate in
+community moments. Language must reflect Hearth's philosophy — these are
+not punitive terms, they are a mutual commitment between Hearth and
+vendors who share its values. Calm, direct, and honest.
+
+Part 2 — Acceptance mechanism
+Add a terms acceptance step to the onboarding flow (onboarding.html), as
+a final confirmation before the completion screen. A checkbox: "I've
+read and agree to Hearth's terms of participation" with a link to
+vendor-terms.html. Write acceptance status to a new
+`vendors.terms_accepted` boolean column and
+`vendors.terms_accepted_at` timestamp column. Do not allow the "Save my
+preferences" button to complete onboarding without this being checked.
+
+Schema addition required before building:
+```sql
+ALTER TABLE vendors
+ADD COLUMN IF NOT EXISTS terms_accepted boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS terms_accepted_at timestamptz DEFAULT NULL;
+```
+
+Note: as with the privacy policy, the terms content should be reviewed
+by a qualified legal professional before Hearth onboards real vendors.
+This ticket covers the platform implementation.
+
+T4-26: Host participation terms
+
+When hosts are first-class entities (T4-16), they will need to accept a
+simple set of participation terms covering: their role in promoting the
+drop, the revenue share or fundraising arrangement, data handling for
+their audience, and their community obligations.
+
+Implementation: a terms acceptance step within the host onboarding flow,
+mirroring the vendor terms pattern. Writes to a `terms_accepted` boolean
+and `terms_accepted_at` timestamp on the hosts table.
+
+Dependency: T4-16 (hosts as first-class entities). Do not build before
+T4-16 is complete.
+
+Note: host terms content requires legal review before use with real
+hosts.
+
 ### Tier 5 — Strategic platform features
 
 T5-1: Delivery optimisation
@@ -633,3 +717,6 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 29. T4-21 — Customer import post-import demand view
 30. T4-22 — Navigation consistency sweep
 31. T4-23 — Drop Studio first drop guidance for new vendors
+32. T4-24 — Customer privacy policy
+33. T4-25 — Vendor terms of participation
+34. T4-26 — Host participation terms
