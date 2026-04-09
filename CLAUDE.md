@@ -419,25 +419,11 @@ Phone number input added to Brand Identity section of Brand Hearth.
 Saves to `vendors.contact_phone`. Pre-populates from saved value on
 load.
 
-T4-19: Onboarding → Brand Hearth continuity
-When a vendor arrives at Brand Hearth having completed onboarding, the
-page should acknowledge that their identity basics are already set. Show
-a quiet confirmation at the top of the Brand Identity section: "Your
-business name and website were carried over from your setup." This
-removes the friction of a vendor feeling they need to re-enter
-information they already provided. No data change — purely a UX state
-based on `onboarding_completed` being true and `display_name` being
-populated.
+T4-19: Onboarding → Brand Hearth continuity ✓ COMPLETE
+Quiet confirmation bar in Brand Identity section when onboarding_completed is true. Adapts message based on whether website is set. Links back to Setup.
 
-T4-20: Onboarding → first drop pathway
-When a vendor completes onboarding and has flagged existing host
-relationships in Q9, the completion screen should offer a direct pathway
-to creating their first drop with that context pre-populated. Button:
-"Create your first drop →" linking to Drop Studio with the host type
-pre-selected where possible. For vendors with no existing host context,
-the button links to Drop Studio without pre-population. This closes the
-gap between setup and action — the moment onboarding ends should feel
-like the beginning of something, not a dead end.
+T4-20: Onboarding → first drop pathway ✓ COMPLETE
+First drop nudge appears on Brand Hearth after saving brand. Suppressed if vendor already has drops. Contextualised by existing_host_contexts if present. Scrolls into view on trigger.
 
 T4-21: Customer import — post-import demand view
 After a vendor completes a customer import (T4-14), surface a
