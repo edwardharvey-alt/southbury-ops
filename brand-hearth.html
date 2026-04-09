@@ -828,10 +828,16 @@
                 <div class="helperText">The small uppercase eyebrow above the vendor name.</div>
               </div>
 
-              <div class="field">
-                <label for="vendorWebsiteUrl">Website URL</label>
-                <input id="vendorWebsiteUrl" type="url" placeholder="https://example.com" />
-                <div class="helperText">Used for the “Visit site” button on the ordering page.</div>
+              <div class=”field”>
+                <label for=”vendorContactPhone”>Contact Phone</label>
+                <input id=”vendorContactPhone” type=”tel” placeholder=”01234 567890” />
+                <div class=”helperText”>Contact phone number for customers and hosts.</div>
+              </div>
+
+              <div class=”field”>
+                <label for=”vendorWebsiteUrl”>Website URL</label>
+                <input id=”vendorWebsiteUrl” type=”url” placeholder=”https://example.com” />
+                <div class=”helperText”>Used for the “Visit site” button on the ordering page.</div>
               </div>
             </div>
           </div>
@@ -1139,6 +1145,7 @@
         display_name: byId("vendorDisplayName").value.trim(),
         tagline: byId("vendorTagline").value.trim(),
         order_label: byId("vendorOrderLabel").value.trim(),
+        contact_phone: byId("vendorContactPhone").value.trim(),
         website_url: byId("vendorWebsiteUrl").value.trim(),
         logo_url: byId("vendorLogoUrl").value.trim(),
         hero_image_url: byId("vendorHeroImageUrl").value.trim(),
@@ -1164,6 +1171,7 @@
       byId("vendorDisplayName").value = vendor.display_name || vendor.name || "";
       byId("vendorTagline").value = vendor.tagline || "";
       byId("vendorOrderLabel").value = vendor.order_label || "Order direct";
+      byId("vendorContactPhone").value = vendor.contact_phone || "";
       byId("vendorWebsiteUrl").value = vendor.website_url || "";
       byId("vendorLogoUrl").value = vendor.logo_url || "";
       byId("vendorHeroImageUrl").value = vendor.hero_image_url || "";
@@ -1470,6 +1478,7 @@
         display_name: form.display_name || null,
         tagline: form.tagline || null,
         order_label: form.order_label || null,
+        contact_phone: form.contact_phone || null,
         website_url: form.website_url || null,
         logo_url: form.logo_url || null,
         hero_image_url: form.hero_image_url || null,
@@ -1527,6 +1536,7 @@
         "vendorDisplayName",
         "vendorTagline",
         "vendorOrderLabel",
+        "vendorContactPhone",
         "vendorWebsiteUrl",
         "brandPrimaryColor",
         "brandSecondaryColor",
