@@ -108,6 +108,51 @@
     /* Hidden on desktop, shown only in mobile media query below */
     .dropCarouselIndicator{ display:none; }
 
+    /* ── Page layout containment — replaces removed hearth.css override block ── */
+    .studioPage{
+      max-width:100% !important;
+      overflow-x:hidden !important;
+    }
+
+    .studioCard,
+    .stageShell,
+    .stageBar,
+    .contextBar,
+    .workspaceOuter,
+    .workspaceInner,
+    .workspaceCard{
+      width:100% !important;
+      max-width:100% !important;
+      min-width:0 !important;
+      box-sizing:border-box !important;
+    }
+
+    #dropBandWrap{
+      overflow-x:auto !important;
+      overflow-y:hidden !important;
+      max-width:100% !important;
+      -webkit-overflow-scrolling:touch !important;
+    }
+
+    .browserToolbar{
+      display:grid !important;
+      grid-template-columns:180px minmax(0,1fr) 220px 220px 110px !important;
+      width:100% !important;
+      max-width:100% !important;
+    }
+
+    .browserToolbar > *{
+      min-width:0 !important;
+    }
+
+    .stagePills{
+      display:grid !important;
+      grid-template-columns:repeat(5, minmax(0,1fr)) !important;
+      width:100% !important;
+      max-width:100% !important;
+      overflow:hidden !important;
+    }
+
     /* ── Drop card spacing — use ID selectors to beat hearth.css end-of-file overrides ── */
     #dropBand{
       gap:16px !important;
@@ -146,6 +191,18 @@
     #dropBand .dropCardActions .btnSmall{
       margin-top:auto !important;
       width:100% !important;
+    }
+
+    @media (max-width:1180px){
+      .browserToolbar{
+        grid-template-columns:1fr 1fr !important;
+      }
+    }
+
+    @media (max-width:900px){
+      .browserToolbar{
+        grid-template-columns:1fr !important;
+      }
     }
 
     @media (max-width: 768px){
