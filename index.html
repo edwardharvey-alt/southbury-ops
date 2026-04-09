@@ -474,8 +474,20 @@
       }
     }
 
-    /* orderCard must not clip the expanded detailsWrap */
-    .orderCard { overflow: visible !important; height: auto !important; }
+    /* Cards must not shrink within the flex column (boardColBody is a fixed-height
+       flex container; default flex-shrink:1 collapses expanded cards back to their
+       shrunk size). flex-shrink:0 lets a card hold its natural height so the column
+       scrolls rather than compressing the card. overflow:visible ensures detailsWrap
+       content is not clipped by the card or its inner wrapper. */
+    .orderCard {
+      overflow: visible !important;
+      height: auto !important;
+      flex-shrink: 0;
+    }
+    .orderCardInner {
+      overflow: visible !important;
+      height: auto !important;
+    }
 
     /* Notify modal — backdrop and content are siblings, not parent/child */
     #notifyWrap { display: none; }
