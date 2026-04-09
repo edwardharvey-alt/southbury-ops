@@ -724,6 +724,35 @@
       .obContinuityBar { flex-wrap: wrap; }
       .obContinuityLink { margin-left: 0; }
     }
+
+    /* ── T4-20: First drop nudge (post brand save) ── */
+    #firstDropNudge {
+      display: none;
+      padding: 16px 18px;
+      border-radius: 16px;
+      background: color-mix(in srgb, var(--h-accent) 5%, white);
+      border: 1px solid color-mix(in srgb, var(--h-accent) 16%, transparent);
+      text-align: center;
+    }
+    .firstDropNudgeTitle {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--h-text);
+      margin: 0 0 4px;
+    }
+    .firstDropNudgeContext {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--h-muted);
+      margin: 0 0 12px;
+      line-height: 1.5;
+    }
+    .firstDropNudgeActions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
   </style>
 </head>
 <body>
@@ -991,6 +1020,15 @@
           <div class="brandActions">
             <button class="btnGhost" id="resetDefaultsBtn" type="button">Reset Colour Defaults</button>
             <button class="btnAccent" id="saveBrandBtnBottom" type="button">Save Brand</button>
+          </div>
+
+          <!-- T4-20: First drop nudge — revealed after brand is saved -->
+          <div id="firstDropNudge">
+            <p class="firstDropNudgeTitle">Your brand is set. Ready to create your first drop?</p>
+            <p class="firstDropNudgeContext" id="firstDropNudgeContext"></p>
+            <div class="firstDropNudgeActions">
+              <a class="btnAccent" id="firstDropNudgeBtn" href="drop-manager.html">Create your first drop →</a>
+            </div>
           </div>
         </div>
 
@@ -1569,12 +1607,49 @@
         state.vendor = { ...state.vendor, ...payload };
         setSaveState("saved");
         showInlineSuccess("Brand updated");
+        showFirstDropNudge(); // T4-20
         showError("");
         applyPreview();
       } catch (error) {
         setSaveState("error", error.message || "Save failed");
         throw error;
       }
+    }
+
+    // T4-20: Reveal the first drop nudge after a successful brand save
+    function showFirstDropNudge() {
+      const nudge = byId('firstDropNudge');
+      const contextEl = byId('firstDropNudgeContext');
+      const btn = byId('firstDropNudgeBtn');
+      if (!nudge) return;
+
+      const HOST_CONTEXT_SHORT = {
+        pub_venue:       'pub or venue',
+        sports_club:     'sports club',
+        school:          'school or college',
+        community_group: 'community group',
+        workplace:       'office or workplace',
+      };
+
+      const savedContexts = state.vendor?.existing_host_contexts || [];
+      const hostContexts = savedContexts.filter(v => v !== 'none');
+
+      let contextText = '';
+      let url = 'drop-manager.html';
+
+      if (hostContexts.length > 0) {
+        const firstContext = hostContexts[0];
+        const shortLabel = HOST_CONTEXT_SHORT[firstContext]
+          || firstContext.replace(/_/g, ' ');
+        url = `drop-manager.html?host_context=${encodeURIComponent(firstContext)}`;
+        contextText = `You mentioned working with a ${shortLabel} \u2014 that\u2019s a good place to start.`;
+      }
+
+      if (btn) btn.href = url;
+      if (contextEl) contextEl.textContent = contextText;
+
+      nudge.style.display = '';
+      nudge.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     function markDirty() {
