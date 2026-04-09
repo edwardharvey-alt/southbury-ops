@@ -816,6 +816,12 @@
                 <div class="helperText">Used as the main customer-facing brand name.</div>
               </div>
 
+              <div class="field">
+                <label for="vendorContactPhone">Contact Phone</label>
+                <input id="vendorContactPhone" type="tel" placeholder="01234 567890" />
+                <div class="helperText">Contact phone number for customers and hosts.</div>
+              </div>
+
               <div class="field" style="grid-column:1 / -1;">
                 <label for="vendorTagline">Tagline</label>
                 <input id="vendorTagline" type="text" placeholder="Wood-fired drops from the farmhouse oven" />
@@ -826,12 +832,6 @@
                 <label for="vendorOrderLabel">Order Label</label>
                 <input id="vendorOrderLabel" type="text" placeholder="Order direct" />
                 <div class="helperText">The small uppercase eyebrow above the vendor name.</div>
-              </div>
-
-              <div class=”field”>
-                <label for=”vendorContactPhone”>Contact Phone</label>
-                <input id=”vendorContactPhone” type=”tel” placeholder=”01234 567890” />
-                <div class=”helperText”>Contact phone number for customers and hosts.</div>
               </div>
 
               <div class=”field”>
@@ -1628,7 +1628,11 @@
       }
     }
 
-    init();
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
   })();
 </script>
 </body>
