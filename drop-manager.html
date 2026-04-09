@@ -108,39 +108,42 @@
     /* Hidden on desktop, shown only in mobile media query below */
     .dropCarouselIndicator{ display:none; }
 
-    /* ── Drop card spacing ── */
-    .dropBand{
+    /* ── Drop card spacing — use ID selectors to beat hearth.css end-of-file overrides ── */
+    #dropBand{
       gap:16px !important;
       padding:4px 2px 14px !important;
     }
 
-    .dropCard{
-      padding:16px !important;
+    #dropBand .dropCard{
       min-width:240px !important;
       max-width:240px !important;
+      width:240px !important;
+      flex:0 0 240px !important;
+      flex-shrink:0 !important;
+      padding:16px !important;
       display:flex !important;
       flex-direction:column !important;
       gap:12px !important;
       box-sizing:border-box !important;
     }
 
-    .dropCardTop{
+    #dropBand .dropCardTop{
       margin-bottom:0 !important;
     }
 
-    .dropCardMeta{
+    #dropBand .dropCardMeta{
       margin-top:0 !important;
     }
 
-    .dropCardStats{
+    #dropBand .dropCardStats{
       margin-top:0 !important;
     }
 
-    .dropCardActions{
+    #dropBand .dropCardActions{
       margin-top:auto !important;
     }
 
-    .dropCardActions .btnSmall{
+    #dropBand .dropCardActions .btnSmall{
       margin-top:auto !important;
       width:100% !important;
     }
