@@ -272,13 +272,79 @@ Post-order destination showing order details, reference number, and
 fulfilment information. order-confirmation.html created; order.html
 redirects to it after successful insert.
 
-T4-3: Insights — complete build
-Fix demand curve chart (buckets by hour not datetime), complete all
-seven sections, ensure narrative intelligence renders with real data.
+T4-3: Insights — drop performance and growing business narrative
 
-T4-4: Home dashboard — complete build
-After T1-3 fix: enhance dynamic next actions, live pulse data, workspace
-status cards fully wired to real platform state.
+Insights answers two questions that matter to a vendor building with
+Hearth:
+
+**Layer 1 — How did my drop perform?**
+Fill rate vs capacity, revenue, order count, fastest-selling items,
+fulfilment mode breakdown, capacity timing curve (when did orders arrive
+across the window).
+
+**Layer 2 — How is Hearth growing my business?**
+Customer growth over time, repeat rate trend, new vs returning customers
+per drop, geographic spread of customer base, host performance (which
+hosts drive the most demand and repeat participation), revenue trend
+across drops.
+
+**Narrative intelligence:**
+Each section should include a plain-English observation in Hearth's
+voice — not a generic insight, but something grounded in the vendor's
+actual data. "Your Friday drops fill faster than Saturdays. Consider
+opening orders earlier." "3 of your last 5 drops sold out. You may have
+room to increase capacity." Language must be calm, supportive, and
+non-judgmental — consistent with the Insights vocabulary: Signals,
+Momentum, What's working.
+
+Fix demand curve chart (buckets by hour not datetime). Complete all seven
+sections. Ensure all views referenced are live in Supabase before
+building.
+
+Dependencies: real drop data, T3-9 (customer capture — complete)
+
+T4-4: Home dashboard — intelligence surface and next action centre
+
+The Home dashboard is where the Hearth model becomes visible to the
+vendor. It is not a workspace landing page. It is the place where a
+vendor understands what they have built, what is working, and what to
+do next.
+
+Two distinct states based on onboarding pathway and drop history:
+
+**Pre-first-drop state** (vendor has completed onboarding but not yet
+run a drop):
+- If `data_posture = rich`: primary action is "Import your customers"
+  (T4-14), with supporting context explaining that Hearth will use their
+  existing audience to identify where demand is strongest
+- If `data_posture = light`: primary action is "Create your first drop",
+  with a suggestion to start with an existing host relationship if
+  `existing_host_contexts` is populated
+- Setup completion status card — shows which of Brand Hearth, Menu
+  Library, and Drop Studio are ready
+- Onboarding summary — reflects back what the vendor told us about
+  themselves and their operating model
+
+**Active state** (vendor has run at least one drop):
+- Audience card: total known customers, new customers this month, repeat
+  rate. Framed as "your audience" not "your data"
+- Demand signal card: strongest postcode clusters from customer geography.
+  Feeds directly from recommendation engine (T5-9)
+- Next recommended drop card: plain-English recommendation with a "Create
+  this drop" CTA pre-populated in Drop Studio. Shows "Signals are
+  building" if insufficient data
+- Recent drop performance: last completed drop — fill rate, revenue, new
+  customers added. One plain-English observation
+- Host and community summary: active hosts, last activation date, next
+  opportunity
+- Quick actions: Create drop, Import customers, View insights
+
+The dashboard must feel calm and considered — never busy, never
+dashboard-for-dashboard's-sake. Every element earns its place by
+pointing to a real action or surfacing a genuine signal.
+
+Dependencies: T4-14 (customer import), T4-16 (hosts as first-class
+entities), T5-9 (recommendation engine V1)
 
 T4-5: Drop Studio — duplicate drop improvement ✓ COMPLETE
 Timing fields (opens_at, closes_at, delivery_start, delivery_end) set to
@@ -298,10 +364,24 @@ Address fields (line 1, line 2, town/city, postcode), phone number validation,
 marketing opt-in checkbox. Written to delivery_address and customer_postcode
 on orders table.
 
-T4-12: Post-drop vendor scorecard — pushed Home dashboard summary
-When drop closes, display summary card on Home: fill rate, total revenue,
-fastest-selling item, repeat customer count, one plain-English nudge.
-Dependency: T3-9 for repeat customer count.
+T4-12: Post-drop scorecard — making the compounding asset visible
+
+When a drop closes, the Home dashboard surfaces a scorecard that frames
+the drop not just as a revenue event but as a moment that grew the
+vendor's audience.
+
+Content: orders placed, revenue, fill rate, fastest-selling item, new
+customers added tonight, customers who have ordered before. One
+plain-English observation in Hearth's voice.
+
+Framing example: "Tonight you served 23 customers. 18 are new to your
+audience. 4 have ordered from you before — your repeat rate is growing."
+
+This is the moment a vendor first sees that Hearth is building something
+for them beyond a single service. The language must make the compounding
+effect tangible without overstating it.
+
+Dependency: T3-9 (customer capture — complete)
 
 T4-13: Minimal host-facing view
 Read-only page via drop shareable link. Content: drop name, date, time,
@@ -336,6 +416,71 @@ When creating a drop, surface: known customers in target area, estimated
 demand range from historical data, suggested host if one exists nearby.
 Pre-drop confidence indicator. Dependency: T3-9.
 
+Priority note: should be built immediately after T4-14 (customer import)
+and T5-9 (recommendation engine V1) are complete. This is the moment
+Drop Studio becomes visibly intelligent — a vendor creating a drop sees
+how many known customers are in the target area before they commit.
+Strategically important, not just a nice-to-have.
+
+T4-18: Brand Hearth — add contact phone field
+Brand Hearth currently does not expose `contact_phone` as an editable
+field, even though the column was added to the vendors table during
+onboarding (T5-13). Add a phone number input to the Brand Identity
+section of Brand Hearth, between the display name and tagline fields.
+Saves to `vendors.contact_phone`. Pre-populates from saved value on
+load. No schema change required.
+
+T4-19: Onboarding → Brand Hearth continuity
+When a vendor arrives at Brand Hearth having completed onboarding, the
+page should acknowledge that their identity basics are already set. Show
+a quiet confirmation at the top of the Brand Identity section: "Your
+business name and website were carried over from your setup." This
+removes the friction of a vendor feeling they need to re-enter
+information they already provided. No data change — purely a UX state
+based on `onboarding_completed` being true and `display_name` being
+populated.
+
+T4-20: Onboarding → first drop pathway
+When a vendor completes onboarding and has flagged existing host
+relationships in Q9, the completion screen should offer a direct pathway
+to creating their first drop with that context pre-populated. Button:
+"Create your first drop →" linking to Drop Studio with the host type
+pre-selected where possible. For vendors with no existing host context,
+the button links to Drop Studio without pre-population. This closes the
+gap between setup and action — the moment onboarding ends should feel
+like the beginning of something, not a dead end.
+
+T4-21: Customer import — post-import demand view
+After a vendor completes a customer import (T4-14), surface a
+post-import summary showing: total customers imported, geographic
+breakdown by outward postcode, top three demand clusters with customer
+counts. Plain-English framing: "Your strongest area is RG10 with 34
+customers. That's a good starting point for your first neighbourhood
+drop." This is the moment the recommendation engine becomes real for
+data-rich vendors. The summary should appear on the Home dashboard and
+be accessible from Insights.
+
+Dependency: T4-14 (customer import)
+
+T4-22: Navigation consistency sweep
+Audit all operator pages to confirm "Setup" appears in the nav
+consistently and links to `onboarding.html`. Pages to check:
+`home.html`, `brand-hearth.html`, `drop-menu.html`, `drop-manager.html`,
+`index.html` (Service Board), `insights.html`, `order-confirmation.html`.
+Nav order must be consistent across all pages: Home, Brand Hearth, Menu
+Library, Drop Studio, Service Board, Insights, Setup. Note: Setup should
+not appear on `order.html` as that is a customer-facing page.
+
+T4-23: Drop Studio — first drop guidance for new vendors
+When a vendor opens Drop Studio for the first time (no existing drops),
+surface a quiet guidance state above the drop list: "Ready to create
+your first drop? Start with a host you know — it's the fastest way to
+fill capacity and build your audience." If the vendor flagged existing
+host relationships in onboarding, reference that context: "You mentioned
+you already work with a pub or venue — add them as a host and create
+your first drop together." Links to the host creation flow and new drop
+creation. Disappears once the vendor has at least one drop.
+
 ### Tier 5 — Strategic platform features
 
 T5-1: Delivery optimisation
@@ -355,9 +500,7 @@ T5-4: Marketplace evolution — host-to-vendor matching
 Hosts request drops, vendors accept. Vendors declare availability windows
 and service areas. Dynamic matching between supply and demand.
 
-T5-5: Vendor onboarding flow
-Structured journey for new vendors: brand setup → menu build →
-first drop → publish. No self-serve onboarding exists yet.
+T5-5: Vendor onboarding flow — RETIRED — absorbed by T5-13
 
 T5-6: Customer accounts
 Order history, saved addresses, preferred drops. Builds repeat
@@ -388,12 +531,15 @@ platforms, booking systems, POS exports. Two vendor pathways: data-rich
 vendors fast-track to recommendations, data-light vendors build through
 drops.
 
-T5-13: Vendor onboarding — two distinct pathways
-Structured onboarding that forks by vendor type. Replaces and expands
-T5-5. Data-rich pathway: fast-track to customer import and recommendation
-engine, suggested first drop from existing data. Data-light pathway:
-host-first approach, conservative capacity, audience building through
-drops.
+T5-13: Vendor onboarding — two distinct pathways ✓ COMPLETE
+Structured onboarding journey capturing vendor identity (business name,
+phone, website), operating model, customer data posture, geographic
+context, existing host relationships, and operating preferences.
+Two-pathway logic implemented: data-rich vendors routed toward customer
+import and demand targeting; data-light vendors routed toward host-led
+first drop. Onboarding preferences written to vendors table and
+pre-populate Brand Hearth automatically. Revisitable at any time via
+Setup in nav.
 
 T5-14: Home page — demand orchestration dashboard
 Major evolution from workspace landing to decision dashboard. Above fold:
@@ -402,10 +548,21 @@ health, action status. Replace conceptual panels with tactical signals.
 Add workspace cards for Audience, Hosts, Comms. Dependency: T3-9,
 T4-16, T5-9.
 
+Strategic framing: a vendor using Hearth at maturity does not just
+operate a location — they operate a network of customers, communities,
+and demand that can be activated in different places, at different times,
+in different ways. This dashboard is where that network becomes visible
+and actionable.
+
 T5-15: Insights — demand and audience intelligence layer
 Major evolution beyond drop performance. Add: customer growth, repeat rate
 trend, postcode cluster analysis, strongest areas, host performance, vendor
 vs host sourced demand, recommended next actions. Dependency: T3-9, T4-16.
+
+Strategic framing: the goal of this layer is to make the compounding
+asset tangible. Every drop adds to something. This surface shows what
+has been built, where it is strongest, and what it is worth — in plain
+language a vendor can act on.
 
 T5-16: Organisations — shared entity for hosts and communities
 Introduce an organisations table as the parent entity for both hosts and
@@ -458,15 +615,21 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 11. T3-11 — Menu Library delivery and collection suitability flags
 12. T4-1  — Recurring series drop generation
 13. T4-2  — Order confirmation page ✓ COMPLETE
-14. T4-3  — Insights complete build
-15. T4-4  — Home dashboard complete build
+14. T4-3  — Insights drop performance and growing business narrative
+15. T4-4  — Home dashboard intelligence surface and next action centre
 16. T4-5  — Drop Studio duplicate drop improvement ✓ COMPLETE
 17. T4-6  — Menu Library delete with safety check
 18. T4-7  — Service Board order notes and fulfilment details ✓ COMPLETE
 19. T4-8  — Order form enhancements ✓ COMPLETE
-20. T4-12 — Post-drop vendor scorecard
+20. T4-12 — Post-drop scorecard
 21. T4-13 — Minimal host-facing view
 22. T4-14 — Vendor customer data import
 23. T4-15 — Multiple drops within a single event
 24. T4-16 — Host onboarding as first-class entity
 25. T4-17 — Drop Studio audience targeting and demand preview
+26. T4-18 — Brand Hearth add contact phone field
+27. T4-19 — Onboarding to Brand Hearth continuity
+28. T4-20 — Onboarding to first drop pathway
+29. T4-21 — Customer import post-import demand view
+30. T4-22 — Navigation consistency sweep
+31. T4-23 — Drop Studio first drop guidance for new vendors
