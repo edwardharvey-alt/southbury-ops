@@ -274,6 +274,9 @@ T4-6: Menu Library — delete products, bundles, categories
 Add permanent delete with safety check — warn if item is used in any
 drop menu before allowing deletion.
 
+T4-6b: Vendor onboarding flow — type and operating model
+Before building further platform intelligence, establish a structured onboarding flow that understands the vendor and how they want to operate. Onboarding captures: vendor type (restaurant / food truck / caterer / pop-up chef / other), operating model (community drops / event-based / neighbourhood delivery / mixed), whether they have an existing customer base (data-rich or data-light pathway), preferred drop cadence, and typical capacity range. Answers drive: platform defaults in Drop Studio, which features are surfaced prominently, what Insights prioritises, and which onboarding pathway is followed. Replaces and absorbs T5-5 and T5-13. Brand Hearth image refresh and font colour (previously T4-6a) to be incorporated into this flow as part of brand setup step. Dependencies: none — this should be designed before T4-16, T4-17, and T5-9 are built as it will influence all three.
+
 T4-7: Service Board — order notes and fulfilment details ✓ COMPLETE
 Surface customer notes, delivery address, and fulfilment mode on order
 cards. Essential for delivery drops.
