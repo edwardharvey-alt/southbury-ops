@@ -141,13 +141,16 @@
 
     /* ── Options grid ── */
     .optionsGrid{
-      display:grid;
-      grid-template-columns:repeat(auto-fill, minmax(160px, 1fr));
+      display:flex;
+      flex-wrap:wrap;
       gap:8px;
     }
 
     /* ── Choice cards (onboardingOption) ── */
     .onboardingOption{
+      width:160px;
+      flex:0 0 160px;
+      box-sizing:border-box;
       border:1px solid var(--h-border);
       border-radius:16px;
       background:#fff;
@@ -155,7 +158,7 @@
       display:flex;
       gap:10px;
       align-items:flex-start;
-      align-self:start;
+      align-self:flex-start;
       cursor:pointer;
       transition:border-color .15s, background .15s;
       user-select:none;
@@ -316,10 +319,14 @@
     /* ── Mobile ── */
     @media (max-width:768px){
       .progressLabel{ display:none; }
-      .optionsGrid{ grid-template-columns:1fr; }
+      .onboardingOption{ width:100%; flex:0 0 100%; }
       .obStageCard{ padding:16px 14px; border-radius:18px; }
       .brandActions{ flex-direction:column; align-items:stretch; }
       .brandActions .btnAccent{ width:100%; min-height:44px; font-size:13px; }
+    }
+
+    @media (max-width:480px){
+      .onboardingOption{ width:100%; flex:0 0 100%; }
     }
   </style>
 </head>
@@ -577,6 +584,61 @@
                 </label>
               </div>
             </div>
+            <!-- Q9 -->
+            <div class="questionBlock">
+              <p class="questionLabel">Do you already have venues or community groups you deliver to?</p>
+              <p class="questionSub">Select all that apply.</p>
+              <div class="optionsGrid" id="q9Grid" data-question="existing_host_contexts" data-multi="true">
+                <label class="onboardingOption">
+                  <input type="checkbox" name="existing_host_contexts" value="pub_venue" />
+                  <span class="optionIndicator"></span>
+                  <div>
+                    <div class="optionTitle">A pub, bar or venue</div>
+                    <div class="optionSub">Regular weekly or monthly nights</div>
+                  </div>
+                </label>
+                <label class="onboardingOption">
+                  <input type="checkbox" name="existing_host_contexts" value="sports_club" />
+                  <span class="optionIndicator"></span>
+                  <div>
+                    <div class="optionTitle">A sports club</div>
+                    <div class="optionSub">Match days or events</div>
+                  </div>
+                </label>
+                <label class="onboardingOption">
+                  <input type="checkbox" name="existing_host_contexts" value="school" />
+                  <span class="optionIndicator"></span>
+                  <div>
+                    <div class="optionTitle">A school or college</div>
+                    <div class="optionSub">Fundraisers or term-time drops</div>
+                  </div>
+                </label>
+                <label class="onboardingOption">
+                  <input type="checkbox" name="existing_host_contexts" value="community_group" />
+                  <span class="optionIndicator"></span>
+                  <div>
+                    <div class="optionTitle">A community group</div>
+                    <div class="optionSub">Residents, associations, local groups</div>
+                  </div>
+                </label>
+                <label class="onboardingOption">
+                  <input type="checkbox" name="existing_host_contexts" value="workplace" />
+                  <span class="optionIndicator"></span>
+                  <div>
+                    <div class="optionTitle">An office or workplace</div>
+                    <div class="optionSub">Lunch or regular delivery</div>
+                  </div>
+                </label>
+                <label class="onboardingOption">
+                  <input type="checkbox" name="existing_host_contexts" value="none" />
+                  <span class="optionIndicator"></span>
+                  <div>
+                    <div class="optionTitle">Not yet</div>
+                    <div class="optionSub">I'd be building these from scratch</div>
+                  </div>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -716,6 +778,7 @@
       primary_goal: [],
       customer_data_posture: null,
       customer_geography: null,
+      existing_host_contexts: [],
       typical_capacity_range: null,
       preferred_fulfilment: null,
       preferred_cadence: null,
@@ -802,6 +865,40 @@
       });
     }
 
+    // ── Host context grid — mutual exclusion for "none" ───────────────────
+    function wireHostContextGrid(gridId){
+      const grid = byId(gridId);
+      if (!grid) return;
+      const question = grid.dataset.question;
+
+      grid.addEventListener('change', (e) => {
+        const changed = e.target;
+        const allInputs = [...grid.querySelectorAll('input')];
+
+        if (changed.value === 'none' && changed.checked) {
+          // "Not yet" selected — deselect everything else
+          allInputs.forEach(input => {
+            if (input.value !== 'none') input.checked = false;
+          });
+        } else if (changed.value !== 'none' && changed.checked) {
+          // Any other selected — deselect "Not yet"
+          const noneInput = grid.querySelector('input[value="none"]');
+          if (noneInput) noneInput.checked = false;
+        }
+
+        // Sync state — store ['none'] so stage2Complete() can detect a selection
+        state[question] = allInputs.filter(i => i.checked).map(i => i.value);
+
+        // Update active styling
+        grid.querySelectorAll('.onboardingOption').forEach(card => {
+          const input = card.querySelector('input');
+          card.classList.toggle('active', input.checked);
+        });
+
+        evaluate();
+      });
+    }
+
     // ── Stage reveal ───────────────────────────────────────────────────────
     let stage2Revealed = false;
     let stage3Revealed = false;
@@ -811,7 +908,7 @@
     }
 
     function stage2Complete(){
-      return state.customer_data_posture && state.customer_geography;
+      return state.customer_data_posture && state.customer_geography && state.existing_host_contexts.length > 0;
     }
 
     function stage3Complete(){
@@ -905,6 +1002,8 @@
       if (vendor.primary_goal)          applySelection('q3Grid', vendor.primary_goal);
       if (vendor.customer_data_posture) applySelection('q4Grid', vendor.customer_data_posture);
       if (vendor.customer_geography)    applySelection('q5Grid', vendor.customer_geography);
+      if (vendor.existing_host_contexts && vendor.existing_host_contexts.length > 0)
+                                        applySelection('q9Grid', vendor.existing_host_contexts);
       if (vendor.typical_capacity_range)applySelection('q6Grid', vendor.typical_capacity_range);
       if (vendor.preferred_fulfilment)  applySelection('q7Grid', vendor.preferred_fulfilment);
       if (vendor.preferred_cadence)     applySelection('q8Grid', vendor.preferred_cadence);
@@ -954,16 +1053,17 @@
       const dataPosture = state.customer_data_posture === 'rich' ? 'rich' : 'light';
 
       const payload = {
-        vendor_type:            state.vendor_type,
-        delivery_model:         state.delivery_model,
-        primary_goal:           state.primary_goal,
-        customer_data_posture:  state.customer_data_posture,
-        data_posture:           dataPosture,
-        customer_geography:     state.customer_geography,
-        typical_capacity_range: state.typical_capacity_range,
-        preferred_fulfilment:   state.preferred_fulfilment,
-        preferred_cadence:      state.preferred_cadence,
-        onboarding_completed:   true,
+        vendor_type:             state.vendor_type,
+        delivery_model:          state.delivery_model,
+        primary_goal:            state.primary_goal,
+        customer_data_posture:   state.customer_data_posture,
+        data_posture:            dataPosture,
+        customer_geography:      state.customer_geography,
+        existing_host_contexts:  state.existing_host_contexts.includes('none') ? [] : state.existing_host_contexts,
+        typical_capacity_range:  state.typical_capacity_range,
+        preferred_fulfilment:    state.preferred_fulfilment,
+        preferred_cadence:       state.preferred_cadence,
+        onboarding_completed:    true,
       };
 
       try {
@@ -1001,6 +1101,7 @@
         wireGrid('q3Grid');
         wireGrid('q4Grid');
         wireGrid('q5Grid');
+        wireHostContextGrid('q9Grid');
         wireGrid('q6Grid');
         wireGrid('q7Grid');
         wireGrid('q8Grid');
