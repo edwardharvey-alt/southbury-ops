@@ -141,28 +141,35 @@
 
     /* ── Options grid ── */
     .optionsGrid{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      align-items:flex-start;
+      display:flex !important;
+      flex-wrap:wrap !important;
+      gap:8px !important;
+      align-items:flex-start !important;
     }
 
     /* ── Choice cards (onboardingOption) ── */
     .onboardingOption{
-      width:160px;
-      flex:0 0 auto;
-      box-sizing:border-box;
+      min-height:72px !important;
+      display:flex !important;
+      flex-direction:row !important;
+      align-items:flex-start !important;
+      gap:10px !important;
+      padding:12px 14px !important;
+      box-sizing:border-box !important;
+      width:160px !important;
+      flex-shrink:0 !important;
+      flex-grow:0 !important;
       border:1px solid var(--h-border);
       border-radius:16px;
       background:#fff;
-      padding:12px 14px;
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      align-self:flex-start;
       cursor:pointer;
       transition:border-color .15s, background .15s;
       user-select:none;
+    }
+
+    /* Q9 tiles have longer labels — give them more room */
+    #q9Grid .onboardingOption{
+      min-height:88px !important;
     }
 
     .onboardingOption input{
@@ -221,6 +228,18 @@
       color:var(--h-muted);
       margin-top:3px;
       line-height:1.35;
+    }
+
+    /* ── Flow wrapper — progress + stage cards ── */
+    #flowWrapper{
+      display:grid;
+      gap:16px;
+    }
+
+    /* ── Stage cards container — 24px between stage cards ── */
+    .stageCards{
+      display:grid;
+      gap:24px;
     }
 
     /* ── Stage wrapper reveal ── */
@@ -407,7 +426,7 @@
     }
 
     @media (max-width:500px){
-      .onboardingOption{ width:100%; flex:0 0 100%; }
+      .onboardingOption{ width:100% !important; flex-shrink:1 !important; flex-grow:1 !important; }
     }
   </style>
 </head>
@@ -471,6 +490,9 @@
             <span class="progressLabel" id="label3">How you operate</span>
           </div>
         </div>
+
+        <!-- Stage cards — 24px gap between each stage -->
+        <div class="stageCards">
 
         <!-- ══════════════════════════════════════ -->
         <!-- STAGE 1 — Who you are                 -->
@@ -838,6 +860,8 @@
             </div>
           </div>
         </div>
+
+        </div><!-- /stageCards -->
 
       </div><!-- /flowWrapper -->
 
