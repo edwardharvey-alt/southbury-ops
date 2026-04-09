@@ -99,6 +99,21 @@ Core belief: great local food should strengthen communities, not bypass them.
    When inserting orders, populate pizzas with the capacity units consumed
    (minimum 1) until this field is formally migrated away.
 
+9. hearth.css contains page-specific override blocks — always check before
+   adding CSS.
+   hearth.css has historically had page-specific !important blocks appended
+   to the end of the file (e.g. "DROP STUDIO HARD WIDTH RESET"). These blocks
+   use class selectors with !important and will silently override page-level
+   <style> block rules that use the same selectors and flag.
+   When CSS changes are not applying as expected:
+   - Check the end of hearth.css for page-specific override blocks targeting
+     the same selectors
+   - If a hearth.css block is overriding a page fix, remove the hearth.css
+     block and apply the correct rule in the page <style> block using an ID
+     selector (#elementId) for guaranteed specificity
+   - Never add new page-specific rules to hearth.css — all page-specific
+     styles belong in the page's own <style> block
+
 ## Brand and tone
 
 - Calm, assured, warm, considered, local
