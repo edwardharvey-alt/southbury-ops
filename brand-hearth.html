@@ -1607,7 +1607,7 @@
         state.vendor = { ...state.vendor, ...payload };
         setSaveState("saved");
         showInlineSuccess("Brand updated");
-        showFirstDropNudge(); // T4-20
+        await showFirstDropNudge(); // T4-20
         showError("");
         applyPreview();
       } catch (error) {
@@ -1617,11 +1617,23 @@
     }
 
     // T4-20: Reveal the first drop nudge after a successful brand save
-    function showFirstDropNudge() {
+    async function showFirstDropNudge() {
       const nudge = byId('firstDropNudge');
       const contextEl = byId('firstDropNudgeContext');
       const btn = byId('firstDropNudgeBtn');
-      if (!nudge) return;
+      if (!nudge || !state.vendor?.id) return;
+
+      // Suppress if vendor already has drops — nudge is for first-timers only
+      try {
+        const { count, error } = await supabase
+          .from('drops')
+          .select('id', { count: 'exact', head: true })
+          .eq('vendor_id', state.vendor.id);
+
+        if (error || count > 0) return;
+      } catch (e) {
+        return;
+      }
 
       const HOST_CONTEXT_SHORT = {
         pub_venue:       'pub or venue',
