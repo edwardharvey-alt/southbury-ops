@@ -336,9 +336,17 @@
       line-height:1.5;
     }
 
+    #filterGrid{
+      grid-template-columns:1fr 1fr 1fr;
+    }
+
     #deepDiveSelector{
       margin-bottom:14px;
-      max-width:320px;
+      max-width:480px;
+    }
+
+    #overviewGrid{
+      margin-top:14px;
     }
 
     .ins-deepHeader{
@@ -497,7 +505,8 @@
       .ins-signalGrid{
         grid-template-columns:1fr;
       }
-      .ins-controlGrid{
+      .ins-controlGrid,
+      #filterGrid{
         grid-template-columns:1fr;
       }
       .ins-heroStats{
@@ -607,7 +616,8 @@
       .ins-grid-2,
       .ins-signalGrid,
       .ins-deepGrid,
-      .ins-controlGrid{
+      .ins-controlGrid,
+      #filterGrid{
         grid-template-columns:1fr;
       }
 
@@ -698,17 +708,16 @@
           </div>
 
           <div class="ins-controls" style="margin-top:14px;">
-            <div>
-              <label class="ins-label" for="rangeSelect">Date range</label>
-              <select class="ins-select" id="rangeSelect">
-                <option value="30">Last 30 days</option>
-                <option value="90" selected>Last 90 days</option>
-                <option value="365">Last 12 months</option>
-                <option value="all">All time</option>
-              </select>
-            </div>
-
-            <div class="ins-controlGrid">
+            <div class="ins-controlGrid" id="filterGrid">
+              <div>
+                <label class="ins-label" for="rangeSelect">Date range</label>
+                <select class="ins-select" id="rangeSelect">
+                  <option value="30">Last 30 days</option>
+                  <option value="90" selected>Last 90 days</option>
+                  <option value="365">Last 12 months</option>
+                  <option value="all">All time</option>
+                </select>
+              </div>
               <div>
                 <label class="ins-label" for="dropTypeFilter">Drop type</label>
                 <select class="ins-select" id="dropTypeFilter">
