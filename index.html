@@ -474,15 +474,32 @@
       }
     }
 
-    /* Notify modal — raise above everything; hearth.css sets z-index:50 */
-    #readyNotifyOverlay { z-index: 600; }
+    /* orderCard must not clip the expanded detailsWrap */
+    .orderCard { overflow: visible !important; height: auto !important; }
 
-    .notifyCard {
-      width: min(380px, 100%);
+    /* Notify modal — backdrop and content are siblings, not parent/child */
+    #notifyWrap { display: none; }
+    #notifyWrap.open { display: block; }
+
+    .notifyOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      z-index: 590;
+      cursor: pointer;
+    }
+    .notifyModal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 600;
+      pointer-events: all;
+      width: min(380px, calc(100vw - 32px));
       background: var(--h-surface);
       border-radius: 16px;
       border: 1px solid var(--h-border-2);
-      box-shadow: 0 20px 44px rgba(15,23,42,0.2);
+      box-shadow: 0 20px 44px rgba(15, 23, 42, 0.2);
       padding: 20px;
     }
     .notifyHeading {
@@ -511,7 +528,6 @@
       flex-direction: column;
       gap: 8px;
     }
-    /* Full-width centred buttons in the notify modal */
     .notifyActions > a,
     .notifyActions > button {
       display: flex;
@@ -832,6 +848,21 @@
     <span id="undoToastMsg"></span>
     <button type="button" id="undoToastBtn">Undo</button>
     <div id="undoToastProgress"></div>
+  </div>
+
+  <!-- T3-10: Order notification modal — must be before <script> so buttons exist when attachEvents() runs -->
+  <div id="notifyWrap">
+    <div id="notifyBackdrop" class="notifyOverlay"></div>
+    <div class="notifyModal">
+      <p class="notifyHeading" id="readyNotifyHeading">Notify customer?</p>
+      <p class="notifyCustomerName" id="readyNotifyName"></p>
+      <div class="notifyPhone" id="readyNotifyPhoneDisplay"></div>
+      <div class="notifyActions">
+        <a id="readyNotifyCallBtn" class="btnAccent" href="#">Call customer</a>
+        <a id="readyNotifySmsBtn" class="btnGhost" href="#">Send SMS</a>
+        <button id="readyNotifySkipBtn" class="btnGhost" type="button">Skip — mark ready</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1500,7 +1531,6 @@
           e.stopPropagation();
           var id = String(toggleEl.dataset.id);
           var detailsEl = wrapper.querySelector(".detailsWrap");
-          console.log("Details clicked, detailsWrap:", detailsEl, "current open state:", detailsEl?.open);
           if (state.expandedOrders.has(id)) {
             state.expandedOrders.delete(id);
             if (detailsEl) detailsEl.classList.remove("open");
@@ -1989,27 +2019,15 @@
         if (smsBtn)  smsBtn.style.display  = "none";
       }
 
-      var overlay = byId("readyNotifyOverlay");
-      if (overlay) overlay.classList.add("open");
+      var wrap = byId("notifyWrap");
+      if (wrap) wrap.classList.add("open");
     }
 
     function dismissNotifyModal() {
-      var overlay = byId("readyNotifyOverlay");
-      if (overlay) overlay.classList.remove("open");
+      var wrap = byId("notifyWrap");
+      if (wrap) wrap.classList.remove("open");
       _notifyOrderId  = null;
       _notifyToStatus = null;
-    }
-
-    // Called by all three action buttons — completes the status transition.
-    async function completeNotifyAction() {
-      console.log("completeNotifyAction called, orderId:", _notifyOrderId, "toStatus:", _notifyToStatus);
-      var orderId  = _notifyOrderId;
-      var toStatus = _notifyToStatus;
-      dismissNotifyModal();
-      if (orderId && toStatus) {
-        try { await updateOrderStatus(orderId, toStatus); }
-        catch (err) { console.error(err); showError(err.message || "Status update failed."); }
-      }
     }
 
     async function handleNextStatus(orderId, toStatus) {
@@ -2232,19 +2250,30 @@
         showUndoToast(orderRef, toStatus);
       });
 
-      // T3-10: Notification modal button handlers
-      var _callBtn       = byId("readyNotifyCallBtn");
-      var _smsBtn        = byId("readyNotifySmsBtn");
-      var _skipBtn       = byId("readyNotifySkipBtn");
-      var _notifyOverlay = byId("readyNotifyOverlay");
-      // Call and SMS: browser follows the tel:/sms: href, then transition completes.
-      if (_callBtn)  _callBtn.addEventListener("click",  function () { completeNotifyAction(); });
-      if (_smsBtn)   _smsBtn.addEventListener("click",   function () { completeNotifyAction(); });
-      if (_skipBtn)  _skipBtn.addEventListener("click",  function () { console.log("Skip clicked"); completeNotifyAction(); });
-      // Tapping the backdrop dismisses the modal without completing the transition.
-      if (_notifyOverlay) _notifyOverlay.addEventListener("click", function (e) {
-        if (e.target === _notifyOverlay) dismissNotifyModal();
+      // T3-10: Notification modal button handlers — buttons exist in DOM before this script runs.
+      var _callBtn   = byId("readyNotifyCallBtn");
+      var _smsBtn    = byId("readyNotifySmsBtn");
+      var _skipBtn   = byId("readyNotifySkipBtn");
+      var _backdrop  = byId("notifyBackdrop");
+
+      if (_callBtn) _callBtn.addEventListener("click", function () {
+        // Browser follows tel: href naturally; capture values before dismissing.
+        var oid = _notifyOrderId; var tos = _notifyToStatus;
+        dismissNotifyModal();
+        if (oid && tos) updateOrderStatus(oid, tos).catch(function (err) { console.error(err); showError(err.message || "Status update failed."); });
       });
+      if (_smsBtn) _smsBtn.addEventListener("click", function () {
+        var oid = _notifyOrderId; var tos = _notifyToStatus;
+        dismissNotifyModal();
+        if (oid && tos) updateOrderStatus(oid, tos).catch(function (err) { console.error(err); showError(err.message || "Status update failed."); });
+      });
+      if (_skipBtn) _skipBtn.addEventListener("click", function () {
+        var oid = _notifyOrderId; var tos = _notifyToStatus;
+        dismissNotifyModal();
+        if (oid && tos) updateOrderStatus(oid, tos).catch(function (err) { console.error(err); showError(err.message || "Status update failed."); });
+      });
+      // Backdrop click dismisses without completing the transition.
+      if (_backdrop) _backdrop.addEventListener("click", function () { dismissNotifyModal(); });
     }
 
     async function init() {
@@ -2273,18 +2302,5 @@
   })();
 </script>
 
-  <!-- T3-10: Order notification modal -->
-  <div id="readyNotifyOverlay" class="modalBackdrop">
-    <div class="notifyCard">
-      <p class="notifyHeading" id="readyNotifyHeading">Notify customer?</p>
-      <p class="notifyCustomerName" id="readyNotifyName"></p>
-      <div class="notifyPhone" id="readyNotifyPhoneDisplay"></div>
-      <div class="notifyActions">
-        <a id="readyNotifyCallBtn" class="btnAccent" href="#">Call customer</a>
-        <a id="readyNotifySmsBtn" class="btnGhost" href="#">Send SMS</a>
-        <button id="readyNotifySkipBtn" class="btnGhost" type="button">Skip — mark ready</button>
-      </div>
-    </div>
-  </div>
 </body>
 </html>
