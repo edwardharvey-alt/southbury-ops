@@ -144,12 +144,13 @@
       display:flex;
       flex-wrap:wrap;
       gap:8px;
+      align-items:flex-start;
     }
 
     /* ── Choice cards (onboardingOption) ── */
     .onboardingOption{
       width:160px;
-      flex:0 0 160px;
+      flex:0 0 auto;
       box-sizing:border-box;
       border:1px solid var(--h-border);
       border-radius:16px;
@@ -316,16 +317,96 @@
       color:var(--h-text);
     }
 
+    /* ── Host detail capture ── */
+    #q9HostDetails{
+      display:grid;
+      gap:10px;
+      padding-top:4px;
+    }
+
+    .hostDetailRow{
+      padding:14px 16px;
+      border:1px solid var(--h-border);
+      border-radius:14px;
+      background:rgba(15,23,42,0.02);
+      display:grid;
+      gap:10px;
+    }
+
+    .hostDetailRowLabel{
+      font-size:11px;
+      font-weight:800;
+      color:var(--h-accent);
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+
+    .hostDetailRow input[type="text"]{
+      width:100%;
+      height:38px;
+      padding:0 12px;
+      border:1px solid var(--h-border);
+      border-radius:10px;
+      background:#fff;
+      font-size:13px;
+      font-weight:600;
+      color:var(--h-text);
+      box-sizing:border-box;
+      outline:none;
+    }
+
+    .hostDetailRow input[type="text"]:focus{
+      border-color:color-mix(in srgb, var(--h-accent) 40%, transparent);
+    }
+
+    .hostDetailSelects{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
+    }
+
+    .hostDetailField{
+      display:grid;
+      gap:5px;
+    }
+
+    .hostDetailFieldLabel{
+      font-size:11px;
+      font-weight:700;
+      color:var(--h-muted);
+    }
+
+    .hostDetailField select{
+      height:38px;
+      padding:0 10px;
+      border:1px solid var(--h-border);
+      border-radius:10px;
+      background:#fff;
+      font-size:13px;
+      font-weight:600;
+      color:var(--h-text);
+      box-sizing:border-box;
+      outline:none;
+      cursor:pointer;
+    }
+
+    .hostDetailField select:focus{
+      border-color:color-mix(in srgb, var(--h-accent) 40%, transparent);
+    }
+
+    @media (max-width:500px){
+      .hostDetailSelects{ grid-template-columns:1fr; }
+    }
+
     /* ── Mobile ── */
     @media (max-width:768px){
       .progressLabel{ display:none; }
-      .onboardingOption{ width:100%; flex:0 0 100%; }
       .obStageCard{ padding:16px 14px; border-radius:18px; }
       .brandActions{ flex-direction:column; align-items:stretch; }
       .brandActions .btnAccent{ width:100%; min-height:44px; font-size:13px; }
     }
 
-    @media (max-width:480px){
+    @media (max-width:500px){
       .onboardingOption{ width:100%; flex:0 0 100%; }
     }
   </style>
@@ -639,6 +720,8 @@
                 </label>
               </div>
             </div>
+            <!-- Q9 host details — rendered by renderHostDetails() -->
+            <div id="q9HostDetails" style="display:none;"></div>
           </div>
         </div>
 
@@ -779,6 +862,7 @@
       customer_data_posture: null,
       customer_geography: null,
       existing_host_contexts: [],
+      existing_host_details: [],
       typical_capacity_range: null,
       preferred_fulfilment: null,
       preferred_cadence: null,
@@ -895,8 +979,90 @@
           card.classList.toggle('active', input.checked);
         });
 
+        renderHostDetails();
         evaluate();
       });
+    }
+
+    // ── Host detail capture ────────────────────────────────────────────────
+    const HOST_CONTEXT_LABELS = {
+      pub_venue:       'A pub, bar or venue',
+      sports_club:     'A sports club',
+      school:          'A school or college',
+      community_group: 'A community group',
+      workplace:       'An office or workplace',
+    };
+
+    function renderHostDetails(){
+      const container = byId('q9HostDetails');
+      if (!container) return;
+
+      const contexts = state.existing_host_contexts.filter(v => v !== 'none');
+      if (contexts.length === 0){
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+      }
+
+      container.style.display = '';
+
+      // Preserve current input values before re-render
+      const preserved = {};
+      container.querySelectorAll('.hostDetailRow').forEach(row => {
+        const ctx = row.dataset.context;
+        if (!ctx) return;
+        preserved[ctx] = {
+          name:      row.querySelector('input[data-field="name"]')?.value || '',
+          frequency: row.querySelector('select[data-field="frequency"]')?.value || '',
+          capacity:  row.querySelector('select[data-field="capacity"]')?.value || '',
+        };
+      });
+
+      container.innerHTML = contexts.map(ctx => {
+        const label = HOST_CONTEXT_LABELS[ctx] || ctx;
+        const s = preserved[ctx] || {};
+        const nameVal = (s.name || '').replace(/"/g, '&quot;');
+        const sel = (field, val) => s[field] === val ? ' selected' : '';
+        return `
+          <div class="hostDetailRow" data-context="${ctx}">
+            <div class="hostDetailRowLabel">${label}</div>
+            <input type="text" data-context="${ctx}" data-field="name"
+              placeholder="Name or describe the venue or group" value="${nameVal}" />
+            <div class="hostDetailSelects">
+              <div class="hostDetailField">
+                <label class="hostDetailFieldLabel">How often?</label>
+                <select data-context="${ctx}" data-field="frequency">
+                  <option value="">Select…</option>
+                  <option value="weekly"${sel('frequency','weekly')}>Weekly</option>
+                  <option value="fortnightly"${sel('frequency','fortnightly')}>Fortnightly</option>
+                  <option value="monthly"${sel('frequency','monthly')}>Monthly</option>
+                  <option value="occasional"${sel('frequency','occasional')}>Occasional</option>
+                </select>
+              </div>
+              <div class="hostDetailField">
+                <label class="hostDetailFieldLabel">Typical capacity?</label>
+                <select data-context="${ctx}" data-field="capacity">
+                  <option value="">Select…</option>
+                  <option value="under_20"${sel('capacity','under_20')}>Under 20</option>
+                  <option value="20_40"${sel('capacity','20_40')}>20–40</option>
+                  <option value="40_60"${sel('capacity','40_60')}>40–60</option>
+                  <option value="over_60"${sel('capacity','over_60')}>Over 60</option>
+                </select>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function collectHostDetails(){
+      const container = byId('q9HostDetails');
+      if (!container) return [];
+      return [...container.querySelectorAll('.hostDetailRow')].map(row => ({
+        context:   row.dataset.context,
+        name:      (row.querySelector('input[data-field="name"]')?.value || '').trim(),
+        frequency: row.querySelector('select[data-field="frequency"]')?.value || '',
+        capacity:  row.querySelector('select[data-field="capacity"]')?.value || '',
+      }));
     }
 
     // ── Stage reveal ───────────────────────────────────────────────────────
@@ -1002,8 +1168,23 @@
       if (vendor.primary_goal)          applySelection('q3Grid', vendor.primary_goal);
       if (vendor.customer_data_posture) applySelection('q4Grid', vendor.customer_data_posture);
       if (vendor.customer_geography)    applySelection('q5Grid', vendor.customer_geography);
-      if (vendor.existing_host_contexts && vendor.existing_host_contexts.length > 0)
-                                        applySelection('q9Grid', vendor.existing_host_contexts);
+      if (vendor.existing_host_contexts && vendor.existing_host_contexts.length > 0){
+        applySelection('q9Grid', vendor.existing_host_contexts);
+        renderHostDetails();
+        // Pre-fill saved host detail values
+        if (vendor.existing_host_details && vendor.existing_host_details.length > 0){
+          vendor.existing_host_details.forEach(detail => {
+            const row = byId('q9HostDetails')?.querySelector(`.hostDetailRow[data-context="${detail.context}"]`);
+            if (!row) return;
+            const nameInput = row.querySelector('input[data-field="name"]');
+            const freqSelect = row.querySelector('select[data-field="frequency"]');
+            const capSelect  = row.querySelector('select[data-field="capacity"]');
+            if (nameInput && detail.name)      nameInput.value = detail.name;
+            if (freqSelect && detail.frequency) freqSelect.value = detail.frequency;
+            if (capSelect  && detail.capacity)  capSelect.value  = detail.capacity;
+          });
+        }
+      }
       if (vendor.typical_capacity_range)applySelection('q6Grid', vendor.typical_capacity_range);
       if (vendor.preferred_fulfilment)  applySelection('q7Grid', vendor.preferred_fulfilment);
       if (vendor.preferred_cadence)     applySelection('q8Grid', vendor.preferred_cadence);
@@ -1060,6 +1241,7 @@
         data_posture:            dataPosture,
         customer_geography:      state.customer_geography,
         existing_host_contexts:  state.existing_host_contexts.includes('none') ? [] : state.existing_host_contexts,
+        existing_host_details:   collectHostDetails(),
         typical_capacity_range:  state.typical_capacity_range,
         preferred_fulfilment:    state.preferred_fulfilment,
         preferred_cadence:       state.preferred_cadence,
