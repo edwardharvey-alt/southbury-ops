@@ -2679,6 +2679,53 @@
       }
     }
 
+    function generateSeriesOccurrences() {
+      const startDate = byId("seriesStartDate").value;
+      if (!startDate) return [];
+
+      const rows = state.seriesRows.filter((r) => r.day_of_week !== "" && r.fulfilment_start && r.fulfilment_end);
+      if (!rows.length) return [];
+
+      const occurrences = [];
+      const start = new Date(`${startDate}T12:00:00`);
+      const endMode = byId("seriesEndMode").value;
+      const endDateVal = byId("seriesEndDate").value;
+      const dropCountVal = Number(byId("seriesDropCount").value || 0);
+
+      let cursor = new Date(start);
+      let safety = 0;
+
+      while (safety < 365) {
+        rows.forEach((row) => {
+          const targetDow = Number(row.day_of_week);
+          const d = new Date(cursor);
+          d.setDate(d.getDate() + ((targetDow - d.getDay() + 7) % 7));
+          if (d < start) return;
+
+          if (endMode === "end_date" && endDateVal) {
+            const endDate = new Date(`${endDateVal}T23:59:59`);
+            if (d > endDate) return;
+          }
+
+          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          occurrences.push({
+            dateStr,
+            fulfilment_start: row.fulfilment_start,
+            fulfilment_end: row.fulfilment_end,
+            order_close_time: row.order_close_time || null
+          });
+        });
+
+        cursor.setDate(cursor.getDate() + 7);
+        safety += 7;
+        if (endMode === "drop_count" && dropCountVal && occurrences.length >= dropCountVal) break;
+      }
+
+      occurrences.sort((a, b) => a.dateStr.localeCompare(b.dateStr));
+      if (endMode === "drop_count" && dropCountVal) return occurrences.slice(0, dropCountVal);
+      return occurrences;
+    }
+
     async function saveDrop(showSuccess = true) {
       if (!state.selectedDropId || !state.drop) return;
 
@@ -2689,25 +2736,133 @@
       dropData.slug = buildUniqueSlug(dropData.slug, state.selectedDropId);
       byId("dropSlug").value = dropData.slug;
 
+      const isRecurring = getRepeatPattern() === "recurring";
+      const alreadyInSeries = !!(state.drop.series_id);
+
       setSaveState("saving");
 
       try {
-        const { error } = await supabase
-          .from("drops")
-          .update(getDropPayload(dropData))
-          .eq("id", state.selectedDropId);
+        const payload = getDropPayload(dropData);
 
-        if (error) throw error;
+        // If this is a new recurring drop, generate the series
+        if (isRecurring && !alreadyInSeries) {
+          const occurrences = generateSeriesOccurrences();
+          if (!occurrences.length) throw new Error("No recurring dates could be generated. Check your schedule and date range.");
 
-        state.drop = { ...state.drop, ...dropData };
-        await saveAssignments();
-        await loadDrops();
-        await loadSelectedDrop();
-        clearDuplicateBanner();
-        renderEverything();
-        isDirty = false;
-        setSaveState("saved");
-        if (showSuccess) showInlineSuccess("Changes saved successfully");
+          const seriesId = crypto.randomUUID();
+
+          // Update the template drop as position 1 with the first occurrence's timing
+          const first = occurrences[0];
+          payload.series_id = seriesId;
+          payload.series_position = 1;
+          payload.delivery_start = combineDateTime(first.dateStr, first.fulfilment_start);
+          payload.delivery_end = combineDateTime(first.dateStr, first.fulfilment_end);
+          payload.closes_at = first.order_close_time ? combineDateTime(first.dateStr, first.order_close_time) : null;
+          payload.opens_at = dropData.opens_at; // Keep form value for first drop
+          payload.status = "draft";
+
+          const { error } = await supabase
+            .from("drops")
+            .update(payload)
+            .eq("id", state.selectedDropId);
+          if (error) throw error;
+
+          state.drop = { ...state.drop, ...dropData, series_id: seriesId, series_position: 1 };
+          await saveAssignments();
+
+          // Fetch assignments for the template drop to copy to series drops
+          const { data: templateAssignments, error: assignErr } = await supabase
+            .from("drop_menu_items")
+            .select("*")
+            .eq("drop_id", state.selectedDropId);
+          if (assignErr) throw assignErr;
+
+          // Generate remaining drops (position 2+)
+          if (occurrences.length > 1) {
+            const remainingOccurrences = occurrences.slice(1);
+            const seriesDrops = remainingOccurrences.map((occ, idx) => {
+              const position = idx + 2;
+              return {
+                ...payload,
+                id: crypto.randomUUID(),
+                slug: buildUniqueSlug(`${payload.slug}-${position}`),
+                series_position: position,
+                delivery_start: combineDateTime(occ.dateStr, occ.fulfilment_start),
+                delivery_end: combineDateTime(occ.dateStr, occ.fulfilment_end),
+                closes_at: occ.order_close_time ? combineDateTime(occ.dateStr, occ.order_close_time) : null,
+                opens_at: null, // Recurring drops after the first don't inherit a specific opens_at
+                status: "draft"
+              };
+            });
+
+            const { error: insertError } = await supabase
+              .from("drops")
+              .insert(seriesDrops);
+            if (insertError) throw insertError;
+
+            // Copy menu assignments to each new drop
+            if ((templateAssignments || []).length) {
+              const allAssignmentRows = [];
+              seriesDrops.forEach((seriesDrop) => {
+                templateAssignments.forEach((row) => {
+                  const itemType = row.menu_item_type || row.item_type;
+                  allAssignmentRows.push({
+                    drop_id: seriesDrop.id,
+                    item_type: itemType,
+                    menu_item_type: itemType,
+                    product_id: row.product_id,
+                    bundle_id: row.bundle_id,
+                    is_available: row.is_available,
+                    price_override_pence: row.price_override_pence,
+                    stock_limit: row.stock_limit,
+                    sort_order: row.sort_order
+                  });
+                });
+              });
+
+              if (allAssignmentRows.length) {
+                const { error: assignInsertError } = await supabase
+                  .from("drop_menu_items")
+                  .insert(allAssignmentRows);
+                if (assignInsertError) throw assignInsertError;
+              }
+            }
+
+            await loadDrops();
+            await loadSelectedDrop();
+            clearDuplicateBanner();
+            renderEverything();
+            isDirty = false;
+            setSaveState("saved");
+            if (showSuccess) showInlineSuccess(`Series created — ${occurrences.length} drops generated`);
+          } else {
+            await loadDrops();
+            await loadSelectedDrop();
+            clearDuplicateBanner();
+            renderEverything();
+            isDirty = false;
+            setSaveState("saved");
+            if (showSuccess) showInlineSuccess("Changes saved successfully");
+          }
+        } else {
+          // Standard one-off save or editing an existing series drop individually
+          const { error } = await supabase
+            .from("drops")
+            .update(payload)
+            .eq("id", state.selectedDropId);
+
+          if (error) throw error;
+
+          state.drop = { ...state.drop, ...dropData };
+          await saveAssignments();
+          await loadDrops();
+          await loadSelectedDrop();
+          clearDuplicateBanner();
+          renderEverything();
+          isDirty = false;
+          setSaveState("saved");
+          if (showSuccess) showInlineSuccess("Changes saved successfully");
+        }
       } catch (err) {
         setSaveState("error", err.message || "Unable to save changes");
         throw err;
