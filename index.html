@@ -474,28 +474,22 @@
       }
     }
 
-    /* Details fixed overlay panel */
-    .detailsOverlayPanel {
-      font-family: var(--sans);
-      font-size: 13px;
-      color: var(--h-text);
-      box-sizing: border-box;
-    }
+    /* Notify modal — raise above everything; hearth.css sets z-index:50 */
+    #readyNotifyOverlay { z-index: 600; }
 
-    /* Notify modal */
     .notifyCard {
-      width: min(420px, 100%);
+      width: min(380px, 100%);
       background: var(--h-surface);
-      border-radius: 18px;
+      border-radius: 16px;
       border: 1px solid var(--h-border-2);
-      box-shadow: 0 20px 44px rgba(15,23,42,0.18);
+      box-shadow: 0 20px 44px rgba(15,23,42,0.2);
       padding: 20px;
     }
     .notifyHeading {
       font-size: 16px;
       font-weight: 600;
       color: var(--h-text);
-      margin: 0 0 4px;
+      margin: 0 0 2px;
     }
     .notifyCustomerName {
       font-size: 13px;
@@ -507,7 +501,7 @@
       font-weight: 500;
       color: var(--h-text);
       margin-bottom: 16px;
-      padding: 10px 12px;
+      padding: 9px 12px;
       background: var(--h-bg);
       border: 1px solid var(--h-border-2);
       border-radius: 8px;
@@ -517,12 +511,16 @@
       flex-direction: column;
       gap: 8px;
     }
-    .notifyActions a,
-    .notifyActions button {
-      display: block;
+    /* Full-width centred buttons in the notify modal */
+    .notifyActions > a,
+    .notifyActions > button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
       width: 100%;
-      text-align: center;
       box-sizing: border-box;
+      text-align: center;
+      text-decoration: none;
     }
   </style>
 </head>
@@ -850,12 +848,8 @@
     let realtimeChannel = null;
     let realtimeSubscribedDropId = null;
     let pendingChange = null;
-    var _detailsOverlay = null;
-    var _detailsOverlayId = null;
-    function closeDetailsOverlay() {
-      if (_detailsOverlay) { _detailsOverlay.remove(); _detailsOverlay = null; }
-      _detailsOverlayId = null;
-    }
+    var _notifyOrderId = null;
+    var _notifyToStatus = null;
 
     const state = {
       drops: [],
@@ -1448,6 +1442,7 @@
       const unitsLabel = getCapacityLabel(Number(order.capacity_units_in_order || order.pizzas || 0));
       const capacityTitle = String(getCapacityCategoryLabel() || "Capacity items").toUpperCase();
       const totalValue = formatMoneyPence(order.total_price_pence);
+      const isExpanded = state.expandedOrders.has(String(order.order_id));
 
       const wrapper = document.createElement("div");
       wrapper.className = "orderCard";
@@ -1467,7 +1462,7 @@
           ${renderFulfilmentRow(order)}
           ${renderNotesBlock(order.customer_notes)}
 
-          <div class="detailsWrap">
+          <div class="detailsWrap ${isExpanded ? "open" : ""}">
             <div class="detailsScroller">
               ${renderCompactBlock(capacityTitle, order.grouped.capacity)}
               ${renderCompactBlock("OTHER ITEMS", order.grouped.extras)}
@@ -1485,7 +1480,6 @@
       if (nextEl) {
         nextEl.addEventListener("click", function (e) {
           e.stopPropagation();
-          closeDetailsOverlay();
           handleNextStatus(nextEl.dataset.id, nextEl.dataset.status).catch(function (err) {
             console.error(err);
             showError(err.message || "Status update failed.");
@@ -1495,7 +1489,6 @@
       if (prevEl) {
         prevEl.addEventListener("click", function (e) {
           e.stopPropagation();
-          closeDetailsOverlay();
           updateOrderStatus(prevEl.dataset.id, prevEl.dataset.status).catch(function (err) {
             console.error(err);
             showError(err.message || "Status update failed.");
@@ -1506,60 +1499,14 @@
         toggleEl.addEventListener("click", function (e) {
           e.stopPropagation();
           var id = String(toggleEl.dataset.id);
-
-          // If this order's overlay is already open, close it and return
-          if (_detailsOverlayId === id) {
-            closeDetailsOverlay();
-            return;
+          var detailsEl = wrapper.querySelector(".detailsWrap");
+          if (state.expandedOrders.has(id)) {
+            state.expandedOrders.delete(id);
+            if (detailsEl) detailsEl.classList.remove("open");
+          } else {
+            state.expandedOrders.add(id);
+            if (detailsEl) detailsEl.classList.add("open");
           }
-
-          // Close any existing overlay then open a new one
-          closeDetailsOverlay();
-          _detailsOverlayId = id;
-
-          var rect = wrapper.getBoundingClientRect();
-          var scroller = wrapper.querySelector(".detailsScroller");
-
-          var ov = document.createElement("div");
-          ov.className = "detailsOverlayPanel";
-
-          // Position below card; flip above if it would go off-screen
-          var topBelow = rect.bottom + 4;
-          var approxHeight = Math.min(window.innerHeight * 0.6, 300);
-          var top = (topBelow + approxHeight > window.innerHeight && rect.top - approxHeight > 0)
-            ? rect.top - approxHeight - 4
-            : topBelow;
-
-          ov.style.cssText = [
-            "position:fixed",
-            "top:" + Math.round(top) + "px",
-            "left:" + Math.round(rect.left) + "px",
-            "width:" + Math.round(rect.width) + "px",
-            "z-index:1000",
-            "background:var(--h-surface)",
-            "border-radius:10px",
-            "box-shadow:0 4px 24px rgba(15,23,42,0.15)",
-            "border:1px solid var(--h-border-2)",
-            "padding:12px 14px",
-            "overflow-y:auto",
-            "max-height:60vh"
-          ].join(";");
-
-          ov.innerHTML = scroller
-            ? scroller.innerHTML
-            : '<div class="emptyState">No details available.</div>';
-
-          document.body.appendChild(ov);
-          _detailsOverlay = ov;
-
-          // Close on outside click (deferred to avoid same-tick close)
-          setTimeout(function () {
-            document.addEventListener("click", closeDetailsOverlay, { once: true });
-          }, 0);
-
-          // Close if the column scrolls (overlay position would be stale)
-          var colBody = wrapper.closest(".boardColBody");
-          if (colBody) colBody.addEventListener("scroll", closeDetailsOverlay, { once: true });
         });
       }
 
@@ -1567,8 +1514,6 @@
     }
 
     function renderBoard() {
-      closeDetailsOverlay();
-
       const cols = {
         placed: byId("colPlaced"),
         confirmed: byId("colConfirmed"),
@@ -1927,7 +1872,6 @@
     }
 
     async function applyBoardFilters() {
-      closeDetailsOverlay();
       state.expandedOrders.clear();
       ensureSelectedDropStillValid();
       await refreshData();
@@ -2012,71 +1956,76 @@
     }
 
     // ---- T3-10: Order notification modal ----
-    let notifyCallback = null;
 
-    // config: { heading: string, smsText: fn(customerName, vendorName) => string }
-    function openNotifyModal(order, config, onComplete) {
-      const vendorName =
-        state.dropSummary?.vendor_name ||
-        state.drop?.vendor_name ||
-        "Hearth";
+    // Stored when modal opens; buttons read these directly — no callback chain.
+    function openNotifyModal(orderId, toStatus, order, config) {
+      _notifyOrderId  = orderId;
+      _notifyToStatus = toStatus;
+
+      const vendorName   = state.dropSummary?.vendor_name || state.drop?.vendor_name || "Hearth";
       const customerName = (order && order.customer_name) || "Customer";
-      const phone = (order && (order.customer_phone || order.phone)) || "";
+      const phone        = (order && (order.customer_phone || order.phone)) || "";
 
-      var headingEl   = byId("readyNotifyHeading");
-      var nameEl      = byId("readyNotifyName");
-      var phoneEl     = byId("readyNotifyPhoneDisplay");
-      var callBtn     = byId("readyNotifyCallBtn");
-      var smsBtn      = byId("readyNotifySmsBtn");
+      var headingEl = byId("readyNotifyHeading");
+      var nameEl    = byId("readyNotifyName");
+      var phoneEl   = byId("readyNotifyPhoneDisplay");
+      var callBtn   = byId("readyNotifyCallBtn");
+      var smsBtn    = byId("readyNotifySmsBtn");
 
       if (headingEl) headingEl.textContent = config.heading || "Notify customer?";
-      if (nameEl)    nameEl.textContent = customerName;
+      if (nameEl)    nameEl.textContent    = customerName;
 
       if (phone) {
-        if (phoneEl)  phoneEl.textContent = phone;
-        if (callBtn)  { callBtn.textContent = "Call " + phone; callBtn.href = "tel:" + phone; callBtn.style.display = ""; }
-        if (smsBtn)   { smsBtn.href = "sms:" + phone + "?body=" + encodeURIComponent(config.smsText(customerName, vendorName)); smsBtn.style.display = ""; }
+        if (phoneEl) phoneEl.textContent = phone;
+        if (callBtn) { callBtn.href = "tel:" + phone; callBtn.style.display = ""; }
+        if (smsBtn)  { smsBtn.href  = "sms:" + phone + "?body=" + encodeURIComponent(config.smsText(customerName, vendorName)); smsBtn.style.display = ""; }
       } else {
-        if (phoneEl)  phoneEl.textContent = "No phone number on file";
-        if (callBtn)  callBtn.style.display = "none";
-        if (smsBtn)   smsBtn.style.display = "none";
+        if (phoneEl) phoneEl.textContent = "No phone number on file";
+        if (callBtn) callBtn.style.display = "none";
+        if (smsBtn)  smsBtn.style.display  = "none";
       }
 
-      notifyCallback = onComplete;
       var overlay = byId("readyNotifyOverlay");
       if (overlay) overlay.classList.add("open");
     }
 
-    function closeNotifyModal() {
+    function dismissNotifyModal() {
       var overlay = byId("readyNotifyOverlay");
       if (overlay) overlay.classList.remove("open");
-      var cb = notifyCallback;
-      notifyCallback = null;
-      if (cb) cb();
+      _notifyOrderId  = null;
+      _notifyToStatus = null;
+    }
+
+    // Called by all three action buttons — completes the status transition.
+    async function completeNotifyAction() {
+      var orderId  = _notifyOrderId;
+      var toStatus = _notifyToStatus;
+      dismissNotifyModal();
+      if (orderId && toStatus) {
+        try { await updateOrderStatus(orderId, toStatus); }
+        catch (err) { console.error(err); showError(err.message || "Status update failed."); }
+      }
     }
 
     async function handleNextStatus(orderId, toStatus) {
-      // Only the Ready transition needs a customer notification modal.
-      // Confirmed → Baking is a direct status update (internal kitchen state).
       if (toStatus === "ready") {
         var order = state.ordersSummary.find(function (o) { return String(o.order_id) === String(orderId); });
-        var config = {
-          heading: "Notify customer?",
-          smsText: function (name, vendor) {
-            return "Hi " + name + ", your order is ready for collection. See you soon \u2014 " + vendor;
-          }
-        };
-        openNotifyModal(order, config, async function () {
-          try {
-            await updateOrderStatus(orderId, toStatus);
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Status update failed.");
-          }
-        });
-        return;
+        var fulfilmentMode = String((order && order.fulfilment_mode) || "").toLowerCase();
+
+        // Only show the notify modal for collection orders.
+        // Delivery orders skip straight to the status update.
+        if (fulfilmentMode !== "delivery") {
+          openNotifyModal(orderId, toStatus, order, {
+            heading: "Notify customer?",
+            smsText: function (name, vendor) {
+              return "Hi " + name + ", your order is ready for collection. See you soon \u2014 " + vendor;
+            }
+          });
+          return;
+        }
       }
-      await updateOrderStatus(orderId, toStatus);
+      try { await updateOrderStatus(orderId, toStatus); }
+      catch (err) { console.error(err); showError(err.message || "Status update failed."); }
     }
     // ---- End T3-10 ----
 
@@ -2168,7 +2117,6 @@
 
       byId("dropSelect").addEventListener("change", async function (e) {
         state.selectedDropId = e.target.value || null;
-        closeDetailsOverlay();
         state.expandedOrders.clear();
         try {
           await refreshData();
@@ -2284,11 +2232,13 @@
       var _smsBtn        = byId("readyNotifySmsBtn");
       var _skipBtn       = byId("readyNotifySkipBtn");
       var _notifyOverlay = byId("readyNotifyOverlay");
-      if (_callBtn)       _callBtn.addEventListener("click", function () { closeNotifyModal(); });
-      if (_smsBtn)        _smsBtn.addEventListener("click", function () { closeNotifyModal(); });
-      if (_skipBtn)       _skipBtn.addEventListener("click", function () { closeNotifyModal(); });
+      // Call and SMS: browser follows the tel:/sms: href, then transition completes.
+      if (_callBtn)  _callBtn.addEventListener("click",  function () { completeNotifyAction(); });
+      if (_smsBtn)   _smsBtn.addEventListener("click",   function () { completeNotifyAction(); });
+      if (_skipBtn)  _skipBtn.addEventListener("click",  function () { completeNotifyAction(); });
+      // Tapping the backdrop dismisses the modal without completing the transition.
       if (_notifyOverlay) _notifyOverlay.addEventListener("click", function (e) {
-        if (e.target === _notifyOverlay) closeNotifyModal();
+        if (e.target === _notifyOverlay) dismissNotifyModal();
       });
     }
 
