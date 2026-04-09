@@ -745,7 +745,19 @@
             <a href="./drop-manager.html">Drop Studio</a>
             <a href="./index.html">Service Board</a>
             <a href="./insights.html">Insights</a>
+            <a href="./onboarding.html">Setup</a>
           </nav>
+        </div>
+      </section>
+
+      <!-- SETUP NOTICE (shown when onboarding_completed is false/null) -->
+      <section class="home-card home-pad" id="setupNotice" style="display:none;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;">
+          <div>
+            <div style="font-size:15px; font-weight:800; color:var(--home-text); margin-bottom:4px;">Complete your workspace setup</div>
+            <div style="font-size:13px; color:var(--home-muted); font-weight:700;">Tell us how you operate so Hearth can work the way you do.</div>
+          </div>
+          <a href="./onboarding.html" class="home-button" style="white-space:nowrap;">Get started →</a>
         </div>
       </section>
 
@@ -1475,6 +1487,13 @@
       renderPulse();
       renderWorkspaces();
       renderActions();
+      renderSetupNotice();
+    }
+
+    function renderSetupNotice(){
+      const el = document.getElementById('setupNotice');
+      if (!el) return;
+      el.style.display = state.vendor?.onboarding_completed ? 'none' : '';
     }
 
     async function init(){
