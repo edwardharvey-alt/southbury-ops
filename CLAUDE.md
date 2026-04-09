@@ -263,47 +263,30 @@ future fulfilment intelligence.
 
 ### Tier 4 — Enhancements that will impress
 
-T4-1: Recurring series — actually create drops
-Drop Studio has full recurring series UI but no generation function.
-Build createSeriesDrops() — critical for vendors running weekly drops.
+T4-1: Recurring series — actually create drops ✓ COMPLETE
+Drop Studio has full recurring series UI and generation function.
+createSeriesDrops() built — vendors can generate drops from series
+schedules.
 
 T4-2: Order confirmation page ✓ COMPLETE
 Post-order destination showing order details, reference number, and
 fulfilment information. order-confirmation.html created; order.html
 redirects to it after successful insert.
 
-T4-3: Insights — drop performance and growing business narrative
-
-Insights answers two questions that matter to a vendor building with
-Hearth:
-
-**Layer 1 — How did my drop perform?**
-Fill rate vs capacity, revenue, order count, fastest-selling items,
-fulfilment mode breakdown, capacity timing curve (when did orders arrive
-across the window).
-
-**Layer 2 — How is Hearth growing my business?**
-Customer growth over time, repeat rate trend, new vs returning customers
-per drop, geographic spread of customer base, host performance (which
-hosts drive the most demand and repeat participation), revenue trend
-across drops.
-
-**Narrative intelligence:**
-Each section should include a plain-English observation in Hearth's
-voice — not a generic insight, but something grounded in the vendor's
-actual data. "Your Friday drops fill faster than Saturdays. Consider
-opening orders earlier." "3 of your last 5 drops sold out. You may have
-room to increase capacity." Language must be calm, supportive, and
-non-judgmental — consistent with the Insights vocabulary: Signals,
-Momentum, What's working.
-
-Fix demand curve chart (buckets by hour not datetime). Complete all seven
-sections. Ensure all views referenced are live in Supabase before
-building.
-
-Dependencies: real drop data, T3-9 (customer capture — complete)
+T4-3: Insights — drop performance, intelligence layer, archetype integration ✓ COMPLETE
+Full Insights page built with drop performance analytics, revenue and
+capacity tracking, item sales breakdown, host performance, and demand
+curve charting. Archetype-aware recommendation engine integrated —
+vendor archetype (derived from onboarding answers) drives contextual
+recommended actions across all primary_goal values. Layout restructured
+with collapsible sections and mobile-responsive design.
 
 T4-4: Home dashboard — intelligence surface and next action centre
+
+**Do not build until T4-14, T4-16, T4-27, and T4-28 are complete.** The
+Home dashboard depends on a live customer asset and the shared
+intelligence module to be meaningful. Without real customer data flowing
+through the intelligence engine, this page would be a shell.
 
 The Home dashboard is where the Hearth model becomes visible to the
 vendor. It is not a workspace landing page. It is the place where a
@@ -329,7 +312,7 @@ run a drop):
 - Audience card: total known customers, new customers this month, repeat
   rate. Framed as "your audience" not "your data"
 - Demand signal card: strongest postcode clusters from customer geography.
-  Feeds directly from recommendation engine (T5-9)
+  Feeds directly from shared intelligence engine (T4-28)
 - Next recommended drop card: plain-English recommendation with a "Create
   this drop" CTA pre-populated in Drop Studio. Shows "Signals are
   building" if insufficient data
@@ -344,15 +327,15 @@ dashboard-for-dashboard's-sake. Every element earns its place by
 pointing to a real action or surfacing a genuine signal.
 
 Dependencies: T4-14 (customer import), T4-16 (hosts as first-class
-entities), T5-9 (recommendation engine V1)
+entities), T4-27 (Customers page), T4-28 (intelligence engine)
 
 T4-5: Drop Studio — duplicate drop improvement ✓ COMPLETE
 Timing fields (opens_at, closes_at, delivery_start, delivery_end) set to
 null on duplicate. Form opens on timing pane with persistent notice and
 highlighted date/time fields.
 
-T4-6: Menu Library — delete products, bundles, categories
-Add permanent delete with safety check — warn if item is used in any
+T4-6: Menu Library — delete products, bundles, categories ✓ COMPLETE
+Permanent delete with safety check — warns if item is used in any
 drop menu before allowing deletion.
 
 T4-7: Service Board — order notes and fulfilment details ✓ COMPLETE
@@ -390,9 +373,18 @@ in real time. No login. Display only.
 
 T4-14: Vendor customer data import
 Allow vendors to upload existing customer list via CSV (name, email,
-postcode). Confirm lawful basis before import. Write to customers and
-customer_relationships with source = import. Accelerates recommendation
-engine for data-rich vendors. Dependency: T3-9 schema.
+postcode). Must include a non-skippable GDPR lawful basis confirmation
+step — vendor must declare the legal basis for processing before any
+data is written. Write to customers and customer_relationships with
+source = import. Accelerates recommendation engine for data-rich vendors.
+
+Note: the import story is most relevant for vendors with direct booking
+history or email lists (e.g. from their own website, a booking platform,
+or a mailing list). Aggregator-dependent vendors (Deliveroo, Uber Eats,
+Just Eat) likely have no exportable customer data — those vendors build
+their customer asset through drops instead.
+
+Primary dependency for T4-27 (Customers page). Dependency: T3-9 schema.
 
 T4-15: Multiple drops within a single event
 Allow vendor to create multiple drops linked to the same host context with
@@ -422,13 +414,10 @@ Drop Studio becomes visibly intelligent — a vendor creating a drop sees
 how many known customers are in the target area before they commit.
 Strategically important, not just a nice-to-have.
 
-T4-18: Brand Hearth — add contact phone field
-Brand Hearth currently does not expose `contact_phone` as an editable
-field, even though the column was added to the vendors table during
-onboarding (T5-13). Add a phone number input to the Brand Identity
-section of Brand Hearth, between the display name and tagline fields.
+T4-18: Brand Hearth — add contact phone field ✓ COMPLETE
+Phone number input added to Brand Identity section of Brand Hearth.
 Saves to `vendors.contact_phone`. Pre-populates from saved value on
-load. No schema change required.
+load.
 
 T4-19: Onboarding → Brand Hearth continuity
 When a vendor arrives at Brand Hearth having completed onboarding, the
@@ -462,14 +451,11 @@ be accessible from Insights.
 
 Dependency: T4-14 (customer import)
 
-T4-22: Navigation consistency sweep
-Audit all operator pages to confirm "Setup" appears in the nav
-consistently and links to `onboarding.html`. Pages to check:
-`home.html`, `brand-hearth.html`, `drop-menu.html`, `drop-manager.html`,
-`index.html` (Service Board), `insights.html`, `order-confirmation.html`.
-Nav order must be consistent across all pages: Home, Brand Hearth, Menu
-Library, Drop Studio, Service Board, Insights, Setup. Note: Setup should
-not appear on `order.html` as that is a customer-facing page.
+T4-22: Navigation consistency sweep ✓ COMPLETE
+All operator pages audited — "Setup" appears consistently and links to
+`onboarding.html`. Nav order consistent across all pages: Home, Brand
+Hearth, Menu Library, Drop Studio, Service Board, Insights, Setup.
+Setup excluded from customer-facing `order.html`.
 
 T4-23: Drop Studio — first drop guidance for new vendors
 When a vendor opens Drop Studio for the first time (no existing drops),
@@ -565,6 +551,52 @@ T4-16 is complete.
 Note: host terms content requires legal review before use with real
 hosts.
 
+T4-27: Customers page — first-class customer asset view
+Owned customer database as a first-class operator page. List view with
+search and filtering. Individual customer profiles showing: name,
+address, postcode, phone, order history, host context (which drops they
+ordered from and which hosts were involved). Customer segmentation:
+loyal core (3+ orders), occasional (2 orders), lapsed (no order in 60+
+days). Customer acquisition over time chart. Reachability signals (has
+email, has phone, has opted in to marketing). Reactivation signals for
+lapsed customers. This is the primary surface for customer intelligence
+— where a vendor sees the asset they are building through drops.
+
+Dependency: T4-14 (customer import)
+
+T4-28: Intelligence engine — extract to shared module
+Move the analysis logic currently inside insights.html (buildActions,
+capacity/rhythm/menu signal functions, archetype-aware recommendation
+generation) into assets/hearth-intelligence.js as a shared module.
+Insights, Customers page (T4-27), and Home dashboard (T4-4) should all
+draw from this shared engine without duplicating logic. The module
+should export functions for: archetype detection, signal analysis
+(capacity, rhythm, menu, growth), recommendation generation, and
+customer segmentation. This is the foundation that T5-9 matures into
+a full recommendation engine.
+
+T4-29: Series intelligence in Insights
+Add series-level performance view to Insights — cumulative revenue
+across a series, fill rate trend by occurrence, whether the series is
+growing or declining over time. Surface plain-English observations:
+"Your Friday series has filled above 80% for 4 consecutive weeks" or
+"Fill rate has dropped for 3 occurrences — consider adjusting capacity
+or timing." Depends on real series data from T4-1.
+
+Dependency: T4-1 (recurring series — complete)
+
+T4-30: Onboarding delivery model audit
+Review whether aggregator-dependent vendors are correctly captured in
+the onboarding flow. The `reduce_aggregators` goal and `aggregator`
+delivery_model option exist but may not be prominent enough given that
+reducing aggregator dependency is a core Hearth pitch. Ensure the
+intelligence layer (T4-28) surfaces appropriate recommendations for
+these vendors — e.g. "You told us you want to reduce aggregator
+dependency. Your last 3 drops brought in 12 new direct customers —
+that's 12 people you can reach without paying commission." Audit
+onboarding Q3 (primary_goal) and Q5 (delivery_model) for clarity and
+prominence of the aggregator reduction pathway.
+
 ### Tier 5 — Strategic platform features
 
 T5-1: Delivery optimisation
@@ -596,12 +628,19 @@ with name and email. Writes to customer_relationships with source =
 interest. Vendor sees interest count in Drop Studio labelled "Signals
 building". Dependency: T3-9.
 
-T5-9: Recommendation engine V1
-Deterministic demand scoring on Home and Drop Studio. Cluster customers by
-outward postcode, score by count plus recency and frequency boosts, check
-for nearby hosts, generate plain-English recommendation cards (maximum 3)
-each with Create drop CTA. Show "Signals are building" if insufficient
-data. Dependency: meaningful customer data from real drops.
+T5-9: Recommendation engine — matured intelligence
+The matured form of T4-28 (intelligence engine). Not a standalone build —
+this is the intelligence module growing in sophistication as real customer
+and drop data accumulates. Adds: deterministic demand scoring across Home
+and Drop Studio, customer clustering by outward postcode with recency and
+frequency boosts, nearby host matching, plain-English recommendation cards
+(maximum 3) each with Create drop CTA. Shows "Signals are building" if
+insufficient data. The foundation (archetype-aware analysis, capacity and
+rhythm signals) is already built inside T4-28 — this ticket extends it
+with geographic intelligence and predictive scoring.
+
+Dependency: T4-28 (intelligence engine), meaningful customer data from
+real drops.
 
 T5-11: Comms engine V1
 Event-driven email and SMS. Triggers: drop_published, order_confirmed,
@@ -639,9 +678,15 @@ in different ways. This dashboard is where that network becomes visible
 and actionable.
 
 T5-15: Insights — demand and audience intelligence layer
-Major evolution beyond drop performance. Add: customer growth, repeat rate
-trend, postcode cluster analysis, strongest areas, host performance, vendor
-vs host sourced demand, recommended next actions. Dependency: T3-9, T4-16.
+The intelligence layer is now partially built inside Insights via
+archetype-aware recommendations (T4-3). This ticket covers extracting
+and maturing that logic into the shared intelligence engine (T4-28) and
+extending it to the Customers page (T4-27) and Home dashboard (T4-4).
+
+Remaining scope: customer growth trend, repeat rate over time, postcode
+cluster analysis, strongest areas, host performance, vendor vs host
+sourced demand, recommended next actions surfaced across all three
+consumer pages. Dependency: T4-28, T4-27, T4-16.
 
 Strategic framing: the goal of this layer is to make the compounding
 asset tangible. Every drop adds to something. This surface shows what
@@ -697,26 +742,30 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 9.  T3-9  — Order page customer data capture and consent ✓ COMPLETE
 10. T3-10 — Order ready notification
 11. T3-11 — Menu Library delivery and collection suitability flags
-12. T4-1  — Recurring series drop generation
+12. T4-1  — Recurring series drop generation ✓ COMPLETE
 13. T4-2  — Order confirmation page ✓ COMPLETE
-14. T4-3  — Insights drop performance and growing business narrative
-15. T4-4  — Home dashboard intelligence surface and next action centre
-16. T4-5  — Drop Studio duplicate drop improvement ✓ COMPLETE
-17. T4-6  — Menu Library delete with safety check
-18. T4-7  — Service Board order notes and fulfilment details ✓ COMPLETE
-19. T4-8  — Order form enhancements ✓ COMPLETE
-20. T4-12 — Post-drop scorecard
-21. T4-13 — Minimal host-facing view
-22. T4-14 — Vendor customer data import
-23. T4-15 — Multiple drops within a single event
-24. T4-16 — Host onboarding as first-class entity
-25. T4-17 — Drop Studio audience targeting and demand preview
-26. T4-18 — Brand Hearth add contact phone field
-27. T4-19 — Onboarding to Brand Hearth continuity
-28. T4-20 — Onboarding to first drop pathway
-29. T4-21 — Customer import post-import demand view
-30. T4-22 — Navigation consistency sweep
-31. T4-23 — Drop Studio first drop guidance for new vendors
-32. T4-24 — Customer privacy policy
-33. T4-25 — Vendor terms of participation
-34. T4-26 — Host participation terms
+14. T4-3  — Insights drop performance and intelligence layer ✓ COMPLETE
+15. T4-5  — Drop Studio duplicate drop improvement ✓ COMPLETE
+16. T4-6  — Menu Library delete with safety check ✓ COMPLETE
+17. T4-7  — Service Board order notes and fulfilment details ✓ COMPLETE
+18. T4-8  — Order form enhancements ✓ COMPLETE
+19. T4-18 — Brand Hearth add contact phone field ✓ COMPLETE
+20. T4-22 — Navigation consistency sweep ✓ COMPLETE
+21. T4-14 — Vendor customer data import
+22. T4-28 — Intelligence engine — extract to shared module
+23. T4-27 — Customers page — first-class customer asset view
+24. T4-30 — Onboarding delivery model audit
+25. T4-29 — Series intelligence in Insights
+26. T4-12 — Post-drop scorecard
+27. T4-13 — Minimal host-facing view
+28. T4-4  — Home dashboard intelligence surface and next action centre
+29. T4-15 — Multiple drops within a single event
+30. T4-16 — Host onboarding as first-class entity
+31. T4-17 — Drop Studio audience targeting and demand preview
+32. T4-19 — Onboarding to Brand Hearth continuity
+33. T4-20 — Onboarding to first drop pathway
+34. T4-21 — Customer import post-import demand view
+35. T4-23 — Drop Studio first drop guidance for new vendors
+36. T4-24 — Customer privacy policy
+37. T4-25 — Vendor terms of participation
+38. T4-26 — Host participation terms
