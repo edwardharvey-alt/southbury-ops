@@ -16,36 +16,31 @@
       gap:16px;
     }
 
-    /* ── Progress indicator ── */
-    .onboardingProgress{
+    /* ── Progress card ── */
+    .obProgressCard{
+      background:#fff;
+      border:1px solid var(--h-border-2);
+      border-radius:20px;
+      box-shadow:0 2px 10px rgba(15,23,42,0.03);
+      padding:14px 18px;
       display:flex;
       align-items:center;
-      gap:0;
-      padding:18px 20px;
     }
 
     .progressStep{
       display:flex;
       align-items:center;
       gap:8px;
-      flex:1;
-      min-width:0;
+      white-space:nowrap;
     }
 
-    .progressStep:not(:last-child)::after{
-      content:"";
+    .progressConnector{
       flex:1;
+      min-width:20px;
       height:2px;
       background:var(--h-border);
       margin:0 10px;
       border-radius:2px;
-    }
-
-    .progressStepInner{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      white-space:nowrap;
     }
 
     .progressDot{
@@ -66,44 +61,53 @@
 
     .progressDot.active{
       border-color:var(--h-accent);
-      background:var(--h-accent);
-      color:#fff;
+      background:#fff;
+      color:var(--h-accent);
     }
 
     .progressDot.done{
       border-color:var(--h-accent);
-      background:color-mix(in srgb, var(--h-accent) 12%, white);
-      color:var(--h-accent);
+      background:var(--h-accent);
+      color:#fff;
     }
 
     .progressLabel{
       font-size:13px;
-      font-weight:800;
+      font-weight:700;
       color:var(--h-muted);
-      transition:color .2s ease;
+      transition:color .2s ease, font-weight .2s ease;
     }
 
     .progressLabel.active{
       color:var(--h-accent);
+      font-weight:950;
     }
 
     .progressLabel.done{
       color:var(--h-text);
+      font-weight:800;
     }
 
-    /* ── Stage card ── */
-    .stageCard{
+    /* ── Stage cards — matches brandSection exactly ── */
+    .obStageCard{
+      border:1px solid var(--h-border-2);
+      border-radius:22px;
+      background:#fff;
+      padding:18px;
       display:grid;
-      gap:20px;
-      padding:24px;
+      gap:14px;
+      box-shadow:0 2px 10px rgba(15,23,42,0.03);
     }
 
-    .stageEyebrow{
+    /* ── Stage eyebrow — matches brandSummaryEyebrow exactly ── */
+    .obStageEyebrow{
       display:inline-flex;
+      min-height:28px;
       align-items:center;
-      padding:5px 10px;
+      padding:0 10px;
       border-radius:999px;
-      background:rgba(249,115,22,0.08);
+      background:rgba(15,23,42,0.05);
+      border:1px solid rgba(15,23,42,0.08);
       color:var(--h-accent);
       font-size:11px;
       font-weight:900;
@@ -115,15 +119,16 @@
     /* ── Question block ── */
     .questionBlock{
       display:grid;
-      gap:10px;
+      gap:8px;
     }
 
     .questionLabel{
-      font-size:15px;
-      font-weight:800;
+      font-size:16px;
+      font-weight:950;
+      letter-spacing:-0.02em;
       color:var(--h-text);
-      line-height:1.3;
-      margin:0;
+      line-height:1.2;
+      margin:0 0 2px;
     }
 
     .questionSub{
@@ -133,133 +138,85 @@
       margin:0;
     }
 
-    /* ── Choice grid ── */
-    .choiceGrid{
+    /* ── Options grid ── */
+    .optionsGrid{
       display:grid;
-      grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
-      gap:8px;
+      grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));
+      gap:10px;
     }
 
-    /* ── onboarding choiceCard (accent-aware, not order-brand-primary) ── */
-    .obChoiceCard{
+    /* ── Choice cards (onboardingOption) ── */
+    .onboardingOption{
       border:1px solid var(--h-border);
-      border-radius:14px;
+      border-radius:16px;
       background:#fff;
       padding:12px 14px;
       display:flex;
       gap:10px;
       align-items:flex-start;
       cursor:pointer;
-      transition:all .15s ease;
+      transition:border-color .15s, background .15s;
       user-select:none;
     }
 
-    .obChoiceCard:hover{
+    .onboardingOption input{
+      display:none;
+    }
+
+    .onboardingOption:hover{
       border-color:color-mix(in srgb, var(--h-accent) 30%, transparent);
       background:color-mix(in srgb, var(--h-accent) 4%, white);
     }
 
-    .obChoiceCard.active{
+    .onboardingOption.active{
       border-color:color-mix(in srgb, var(--h-accent) 40%, white);
-      background:color-mix(in srgb, var(--h-accent) 9%, white);
-      box-shadow:0 4px 12px color-mix(in srgb, var(--h-accent) 12%, transparent);
+      background:color-mix(in srgb, var(--h-accent) 8%, white);
+      box-shadow:0 4px 12px color-mix(in srgb, var(--h-accent) 10%, transparent);
     }
 
-    .obChoiceCard input{
-      width:16px;
-      height:16px;
-      margin:2px 0 0;
-      accent-color:var(--h-accent);
+    /* ── Custom indicator circle ── */
+    .optionIndicator{
+      width:24px;
+      height:24px;
+      border-radius:999px;
+      border:2px solid var(--h-border);
       flex:0 0 auto;
+      margin-top:1px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition:all .15s;
     }
 
-    .obChoiceCardTitle{
+    .onboardingOption.active .optionIndicator{
+      background:var(--h-accent);
+      border-color:var(--h-accent);
+    }
+
+    .onboardingOption.active .optionIndicator::after{
+      content:'✓';
+      color:#fff;
+      font-size:11px;
+      font-weight:900;
+      line-height:1;
+    }
+
+    .optionTitle{
       font-size:13px;
       font-weight:900;
       color:var(--h-text);
-      line-height:1.2;
+      line-height:1.15;
     }
 
-    .obChoiceCardSub{
+    .optionSub{
       font-size:11px;
-      color:var(--h-muted);
       font-weight:700;
-      line-height:1.35;
+      color:var(--h-muted);
       margin-top:3px;
+      line-height:1.3;
     }
 
-    /* ── Save bar ── */
-    .savebar{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:14px;
-      flex-wrap:wrap;
-      padding:18px 24px;
-    }
-
-    .savebarHint{
-      font-size:13px;
-      color:var(--h-muted);
-      font-weight:700;
-    }
-
-    .savebarActions{
-      display:flex;
-      gap:10px;
-      align-items:center;
-    }
-
-    .btnPrimary{
-      appearance:none;
-      border:none;
-      background:var(--h-accent);
-      color:#fff;
-      font:inherit;
-      font-size:14px;
-      font-weight:800;
-      padding:0 20px;
-      height:42px;
-      border-radius:12px;
-      cursor:pointer;
-      transition:all .18s ease;
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-    }
-
-    .btnPrimary:hover:not(:disabled){
-      filter:brightness(.96);
-    }
-
-    .btnPrimary:disabled{
-      opacity:.42;
-      cursor:not-allowed;
-    }
-
-    .btnGhostLink{
-      appearance:none;
-      border:none;
-      background:transparent;
-      color:var(--h-muted);
-      font:inherit;
-      font-size:13px;
-      font-weight:800;
-      padding:0 8px;
-      height:42px;
-      border-radius:12px;
-      cursor:pointer;
-      text-decoration:none;
-      display:inline-flex;
-      align-items:center;
-      transition:color .15s ease;
-    }
-
-    .btnGhostLink:hover{
-      color:var(--h-text);
-    }
-
-    /* ── Stage reveal ── */
+    /* ── Stage wrapper reveal ── */
     .stageWrapper{
       display:none;
     }
@@ -273,9 +230,21 @@
       display:none;
     }
 
-    /* ── Completion state ── */
-    .completionCard{
-      padding:36px 28px;
+    /* ── Save hint inside brandActions ── */
+    .obSaveHint{
+      font-size:12px;
+      font-weight:700;
+      color:var(--h-muted);
+      margin:0;
+    }
+
+    /* ── Completion card — brandSection treatment ── */
+    .obCompletionCard{
+      border:1px solid var(--h-border-2);
+      border-radius:22px;
+      background:#fff;
+      padding:40px 28px;
+      box-shadow:0 2px 10px rgba(15,23,42,0.03);
       text-align:center;
       display:grid;
       gap:10px;
@@ -297,9 +266,9 @@
     }
 
     .completionTitle{
-      font-size:22px;
+      font-size:24px;
       font-weight:950;
-      letter-spacing:-0.025em;
+      letter-spacing:-0.03em;
       color:var(--h-text);
       margin:0;
     }
@@ -316,67 +285,32 @@
       gap:10px;
       flex-wrap:wrap;
       justify-content:center;
+      align-items:center;
       margin-top:14px;
     }
 
-    .btnCompletionPrimary{
-      appearance:none;
-      border:none;
-      background:var(--h-accent);
-      color:#fff;
-      font:inherit;
-      font-size:14px;
+    .brandMiniLink{
+      font-size:12px;
       font-weight:800;
-      padding:0 22px;
-      height:44px;
-      border-radius:13px;
-      cursor:pointer;
+      color:var(--h-accent);
       text-decoration:none;
-      display:inline-flex;
-      align-items:center;
-      transition:all .18s ease;
     }
 
-    .btnCompletionPrimary:hover{
-      filter:brightness(.96);
-    }
-
-    .btnCompletionSecondary{
-      appearance:none;
-      border:1px solid var(--h-border);
-      background:#fff;
-      color:var(--h-text);
-      font:inherit;
-      font-size:13px;
-      font-weight:800;
-      padding:0 18px;
-      height:44px;
-      border-radius:13px;
-      cursor:pointer;
-      text-decoration:none;
-      display:inline-flex;
-      align-items:center;
-      transition:all .18s ease;
-    }
-
-    .btnCompletionSecondary:hover{
-      border-color:var(--h-border-2);
-      background:rgba(15,23,42,0.02);
+    .brandMiniLink:hover{
+      text-decoration:underline;
     }
 
     .completionUpdateLink{
       font-size:12px;
-      color:var(--h-muted);
       font-weight:700;
-      cursor:pointer;
+      color:var(--h-muted);
       background:none;
       border:none;
       font:inherit;
       font-size:12px;
       font-weight:700;
-      color:var(--h-muted);
       text-decoration:underline;
-      margin-top:6px;
+      margin-top:4px;
       cursor:pointer;
     }
 
@@ -387,9 +321,10 @@
     /* ── Mobile ── */
     @media (max-width:768px){
       .progressLabel{ display:none; }
-      .choiceGrid{ grid-template-columns:1fr; }
-      .stageCard{ padding:18px 16px; }
-      .savebar{ padding:16px; }
+      .optionsGrid{ grid-template-columns:1fr; }
+      .obStageCard{ padding:16px 14px; border-radius:18px; }
+      .brandActions{ flex-direction:column; align-items:stretch; }
+      .brandActions .btnAccent{ width:100%; min-height:44px; font-size:13px; }
     }
   </style>
 </head>
@@ -422,13 +357,13 @@
       <div class="statusNotice" id="pageNotice"></div>
 
       <!-- COMPLETION STATE -->
-      <div class="card completionCard" id="completionState" style="display:none;">
+      <div class="obCompletionCard" id="completionState" style="display:none;">
         <div class="completionMark">✓</div>
         <h2 class="completionTitle">Your setup is saved.</h2>
         <p class="completionSub">Now let's shape how customers see your brand.</p>
         <div class="completionActions">
-          <a class="btnCompletionPrimary" href="brand-hearth.html">Set up your brand →</a>
-          <a class="btnCompletionSecondary" href="home.html">Go to your workspace</a>
+          <a class="btnAccent" href="brand-hearth.html">Set up your brand →</a>
+          <a class="brandMiniLink" href="home.html">Go to your workspace</a>
         </div>
         <button class="completionUpdateLink" id="updatePreferencesBtn" type="button">Update your preferences</button>
       </div>
@@ -437,61 +372,59 @@
       <div id="flowWrapper">
 
         <!-- PROGRESS INDICATOR -->
-        <div class="card onboardingProgress">
+        <div class="obProgressCard">
           <div class="progressStep">
-            <div class="progressStepInner">
-              <div class="progressDot" id="dot1">1</div>
-              <span class="progressLabel" id="label1">Who you are</span>
-            </div>
+            <div class="progressDot" id="dot1">1</div>
+            <span class="progressLabel" id="label1">Who you are</span>
           </div>
+          <div class="progressConnector"></div>
           <div class="progressStep">
-            <div class="progressStepInner">
-              <div class="progressDot" id="dot2">2</div>
-              <span class="progressLabel" id="label2">Your customers</span>
-            </div>
+            <div class="progressDot" id="dot2">2</div>
+            <span class="progressLabel" id="label2">Your customers</span>
           </div>
+          <div class="progressConnector"></div>
           <div class="progressStep">
-            <div class="progressStepInner">
-              <div class="progressDot" id="dot3">3</div>
-              <span class="progressLabel" id="label3">How you operate</span>
-            </div>
+            <div class="progressDot" id="dot3">3</div>
+            <span class="progressLabel" id="label3">How you operate</span>
           </div>
         </div>
 
         <!-- ══════════════════════════════════════ -->
         <!-- STAGE 1 — Who you are                 -->
         <!-- ══════════════════════════════════════ -->
-        <div class="card stageCard" id="stage1">
-          <div>
-            <div class="stageEyebrow">Who you are</div>
-          </div>
+        <div class="obStageCard" id="stage1">
+          <div class="obStageEyebrow">Who you are</div>
 
           <!-- Q1 -->
           <div class="questionBlock">
             <p class="questionLabel">What best describes how you operate?</p>
-            <div class="choiceGrid" id="q1Grid" data-question="vendor_type" data-multi="false">
-              <label class="obChoiceCard">
+            <div class="optionsGrid" id="q1Grid" data-question="vendor_type" data-multi="false">
+              <label class="onboardingOption">
                 <input type="radio" name="vendor_type" value="restaurant" />
+                <span class="optionIndicator"></span>
                 <div>
-                  <div class="obChoiceCardTitle">A restaurant or fixed kitchen</div>
+                  <div class="optionTitle">A restaurant or fixed kitchen</div>
                 </div>
               </label>
-              <label class="obChoiceCard">
+              <label class="onboardingOption">
                 <input type="radio" name="vendor_type" value="food_truck" />
+                <span class="optionIndicator"></span>
                 <div>
-                  <div class="obChoiceCardTitle">A food truck or mobile kitchen</div>
+                  <div class="optionTitle">A food truck or mobile kitchen</div>
                 </div>
               </label>
-              <label class="obChoiceCard">
+              <label class="onboardingOption">
                 <input type="radio" name="vendor_type" value="popup" />
+                <span class="optionIndicator"></span>
                 <div>
-                  <div class="obChoiceCardTitle">A pop-up chef or occasional service</div>
+                  <div class="optionTitle">A pop-up chef or occasional service</div>
                 </div>
               </label>
-              <label class="obChoiceCard">
+              <label class="onboardingOption">
                 <input type="radio" name="vendor_type" value="caterer" />
+                <span class="optionIndicator"></span>
                 <div>
-                  <div class="obChoiceCardTitle">A caterer</div>
+                  <div class="optionTitle">A caterer</div>
                 </div>
               </label>
             </div>
@@ -500,32 +433,36 @@
           <!-- Q2 -->
           <div class="questionBlock">
             <p class="questionLabel">How do you currently get food to customers?</p>
-            <div class="choiceGrid" id="q2Grid" data-question="delivery_model" data-multi="false">
-              <label class="obChoiceCard">
+            <div class="optionsGrid" id="q2Grid" data-question="delivery_model" data-multi="false">
+              <label class="onboardingOption">
                 <input type="radio" name="delivery_model" value="none" />
+                <span class="optionIndicator"></span>
                 <div>
-                  <div class="obChoiceCardTitle">We don't currently deliver</div>
-                  <div class="obChoiceCardSub">We serve in-house or at events only</div>
+                  <div class="optionTitle">We don't currently deliver</div>
+                  <div class="optionSub">We serve in-house or at events only</div>
                 </div>
               </label>
-              <label class="obChoiceCard">
+              <label class="onboardingOption">
                 <input type="radio" name="delivery_model" value="direct" />
+                <span class="optionIndicator"></span>
                 <div>
-                  <div class="obChoiceCardTitle">We deliver directly</div>
-                  <div class="obChoiceCardSub">Our own drivers or couriers</div>
+                  <div class="optionTitle">We deliver directly</div>
+                  <div class="optionSub">Our own drivers or couriers</div>
                 </div>
               </label>
-              <label class="obChoiceCard">
+              <label class="onboardingOption">
                 <input type="radio" name="delivery_model" value="aggregator" />
+                <span class="optionIndicator"></span>
                 <div>
-                  <div class="obChoiceCardTitle">We use delivery aggregators</div>
-                  <div class="obChoiceCardSub">Deliveroo, Uber Eats, Just Eat</div>
+                  <div class="optionTitle">We use delivery aggregators</div>
+                  <div class="optionSub">Deliveroo, Uber Eats, Just Eat</div>
                 </div>
               </label>
-              <label class="obChoiceCard">
+              <label class="onboardingOption">
                 <input type="radio" name="delivery_model" value="mixed" />
+                <span class="optionIndicator"></span>
                 <div>
-                  <div class="obChoiceCardTitle">A mix of the above</div>
+                  <div class="optionTitle">A mix of the above</div>
                 </div>
               </label>
             </div>
@@ -535,35 +472,40 @@
           <div class="questionBlock">
             <p class="questionLabel">What are you hoping Hearth helps you do?</p>
             <p class="questionSub">Choose up to two.</p>
-            <div class="choiceGrid" id="q3Grid" data-question="primary_goal" data-multi="true" data-max="2">
-              <label class="obChoiceCard">
+            <div class="optionsGrid" id="q3Grid" data-question="primary_goal" data-multi="true" data-max="2">
+              <label class="onboardingOption">
                 <input type="checkbox" name="primary_goal" value="predictable_demand" />
+                <span class="optionIndicator"></span>
                 <div>
-                  <div class="obChoiceCardTitle">Create more predictable demand</div>
+                  <div class="optionTitle">Create more predictable demand</div>
                 </div>
               </label>
-              <label class="obChoiceCard">
+              <label class="onboardingOption">
                 <input type="checkbox" name="primary_goal" value="new_areas" />
+                <span class="optionIndicator"></span>
                 <div>
-                  <div class="obChoiceCardTitle">Reach customers in new areas</div>
+                  <div class="optionTitle">Reach customers in new areas</div>
                 </div>
               </label>
-              <label class="obChoiceCard">
+              <label class="onboardingOption">
                 <input type="checkbox" name="primary_goal" value="reduce_aggregators" />
+                <span class="optionIndicator"></span>
                 <div>
-                  <div class="obChoiceCardTitle">Reduce aggregator dependency</div>
+                  <div class="optionTitle">Reduce aggregator dependency</div>
                 </div>
               </label>
-              <label class="obChoiceCard">
+              <label class="onboardingOption">
                 <input type="checkbox" name="primary_goal" value="events" />
+                <span class="optionIndicator"></span>
                 <div>
-                  <div class="obChoiceCardTitle">Run occasional or fundraising events more easily</div>
+                  <div class="optionTitle">Run occasional or fundraising events more easily</div>
                 </div>
               </label>
-              <label class="obChoiceCard">
+              <label class="onboardingOption">
                 <input type="checkbox" name="primary_goal" value="weekly_rhythm" />
+                <span class="optionIndicator"></span>
                 <div>
-                  <div class="obChoiceCardTitle">Build a repeatable weekly rhythm</div>
+                  <div class="optionTitle">Build a repeatable weekly rhythm</div>
                 </div>
               </label>
             </div>
@@ -574,31 +516,32 @@
         <!-- STAGE 2 — Your customers              -->
         <!-- ══════════════════════════════════════ -->
         <div class="stageWrapper" id="stage2Wrapper">
-          <div class="card stageCard" id="stage2">
-            <div>
-              <div class="stageEyebrow">Your customers</div>
-            </div>
+          <div class="obStageCard" id="stage2">
+            <div class="obStageEyebrow">Your customers</div>
 
             <!-- Q4 -->
             <div class="questionBlock">
               <p class="questionLabel">Do you already have a list of customers you could reach?</p>
-              <div class="choiceGrid" id="q4Grid" data-question="customer_data_posture" data-multi="false">
-                <label class="obChoiceCard">
+              <div class="optionsGrid" id="q4Grid" data-question="customer_data_posture" data-multi="false">
+                <label class="onboardingOption">
                   <input type="radio" name="customer_data_posture" value="rich" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">Yes — we have an email list, booking history, or past order data</div>
+                    <div class="optionTitle">Yes — we have an email list, booking history, or past order data</div>
                   </div>
                 </label>
-                <label class="obChoiceCard">
+                <label class="onboardingOption">
                   <input type="radio" name="customer_data_posture" value="partial" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">Somewhat — we have some contacts but nothing organised</div>
+                    <div class="optionTitle">Somewhat — we have some contacts but nothing organised</div>
                   </div>
                 </label>
-                <label class="obChoiceCard">
+                <label class="onboardingOption">
                   <input type="radio" name="customer_data_posture" value="light" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">Not yet — we'd be building from scratch</div>
+                    <div class="optionTitle">Not yet — we'd be building from scratch</div>
                   </div>
                 </label>
               </div>
@@ -607,30 +550,34 @@
             <!-- Q5 -->
             <div class="questionBlock">
               <p class="questionLabel">Where do most of your current or target customers come from?</p>
-              <div class="choiceGrid" id="q5Grid" data-question="customer_geography" data-multi="false">
-                <label class="obChoiceCard">
+              <div class="optionsGrid" id="q5Grid" data-question="customer_geography" data-multi="false">
+                <label class="onboardingOption">
                   <input type="radio" name="customer_geography" value="local" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">They're mostly local</div>
-                    <div class="obChoiceCardSub">A specific area or neighbourhood</div>
+                    <div class="optionTitle">They're mostly local</div>
+                    <div class="optionSub">A specific area or neighbourhood</div>
                   </div>
                 </label>
-                <label class="obChoiceCard">
+                <label class="onboardingOption">
                   <input type="radio" name="customer_geography" value="spread" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">They're spread across a wider region</div>
+                    <div class="optionTitle">They're spread across a wider region</div>
                   </div>
                 </label>
-                <label class="obChoiceCard">
+                <label class="onboardingOption">
                   <input type="radio" name="customer_geography" value="variable" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">It depends on the event or occasion</div>
+                    <div class="optionTitle">It depends on the event or occasion</div>
                   </div>
                 </label>
-                <label class="obChoiceCard">
+                <label class="onboardingOption">
                   <input type="radio" name="customer_geography" value="unknown" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">I'm not sure yet</div>
+                    <div class="optionTitle">I'm not sure yet</div>
                   </div>
                 </label>
               </div>
@@ -642,37 +589,39 @@
         <!-- STAGE 3 — How you want to operate     -->
         <!-- ══════════════════════════════════════ -->
         <div class="stageWrapper" id="stage3Wrapper">
-          <div class="card stageCard" id="stage3">
-            <div>
-              <div class="stageEyebrow">How you want to operate</div>
-            </div>
+          <div class="obStageCard" id="stage3">
+            <div class="obStageEyebrow">How you want to operate</div>
 
             <!-- Q6 -->
             <div class="questionBlock">
               <p class="questionLabel">In a typical service, how many orders would you expect to handle?</p>
-              <div class="choiceGrid" id="q6Grid" data-question="typical_capacity_range" data-multi="false">
-                <label class="obChoiceCard">
+              <div class="optionsGrid" id="q6Grid" data-question="typical_capacity_range" data-multi="false">
+                <label class="onboardingOption">
                   <input type="radio" name="typical_capacity_range" value="under_20" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">Fewer than 20</div>
+                    <div class="optionTitle">Fewer than 20</div>
                   </div>
                 </label>
-                <label class="obChoiceCard">
+                <label class="onboardingOption">
                   <input type="radio" name="typical_capacity_range" value="20_40" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">20–40</div>
+                    <div class="optionTitle">20–40</div>
                   </div>
                 </label>
-                <label class="obChoiceCard">
+                <label class="onboardingOption">
                   <input type="radio" name="typical_capacity_range" value="40_60" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">40–60</div>
+                    <div class="optionTitle">40–60</div>
                   </div>
                 </label>
-                <label class="obChoiceCard">
+                <label class="onboardingOption">
                   <input type="radio" name="typical_capacity_range" value="over_60" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">More than 60</div>
+                    <div class="optionTitle">More than 60</div>
                   </div>
                 </label>
               </div>
@@ -681,24 +630,27 @@
             <!-- Q7 -->
             <div class="questionBlock">
               <p class="questionLabel">How do you expect to get food to customers through Hearth?</p>
-              <div class="choiceGrid" id="q7Grid" data-question="preferred_fulfilment" data-multi="false">
-                <label class="obChoiceCard">
+              <div class="optionsGrid" id="q7Grid" data-question="preferred_fulfilment" data-multi="false">
+                <label class="onboardingOption">
                   <input type="radio" name="preferred_fulfilment" value="delivery" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">Delivery to their address</div>
+                    <div class="optionTitle">Delivery to their address</div>
                   </div>
                 </label>
-                <label class="obChoiceCard">
+                <label class="onboardingOption">
                   <input type="radio" name="preferred_fulfilment" value="collection" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">Collection from a fixed point</div>
-                    <div class="obChoiceCardSub">Venue, pub, event</div>
+                    <div class="optionTitle">Collection from a fixed point</div>
+                    <div class="optionSub">Venue, pub, event</div>
                   </div>
                 </label>
-                <label class="obChoiceCard">
+                <label class="onboardingOption">
                   <input type="radio" name="preferred_fulfilment" value="mixed" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">A mix — it depends on the drop</div>
+                    <div class="optionTitle">A mix — it depends on the drop</div>
                   </div>
                 </label>
               </div>
@@ -707,43 +659,43 @@
             <!-- Q8 -->
             <div class="questionBlock">
               <p class="questionLabel">How often would you ideally like to run drops?</p>
-              <div class="choiceGrid" id="q8Grid" data-question="preferred_cadence" data-multi="false">
-                <label class="obChoiceCard">
+              <div class="optionsGrid" id="q8Grid" data-question="preferred_cadence" data-multi="false">
+                <label class="onboardingOption">
                   <input type="radio" name="preferred_cadence" value="weekly" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">Weekly or more</div>
-                    <div class="obChoiceCardSub">I want to build a regular rhythm</div>
+                    <div class="optionTitle">Weekly or more</div>
+                    <div class="optionSub">I want to build a regular rhythm</div>
                   </div>
                 </label>
-                <label class="obChoiceCard">
+                <label class="onboardingOption">
                   <input type="radio" name="preferred_cadence" value="fortnightly" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">A few times a month</div>
+                    <div class="optionTitle">A few times a month</div>
                   </div>
                 </label>
-                <label class="obChoiceCard">
+                <label class="onboardingOption">
                   <input type="radio" name="preferred_cadence" value="occasional" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">Occasionally — events and one-offs for now</div>
+                    <div class="optionTitle">Occasionally — events and one-offs for now</div>
                   </div>
                 </label>
-                <label class="obChoiceCard">
+                <label class="onboardingOption">
                   <input type="radio" name="preferred_cadence" value="unknown" />
+                  <span class="optionIndicator"></span>
                   <div>
-                    <div class="obChoiceCardTitle">I'm not sure yet — I want to learn first</div>
+                    <div class="optionTitle">I'm not sure yet — I want to learn first</div>
                   </div>
                 </label>
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- SAVE BAR (revealed with Stage 3) -->
-        <div class="stageWrapper" id="savebarWrapper">
-          <div class="card savebar">
-            <p class="savebarHint" id="savebarHint">Answer all questions above to save your preferences.</p>
-            <div class="savebarActions">
-              <button class="btnPrimary" id="saveBtn" disabled type="button">Save my preferences</button>
+            <!-- Save actions -->
+            <div class="brandActions">
+              <p class="obSaveHint" id="savebarHint">Answer all questions above to save your preferences.</p>
+              <button class="btnAccent" id="saveBtn" disabled type="button">Save my preferences</button>
             </div>
           </div>
         </div>
@@ -833,12 +785,12 @@
           allInputs.forEach(input => {
             if (!input.checked && checked.length >= max) {
               input.disabled = true;
-              input.closest('.obChoiceCard').style.opacity = '0.45';
-              input.closest('.obChoiceCard').style.cursor = 'not-allowed';
+              input.closest('.onboardingOption').style.opacity = '0.45';
+              input.closest('.onboardingOption').style.pointerEvents = 'none';
             } else {
               input.disabled = false;
-              input.closest('.obChoiceCard').style.opacity = '';
-              input.closest('.obChoiceCard').style.cursor = '';
+              input.closest('.onboardingOption').style.opacity = '';
+              input.closest('.onboardingOption').style.pointerEvents = '';
             }
           });
         } else {
@@ -847,7 +799,7 @@
         }
 
         // Update active styling
-        grid.querySelectorAll('.obChoiceCard').forEach(card => {
+        grid.querySelectorAll('.onboardingOption').forEach(card => {
           const input = card.querySelector('input');
           card.classList.toggle('active', input.checked);
         });
@@ -859,7 +811,6 @@
     // ── Stage reveal ───────────────────────────────────────────────────────
     let stage2Revealed = false;
     let stage3Revealed = false;
-    let savebarRevealed = false;
 
     function stage1Complete(){
       return state.vendor_type && state.delivery_model && state.primary_goal.length > 0;
@@ -881,14 +832,6 @@
       if (stage2Revealed && !stage3Revealed && stage2Complete()){
         stage3Revealed = true;
         revealStage('stage3Wrapper', 'dot2', 'label2', 'dot3', 'label3');
-      }
-      if (stage3Revealed && !savebarRevealed){
-        savebarRevealed = true;
-        byId('savebarWrapper').classList.add('visible');
-        // scroll the save bar into view after a short delay
-        setTimeout(() => {
-          byId('savebarWrapper').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 80);
       }
       updateSaveButton();
     }
@@ -920,18 +863,32 @@
       const allDone = stage1Complete() && stage2Complete() && stage3Complete();
       btn.disabled = !allDone;
 
-      if (allDone){
-        hint.textContent = 'Everything looks good. Save when ready.';
-      } else if (stage3Revealed) {
-        hint.textContent = 'Answer all questions above to save your preferences.';
+      if (hint){
+        if (allDone){
+          hint.textContent = 'Everything looks good. Save when ready.';
+        } else if (stage3Revealed) {
+          hint.textContent = 'Answer all questions above to save your preferences.';
+        }
       }
     }
 
     // ── Progress indicator initialisation ─────────────────────────────────
     function initProgress(){
       // Stage 1 always active on load
-      byId('dot1').classList.add('active');
-      byId('label1').classList.add('active');
+      const dot1 = byId('dot1');
+      const label1 = byId('label1');
+      // Reset all dots first
+      ['dot1','dot2','dot3'].forEach(id => {
+        const d = byId(id);
+        d.classList.remove('active','done');
+        d.textContent = d.id.replace('dot','');
+      });
+      ['label1','label2','label3'].forEach(id => {
+        const l = byId(id);
+        l.classList.remove('active','done');
+      });
+      dot1.classList.add('active');
+      label1.classList.add('active');
     }
 
     // ── Pre-populate from saved values ────────────────────────────────────
@@ -945,7 +902,7 @@
       grid.querySelectorAll('input').forEach(input => {
         if (valSet.has(input.value)){
           input.checked = true;
-          input.closest('.obChoiceCard').classList.add('active');
+          input.closest('.onboardingOption').classList.add('active');
         }
       });
 
@@ -981,8 +938,8 @@
       if (checked.length >= max){
         grid.querySelectorAll('input:not(:checked)').forEach(input => {
           input.disabled = true;
-          input.closest('.obChoiceCard').style.opacity = '0.45';
-          input.closest('.obChoiceCard').style.cursor = 'not-allowed';
+          input.closest('.onboardingOption').style.opacity = '0.45';
+          input.closest('.onboardingOption').style.pointerEvents = 'none';
         });
       }
     }
@@ -1071,10 +1028,8 @@
           // Re-evaluate to restore correct stage/progress state
           stage2Revealed = false;
           stage3Revealed = false;
-          savebarRevealed = false;
           byId('stage2Wrapper').classList.remove('visible');
           byId('stage3Wrapper').classList.remove('visible');
-          byId('savebarWrapper').classList.remove('visible');
           initProgress();
           // Re-evaluate from current selections
           if (stage1Complete()){
@@ -1090,10 +1045,6 @@
             byId('dot2').classList.remove('active'); byId('dot2').classList.add('done'); byId('dot2').textContent = '✓';
             byId('label2').classList.remove('active'); byId('label2').classList.add('done');
             byId('dot3').classList.add('active'); byId('label3').classList.add('active');
-          }
-          if (stage1Complete() && stage2Complete() && stage3Complete()){
-            savebarRevealed = true;
-            byId('savebarWrapper').classList.add('visible');
           }
           updateSaveButton();
         });
@@ -1115,10 +1066,6 @@
           byId('dot2').classList.remove('active'); byId('dot2').classList.add('done'); byId('dot2').textContent = '✓';
           byId('label2').classList.remove('active'); byId('label2').classList.add('done');
           byId('dot3').classList.add('active'); byId('label3').classList.add('active');
-        }
-        if (stage1Complete() && stage2Complete() && stage3Complete()){
-          savebarRevealed = true;
-          byId('savebarWrapper').classList.add('visible');
         }
         updateSaveButton();
 
