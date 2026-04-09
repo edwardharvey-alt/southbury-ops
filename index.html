@@ -1500,12 +1500,16 @@
           e.stopPropagation();
           var id = String(toggleEl.dataset.id);
           var detailsEl = wrapper.querySelector(".detailsWrap");
+          console.log("Details clicked, detailsWrap:", detailsEl, "current open state:", detailsEl?.open);
           if (state.expandedOrders.has(id)) {
             state.expandedOrders.delete(id);
             if (detailsEl) detailsEl.classList.remove("open");
           } else {
             state.expandedOrders.add(id);
-            if (detailsEl) detailsEl.classList.add("open");
+            if (detailsEl) {
+              detailsEl.classList.add("open");
+              detailsEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }
           }
         });
       }
@@ -1998,6 +2002,7 @@
 
     // Called by all three action buttons — completes the status transition.
     async function completeNotifyAction() {
+      console.log("completeNotifyAction called, orderId:", _notifyOrderId, "toStatus:", _notifyToStatus);
       var orderId  = _notifyOrderId;
       var toStatus = _notifyToStatus;
       dismissNotifyModal();
@@ -2235,7 +2240,7 @@
       // Call and SMS: browser follows the tel:/sms: href, then transition completes.
       if (_callBtn)  _callBtn.addEventListener("click",  function () { completeNotifyAction(); });
       if (_smsBtn)   _smsBtn.addEventListener("click",   function () { completeNotifyAction(); });
-      if (_skipBtn)  _skipBtn.addEventListener("click",  function () { completeNotifyAction(); });
+      if (_skipBtn)  _skipBtn.addEventListener("click",  function () { console.log("Skip clicked"); completeNotifyAction(); });
       // Tapping the backdrop dismisses the modal without completing the transition.
       if (_notifyOverlay) _notifyOverlay.addEventListener("click", function (e) {
         if (e.target === _notifyOverlay) dismissNotifyModal();
