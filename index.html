@@ -1153,9 +1153,22 @@
 
       const capacityCategoryLabel = getCapacityCategoryLabel();
 
+      // Fix 4 diagnostic — log every item evaluated for Next items to make
+      console.log("[renderQueue] evaluating", state.itemDetails.length, "item rows:");
+      state.itemDetails.forEach((row) => {
+        console.log("  item:", (row.item_name || row.product_name || row.selected_product_name || row.name || "?"),
+          "| status:", row.status,
+          "| statusMatch:", normaliseStatus(row.status) === "confirmed",
+          "| isCapacity:", isCapacityItem(row),
+          "| category_id:", row.category_id,
+          "| capacity_impact:", row.capacity_impact
+        );
+      });
+
       const relevant = state.itemDetails.filter((row) =>
         normaliseStatus(row.status) === "confirmed" && isCapacityItem(row)
       );
+      console.log("[renderQueue] relevant items after filter:", relevant.length);
 
       const counts = new Map();
       relevant.forEach((row) => {
@@ -1449,6 +1462,11 @@
           e.stopPropagation();
           var id = String(toggleEl.dataset.id);
           var detailsEl = wrapper.querySelector(".detailsWrap");
+          // Fix 2 diagnostic — logs whether the listener fires and whether detailsEl exists.
+          // If this line does NOT appear in console when Details is clicked, the direct
+          // listener is not attached (toggleEl was null at render time).
+          // If detailsEl is null, the detailsWrap div is missing from the card's HTML.
+          console.log("[Details toggle] id:", id, "| status:", normaliseStatus(order.status), "| detailsEl:", detailsEl ? "found" : "NULL — check renderOrderCard innerHTML");
           if (state.expandedOrders.has(id)) {
             state.expandedOrders.delete(id);
             if (detailsEl) detailsEl.classList.remove("open");
@@ -1457,6 +1475,9 @@
             if (detailsEl) detailsEl.classList.add("open");
           }
         });
+      } else {
+        // Fix 2 diagnostic — toggleEl was null; js-toggle-details not found in card HTML.
+        console.warn("[Details toggle] toggleEl is null for order:", order.order_id, "status:", normaliseStatus(order.status));
       }
 
       return wrapper;
@@ -1551,13 +1572,29 @@
     async function enrichItemDetailsWithProductData(items) {
       if (!items || !items.length) return items;
 
+      // Fix 3 diagnostic — log all items before enrichment
+      console.log("[enrichItems] RAW items (" + items.length + "):", items.map((r) => ({
+        order_id: r.order_id,
+        product_id: r.product_id,
+        item_name: r.item_name || r.product_name || r.selected_product_name || r.name,
+        category_id: r.category_id,
+        capacity_impact: r.capacity_impact,
+        capacity_units_snapshot: r.capacity_units_snapshot,
+        status: r.status
+      })));
+
       const missingIds = [...new Set(
         items
           .filter((row) => (row.category_id === null || row.category_id === undefined) && row.product_id)
           .map((row) => String(row.product_id))
       )];
 
-      if (!missingIds.length) return items;
+      console.log("[enrichItems] product_ids needing lookup:", missingIds);
+
+      if (!missingIds.length) {
+        console.log("[enrichItems] no enrichment needed — all rows already have category_id");
+        return items;
+      }
 
       const { data: products, error } = await supabase
         .from("products")
@@ -1565,13 +1602,15 @@
         .in("id", missingIds);
 
       if (error || !products || !products.length) {
-        console.warn("[Service Board] Could not enrich item details with product data:", error?.message || "no products returned");
+        console.warn("[enrichItems] product lookup failed:", error?.message || "no products returned");
         return items;
       }
 
+      console.log("[enrichItems] products fetched:", products.map((p) => ({ id: p.id, category_id: p.category_id, capacity_impact: p.capacity_impact })));
+
       const productMap = new Map(products.map((p) => [String(p.id), p]));
 
-      return items.map((row) => {
+      const enriched = items.map((row) => {
         if ((row.category_id === null || row.category_id === undefined) && row.product_id) {
           const product = productMap.get(String(row.product_id));
           if (product) {
@@ -1584,6 +1623,18 @@
         }
         return row;
       });
+
+      // Fix 3 diagnostic — log enriched items with isCapacityItem result
+      const capacityCategoryId = state.dropSummary?.capacity_category_id || state.drop?.capacity_category_id || null;
+      console.log("[enrichItems] capacity_category_id:", capacityCategoryId);
+      console.log("[enrichItems] ENRICHED items:", enriched.map((r) => ({
+        item_name: r.item_name || r.product_name || r.selected_product_name || r.name,
+        category_id: r.category_id,
+        capacity_impact: r.capacity_impact,
+        isCapacity: isCapacityItem(r)
+      })));
+
+      return enriched;
     }
 
     async function loadExpandedOrderDetails(dropId) {
@@ -1957,23 +2008,22 @@
     }
 
     async function handleNextStatus(orderId, toStatus) {
+      // Fix 1 diagnostic — expected for Confirmed → Baking click:
+      //   [handleNextStatus] orderId: <uuid-string> | type: string | toStatus: baking
+      // "baking" is an internal kitchen status; modal only fires for "ready".
+      // If toStatus is not "baking" here, check renderActionRow / getNextStatus.
       console.log("[handleNextStatus] orderId:", orderId, "| type:", typeof orderId, "| toStatus:", toStatus);
-      if (toStatus === "ready" || toStatus === "baking") {
+
+      // Only the Ready transition needs a customer notification modal.
+      // Confirmed → Baking is a direct status update (internal kitchen state).
+      if (toStatus === "ready") {
         var order = state.ordersSummary.find(function (o) { return String(o.order_id) === String(orderId); });
-        var customerName = (order && order.customer_name) || "Customer";
-        var config = toStatus === "ready"
-          ? {
-              heading: "Notify customer?",
-              smsText: function (name, vendor) {
-                return "Hi " + name + ", your order is ready for collection. See you soon \u2014 " + vendor;
-              }
-            }
-          : {
-              heading: "Let " + customerName + " know?",
-              smsText: function (name, vendor) {
-                return "Hi " + name + ", your order is now being prepared. It will be ready soon \u2014 " + vendor;
-              }
-            };
+        var config = {
+          heading: "Notify customer?",
+          smsText: function (name, vendor) {
+            return "Hi " + name + ", your order is ready for collection. See you soon \u2014 " + vendor;
+          }
+        };
         openNotifyModal(order, config, async function () {
           try {
             await updateOrderStatus(orderId, toStatus);
