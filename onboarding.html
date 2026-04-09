@@ -442,6 +442,34 @@
       .onboardingOption, #q9Grid .onboardingOption{ width:100% !important; flex:0 0 100% !important; }
       .identityGrid{ grid-template-columns:1fr; }
     }
+
+    /* ── T4-20: First drop pathway block ── */
+    #completionDropAction {
+      display: grid;
+      gap: 8px;
+      justify-items: center;
+      width: 100%;
+      padding-top: 16px;
+      margin-top: 4px;
+      border-top: 1px solid var(--h-border-2);
+    }
+    .completionDropContext {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--h-muted);
+      margin: 0;
+      line-height: 1.5;
+      max-width: 38ch;
+      text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      #completionDropAction .btnGhost {
+        width: 100%;
+        min-height: 44px;
+        font-size: 13px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -480,6 +508,11 @@
         <div class="completionActions">
           <a class="btnAccent" href="brand-hearth.html">Set up your brand →</a>
           <a class="brandMiniLink" href="home.html">Go to your workspace</a>
+        </div>
+        <!-- T4-20: First drop pathway -->
+        <div id="completionDropAction" style="display:none;">
+          <p id="completionDropContext" class="completionDropContext"></p>
+          <a class="btnGhost" id="completionDropBtn" href="drop-manager.html">Create your first drop →</a>
         </div>
         <button class="completionUpdateLink" id="updatePreferencesBtn" type="button">Update your preferences</button>
       </div>
@@ -1050,6 +1083,15 @@
     }
 
     // ── Host detail capture ────────────────────────────────────────────────
+    // Human-readable labels for the drop pathway context line (T4-20)
+    const HOST_CONTEXT_SHORT = {
+      pub_venue:       'pub or venue',
+      sports_club:     'sports club',
+      school:          'school or college',
+      community_group: 'community group',
+      workplace:       'office or workplace',
+    };
+
     const HOST_CONTEXT_LABELS = {
       pub_venue:       'A pub, bar or venue',
       sports_club:     'A sports club',
@@ -1277,10 +1319,37 @@
       }
     }
 
+    // T4-20: Build the first drop pathway link based on saved host contexts
+    function applyCompletionDropPath() {
+      const dropAction = byId('completionDropAction');
+      const dropBtn = byId('completionDropBtn');
+      const dropContext = byId('completionDropContext');
+      if (!dropAction || !dropBtn) return;
+
+      const savedContexts = state.vendor?.existing_host_contexts || [];
+      const hostContexts = savedContexts.filter(v => v !== 'none');
+
+      let url = 'drop-manager.html';
+      let contextText = '';
+
+      if (hostContexts.length > 0) {
+        const firstContext = hostContexts[0];
+        const shortLabel = HOST_CONTEXT_SHORT[firstContext]
+          || firstContext.replace(/_/g, ' ');
+        url = `drop-manager.html?host_context=${encodeURIComponent(firstContext)}`;
+        contextText = `You mentioned working with a ${shortLabel} \u2014 that\u2019s a good place to start.`;
+      }
+
+      dropBtn.href = url;
+      if (dropContext) dropContext.textContent = contextText;
+      dropAction.style.display = '';
+    }
+
     // ── Show completion state ──────────────────────────────────────────────
     function showCompletion(){
       byId('flowWrapper').style.display = 'none';
       byId('completionState').style.display = '';
+      applyCompletionDropPath(); // T4-20
     }
 
     function hideCompletion(){

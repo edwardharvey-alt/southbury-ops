@@ -684,6 +684,46 @@
         font-size:13px;
       }
     }
+
+    /* ── T4-19: Onboarding continuity notice ── */
+    .obContinuityBar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--h-accent) 6%, white);
+      border: 1px solid color-mix(in srgb, var(--h-accent) 18%, transparent);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--h-text);
+    }
+    .obContinuityIcon {
+      color: var(--h-accent);
+      font-size: 13px;
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+    .obContinuityText {
+      flex: 1;
+      min-width: 0;
+      line-height: 1.4;
+    }
+    .obContinuityLink {
+      margin-left: auto;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--h-accent);
+      text-decoration: none;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+    .obContinuityLink:hover { text-decoration: underline; }
+
+    @media (max-width: 768px) {
+      .obContinuityBar { flex-wrap: wrap; }
+      .obContinuityLink { margin-left: 0; }
+    }
   </style>
 </head>
 <body>
@@ -800,6 +840,15 @@
               <div>
                 <h4 class="brandSectionTitle">Brand Identity</h4>
                 <p class="brandSectionSub">Define the name, voice and customer-facing label for your brand.</p>
+              </div>
+            </div>
+
+            <!-- T4-19: Onboarding continuity notice -->
+            <div id="onboardingContinuityNotice" style="display:none;">
+              <div class="obContinuityBar">
+                <span class="obContinuityIcon">✓</span>
+                <span class="obContinuityText" id="onboardingContinuityText">Your business name was carried over from your setup.</span>
+                <a href="onboarding.html" class="obContinuityLink">Update setup</a>
               </div>
             </div>
 
@@ -1183,6 +1232,25 @@
       updateAssetPreview("heroPreview", vendor.hero_image_url || "");
     }
 
+    // T4-19: Show a quiet confirmation when vendor arrives from onboarding
+    function applyOnboardingContinuity() {
+      const notice = byId('onboardingContinuityNotice');
+      const textEl = byId('onboardingContinuityText');
+      if (!notice) return;
+      const vendor = state.vendor;
+      if (vendor && vendor.onboarding_completed && vendor.display_name) {
+        const hasWebsite = !!(vendor.website_url || '').trim();
+        if (textEl) {
+          textEl.textContent = hasWebsite
+            ? 'Your business name and website were carried over from your setup.'
+            : 'Your business name was carried over from your setup.';
+        }
+        notice.style.display = '';
+      } else {
+        notice.style.display = 'none';
+      }
+    }
+
     async function uploadAsset(file, assetType) {
       const slug = state.vendor?.slug;
       if (!slug) throw new Error("Vendor not loaded.");
@@ -1465,6 +1533,7 @@
       await loadPreviewDrop();
       populateForm(state.vendor);
       applyPreview();
+      applyOnboardingContinuity(); // T4-19
       setSaveState("saved");
     }
 
