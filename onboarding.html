@@ -80,7 +80,7 @@
 
     .progressLabel.active{
       color:var(--h-accent);
-      font-weight:950;
+      font-weight:800;
     }
 
     .progressLabel.done{
@@ -93,9 +93,9 @@
       border:1px solid var(--h-border-2);
       border-radius:22px;
       background:#fff;
-      padding:18px;
+      padding:20px;
       display:grid;
-      gap:14px;
+      gap:20px;
       box-shadow:0 2px 10px rgba(15,23,42,0.03);
     }
 
@@ -110,7 +110,7 @@
       border:1px solid rgba(15,23,42,0.08);
       color:var(--h-accent);
       font-size:11px;
-      font-weight:900;
+      font-weight:800;
       text-transform:uppercase;
       letter-spacing:.06em;
       width:fit-content;
@@ -123,19 +123,20 @@
     }
 
     .questionLabel{
-      font-size:16px;
-      font-weight:950;
-      letter-spacing:-0.02em;
+      font-size:15px;
+      font-weight:800;
+      letter-spacing:-0.01em;
       color:var(--h-text);
-      line-height:1.2;
-      margin:0 0 2px;
+      line-height:1.3;
+      margin:0;
     }
 
     .questionSub{
       font-size:12px;
-      font-weight:700;
+      font-weight:600;
       color:var(--h-muted);
-      margin:0;
+      margin-top:-6px;
+      margin-bottom:2px;
     }
 
     /* ── Options grid ── */
@@ -203,17 +204,17 @@
 
     .optionTitle{
       font-size:13px;
-      font-weight:900;
+      font-weight:800;
       color:var(--h-text);
-      line-height:1.15;
+      line-height:1.2;
     }
 
     .optionSub{
       font-size:11px;
-      font-weight:700;
+      font-weight:600;
       color:var(--h-muted);
       margin-top:3px;
-      line-height:1.3;
+      line-height:1.35;
     }
 
     /* ── Stage wrapper reveal ── */
@@ -228,14 +229,6 @@
     /* ── Page status notice ── */
     #pageNotice{
       display:none;
-    }
-
-    /* ── Save hint inside brandActions ── */
-    .obSaveHint{
-      font-size:12px;
-      font-weight:700;
-      color:var(--h-muted);
-      margin:0;
     }
 
     /* ── Completion card — brandSection treatment ── */
@@ -693,9 +686,8 @@
             </div>
 
             <!-- Save actions -->
-            <div class="brandActions">
-              <p class="obSaveHint" id="savebarHint">Answer all questions above to save your preferences.</p>
-              <button class="btnAccent" id="saveBtn" disabled type="button">Save my preferences</button>
+            <div class="brandActions" style="margin-top: 6px;">
+              <button class="btnAccent" id="saveBtn" type="button">Save my preferences</button>
             </div>
           </div>
         </div>
@@ -857,19 +849,8 @@
 
     function updateSaveButton(){
       const btn = byId('saveBtn');
-      const hint = byId('savebarHint');
       if (!btn) return;
-
-      const allDone = stage1Complete() && stage2Complete() && stage3Complete();
-      btn.disabled = !allDone;
-
-      if (hint){
-        if (allDone){
-          hint.textContent = 'Everything looks good. Save when ready.';
-        } else if (stage3Revealed) {
-          hint.textContent = 'Answer all questions above to save your preferences.';
-        }
-      }
+      btn.disabled = !(stage1Complete() && stage2Complete() && stage3Complete());
     }
 
     // ── Progress indicator initialisation ─────────────────────────────────
