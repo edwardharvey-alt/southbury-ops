@@ -1737,41 +1737,64 @@
       }
 
       /* --- Archetype-aware recommendations from vendor onboarding --- */
-      const goals = (vendor && Array.isArray(vendor.primary_goal)) ? vendor.primary_goal : [];
-      const dm = vendor && vendor.delivery_model;
+      const goals = Array.isArray(vendor?.primary_goal) ? vendor.primary_goal : [];
+      const deliveryModel = vendor?.delivery_model || '';
+      const vendorType = vendor?.vendor_type || '';
 
-      if (goals.length === 0) {
+      if (goals.includes('grow_customer_base') && actions.length < 6) {
         actions.push({
-          label:'Setup',
-          tone:'neutral',
+          label:'Growth', tone:'good',
+          title:'Every drop builds your owned customer asset',
+          text:'Unlike aggregator platforms, every Hearth order adds a consented customer record you own permanently. The more drops you run, the faster that asset compounds \u2014 independent of any platform.'
+        });
+      }
+
+      if ((goals.includes('reduce_aggregators') || deliveryModel === 'aggregator') && actions.length < 6) {
+        actions.push({
+          label:'Independence', tone:'good',
+          title:'Hearth builds the asset that aggregators keep from you',
+          text:'Aggregators own your customer relationships. Each Hearth drop reclaims a piece of that \u2014 giving you direct reach, zero commission, and a customer list that compounds over time.'
+        });
+      }
+
+      if (goals.includes('predictable_demand') && actions.length < 6) {
+        actions.push({
+          label:'Demand', tone:'good',
+          title:'Drops create predictable, plannable revenue moments',
+          text:'Each drop has a declared capacity and a fixed window \u2014 giving you clarity on demand before you commit to fulfilment. That predictability compounds as your drop rhythm becomes known to your customers.'
+        });
+      }
+
+      if (goals.includes('new_areas') && actions.length < 6) {
+        actions.push({
+          label:'Expansion', tone:'neutral',
+          title:'Use host contexts to test new areas without fixed cost',
+          text:'A drop at a new host venue is a low-risk way to test demand in a location before committing to it. Strong drops become the evidence base for where to expand next.'
+        });
+      }
+
+      if (goals.includes('weekly_rhythm') && actions.length < 6) {
+        actions.push({
+          label:'Rhythm', tone:'neutral',
+          title:'A recurring series locks in your operating cadence',
+          text:'Set up a recurring drop series in Drop Studio and your weekly rhythm runs itself. Customers learn when to expect you \u2014 and repeat orders follow naturally.'
+        });
+      }
+
+      if (goals.includes('events') && actions.length < 6) {
+        actions.push({
+          label:'Events', tone:'neutral',
+          title:'Hearth is purpose-built for planned food moments',
+          text:'Every drop is a designed event \u2014 fixed window, declared capacity, host context. That structure makes one-off and fundraising events as easy to run as a regular service.'
+        });
+      }
+
+      if ((!vendor || goals.length === 0) && actions.length < 6) {
+        actions.push({
+          label:'Setup', tone:'neutral',
           title:'Complete your setup to unlock personalised recommendations',
           text:'Visit Setup to tell Hearth about your goals and how you operate. Recommendations will personalise once your preferences are saved.'
         });
-      } else {
-        if (goals.includes('grow_customer_base')) {
-          actions.push({
-            label:'Growth',
-            tone:'good',
-            title:'Every drop builds your owned customer asset',
-            text:'Unlike aggregator platforms, every Hearth order adds a consented customer record you own permanently. The more drops you run, the faster that asset compounds \u2014 independent of any platform.'
-          });
-        }
-        if (goals.includes('new_revenue_stream')) {
-          actions.push({
-            label:'Revenue',
-            tone:'good',
-            title:'This drop format opens a new revenue moment',
-            text:'A targeted drop into a new daypart or context lets you generate revenue from customers you already have, without cannibalising your existing service.'
-          });
-        }
-        if (dm === 'direct' || goals.includes('grow_customer_base')) {
-          actions.push({
-            label:'Customers',
-            tone:'neutral',
-            title:'Your next step is building your customer list',
-            text:'Import your existing customer contacts to start building reachability signals. The more Hearth knows about who your customers are and where they are, the better it can help you activate them for each drop.'
-          });
-        }
       }
 
       return actions.slice(0, 6);
