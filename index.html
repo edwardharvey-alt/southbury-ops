@@ -473,6 +473,57 @@
         overflow-y: auto;
       }
     }
+
+    /* Details fixed overlay panel */
+    .detailsOverlayPanel {
+      font-family: var(--sans);
+      font-size: 13px;
+      color: var(--h-text);
+      box-sizing: border-box;
+    }
+
+    /* Notify modal */
+    .notifyCard {
+      width: min(420px, 100%);
+      background: var(--h-surface);
+      border-radius: 18px;
+      border: 1px solid var(--h-border-2);
+      box-shadow: 0 20px 44px rgba(15,23,42,0.18);
+      padding: 20px;
+    }
+    .notifyHeading {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--h-text);
+      margin: 0 0 4px;
+    }
+    .notifyCustomerName {
+      font-size: 13px;
+      color: var(--h-muted);
+      margin: 0 0 12px;
+    }
+    .notifyPhone {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--h-text);
+      margin-bottom: 16px;
+      padding: 10px 12px;
+      background: var(--h-bg);
+      border: 1px solid var(--h-border-2);
+      border-radius: 8px;
+    }
+    .notifyActions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .notifyActions a,
+    .notifyActions button {
+      display: block;
+      width: 100%;
+      text-align: center;
+      box-sizing: border-box;
+    }
   </style>
 </head>
 <body>
@@ -799,6 +850,12 @@
     let realtimeChannel = null;
     let realtimeSubscribedDropId = null;
     let pendingChange = null;
+    var _detailsOverlay = null;
+    var _detailsOverlayId = null;
+    function closeDetailsOverlay() {
+      if (_detailsOverlay) { _detailsOverlay.remove(); _detailsOverlay = null; }
+      _detailsOverlayId = null;
+    }
 
     const state = {
       drops: [],
@@ -1388,7 +1445,6 @@
     }
 
     function renderOrderCard(order) {
-      const isExpanded = state.expandedOrders.has(String(order.order_id));
       const unitsLabel = getCapacityLabel(Number(order.capacity_units_in_order || order.pizzas || 0));
       const capacityTitle = String(getCapacityCategoryLabel() || "Capacity items").toUpperCase();
       const totalValue = formatMoneyPence(order.total_price_pence);
@@ -1411,7 +1467,7 @@
           ${renderFulfilmentRow(order)}
           ${renderNotesBlock(order.customer_notes)}
 
-          <div class="detailsWrap ${isExpanded ? "open" : ""}">
+          <div class="detailsWrap">
             <div class="detailsScroller">
               ${renderCompactBlock(capacityTitle, order.grouped.capacity)}
               ${renderCompactBlock("OTHER ITEMS", order.grouped.extras)}
@@ -1429,6 +1485,7 @@
       if (nextEl) {
         nextEl.addEventListener("click", function (e) {
           e.stopPropagation();
+          closeDetailsOverlay();
           handleNextStatus(nextEl.dataset.id, nextEl.dataset.status).catch(function (err) {
             console.error(err);
             showError(err.message || "Status update failed.");
@@ -1438,6 +1495,7 @@
       if (prevEl) {
         prevEl.addEventListener("click", function (e) {
           e.stopPropagation();
+          closeDetailsOverlay();
           updateOrderStatus(prevEl.dataset.id, prevEl.dataset.status).catch(function (err) {
             console.error(err);
             showError(err.message || "Status update failed.");
@@ -1448,19 +1506,60 @@
         toggleEl.addEventListener("click", function (e) {
           e.stopPropagation();
           var id = String(toggleEl.dataset.id);
-          var detailsEl = wrapper.querySelector(".detailsWrap");
+
+          // If this order's overlay is already open, close it and return
+          if (_detailsOverlayId === id) {
+            closeDetailsOverlay();
+            return;
+          }
+
+          // Close any existing overlay then open a new one
+          closeDetailsOverlay();
+          _detailsOverlayId = id;
+
+          var rect = wrapper.getBoundingClientRect();
+          var scroller = wrapper.querySelector(".detailsScroller");
+
+          var ov = document.createElement("div");
+          ov.className = "detailsOverlayPanel";
+
+          // Position below card; flip above if it would go off-screen
+          var topBelow = rect.bottom + 4;
+          var approxHeight = Math.min(window.innerHeight * 0.6, 300);
+          var top = (topBelow + approxHeight > window.innerHeight && rect.top - approxHeight > 0)
+            ? rect.top - approxHeight - 4
+            : topBelow;
+
+          ov.style.cssText = [
+            "position:fixed",
+            "top:" + Math.round(top) + "px",
+            "left:" + Math.round(rect.left) + "px",
+            "width:" + Math.round(rect.width) + "px",
+            "z-index:1000",
+            "background:var(--h-surface)",
+            "border-radius:10px",
+            "box-shadow:0 4px 24px rgba(15,23,42,0.15)",
+            "border:1px solid var(--h-border-2)",
+            "padding:12px 14px",
+            "overflow-y:auto",
+            "max-height:60vh"
+          ].join(";");
+
+          ov.innerHTML = scroller
+            ? scroller.innerHTML
+            : '<div class="emptyState">No details available.</div>';
+
+          document.body.appendChild(ov);
+          _detailsOverlay = ov;
+
+          // Close on outside click (deferred to avoid same-tick close)
+          setTimeout(function () {
+            document.addEventListener("click", closeDetailsOverlay, { once: true });
+          }, 0);
+
+          // Close if the column scrolls (overlay position would be stale)
           var colBody = wrapper.closest(".boardColBody");
-          if (state.expandedOrders.has(id)) {
-            state.expandedOrders.delete(id);
-            if (detailsEl) detailsEl.classList.remove("open");
-          } else {
-            state.expandedOrders.add(id);
-            if (detailsEl) detailsEl.classList.add("open");
-          }
-          if (colBody) {
-            var anyOpen = colBody.querySelector(".detailsWrap.open");
-            colBody.style.overflow = anyOpen ? "visible" : "";
-          }
+          if (colBody) colBody.addEventListener("scroll", closeDetailsOverlay, { once: true });
         });
       }
 
@@ -1468,6 +1567,8 @@
     }
 
     function renderBoard() {
+      closeDetailsOverlay();
+
       const cols = {
         placed: byId("colPlaced"),
         confirmed: byId("colConfirmed"),
@@ -1493,12 +1594,6 @@
         matches.forEach((order) => {
           cols[status].appendChild(renderOrderCard(order));
         });
-      });
-
-      // Sync colBody overflow after render — expanded cards need overflow:visible to avoid clipping
-      Object.values(cols).forEach((colBody) => {
-        var anyOpen = colBody.querySelector(".detailsWrap.open");
-        colBody.style.overflow = anyOpen ? "visible" : "";
       });
     }
 
@@ -1832,6 +1927,7 @@
     }
 
     async function applyBoardFilters() {
+      closeDetailsOverlay();
       state.expandedOrders.clear();
       ensureSelectedDropStillValid();
       await refreshData();
@@ -2072,6 +2168,7 @@
 
       byId("dropSelect").addEventListener("change", async function (e) {
         state.selectedDropId = e.target.value || null;
+        closeDetailsOverlay();
         state.expandedOrders.clear();
         try {
           await refreshData();
@@ -2220,5 +2317,19 @@
     init();
   })();
 </script>
+
+  <!-- T3-10: Order notification modal -->
+  <div id="readyNotifyOverlay" class="modalBackdrop">
+    <div class="notifyCard">
+      <p class="notifyHeading" id="readyNotifyHeading">Notify customer?</p>
+      <p class="notifyCustomerName" id="readyNotifyName"></p>
+      <div class="notifyPhone" id="readyNotifyPhoneDisplay"></div>
+      <div class="notifyActions">
+        <a id="readyNotifyCallBtn" class="btnAccent" href="#">Call customer</a>
+        <a id="readyNotifySmsBtn" class="btnGhost" href="#">Send SMS</a>
+        <button id="readyNotifySkipBtn" class="btnGhost" type="button">Skip — mark ready</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
