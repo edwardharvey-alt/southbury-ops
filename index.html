@@ -985,14 +985,14 @@
         return row.category_id === capacityCategoryId;
       }
 
-      // Secondary: capacity_impact — enriched from products table for bundle components
+      // Secondary: capacity_units — enriched from products table for bundle components
       // that don't carry category_id through the expanded view
-      if (row.capacity_impact !== null && row.capacity_impact !== undefined) {
-        return Number(row.capacity_impact) > 0;
+      if (row.capacity_units !== null && row.capacity_units !== undefined) {
+        return Number(row.capacity_units) > 0;
       }
 
       // Fallback: legacy view — items with capacity_units_snapshot > 0 are capacity items
-      return Number(row.capacity_units_snapshot ?? row.capacity_units ?? 0) > 0;
+      return Number(row.capacity_units_snapshot ?? 0) > 0;
     }
 
     function groupItemDetailsByOrder(items) {
@@ -1153,22 +1153,9 @@
 
       const capacityCategoryLabel = getCapacityCategoryLabel();
 
-      // Fix 4 diagnostic — log every item evaluated for Next items to make
-      console.log("[renderQueue] evaluating", state.itemDetails.length, "item rows:");
-      state.itemDetails.forEach((row) => {
-        console.log("  item:", (row.item_name || row.product_name || row.selected_product_name || row.name || "?"),
-          "| status:", row.status,
-          "| statusMatch:", normaliseStatus(row.status) === "confirmed",
-          "| isCapacity:", isCapacityItem(row),
-          "| category_id:", row.category_id,
-          "| capacity_impact:", row.capacity_impact
-        );
-      });
-
       const relevant = state.itemDetails.filter((row) =>
         normaliseStatus(row.status) === "confirmed" && isCapacityItem(row)
       );
-      console.log("[renderQueue] relevant items after filter:", relevant.length);
 
       const counts = new Map();
       relevant.forEach((row) => {
@@ -1462,11 +1449,7 @@
           e.stopPropagation();
           var id = String(toggleEl.dataset.id);
           var detailsEl = wrapper.querySelector(".detailsWrap");
-          // Fix 2 diagnostic — logs whether the listener fires and whether detailsEl exists.
-          // If this line does NOT appear in console when Details is clicked, the direct
-          // listener is not attached (toggleEl was null at render time).
-          // If detailsEl is null, the detailsWrap div is missing from the card's HTML.
-          console.log("[Details toggle] id:", id, "| status:", normaliseStatus(order.status), "| detailsEl:", detailsEl ? "found" : "NULL — check renderOrderCard innerHTML");
+          var colBody = wrapper.closest(".boardColBody");
           if (state.expandedOrders.has(id)) {
             state.expandedOrders.delete(id);
             if (detailsEl) detailsEl.classList.remove("open");
@@ -1474,10 +1457,11 @@
             state.expandedOrders.add(id);
             if (detailsEl) detailsEl.classList.add("open");
           }
+          if (colBody) {
+            var anyOpen = colBody.querySelector(".detailsWrap.open");
+            colBody.style.overflow = anyOpen ? "visible" : "";
+          }
         });
-      } else {
-        // Fix 2 diagnostic — toggleEl was null; js-toggle-details not found in card HTML.
-        console.warn("[Details toggle] toggleEl is null for order:", order.order_id, "status:", normaliseStatus(order.status));
       }
 
       return wrapper;
@@ -1509,6 +1493,12 @@
         matches.forEach((order) => {
           cols[status].appendChild(renderOrderCard(order));
         });
+      });
+
+      // Sync colBody overflow after render — expanded cards need overflow:visible to avoid clipping
+      Object.values(cols).forEach((colBody) => {
+        var anyOpen = colBody.querySelector(".detailsWrap.open");
+        colBody.style.overflow = anyOpen ? "visible" : "";
       });
     }
 
@@ -1565,23 +1555,12 @@
       renderDropSelect();
     }
 
-    // Fix 1 — enrich bundle component rows with capacity_impact from the products table.
+    // Enrich bundle component rows with category_id and capacity_units from the products table.
     // v_order_item_detail_expanded returns one row per bundle component but does not
-    // carry category_id or capacity_impact for those components.  We fetch those fields
+    // carry category_id or capacity_units for those components.  We fetch those fields
     // from products and merge them so isCapacityItem() can classify correctly.
     async function enrichItemDetailsWithProductData(items) {
       if (!items || !items.length) return items;
-
-      // Fix 3 diagnostic — log all items before enrichment
-      console.log("[enrichItems] RAW items (" + items.length + "):", items.map((r) => ({
-        order_id: r.order_id,
-        product_id: r.product_id,
-        item_name: r.item_name || r.product_name || r.selected_product_name || r.name,
-        category_id: r.category_id,
-        capacity_impact: r.capacity_impact,
-        capacity_units_snapshot: r.capacity_units_snapshot,
-        status: r.status
-      })));
 
       const missingIds = [...new Set(
         items
@@ -1589,52 +1568,33 @@
           .map((row) => String(row.product_id))
       )];
 
-      console.log("[enrichItems] product_ids needing lookup:", missingIds);
-
-      if (!missingIds.length) {
-        console.log("[enrichItems] no enrichment needed — all rows already have category_id");
-        return items;
-      }
+      if (!missingIds.length) return items;
 
       const { data: products, error } = await supabase
         .from("products")
-        .select("id, category_id, capacity_impact")
+        .select("id, category_id, capacity_units")
         .in("id", missingIds);
 
       if (error || !products || !products.length) {
-        console.warn("[enrichItems] product lookup failed:", error?.message || "no products returned");
+        console.warn("[Service Board] Could not enrich item details with product data:", error?.message || "no products returned");
         return items;
       }
 
-      console.log("[enrichItems] products fetched:", products.map((p) => ({ id: p.id, category_id: p.category_id, capacity_impact: p.capacity_impact })));
-
       const productMap = new Map(products.map((p) => [String(p.id), p]));
 
-      const enriched = items.map((row) => {
+      return items.map((row) => {
         if ((row.category_id === null || row.category_id === undefined) && row.product_id) {
           const product = productMap.get(String(row.product_id));
           if (product) {
             return {
               ...row,
               category_id: product.category_id,
-              capacity_impact: product.capacity_impact
+              capacity_units: product.capacity_units
             };
           }
         }
         return row;
       });
-
-      // Fix 3 diagnostic — log enriched items with isCapacityItem result
-      const capacityCategoryId = state.dropSummary?.capacity_category_id || state.drop?.capacity_category_id || null;
-      console.log("[enrichItems] capacity_category_id:", capacityCategoryId);
-      console.log("[enrichItems] ENRICHED items:", enriched.map((r) => ({
-        item_name: r.item_name || r.product_name || r.selected_product_name || r.name,
-        category_id: r.category_id,
-        capacity_impact: r.capacity_impact,
-        isCapacity: isCapacityItem(r)
-      })));
-
-      return enriched;
     }
 
     async function loadExpandedOrderDetails(dropId) {
@@ -1926,17 +1886,9 @@
     // The body-level delegation handler (lines below in attachEvents) handles the same
     // path for events that reach it, but direct listeners stop propagation before that.
     async function updateOrderStatus(orderId, toStatus) {
-      console.log("[updateOrderStatus] orderId:", orderId, "| type:", typeof orderId, "| toStatus:", toStatus);
-
       if (pendingChange) await commitPending(true);
 
       const order = state.ordersSummary.find((o) => String(o.order_id) === String(orderId));
-      console.log(
-        "[updateOrderStatus] match result:",
-        order
-          ? "FOUND (id=" + order.order_id + ", type=" + typeof order.order_id + ")"
-          : "NOT FOUND | state sample=" + JSON.stringify(state.ordersSummary.slice(0, 3).map((o) => ({ id: o.order_id, t: typeof o.order_id })))
-      );
 
       if (!order) throw new Error("Order not found in current state.");
 
@@ -2008,12 +1960,6 @@
     }
 
     async function handleNextStatus(orderId, toStatus) {
-      // Fix 1 diagnostic — expected for Confirmed → Baking click:
-      //   [handleNextStatus] orderId: <uuid-string> | type: string | toStatus: baking
-      // "baking" is an internal kitchen status; modal only fires for "ready".
-      // If toStatus is not "baking" here, check renderActionRow / getNextStatus.
-      console.log("[handleNextStatus] orderId:", orderId, "| type:", typeof orderId, "| toStatus:", toStatus);
-
       // Only the Ready transition needs a customer notification modal.
       // Confirmed → Baking is a direct status update (internal kitchen state).
       if (toStatus === "ready") {
