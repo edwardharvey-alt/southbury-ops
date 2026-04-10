@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hearth — Import Customers</title>
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=30" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --ci-bg: #f7f5f1;
+      --ci-card: #ffffff;
+      --ci-border: #e9e3d8;
+      --ci-text: #1f2937;
+      --ci-muted: #6b7280;
+      --ci-accent: var(--h-accent, #f97316);
+      --ci-accent-light: rgba(249, 115, 22, 0.08);
+      --ci-radius: 18px;
+      --ci-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+      --ci-good: #166534;
+      --ci-good-bg: #ecfdf3;
+    }
+
+    body {
+      background: var(--ci-bg);
+      color: var(--ci-text);
+    }
+
+    /* ── Step indicator ── */
+    .ci-steps {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin: 0 0 32px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .ci-step {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .ci-step-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--ci-border);
+      background: var(--ci-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ci-muted);
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+
+    .ci-step-label {
+      font-size: 13px;
+      color: var(--ci-muted);
+      margin-left: 8px;
+      white-space: nowrap;
+      transition: color 0.2s ease;
+    }
+
+    .ci-step-connector {
+      width: 32px;
+      height: 2px;
+      background: var(--ci-border);
+      margin: 0 8px;
+      flex-shrink: 0;
+    }
+
+    .ci-step.active .ci-step-dot {
+      border-color: var(--ci-accent);
+      background: var(--ci-accent);
+      color: #fff;
+    }
+
+    .ci-step.active .ci-step-label {
+      color: var(--ci-text);
+      font-weight: 600;
+    }
+
+    .ci-step.complete .ci-step-dot {
+      border-color: var(--ci-good);
+      background: var(--ci-good-bg);
+      color: var(--ci-good);
+    }
+
+    .ci-step.complete .ci-step-label {
+      color: var(--ci-good);
+    }
+
+    /* Mobile step indicator */
+    .ci-steps-mobile {
+      display: none;
+      text-align: center;
+      margin: 0 0 24px;
+      font-size: 14px;
+      color: var(--ci-muted);
+    }
+
+    .ci-steps-mobile strong {
+      color: var(--ci-text);
+    }
+
+    @media (max-width: 768px) {
+      .ci-steps { display: none; }
+      .ci-steps-mobile { display: block; }
+    }
+
+    /* ── Main card ── */
+    .ci-card {
+      background: var(--ci-card);
+      border: 1px solid var(--ci-border);
+      border-radius: var(--ci-radius);
+      box-shadow: var(--ci-shadow);
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 36px 32px;
+    }
+
+    @media (max-width: 768px) {
+      .ci-card {
+        padding: 24px 18px;
+      }
+    }
+
+    .ci-title {
+      margin: 0 0 6px;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .ci-subtitle {
+      margin: 0 0 32px;
+      color: var(--ci-muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* ── Drop zone ── */
+    .ci-dropzone {
+      border: 2px dashed var(--ci-border);
+      border-radius: 14px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--ci-bg);
+    }
+
+    .ci-dropzone:hover,
+    .ci-dropzone.dragover {
+      border-color: var(--ci-accent);
+      background: var(--ci-accent-light);
+    }
+
+    .ci-dropzone-icon {
+      font-size: 36px;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+
+    .ci-dropzone-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ci-text);
+      margin-bottom: 4px;
+    }
+
+    .ci-dropzone-hint {
+      font-size: 13px;
+      color: var(--ci-muted);
+    }
+
+    .ci-browse-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 16px;
+      padding: 10px 24px;
+      border: 1px solid var(--ci-border);
+      border-radius: 10px;
+      background: var(--ci-card);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ci-text);
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .ci-browse-btn:hover {
+      border-color: var(--ci-accent);
+      color: var(--ci-accent);
+    }
+
+    .ci-file-input {
+      display: none;
+    }
+
+    /* ── Error message ── */
+    .ci-error {
+      display: none;
+      margin-top: 20px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Step panels ── */
+    .ci-step-panel {
+      display: none;
+    }
+
+    .ci-step-panel.active {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="card headerBar">
+      <div class="brand">
+        <div class="brandMark">H</div>
+        <div>
+          <div class="brandTitle">Hearth — Import Customers</div>
+          <div class="brandSubtitle">Add your existing customer list to your Hearth audience.</div>
+        </div>
+      </div>
+
+      <div class="nav">
+        <a href="home.html">Home</a>
+        <a href="brand-hearth.html">Brand Hearth</a>
+        <a href="drop-menu.html">Menu Library</a>
+        <a href="drop-manager.html">Drop Studio</a>
+        <a href="index.html">Service Board</a>
+        <a href="insights.html">Insights</a>
+        <a href="onboarding.html">Setup</a>
+      </div>
+    </div>
+
+    <div class="ci-card">
+
+      <!-- Step indicator — desktop -->
+      <ol class="ci-steps" id="stepIndicator">
+        <li class="ci-step active" data-step="1">
+          <span class="ci-step-dot">1</span>
+          <span class="ci-step-label">Upload</span>
+        </li>
+        <li class="ci-step-connector"></li>
+        <li class="ci-step" data-step="2">
+          <span class="ci-step-dot">2</span>
+          <span class="ci-step-label">Preview</span>
+        </li>
+        <li class="ci-step-connector"></li>
+        <li class="ci-step" data-step="3">
+          <span class="ci-step-dot">3</span>
+          <span class="ci-step-label">Confirm</span>
+        </li>
+        <li class="ci-step-connector"></li>
+        <li class="ci-step" data-step="4">
+          <span class="ci-step-dot">4</span>
+          <span class="ci-step-label">Import</span>
+        </li>
+        <li class="ci-step-connector"></li>
+        <li class="ci-step" data-step="5">
+          <span class="ci-step-dot">5</span>
+          <span class="ci-step-label">Done</span>
+        </li>
+      </ol>
+
+      <!-- Step indicator — mobile -->
+      <div class="ci-steps-mobile" id="stepIndicatorMobile">
+        <strong>Upload</strong> — Step 1 of 5
+      </div>
+
+      <!-- Step 1: Upload -->
+      <div class="ci-step-panel active" data-panel="1">
+        <h1 class="ci-title">Import customers</h1>
+        <p class="ci-subtitle">Add your existing customer list to your Hearth audience.</p>
+
+        <div class="ci-dropzone" id="dropzone">
+          <div class="ci-dropzone-icon">&#128196;</div>
+          <div class="ci-dropzone-text">Drop your CSV here</div>
+          <div class="ci-dropzone-hint">CSV file with name, email, and postcode columns</div>
+        </div>
+
+        <div style="text-align:center;">
+          <button class="ci-browse-btn" id="browseBtn" type="button">Browse files</button>
+          <input type="file" class="ci-file-input" id="fileInput" accept=".csv" />
+        </div>
+
+        <div class="ci-error" id="errorMsg"></div>
+      </div>
+
+      <!-- Step 2: Preview (hidden) -->
+      <div class="ci-step-panel" data-panel="2"></div>
+
+      <!-- Step 3: Confirm (hidden) -->
+      <div class="ci-step-panel" data-panel="3"></div>
+
+      <!-- Step 4: Import (hidden) -->
+      <div class="ci-step-panel" data-panel="4"></div>
+
+      <!-- Step 5: Done (hidden) -->
+      <div class="ci-step-panel" data-panel="5"></div>
+
+    </div>
+  </div>
+
+  <script>
+    const sb = window.supabase.createClient(
+      window.HEARTH_CONFIG.SUPABASE_URL,
+      window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+    );
+
+    async function resolveVendor() {
+      return null;
+    }
+  </script>
+</body>
+</html>
