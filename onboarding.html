@@ -476,8 +476,8 @@
       <div class="obCompletionCard" id="completionState" style="display:none;">
         <div class="completionMark">✓</div>
         <h2 class="completionTitle">Your setup is saved.</h2>
-        <p class="completionSub">Now let's shape how customers see your brand.</p>
-        <div class="completionActions">
+        <p class="completionSub" id="completionSub">Now let's shape how customers see your brand.</p>
+        <div class="completionActions" id="completionActions">
           <a class="btnAccent" href="brand-hearth.html">Set up your brand →</a>
           <a class="brandMiniLink" href="home.html">Go to your workspace</a>
         </div>
@@ -593,7 +593,7 @@
                 <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">We use delivery aggregators</div>
-                  <div class="optionSub">Deliveroo, Uber Eats, Just Eat</div>
+                  <div class="optionSub">Deliveroo, Uber Eats, Just Eat. Hearth helps you build a direct customer relationship alongside these.</div>
                 </div>
               </label>
               <label class="onboardingOption">
@@ -638,6 +638,7 @@
                 <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">Reduce aggregator dependency</div>
+                  <div class="optionSub">Every drop builds customers you own — not rented from a platform</div>
                 </div>
               </label>
               <label class="onboardingOption">
@@ -668,6 +669,7 @@
             <!-- Q4 -->
             <div class="questionBlock">
               <p class="questionLabel">Do you already have a list of customers you could reach?</p>
+              <p class="questionSub" id="q4AggregatorNote" style="display:none;">Most aggregator platforms don't share customer data with you. That's part of what Hearth changes — every order through a drop adds a customer you own directly.</p>
               <div class="optionsGrid" id="q4Grid" data-question="customer_data_posture" data-multi="false">
                 <label class="onboardingOption">
                   <input type="radio" name="customer_data_posture" value="rich" />
@@ -1155,6 +1157,9 @@
         stage3Revealed = true;
         revealStage('stage3Wrapper', 'dot2', 'label2', 'dot3', 'label3');
       }
+      // Show aggregator data gap note at Q4 when delivery_model is aggregator
+      const aggNote = byId('q4AggregatorNote');
+      if (aggNote) aggNote.style.display = state.delivery_model === 'aggregator' ? '' : 'none';
       updateSaveButton();
     }
 
@@ -1281,6 +1286,22 @@
     function showCompletion(){
       byId('flowWrapper').style.display = 'none';
       byId('completionState').style.display = '';
+
+      // Pathway-aware completion CTAs
+      const posture = state.vendor?.data_posture || (state.customer_data_posture === 'light' ? 'light' : 'rich');
+      const sub = byId('completionSub');
+      const actions = byId('completionActions');
+      if (posture === 'rich') {
+        sub.textContent = 'You have customer data — bring it into Hearth to unlock demand targeting.';
+        actions.innerHTML =
+          '<a class="btnAccent" href="customer-import.html">Import your customers →</a>' +
+          '<a class="brandMiniLink" href="brand-hearth.html">Set up your brand</a>';
+      } else {
+        sub.textContent = 'Start with a host you know — it\'s the fastest way to fill capacity and build your audience.';
+        actions.innerHTML =
+          '<a class="btnAccent" href="drop-manager.html">Create your first drop →</a>' +
+          '<a class="brandMiniLink" href="brand-hearth.html">Set up your brand</a>';
+      }
     }
 
     function hideCompletion(){
@@ -1301,7 +1322,7 @@
       showNotice('');
 
       // Derive data_posture from customer_data_posture
-      const dataPosture = state.customer_data_posture === 'rich' ? 'rich' : 'light';
+      const dataPosture = state.customer_data_posture === 'light' ? 'light' : 'rich';
 
       // Identity fields — only write if non-empty
       const businessName = byId('obBusinessName').value.trim();
