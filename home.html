@@ -900,6 +900,11 @@
         <div class="home-today" id="todayContent"></div>
       </section>
 
+      <!-- SCORECARD PROMPT -->
+      <section class="home-card home-pad" id="scorecardPrompt" style="display:none;">
+        <div class="home-today" id="scorecardPromptContent"></div>
+      </section>
+
       <!-- HERO -->
       <section class="home-hero">
         <div class="home-card home-pad-lg home-heroMain">
@@ -1442,6 +1447,50 @@
       `;
     }
 
+    function renderScorecardPrompt(){
+      const prompt = document.getElementById('scorecardPrompt');
+      const content = document.getElementById('scorecardPromptContent');
+      if (!prompt || !content) return;
+
+      const now = new Date();
+      const cutoff = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+
+      /* Find the most recently closed drop within the last 48 hours */
+      const recentClosed = state.drops
+        .filter(d => {
+          const status = (d.status || '').toLowerCase();
+          if (status !== 'closed') return false;
+          const closedAt = d.closes_at ? new Date(d.closes_at) : null;
+          return closedAt && closedAt >= cutoff && closedAt <= now;
+        })
+        .sort((a, b) => new Date(b.closes_at) - new Date(a.closes_at))[0];
+
+      if (!recentClosed) {
+        prompt.style.display = 'none';
+        return;
+      }
+
+      prompt.style.display = '';
+      const name = escapeHtml(recentClosed.name || recentClosed.drop_name || 'Your drop');
+      const dropId = encodeURIComponent(recentClosed.drop_id || recentClosed.id);
+
+      content.innerHTML = `
+        <div class="home-todayLeft">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="flex-shrink:0;">
+            <rect x="2" y="4" width="16" height="13" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            <path d="M6 9h3v4H6z" fill="currentColor" opacity="0.3"/>
+            <path d="M11 7h3v6h-3z" fill="currentColor" opacity="0.3"/>
+            <line x1="2" y1="14" x2="18" y2="14" stroke="currentColor" stroke-width="1" opacity="0.2"/>
+          </svg>
+          <div>
+            <div class="home-todayLabel">${name} just closed</div>
+            <div class="home-todayMeta">Your scorecard is ready.</div>
+          </div>
+        </div>
+        <a class="home-button" href="./scorecard.html?drop=${dropId}">View scorecard</a>
+      `;
+    }
+
     function renderAssetSnapshot(){
       const section = document.getElementById('assetSection');
       const grid = document.getElementById('assetGrid');
@@ -1888,6 +1937,7 @@
     function render(){
       renderSetupNotice();
       renderToday();
+      renderScorecardPrompt();
       renderHero();
       renderPulse();
       renderAssetSnapshot();

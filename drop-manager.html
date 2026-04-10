@@ -193,6 +193,21 @@
       width:100% !important;
     }
 
+    .scorecardLink{
+      display:inline-block;
+      font-size:12px;
+      font-weight:600;
+      color:#6b7280;
+      text-decoration:none;
+      text-align:center;
+      padding:4px 0;
+      transition:color .18s ease;
+    }
+
+    .scorecardLink:hover{
+      color:#1f2937;
+    }
+
     @media (max-width:1180px){
       .browserToolbar{
         grid-template-columns:1fr 1fr !important;
@@ -1937,6 +1952,7 @@
 
             <div class="dropCardActions">
               <button class="btnSmall js-duplicate-drop" type="button" data-drop-id="${drop.drop_id}">Duplicate</button>
+              ${(drop.status || '').toLowerCase() === 'closed' ? `<a class="scorecardLink" href="./scorecard.html?drop=${encodeURIComponent(drop.drop_id)}">Scorecard →</a>` : ''}
             </div>
           </div>
         `;
