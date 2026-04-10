@@ -748,8 +748,8 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 29. T4-15 — Multiple drops within a single event
 30. T4-16 — Host onboarding as first-class entity
 31. T4-17 — Drop Studio audience targeting and demand preview
-32. T4-19 — Onboarding to Brand Hearth continuity
-33. T4-20 — Onboarding to first drop pathway
+32. T4-19 — Onboarding to Brand Hearth continuity ✓ COMPLETE
+33. T4-20 — Onboarding to first drop pathway ✓ COMPLETE
 34. T4-21 — Customer import post-import demand view
 35. T4-23 — Drop Studio first drop guidance for new vendors
 36. T4-24 — Customer privacy policy
