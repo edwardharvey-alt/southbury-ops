@@ -281,50 +281,16 @@ vendor archetype (derived from onboarding answers) drives contextual
 recommended actions across all primary_goal values. Layout restructured
 with collapsible sections and mobile-responsive design.
 
-T4-4: Home dashboard — intelligence surface and next action centre
-
-**Do not build until T4-14, T4-16, T4-27, and T4-28 are complete.** The
-Home dashboard depends on a live customer asset and the shared
-intelligence module to be meaningful. Without real customer data flowing
-through the intelligence engine, this page would be a shell.
-
-The Home dashboard is where the Hearth model becomes visible to the
-vendor. It is not a workspace landing page. It is the place where a
-vendor understands what they have built, what is working, and what to
-do next.
-
-Two distinct states based on onboarding pathway and drop history:
-
-**Pre-first-drop state** (vendor has completed onboarding but not yet
-run a drop):
-- If `data_posture = rich`: primary action is "Import your customers"
-  (T4-14), with supporting context explaining that Hearth will use their
-  existing audience to identify where demand is strongest
-- If `data_posture = light`: primary action is "Create your first drop",
-  with a suggestion to start with an existing host relationship if
-  `existing_host_contexts` is populated
-- Setup completion status card — shows which of Brand Hearth, Menu
-  Library, and Drop Studio are ready
-- Onboarding summary — reflects back what the vendor told us about
-  themselves and their operating model
-
-**Active state** (vendor has run at least one drop):
-- Audience card: total known customers, new customers this month, repeat
-  rate. Framed as "your audience" not "your data"
-- Demand signal card: strongest postcode clusters from customer geography.
-  Feeds directly from shared intelligence engine (T4-28)
-- Next recommended drop card: plain-English recommendation with a "Create
-  this drop" CTA pre-populated in Drop Studio. Shows "Signals are
-  building" if insufficient data
-- Recent drop performance: last completed drop — fill rate, revenue, new
-  customers added. One plain-English observation
-- Host and community summary: active hosts, last activation date, next
-  opportunity
-- Quick actions: Create drop, Import customers, View insights
-
-The dashboard must feel calm and considered — never busy, never
-dashboard-for-dashboard's-sake. Every element earns its place by
-pointing to a real action or surfacing a genuine signal.
+T4-4: Home dashboard — intelligence surface and next action centre ✓ COMPLETE
+Page existed and was in good shape. Strategic alignment pass completed:
+Today strip (live/scheduled/quiet state), Asset snapshot (customer counts,
+loyal core, earned vs imported), intelligence-driven next actions from
+HearthIntelligence.generateRecommendations(), Business pulse with link to
+Insights, Customers workspace card. Hero copy updated to lead with customer
+ownership, "Why it feels different" panel updated, flow extended to Step 6
+(Compound), "How Hearth works" section updated with compounding paragraph.
+Three intelligence surfaces (Insights, Customers, Home) now complete and
+strategically aligned.
 
 Dependencies: T4-14 (customer import), T4-16 (hosts as first-class
 entities), T4-27 (Customers page), T4-28 (intelligence engine)
@@ -756,13 +722,11 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 21. T4-14 — Vendor customer data import ✓ COMPLETE
 22. T4-28 — Intelligence engine — extract to shared module ✓ COMPLETE
 23. T4-27 — Customers page — first-class customer asset view ✓ COMPLETE
-24. T4-4  — Home dashboard intelligence surface and next action centre ← NEXT
-    Should draw from window.HearthIntelligence (assets/hearth-intelligence.js)
-    and link to both Insights (insights.html) and Customers (customers.html).
-    T4-14, T4-27, and T4-28 dependencies are now satisfied. T4-16 (hosts as
-    first-class entity) remains incomplete — build without host intelligence
-    for now and add that surface when T4-16 lands.
-25. T4-30 — Onboarding delivery model audit
+24. T4-4  — Home dashboard intelligence surface and next action centre ✓ COMPLETE
+25. T4-30 — Onboarding delivery model audit ← NEXT
+    The three intelligence surfaces (Insights, Customers, Home) are now
+    complete and strategically aligned. Review the T4/T5 backlog to
+    determine the next priority.
 26. T4-29 — Series intelligence in Insights
 27. T4-12 — Post-drop scorecard
 28. T4-13 — Minimal host-facing view
