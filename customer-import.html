@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hearth — Import Customers</title>
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=30" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --ci-bg: #f7f5f1;
+      --ci-card: #ffffff;
+      --ci-border: #e9e3d8;
+      --ci-text: #1f2937;
+      --ci-muted: #6b7280;
+      --ci-accent: var(--h-accent, #f97316);
+      --ci-accent-light: rgba(249, 115, 22, 0.08);
+      --ci-radius: 18px;
+      --ci-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+      --ci-good: #166534;
+      --ci-good-bg: #ecfdf3;
+    }
+
+    body {
+      background: var(--ci-bg);
+      color: var(--ci-text);
+    }
+
+    /* ── Step indicator ── */
+    .ci-steps {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin: 0 0 32px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .ci-step {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .ci-step-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--ci-border);
+      background: var(--ci-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ci-muted);
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+
+    .ci-step-label {
+      font-size: 13px;
+      color: var(--ci-muted);
+      margin-left: 8px;
+      white-space: nowrap;
+      transition: color 0.2s ease;
+    }
+
+    .ci-step-connector {
+      width: 32px;
+      height: 2px;
+      background: var(--ci-border);
+      margin: 0 8px;
+      flex-shrink: 0;
+    }
+
+    .ci-step.active .ci-step-dot {
+      border-color: var(--ci-accent);
+      background: var(--ci-accent);
+      color: #fff;
+    }
+
+    .ci-step.active .ci-step-label {
+      color: var(--ci-text);
+      font-weight: 600;
+    }
+
+    .ci-step.complete .ci-step-dot {
+      border-color: var(--ci-good);
+      background: var(--ci-good-bg);
+      color: var(--ci-good);
+    }
+
+    .ci-step.complete .ci-step-label {
+      color: var(--ci-good);
+    }
+
+    /* Mobile step indicator */
+    .ci-steps-mobile {
+      display: none;
+      text-align: center;
+      margin: 0 0 24px;
+      font-size: 14px;
+      color: var(--ci-muted);
+    }
+
+    .ci-steps-mobile strong {
+      color: var(--ci-text);
+    }
+
+    @media (max-width: 768px) {
+      .ci-steps { display: none; }
+      .ci-steps-mobile { display: block; }
+    }
+
+    /* ── Main card ── */
+    .ci-card {
+      background: var(--ci-card);
+      border: 1px solid var(--ci-border);
+      border-radius: var(--ci-radius);
+      box-shadow: var(--ci-shadow);
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 36px 32px;
+    }
+
+    @media (max-width: 768px) {
+      .ci-card {
+        padding: 24px 18px;
+      }
+    }
+
+    .ci-title {
+      margin: 0 0 6px;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .ci-subtitle {
+      margin: 0 0 32px;
+      color: var(--ci-muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* ── Drop zone ── */
+    .ci-dropzone {
+      border: 2px dashed var(--ci-border);
+      border-radius: 14px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--ci-bg);
+    }
+
+    .ci-dropzone:hover,
+    .ci-dropzone.dragover {
+      border-color: var(--ci-accent);
+      background: var(--ci-accent-light);
+    }
+
+    .ci-dropzone-icon {
+      font-size: 36px;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+
+    .ci-dropzone-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ci-text);
+      margin-bottom: 4px;
+    }
+
+    .ci-dropzone-hint {
+      font-size: 13px;
+      color: var(--ci-muted);
+    }
+
+    .ci-browse-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 16px;
+      padding: 10px 24px;
+      border: 1px solid var(--ci-border);
+      border-radius: 10px;
+      background: var(--ci-card);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ci-text);
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .ci-browse-btn:hover {
+      border-color: var(--ci-accent);
+      color: var(--ci-accent);
+    }
+
+    .ci-file-input {
+      display: none;
+    }
+
+    /* ── Error message ── */
+    .ci-error {
+      display: none;
+      margin-top: 20px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Step panels ── */
+    .ci-step-panel {
+      display: none;
+    }
+
+    .ci-step-panel.active {
+      display: block;
+    }
+
+    /* ── Step 2: Preview ── */
+    .ci-summary {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .ci-summary-item {
+      flex: 1;
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: var(--ci-bg);
+      text-align: center;
+    }
+
+    .ci-summary-value {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--ci-text);
+    }
+
+    .ci-summary-label {
+      font-size: 12px;
+      color: var(--ci-muted);
+      margin-top: 2px;
+    }
+
+    .ci-summary-item.has-issues .ci-summary-value {
+      color: #b91c1c;
+    }
+
+    .ci-preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    .ci-preview-table th {
+      text-align: left;
+      padding: 8px 10px;
+      font-weight: 600;
+      color: var(--ci-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--ci-border);
+    }
+
+    .ci-preview-table td {
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+      vertical-align: top;
+      color: var(--ci-text);
+    }
+
+    .ci-preview-table tr.ci-row-issue {
+      border-left: 3px solid #fca5a5;
+    }
+
+    .ci-preview-table tr.ci-row-issue td:first-child {
+      padding-left: 7px;
+    }
+
+    .ci-row-issue-note {
+      display: block;
+      font-size: 11px;
+      color: #b91c1c;
+      margin-top: 2px;
+    }
+
+    .ci-empty-cell {
+      color: var(--ci-muted);
+    }
+
+    .ci-preview-note {
+      font-size: 13px;
+      color: var(--ci-muted);
+      line-height: 1.5;
+      margin-bottom: 28px;
+    }
+
+    .ci-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .ci-btn-back {
+      appearance: none;
+      border: 1px solid var(--ci-border);
+      border-radius: 10px;
+      background: var(--ci-card);
+      padding: 10px 20px;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ci-muted);
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .ci-btn-back:hover {
+      border-color: var(--ci-text);
+      color: var(--ci-text);
+    }
+
+    .ci-btn-continue {
+      appearance: none;
+      border: none;
+      border-radius: 10px;
+      background: var(--ci-accent);
+      padding: 10px 24px;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .ci-btn-continue:hover {
+      opacity: 0.9;
+    }
+
+    .ci-btn-continue:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 768px) {
+      .ci-summary {
+        flex-direction: column;
+      }
+
+      .ci-preview-table {
+        font-size: 12px;
+      }
+
+      .ci-preview-table th,
+      .ci-preview-table td {
+        padding: 8px 6px;
+      }
+    }
+
+    /* ── Step 3: GDPR confirmation ── */
+    .ci-consent-body {
+      font-size: 15px;
+      line-height: 1.65;
+      color: var(--ci-text);
+      margin-bottom: 28px;
+    }
+
+    .ci-radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .ci-radio-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 14px 16px;
+      border: 1px solid var(--ci-border);
+      border-radius: 12px;
+      background: var(--ci-bg);
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .ci-radio-option:hover {
+      border-color: var(--ci-accent);
+    }
+
+    .ci-radio-option.selected {
+      border-color: var(--ci-accent);
+      background: var(--ci-accent-light);
+    }
+
+    .ci-radio-option input[type="radio"] {
+      margin-top: 3px;
+      flex-shrink: 0;
+      accent-color: var(--ci-accent);
+    }
+
+    .ci-radio-option span {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--ci-text);
+    }
+
+    .ci-checkbox-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 14px 16px;
+      border: 1px solid var(--ci-border);
+      border-radius: 12px;
+      background: var(--ci-bg);
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: all 0.18s ease;
+    }
+
+    .ci-checkbox-option:hover {
+      border-color: var(--ci-accent);
+    }
+
+    .ci-checkbox-option.checked {
+      border-color: var(--ci-accent);
+      background: var(--ci-accent-light);
+    }
+
+    .ci-checkbox-option input[type="checkbox"] {
+      margin-top: 3px;
+      flex-shrink: 0;
+      accent-color: var(--ci-accent);
+    }
+
+    .ci-checkbox-option span {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--ci-text);
+    }
+
+    .ci-inline-error {
+      display: none;
+      font-size: 13px;
+      color: #b91c1c;
+      margin-top: 4px;
+      margin-bottom: 8px;
+    }
+
+    .ci-inline-error.visible {
+      display: block;
+    }
+
+    @keyframes ci-shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-4px); }
+      40%, 80% { transform: translateX(4px); }
+    }
+
+    .ci-shake {
+      animation: ci-shake 0.4s ease;
+    }
+
+    /* ── Step 4: Import progress ── */
+    .ci-loading {
+      text-align: center;
+      padding: 48px 24px;
+    }
+
+    .ci-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--ci-border);
+      border-top-color: var(--ci-accent);
+      border-radius: 50%;
+      animation: ci-spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes ci-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .ci-loading-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ci-text);
+    }
+
+    .ci-fatal-error {
+      display: none;
+      text-align: center;
+      padding: 36px 24px;
+    }
+
+    .ci-fatal-error.visible {
+      display: block;
+    }
+
+    .ci-fatal-error-msg {
+      font-size: 15px;
+      color: #991b1b;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .ci-btn-retry {
+      appearance: none;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      background: #fef2f2;
+      padding: 10px 24px;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: #991b1b;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .ci-btn-retry:hover {
+      background: #fee2e2;
+    }
+
+    /* ── Step 5: Results ── */
+    .ci-result-card {
+      padding: 28px 24px;
+      border-radius: 14px;
+      background: var(--ci-good-bg);
+      border: 1px solid #bbf7d0;
+      margin-bottom: 24px;
+    }
+
+    .ci-result-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--ci-good);
+      margin: 0 0 16px;
+    }
+
+    .ci-result-lines {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .ci-result-lines li {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--ci-text);
+      padding: 4px 0;
+    }
+
+    .ci-result-lines li strong {
+      font-weight: 700;
+    }
+
+    .ci-result-lines li.ci-result-warn {
+      color: #92400e;
+    }
+
+    .ci-result-lines li.ci-result-error {
+      color: #991b1b;
+    }
+
+    .ci-conflicts-toggle {
+      appearance: none;
+      border: 1px solid var(--ci-border);
+      border-radius: 10px;
+      background: var(--ci-card);
+      padding: 10px 16px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ci-muted);
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: all 0.18s ease;
+    }
+
+    .ci-conflicts-toggle:hover {
+      border-color: var(--ci-text);
+      color: var(--ci-text);
+    }
+
+    .ci-conflicts-list {
+      display: none;
+      margin-bottom: 24px;
+      padding: 0;
+      list-style: none;
+      border: 1px solid var(--ci-border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .ci-conflicts-list.visible {
+      display: block;
+    }
+
+    .ci-conflicts-list li {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--ci-text);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    }
+
+    .ci-conflicts-list li:last-child {
+      border-bottom: none;
+    }
+
+    .ci-conflicts-list li span {
+      color: var(--ci-muted);
+      margin-left: 8px;
+    }
+
+    .ci-result-links {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .ci-result-links a {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ci-accent);
+      text-decoration: none;
+      transition: opacity 0.18s ease;
+    }
+
+    .ci-result-links a:hover {
+      opacity: 0.8;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="card headerBar">
+      <div class="brand">
+        <div class="brandMark">H</div>
+        <div>
+          <div class="brandTitle">Hearth — Import Customers</div>
+          <div class="brandSubtitle">Add your existing customer list to your Hearth audience.</div>
+        </div>
+      </div>
+
+      <div class="nav">
+        <a href="home.html">Home</a>
+        <a href="brand-hearth.html">Brand Hearth</a>
+        <a href="drop-menu.html">Menu Library</a>
+        <a href="drop-manager.html">Drop Studio</a>
+        <a href="index.html">Service Board</a>
+        <a href="insights.html">Insights</a>
+        <a href="onboarding.html">Setup</a>
+      </div>
+    </div>
+
+    <div class="ci-card">
+
+      <!-- Step indicator — desktop -->
+      <ol class="ci-steps" id="stepIndicator">
+        <li class="ci-step active" data-step="1">
+          <span class="ci-step-dot">1</span>
+          <span class="ci-step-label">Upload</span>
+        </li>
+        <li class="ci-step-connector"></li>
+        <li class="ci-step" data-step="2">
+          <span class="ci-step-dot">2</span>
+          <span class="ci-step-label">Preview</span>
+        </li>
+        <li class="ci-step-connector"></li>
+        <li class="ci-step" data-step="3">
+          <span class="ci-step-dot">3</span>
+          <span class="ci-step-label">Confirm</span>
+        </li>
+        <li class="ci-step-connector"></li>
+        <li class="ci-step" data-step="4">
+          <span class="ci-step-dot">4</span>
+          <span class="ci-step-label">Import</span>
+        </li>
+        <li class="ci-step-connector"></li>
+        <li class="ci-step" data-step="5">
+          <span class="ci-step-dot">5</span>
+          <span class="ci-step-label">Done</span>
+        </li>
+      </ol>
+
+      <!-- Step indicator — mobile -->
+      <div class="ci-steps-mobile" id="stepIndicatorMobile">
+        <strong>Upload</strong> — Step 1 of 5
+      </div>
+
+      <!-- Step 1: Upload -->
+      <div class="ci-step-panel active" data-panel="1">
+        <h1 class="ci-title">Import customers</h1>
+        <p class="ci-subtitle">Add your existing customer list to your Hearth audience.</p>
+
+        <div class="ci-dropzone" id="dropzone">
+          <div class="ci-dropzone-icon">&#128196;</div>
+          <div class="ci-dropzone-text">Drop your CSV here</div>
+          <div class="ci-dropzone-hint">CSV file with name, email, and postcode columns</div>
+        </div>
+
+        <div style="text-align:center;">
+          <button class="ci-browse-btn" id="browseBtn" type="button">Browse files</button>
+          <input type="file" class="ci-file-input" id="fileInput" accept=".csv" />
+        </div>
+
+        <div class="ci-error" id="errorMsg"></div>
+      </div>
+
+      <!-- Step 2: Preview -->
+      <div class="ci-step-panel" data-panel="2">
+        <h1 class="ci-title">Preview your data</h1>
+        <p class="ci-subtitle">Check that your file looks right before continuing.</p>
+
+        <div class="ci-summary" id="previewSummary"></div>
+
+        <div style="overflow-x:auto;">
+          <table class="ci-preview-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>Postcode</th>
+              </tr>
+            </thead>
+            <tbody id="previewBody"></tbody>
+          </table>
+        </div>
+
+        <p class="ci-preview-note">
+          Rows with issues will be skipped during import.
+          Only valid rows will be added to your audience.
+        </p>
+
+        <div class="ci-actions">
+          <button class="ci-btn-back" type="button" onclick="goToStep(1)">Back</button>
+          <button class="ci-btn-continue" type="button" id="step2Continue" onclick="goToStep(3)">Continue</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Confirm -->
+      <div class="ci-step-panel" data-panel="3">
+        <h1 class="ci-title">Before you import</h1>
+
+        <p class="ci-consent-body">
+          You're about to add customers to your Hearth audience. Before you do, you
+          need to confirm that you have the right to contact these people through Hearth.
+          This means they've either given you explicit permission to receive marketing
+          communications, or you have a legitimate interest basis &mdash; for example, they're
+          existing customers who would reasonably expect to hear from you about food
+          services you offer.
+        </p>
+
+        <div class="ci-radio-group" id="lawfulBasisGroup">
+          <label class="ci-radio-option" id="optExplicit">
+            <input type="radio" name="lawful_basis" value="explicit_consent" />
+            <span>These customers have given me explicit permission to receive marketing communications from my business.</span>
+          </label>
+          <label class="ci-radio-option" id="optLegitimate">
+            <input type="radio" name="lawful_basis" value="legitimate_interests" />
+            <span>I have a legitimate interest basis &mdash; these are existing customers who would reasonably expect to hear from me about my food services.</span>
+          </label>
+        </div>
+        <div class="ci-inline-error" id="radioError">Please select a lawful basis before continuing.</div>
+
+        <label class="ci-checkbox-option" id="optGdprConfirm">
+          <input type="checkbox" id="gdprCheckbox" />
+          <span>I confirm that I'm responsible for ensuring this data is handled in line with UK GDPR, and that Hearth may use it to help me run and promote drops to these customers.</span>
+        </label>
+        <div class="ci-inline-error" id="checkboxError">You must confirm this before continuing.</div>
+
+        <div class="ci-actions" style="margin-top:24px;">
+          <button class="ci-btn-back" type="button" onclick="goToStep(2)">Back</button>
+          <button class="ci-btn-continue" type="button" id="step3Continue" onclick="handleStep3Continue()">Continue</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Import -->
+      <div class="ci-step-panel" data-panel="4">
+        <div class="ci-loading" id="importLoading">
+          <div class="ci-spinner"></div>
+          <div class="ci-loading-text">Importing your customers&hellip;</div>
+        </div>
+
+        <div class="ci-fatal-error" id="importFatalError">
+          <div class="ci-fatal-error-msg" id="importFatalMsg">Something went wrong while importing your customers. Please check your connection and try again.</div>
+          <button class="ci-btn-retry" type="button" onclick="runImport()">Try again</button>
+        </div>
+      </div>
+
+      <!-- Step 5: Done -->
+      <div class="ci-step-panel" data-panel="5">
+        <h1 class="ci-title">Import complete</h1>
+
+        <div class="ci-result-card" id="resultCard">
+          <div class="ci-result-title">Your audience is growing</div>
+          <ul class="ci-result-lines" id="resultLines"></ul>
+        </div>
+
+        <div id="conflictsSection" style="display:none;">
+          <button class="ci-conflicts-toggle" type="button" id="conflictsToggle">Show conflicted rows</button>
+          <ul class="ci-conflicts-list" id="conflictsList"></ul>
+        </div>
+
+        <div class="ci-result-links">
+          <a href="insights.html">View Insights &rarr;</a>
+          <a href="home.html">Back to home &rarr;</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const sb = window.supabase.createClient(
+      window.HEARTH_CONFIG.SUPABASE_URL,
+      window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+    );
+
+    /* ── Vendor resolution ── */
+    function getUrlParam(key) {
+      return new URLSearchParams(window.location.search).get(key);
+    }
+
+    async function resolveVendor() {
+      const explicitVendorId = getUrlParam('vendor_id') || window.HEARTH_VENDOR_ID || null;
+      const explicitSlug = getUrlParam('vendor') || getUrlParam('vendor_slug') || null;
+
+      if (explicitVendorId) {
+        const { data, error } = await sb.from('vendors').select('*').eq('id', explicitVendorId).maybeSingle();
+        if (!error && data) return data;
+      }
+
+      if (explicitSlug) {
+        const slugFields = ['slug', 'vendor_slug'];
+        for (const field of slugFields) {
+          try {
+            const { data, error } = await sb.from('vendors').select('*').eq(field, explicitSlug).maybeSingle();
+            if (!error && data) return data;
+          } catch (e) {}
+        }
+      }
+
+      const { data, error } = await sb.from('vendors').select('*').limit(1);
+      if (error) throw error;
+      return data?.[0] || null;
+    }
+
+    /* ── State ── */
+    const STEP_LABELS = ['Upload', 'Preview', 'Confirm', 'Import', 'Done'];
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    let currentStep = 1;
+    let parsedRows = [];
+    let lawfulBasis = null;
+    let importResults = null;
+    let importConflictRows = [];
+
+    /* ── Column name variants ── */
+    const COLUMN_MAP = {
+      name:     ['name', 'full name', 'customer name', 'full_name'],
+      email:    ['email', 'email address', 'email_address'],
+      phone:    ['phone', 'phone number', 'mobile', 'telephone', 'tel', 'mobile_number'],
+      address:  ['address', 'full address', 'street address', 'address line 1', 'delivery address', 'address_line_1', 'full_address'],
+      postcode: ['postcode', 'post code', 'postal code', 'zip']
+    };
+
+    /* ── CSV parser ── */
+    function parseCSV(text) {
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      if (lines.length < 2) {
+        return { rows: [], hasName: false, hasEmail: false, error: 'File is empty or has no data rows.' };
+      }
+
+      const rawHeaders = lines[0].split(',').map(h => h.trim());
+      const normHeaders = rawHeaders.map(h => h.toLowerCase().replace(/['"]/g, ''));
+
+      const colIndex = {};
+      for (const [field, variants] of Object.entries(COLUMN_MAP)) {
+        const idx = normHeaders.findIndex(h => variants.includes(h));
+        colIndex[field] = idx;
+      }
+
+      const hasName = colIndex.name !== -1;
+      const hasEmail = colIndex.email !== -1;
+
+      if (!hasName || !hasEmail) {
+        return { rows: [], hasName, hasEmail, error: 'Required columns missing.' };
+      }
+
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cells = splitCSVLine(lines[i]);
+        const row = {
+          name:     (colIndex.name !== -1 ? (cells[colIndex.name] || '') : '').trim(),
+          email:    (colIndex.email !== -1 ? (cells[colIndex.email] || '') : '').trim(),
+          phone:    (colIndex.phone !== -1 ? (cells[colIndex.phone] || '') : '').trim(),
+          address:  (colIndex.address !== -1 ? (cells[colIndex.address] || '') : '').trim(),
+          postcode: (colIndex.postcode !== -1 ? (cells[colIndex.postcode] || '') : '').trim()
+        };
+        rows.push(row);
+      }
+
+      return { rows, hasName, hasEmail, error: null };
+    }
+
+    function splitCSVLine(line) {
+      const cells = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (inQuotes) {
+          if (ch === '"' && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else if (ch === '"') {
+            inQuotes = false;
+          } else {
+            current += ch;
+          }
+        } else {
+          if (ch === '"') {
+            inQuotes = true;
+          } else if (ch === ',') {
+            cells.push(current);
+            current = '';
+          } else {
+            current += ch;
+          }
+        }
+      }
+      cells.push(current);
+      return cells;
+    }
+
+    /* ── Row validation ── */
+    function validateRow(row) {
+      const issues = [];
+      if (!row.name) issues.push('Missing name');
+      if (!row.email) issues.push('Missing email');
+      else if (!EMAIL_RE.test(row.email)) issues.push('Invalid email format');
+      return issues;
+    }
+
+    /* ── Phone normalisation ── */
+    function normalisePhone(phone) {
+      let p = phone.replace(/[\s\-]/g, '');
+      if (p.startsWith('07')) {
+        p = '+447' + p.slice(2);
+      } else if (p.startsWith('00')) {
+        p = '+' + p.slice(2);
+      }
+      return p;
+    }
+
+    /* ── Step navigation ── */
+    function goToStep(step) {
+      currentStep = step;
+
+      document.querySelectorAll('.ci-step-panel').forEach(p => p.classList.remove('active'));
+      const panel = document.querySelector('[data-panel="' + step + '"]');
+      if (panel) panel.classList.add('active');
+
+      document.querySelectorAll('.ci-step').forEach(el => {
+        const s = parseInt(el.dataset.step);
+        el.classList.remove('active', 'complete');
+        if (s === step) el.classList.add('active');
+        else if (s < step) el.classList.add('complete');
+      });
+
+      document.querySelectorAll('.ci-step .ci-step-dot').forEach(dot => {
+        const li = dot.closest('.ci-step');
+        if (li && li.classList.contains('complete')) {
+          dot.textContent = '\u2713';
+        } else {
+          dot.textContent = li.dataset.step;
+        }
+      });
+
+      const mobileEl = document.getElementById('stepIndicatorMobile');
+      mobileEl.innerHTML = '<strong>' + STEP_LABELS[step - 1] + '</strong> \u2014 Step ' + step + ' of 5';
+
+      if (step === 2) renderPreview();
+      if (step === 4) runImport();
+      if (step === 5) renderResults();
+    }
+
+    /* ── Step 2 rendering ── */
+    function renderPreview() {
+      const total = parsedRows.length;
+      const validated = parsedRows.map(r => ({ ...r, issues: validateRow(r) }));
+      const valid = validated.filter(r => r.issues.length === 0).length;
+      const withIssues = total - valid;
+
+      const summaryEl = document.getElementById('previewSummary');
+      summaryEl.innerHTML =
+        '<div class="ci-summary-item">' +
+          '<div class="ci-summary-value">' + total + '</div>' +
+          '<div class="ci-summary-label">Total rows</div>' +
+        '</div>' +
+        '<div class="ci-summary-item">' +
+          '<div class="ci-summary-value">' + valid + '</div>' +
+          '<div class="ci-summary-label">Valid</div>' +
+        '</div>' +
+        '<div class="ci-summary-item' + (withIssues > 0 ? ' has-issues' : '') + '">' +
+          '<div class="ci-summary-value">' + withIssues + '</div>' +
+          '<div class="ci-summary-label">With issues</div>' +
+        '</div>';
+
+      const tbody = document.getElementById('previewBody');
+      const preview = validated.slice(0, 10);
+      tbody.innerHTML = preview.map(r => {
+        const hasIssue = r.issues.length > 0;
+        const cls = hasIssue ? ' class="ci-row-issue"' : '';
+        const issueNote = hasIssue
+          ? '<span class="ci-row-issue-note">' + r.issues.join(', ') + '</span>'
+          : '';
+        return '<tr' + cls + '>' +
+          '<td>' + esc(r.name || '\u2014') + issueNote + '</td>' +
+          '<td>' + esc(r.email || '\u2014') + '</td>' +
+          '<td>' + (r.phone ? esc(r.phone) : '<span class="ci-empty-cell">\u2014</span>') + '</td>' +
+          '<td>' + (r.address ? esc(r.address) : '<span class="ci-empty-cell">\u2014</span>') + '</td>' +
+          '<td>' + (r.postcode ? esc(r.postcode) : '<span class="ci-empty-cell">\u2014</span>') + '</td>' +
+        '</tr>';
+      }).join('');
+
+      document.getElementById('step2Continue').disabled = valid === 0;
+    }
+
+    function esc(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    /* ── Step 3: GDPR validation ── */
+    function applyShake(el) {
+      el.classList.remove('ci-shake');
+      void el.offsetWidth;
+      el.classList.add('ci-shake');
+    }
+
+    function handleStep3Continue() {
+      const radioGroup = document.getElementById('lawfulBasisGroup');
+      const radioError = document.getElementById('radioError');
+      const checkboxWrap = document.getElementById('optGdprConfirm');
+      const checkboxError = document.getElementById('checkboxError');
+      const checkbox = document.getElementById('gdprCheckbox');
+
+      const selectedRadio = document.querySelector('input[name="lawful_basis"]:checked');
+      let valid = true;
+
+      radioError.classList.remove('visible');
+      checkboxError.classList.remove('visible');
+
+      if (!selectedRadio) {
+        radioError.classList.add('visible');
+        applyShake(radioGroup);
+        valid = false;
+      }
+
+      if (!checkbox.checked) {
+        checkboxError.classList.add('visible');
+        applyShake(checkboxWrap);
+        valid = false;
+      }
+
+      if (!valid) return;
+
+      lawfulBasis = selectedRadio.value;
+      goToStep(4);
+    }
+
+    /* ── Step 3: radio/checkbox interactive styling ── */
+    document.querySelectorAll('.ci-radio-option input[type="radio"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        document.querySelectorAll('.ci-radio-option').forEach(opt => opt.classList.remove('selected'));
+        radio.closest('.ci-radio-option').classList.add('selected');
+        document.getElementById('radioError').classList.remove('visible');
+      });
+    });
+
+    document.getElementById('gdprCheckbox').addEventListener('change', function() {
+      const wrap = document.getElementById('optGdprConfirm');
+      wrap.classList.toggle('checked', this.checked);
+      if (this.checked) document.getElementById('checkboxError').classList.remove('visible');
+    });
+
+    /* ── Step 5: Results rendering ── */
+    function renderResults() {
+      if (!importResults) return;
+      const r = importResults;
+      const lines = [];
+
+      lines.push('<li><strong>' + r.newCustomers + '</strong> new customers added to your audience</li>');
+
+      if (r.newRelationships > 0) {
+        lines.push('<li><strong>' + r.newRelationships + '</strong> people were already on Hearth \u2014 added to your audience</li>');
+      }
+      if (r.skipped > 0) {
+        lines.push('<li><strong>' + r.skipped + '</strong> already in your audience and skipped</li>');
+      }
+      if (r.conflicts > 0) {
+        lines.push('<li class="ci-result-warn"><strong>' + r.conflicts + '</strong> rows skipped \u2014 email and phone point to different existing customers. Review manually.</li>');
+      }
+      if (r.failed > 0) {
+        lines.push('<li class="ci-result-error"><strong>' + r.failed + '</strong> rows could not be imported due to an error.</li>');
+      }
+
+      document.getElementById('resultLines').innerHTML = lines.join('');
+
+      const conflictsSection = document.getElementById('conflictsSection');
+      if (r.conflicts > 0 && importConflictRows.length > 0) {
+        conflictsSection.style.display = '';
+        const list = document.getElementById('conflictsList');
+        list.innerHTML = importConflictRows.map(row =>
+          '<li>' + esc(row.name) + '<span>' + esc(row.email) + '</span></li>'
+        ).join('');
+      } else {
+        conflictsSection.style.display = 'none';
+      }
+    }
+
+    document.getElementById('conflictsToggle').addEventListener('click', function() {
+      const list = document.getElementById('conflictsList');
+      const isVisible = list.classList.contains('visible');
+      list.classList.toggle('visible', !isVisible);
+      this.textContent = isVisible ? 'Show conflicted rows' : 'Hide conflicted rows';
+    });
+
+    /* ── Step 4: Import logic ── */
+    async function runImport() {
+      const loadingEl = document.getElementById('importLoading');
+      const fatalEl = document.getElementById('importFatalError');
+      const fatalMsg = document.getElementById('importFatalMsg');
+
+      loadingEl.style.display = '';
+      fatalEl.classList.remove('visible');
+
+      const counts = {
+        newCustomers: 0,
+        newRelationships: 0,
+        skipped: 0,
+        conflicts: 0,
+        failed: 0
+      };
+
+      try {
+        /* 0. Resolve vendor */
+        const vendor = await resolveVendor();
+        if (!vendor) throw new Error('Could not resolve vendor.');
+        const vendorId = vendor.id;
+
+        /* 1. Fetch existing customer_relationships for this vendor, with linked customers */
+        const { data: rels, error: relErr } = await sb
+          .from('customer_relationships')
+          .select('id, customer_id, customers ( id, email, phone, address )')
+          .eq('owner_type', 'vendor')
+          .eq('owner_id', vendorId);
+
+        if (relErr) throw relErr;
+
+        /* Also fetch all customers that might exist without a relationship to this vendor.
+           We need a complete lookup of all customers to detect email/phone matches. */
+        const { data: allCustomers, error: custErr } = await sb
+          .from('customers')
+          .select('id, email, phone, address');
+
+        if (custErr) throw custErr;
+
+        /* Build lookup: which customer IDs already have a relationship to this vendor */
+        const vendorRelCustomerIds = new Set();
+        for (const rel of (rels || [])) {
+          if (rel.customer_id) vendorRelCustomerIds.add(rel.customer_id);
+        }
+
+        /* Build email → customer and phone → customer maps from all customers */
+        const emailToCustomer = new Map();
+        const phoneToCustomer = new Map();
+
+        for (const c of (allCustomers || [])) {
+          if (c.email) {
+            emailToCustomer.set(c.email.toLowerCase().trim(), {
+              customerId: c.id,
+              hasRelationship: vendorRelCustomerIds.has(c.id),
+              existingAddress: c.address || ''
+            });
+          }
+          if (c.phone) {
+            const normPhone = normalisePhone(c.phone);
+            if (normPhone) {
+              phoneToCustomer.set(normPhone, {
+                customerId: c.id,
+                hasRelationship: vendorRelCustomerIds.has(c.id),
+                existingAddress: c.address || ''
+              });
+            }
+          }
+        }
+
+        /* 2. Classify each valid CSV row */
+        const validRows = parsedRows.filter(r => validateRow(r).length === 0);
+
+        const createNewRows = [];
+        const addRelationshipOnly = [];
+        const skippedRows = [];
+        const conflictRows = [];
+
+        for (const row of validRows) {
+          const normEmail = row.email.toLowerCase().trim();
+          const normPhone = row.phone ? normalisePhone(row.phone) : null;
+
+          const emailMatch = emailToCustomer.get(normEmail) || null;
+          const phoneMatch = normPhone ? (phoneToCustomer.get(normPhone) || null) : null;
+
+          /* d. Conflict: email matches customer A, phone matches different customer B */
+          if (emailMatch && phoneMatch && emailMatch.customerId !== phoneMatch.customerId) {
+            conflictRows.push(row);
+            continue;
+          }
+
+          /* e. Email matches an existing customer */
+          if (emailMatch) {
+            if (emailMatch.hasRelationship) {
+              skippedRows.push(row);
+            } else {
+              addRelationshipOnly.push({
+                customerId: emailMatch.customerId,
+                existingAddress: emailMatch.existingAddress,
+                importAddress: row.address
+              });
+            }
+            continue;
+          }
+
+          /* f. Phone matches an existing customer (email did not match) */
+          if (phoneMatch) {
+            if (phoneMatch.hasRelationship) {
+              skippedRows.push(row);
+            } else {
+              addRelationshipOnly.push({
+                customerId: phoneMatch.customerId,
+                existingAddress: phoneMatch.existingAddress,
+                importAddress: row.address
+              });
+            }
+            continue;
+          }
+
+          /* g. No match — create new */
+          createNewRows.push(row);
+        }
+
+        counts.skipped = skippedRows.length;
+        counts.conflicts = conflictRows.length;
+        importConflictRows = conflictRows;
+
+        /* 3a. Create new customers + relationships */
+        for (const row of createNewRows) {
+          try {
+            const customerPayload = { name: row.name, email: row.email };
+            if (row.phone) customerPayload.phone = normalisePhone(row.phone);
+            if (row.postcode) customerPayload.postcode = row.postcode;
+            if (row.address) customerPayload.address = row.address;
+
+            const { data: newCust, error: insertErr } = await sb
+              .from('customers')
+              .insert(customerPayload)
+              .select('id')
+              .single();
+
+            if (insertErr) { counts.failed++; continue; }
+
+            const { error: relInsertErr } = await sb
+              .from('customer_relationships')
+              .insert({
+                customer_id: newCust.id,
+                owner_type: 'vendor',
+                owner_id: vendorId,
+                consent_status: 'imported',
+                source: 'import',
+                lawful_basis: lawfulBasis
+              });
+
+            if (relInsertErr) { counts.failed++; continue; }
+
+            counts.newCustomers++;
+          } catch (e) {
+            counts.failed++;
+          }
+        }
+
+        /* 3b. Add relationships only (+ address backfill) */
+        for (const item of addRelationshipOnly) {
+          try {
+            const { error: relInsertErr } = await sb
+              .from('customer_relationships')
+              .insert({
+                customer_id: item.customerId,
+                owner_type: 'vendor',
+                owner_id: vendorId,
+                consent_status: 'imported',
+                source: 'import',
+                lawful_basis: lawfulBasis
+              });
+
+            if (relInsertErr) { counts.failed++; continue; }
+
+            /* Backfill address if import row has one and existing customer does not */
+            if (item.importAddress && (!item.existingAddress || item.existingAddress.trim() === '')) {
+              await sb
+                .from('customers')
+                .update({ address: item.importAddress })
+                .eq('id', item.customerId);
+            }
+
+            counts.newRelationships++;
+          } catch (e) {
+            counts.failed++;
+          }
+        }
+
+        /* 4. Store results and advance to Step 5 */
+        importResults = counts;
+        goToStep(5);
+
+      } catch (err) {
+        console.error('Import fatal error:', err);
+        loadingEl.style.display = 'none';
+        fatalMsg.textContent = 'Something went wrong while importing your customers. Please check your connection and try again.';
+        fatalEl.classList.add('visible');
+      }
+    }
+
+    /* ── File handling ── */
+    function handleFile(file) {
+      if (!file) return;
+
+      const errorEl = document.getElementById('errorMsg');
+      errorEl.style.display = 'none';
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const result = parseCSV(e.target.result);
+        if (result.error) {
+          errorEl.textContent = "We couldn\u2019t find a name or email column in your file. Check your column headers and try again.";
+          errorEl.style.display = 'block';
+          return;
+        }
+        parsedRows = result.rows;
+        goToStep(2);
+      };
+      reader.readAsText(file);
+    }
+
+    /* ── Browse button ── */
+    const fileInput = document.getElementById('fileInput');
+    const browseBtn = document.getElementById('browseBtn');
+    browseBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) handleFile(fileInput.files[0]);
+    });
+
+    /* ── Drag and drop ── */
+    const dropzone = document.getElementById('dropzone');
+    dropzone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('dragover');
+    });
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    dropzone.addEventListener('click', () => fileInput.click());
+  </script>
+</body>
+</html>
