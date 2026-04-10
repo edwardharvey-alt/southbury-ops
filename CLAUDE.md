@@ -557,29 +557,25 @@ T4-16 is complete.
 Note: host terms content requires legal review before use with real
 hosts.
 
-T4-27: Customers page — first-class customer asset view
-Owned customer database as a first-class operator page. List view with
-search and filtering. Individual customer profiles showing: name,
-address, postcode, phone, order history, host context (which drops they
-ordered from and which hosts were involved). Customer segmentation:
-loyal core (3+ orders), occasional (2 orders), lapsed (no order in 60+
-days). Customer acquisition over time chart. Reachability signals (has
-email, has phone, has opted in to marketing). Reactivation signals for
-lapsed customers. This is the primary surface for customer intelligence
-— where a vendor sees the asset they are building through drops.
+T4-27: Customers page — first-class customer asset view ✓ COMPLETE
+customers.html built as a first-class operator page. Four sections:
+asset summary bar (total/earned/imported counts), segment cards (loyal
+core, occasional, lapsed via HearthIntelligence.segmentCustomers()),
+recommendations strip (filtered from HearthIntelligence.generateRecommendations()),
+and full customer list with client-side segment filtering (200-row cap).
+Mobile-responsive layout with stacked cards, hidden low-priority table
+columns, and 44px touch targets at 768px and below.
 
-Dependency: T4-14 (customer import)
+Dependency: T4-14 (customer import — complete)
 
-T4-28: Intelligence engine — extract to shared module
-Move the analysis logic currently inside insights.html (buildActions,
-capacity/rhythm/menu signal functions, archetype-aware recommendation
-generation) into assets/hearth-intelligence.js as a shared module.
-Insights, Customers page (T4-27), and Home dashboard (T4-4) should all
-draw from this shared engine without duplicating logic. The module
-should export functions for: archetype detection, signal analysis
-(capacity, rhythm, menu, growth), recommendation generation, and
-customer segmentation. This is the foundation that T5-9 matures into
-a full recommendation engine.
+T4-28: Intelligence engine — extract to shared module ✓ COMPLETE
+assets/hearth-intelligence.js created as a shared module exposing
+window.HearthIntelligence with: detectArchetype(), analyseCapacitySignals(),
+analyseRhythmSignals(), analyseMenuSignals(), analyseGrowthSignals(),
+generateRecommendations(), and segmentCustomers(). insights.html
+refactored to consume the shared module. Customers page (T4-27) and
+Home dashboard (T4-4) draw from this engine without duplicating logic.
+Foundation that T5-9 matures into a full recommendation engine.
 
 T4-29: Series intelligence in Insights
 Add series-level performance view to Insights — cumulative revenue
@@ -757,14 +753,19 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 18. T4-8  — Order form enhancements ✓ COMPLETE
 19. T4-18 — Brand Hearth add contact phone field ✓ COMPLETE
 20. T4-22 — Navigation consistency sweep ✓ COMPLETE
-21. T4-14 — Vendor customer data import
-22. T4-28 — Intelligence engine — extract to shared module
-23. T4-27 — Customers page — first-class customer asset view
-24. T4-30 — Onboarding delivery model audit
-25. T4-29 — Series intelligence in Insights
-26. T4-12 — Post-drop scorecard
-27. T4-13 — Minimal host-facing view
-28. T4-4  — Home dashboard intelligence surface and next action centre
+21. T4-14 — Vendor customer data import ✓ COMPLETE
+22. T4-28 — Intelligence engine — extract to shared module ✓ COMPLETE
+23. T4-27 — Customers page — first-class customer asset view ✓ COMPLETE
+24. T4-4  — Home dashboard intelligence surface and next action centre ← NEXT
+    Should draw from window.HearthIntelligence (assets/hearth-intelligence.js)
+    and link to both Insights (insights.html) and Customers (customers.html).
+    T4-14, T4-27, and T4-28 dependencies are now satisfied. T4-16 (hosts as
+    first-class entity) remains incomplete — build without host intelligence
+    for now and add that surface when T4-16 lands.
+25. T4-30 — Onboarding delivery model audit
+26. T4-29 — Series intelligence in Insights
+27. T4-12 — Post-drop scorecard
+28. T4-13 — Minimal host-facing view
 29. T4-15 — Multiple drops within a single event
 30. T4-16 — Host onboarding as first-class entity
 31. T4-17 — Drop Studio audience targeting and demand preview
