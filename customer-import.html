@@ -268,6 +268,13 @@
       border-collapse: collapse;
       font-size: 13px;
       margin-bottom: 16px;
+      table-layout: fixed;
+    }
+
+    .ci-preview-table th,
+    .ci-preview-table td {
+      word-break: break-word;
+      vertical-align: top;
     }
 
     .ci-preview-table th {
@@ -284,9 +291,19 @@
     .ci-preview-table td {
       padding: 10px 10px;
       border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-      vertical-align: top;
       color: var(--ci-text);
     }
+
+    .ci-preview-table th:nth-child(1),
+    .ci-preview-table td:nth-child(1) { max-width: 120px; width: 120px; }
+    .ci-preview-table th:nth-child(2),
+    .ci-preview-table td:nth-child(2) { max-width: 160px; width: 160px; }
+    .ci-preview-table th:nth-child(3),
+    .ci-preview-table td:nth-child(3) { max-width: 110px; width: 110px; }
+    .ci-preview-table th:nth-child(4),
+    .ci-preview-table td:nth-child(4) { max-width: 140px; width: 140px; }
+    .ci-preview-table th:nth-child(5),
+    .ci-preview-table td:nth-child(5) { max-width: 90px; width: 90px; }
 
     .ci-preview-table tr.ci-row-issue {
       border-left: 3px solid #fca5a5;
@@ -305,6 +322,46 @@
 
     .ci-empty-cell {
       color: var(--ci-muted);
+    }
+
+    .ci-issue-detail {
+      display: none;
+      padding: 16px 18px;
+      border-radius: 12px;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      margin-bottom: 24px;
+    }
+
+    .ci-issue-detail.visible {
+      display: block;
+    }
+
+    .ci-issue-detail-heading {
+      font-size: 14px;
+      font-weight: 700;
+      color: #92400e;
+      margin: 0 0 10px;
+    }
+
+    .ci-issue-detail-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 12px;
+    }
+
+    .ci-issue-detail-list li {
+      font-size: 13px;
+      color: #78350f;
+      line-height: 1.6;
+      padding: 2px 0;
+    }
+
+    .ci-issue-detail-note {
+      font-size: 13px;
+      color: #92400e;
+      line-height: 1.5;
+      margin: 0;
     }
 
     .ci-preview-note {
@@ -576,6 +633,10 @@
       font-weight: 700;
     }
 
+    .ci-result-lines li.ci-result-skipped {
+      color: var(--ci-muted);
+    }
+
     .ci-result-lines li.ci-result-warn {
       color: #92400e;
     }
@@ -737,6 +798,12 @@
         <p class="ci-subtitle">Check that your file looks right before continuing.</p>
 
         <div class="ci-summary" id="previewSummary"></div>
+
+        <div class="ci-issue-detail" id="issueDetail">
+          <div class="ci-issue-detail-heading">Rows with issues &mdash; these will be skipped</div>
+          <ul class="ci-issue-detail-list" id="issueDetailList"></ul>
+          <p class="ci-issue-detail-note">To include these rows, update your CSV and re-upload. Everything else looks good to continue.</p>
+        </div>
 
         <div style="overflow-x:auto;">
           <table class="ci-preview-table">
@@ -1033,6 +1100,29 @@
           '<div class="ci-summary-label">With issues</div>' +
         '</div>';
 
+      /* Issue detail section */
+      const issueDetailEl = document.getElementById('issueDetail');
+      const issueListEl = document.getElementById('issueDetailList');
+      if (withIssues > 0) {
+        const issueLines = [];
+        validated.forEach((r, idx) => {
+          if (r.issues.length === 0) return;
+          const missingName = r.issues.includes('Missing name');
+          const missingEmail = r.issues.includes('Missing email');
+          let reason;
+          if (missingName && missingEmail) {
+            reason = 'Missing name and email';
+          } else {
+            reason = r.issues.join(', ');
+          }
+          issueLines.push('<li>Row ' + (idx + 1) + ': ' + esc(reason) + '</li>');
+        });
+        issueListEl.innerHTML = issueLines.join('');
+        issueDetailEl.classList.add('visible');
+      } else {
+        issueDetailEl.classList.remove('visible');
+      }
+
       const tbody = document.getElementById('previewBody');
       const preview = validated.slice(0, 10);
       tbody.innerHTML = preview.map(r => {
@@ -1124,7 +1214,7 @@
         lines.push('<li><strong>' + r.newRelationships + '</strong> people were already on Hearth \u2014 added to your audience</li>');
       }
       if (r.skipped > 0) {
-        lines.push('<li><strong>' + r.skipped + '</strong> already in your audience and skipped</li>');
+        lines.push('<li class="ci-result-skipped"><strong>' + r.skipped + '</strong> already in your audience and skipped</li>');
       }
       if (r.conflicts > 0) {
         lines.push('<li class="ci-result-warn"><strong>' + r.conflicts + '</strong> rows skipped \u2014 email and phone point to different existing customers. Review manually.</li>');
@@ -1295,7 +1385,10 @@
               .select('id')
               .single();
 
-            if (insertErr) { counts.failed++; continue; }
+            if (insertErr) {
+              if (insertErr.code === '23505') { counts.skipped++; } else { counts.failed++; }
+              continue;
+            }
 
             const { error: relInsertErr } = await sb
               .from('customer_relationships')
@@ -1308,7 +1401,10 @@
                 lawful_basis: lawfulBasis
               });
 
-            if (relInsertErr) { counts.failed++; continue; }
+            if (relInsertErr) {
+              if (relInsertErr.code === '23505') { counts.skipped++; } else { counts.failed++; }
+              continue;
+            }
 
             counts.newCustomers++;
           } catch (e) {
@@ -1330,7 +1426,15 @@
                 lawful_basis: lawfulBasis
               });
 
-            if (relInsertErr) { counts.failed++; continue; }
+            if (relInsertErr) {
+              /* Unique constraint violation = relationship already exists → skip, not fail */
+              if (relInsertErr.code === '23505') {
+                counts.skipped++;
+              } else {
+                counts.failed++;
+              }
+              continue;
+            }
 
             /* Backfill address if import row has one and existing customer does not */
             if (item.importAddress && (!item.existingAddress || item.existingAddress.trim() === '')) {
