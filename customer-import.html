@@ -542,6 +542,116 @@
     .ci-btn-retry:hover {
       background: #fee2e2;
     }
+
+    /* ── Step 5: Results ── */
+    .ci-result-card {
+      padding: 28px 24px;
+      border-radius: 14px;
+      background: var(--ci-good-bg);
+      border: 1px solid #bbf7d0;
+      margin-bottom: 24px;
+    }
+
+    .ci-result-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--ci-good);
+      margin: 0 0 16px;
+    }
+
+    .ci-result-lines {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .ci-result-lines li {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--ci-text);
+      padding: 4px 0;
+    }
+
+    .ci-result-lines li strong {
+      font-weight: 700;
+    }
+
+    .ci-result-lines li.ci-result-warn {
+      color: #92400e;
+    }
+
+    .ci-result-lines li.ci-result-error {
+      color: #991b1b;
+    }
+
+    .ci-conflicts-toggle {
+      appearance: none;
+      border: 1px solid var(--ci-border);
+      border-radius: 10px;
+      background: var(--ci-card);
+      padding: 10px 16px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ci-muted);
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: all 0.18s ease;
+    }
+
+    .ci-conflicts-toggle:hover {
+      border-color: var(--ci-text);
+      color: var(--ci-text);
+    }
+
+    .ci-conflicts-list {
+      display: none;
+      margin-bottom: 24px;
+      padding: 0;
+      list-style: none;
+      border: 1px solid var(--ci-border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .ci-conflicts-list.visible {
+      display: block;
+    }
+
+    .ci-conflicts-list li {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--ci-text);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    }
+
+    .ci-conflicts-list li:last-child {
+      border-bottom: none;
+    }
+
+    .ci-conflicts-list li span {
+      color: var(--ci-muted);
+      margin-left: 8px;
+    }
+
+    .ci-result-links {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .ci-result-links a {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ci-accent);
+      text-decoration: none;
+      transition: opacity 0.18s ease;
+    }
+
+    .ci-result-links a:hover {
+      opacity: 0.8;
+      text-decoration: underline;
+    }
   </style>
 </head>
 
@@ -704,8 +814,25 @@
         </div>
       </div>
 
-      <!-- Step 5: Done (hidden) -->
-      <div class="ci-step-panel" data-panel="5"></div>
+      <!-- Step 5: Done -->
+      <div class="ci-step-panel" data-panel="5">
+        <h1 class="ci-title">Import complete</h1>
+
+        <div class="ci-result-card" id="resultCard">
+          <div class="ci-result-title">Your audience is growing</div>
+          <ul class="ci-result-lines" id="resultLines"></ul>
+        </div>
+
+        <div id="conflictsSection" style="display:none;">
+          <button class="ci-conflicts-toggle" type="button" id="conflictsToggle">Show conflicted rows</button>
+          <ul class="ci-conflicts-list" id="conflictsList"></ul>
+        </div>
+
+        <div class="ci-result-links">
+          <a href="insights.html">View Insights &rarr;</a>
+          <a href="home.html">Back to home &rarr;</a>
+        </div>
+      </div>
 
     </div>
   </div>
@@ -722,24 +849,27 @@
     }
 
     async function resolveVendor() {
-      const explicitId = getUrlParam('vendor_id') || window.HEARTH_VENDOR_ID || null;
+      const explicitVendorId = getUrlParam('vendor_id') || window.HEARTH_VENDOR_ID || null;
       const explicitSlug = getUrlParam('vendor') || getUrlParam('vendor_slug') || null;
 
-      try {
-        if (explicitId) {
-          const { data } = await sb.from('vendors').select('*').eq('id', explicitId).maybeSingle();
-          if (data) return data;
-        }
-        if (explicitSlug) {
-          const { data } = await sb.from('vendors').select('*').eq('slug', explicitSlug).maybeSingle();
-          if (data) return data;
-        }
-        const { data } = await sb.from('vendors').select('*').limit(1).single();
-        return data || null;
-      } catch (e) {
-        console.error('resolveVendor failed:', e);
-        return null;
+      if (explicitVendorId) {
+        const { data, error } = await sb.from('vendors').select('*').eq('id', explicitVendorId).maybeSingle();
+        if (!error && data) return data;
       }
+
+      if (explicitSlug) {
+        const slugFields = ['slug', 'vendor_slug'];
+        for (const field of slugFields) {
+          try {
+            const { data, error } = await sb.from('vendors').select('*').eq(field, explicitSlug).maybeSingle();
+            if (!error && data) return data;
+          } catch (e) {}
+        }
+      }
+
+      const { data, error } = await sb.from('vendors').select('*').limit(1);
+      if (error) throw error;
+      return data?.[0] || null;
     }
 
     /* ── State ── */
@@ -749,6 +879,7 @@
     let parsedRows = [];
     let lawfulBasis = null;
     let importResults = null;
+    let importConflictRows = [];
 
     /* ── Column name variants ── */
     const COLUMN_MAP = {
@@ -877,6 +1008,7 @@
 
       if (step === 2) renderPreview();
       if (step === 4) runImport();
+      if (step === 5) renderResults();
     }
 
     /* ── Step 2 rendering ── */
@@ -978,6 +1110,48 @@
       const wrap = document.getElementById('optGdprConfirm');
       wrap.classList.toggle('checked', this.checked);
       if (this.checked) document.getElementById('checkboxError').classList.remove('visible');
+    });
+
+    /* ── Step 5: Results rendering ── */
+    function renderResults() {
+      if (!importResults) return;
+      const r = importResults;
+      const lines = [];
+
+      lines.push('<li><strong>' + r.newCustomers + '</strong> new customers added to your audience</li>');
+
+      if (r.newRelationships > 0) {
+        lines.push('<li><strong>' + r.newRelationships + '</strong> people were already on Hearth \u2014 added to your audience</li>');
+      }
+      if (r.skipped > 0) {
+        lines.push('<li><strong>' + r.skipped + '</strong> already in your audience and skipped</li>');
+      }
+      if (r.conflicts > 0) {
+        lines.push('<li class="ci-result-warn"><strong>' + r.conflicts + '</strong> rows skipped \u2014 email and phone point to different existing customers. Review manually.</li>');
+      }
+      if (r.failed > 0) {
+        lines.push('<li class="ci-result-error"><strong>' + r.failed + '</strong> rows could not be imported due to an error.</li>');
+      }
+
+      document.getElementById('resultLines').innerHTML = lines.join('');
+
+      const conflictsSection = document.getElementById('conflictsSection');
+      if (r.conflicts > 0 && importConflictRows.length > 0) {
+        conflictsSection.style.display = '';
+        const list = document.getElementById('conflictsList');
+        list.innerHTML = importConflictRows.map(row =>
+          '<li>' + esc(row.name) + '<span>' + esc(row.email) + '</span></li>'
+        ).join('');
+      } else {
+        conflictsSection.style.display = 'none';
+      }
+    }
+
+    document.getElementById('conflictsToggle').addEventListener('click', function() {
+      const list = document.getElementById('conflictsList');
+      const isVisible = list.classList.contains('visible');
+      list.classList.toggle('visible', !isVisible);
+      this.textContent = isVisible ? 'Show conflicted rows' : 'Hide conflicted rows';
     });
 
     /* ── Step 4: Import logic ── */
@@ -1105,6 +1279,7 @@
 
         counts.skipped = skippedRows.length;
         counts.conflicts = conflictRows.length;
+        importConflictRows = conflictRows;
 
         /* 3a. Create new customers + relationships */
         for (const row of createNewRows) {
