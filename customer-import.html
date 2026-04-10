@@ -377,6 +377,171 @@
         padding: 8px 6px;
       }
     }
+
+    /* ── Step 3: GDPR confirmation ── */
+    .ci-consent-body {
+      font-size: 15px;
+      line-height: 1.65;
+      color: var(--ci-text);
+      margin-bottom: 28px;
+    }
+
+    .ci-radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .ci-radio-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 14px 16px;
+      border: 1px solid var(--ci-border);
+      border-radius: 12px;
+      background: var(--ci-bg);
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .ci-radio-option:hover {
+      border-color: var(--ci-accent);
+    }
+
+    .ci-radio-option.selected {
+      border-color: var(--ci-accent);
+      background: var(--ci-accent-light);
+    }
+
+    .ci-radio-option input[type="radio"] {
+      margin-top: 3px;
+      flex-shrink: 0;
+      accent-color: var(--ci-accent);
+    }
+
+    .ci-radio-option span {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--ci-text);
+    }
+
+    .ci-checkbox-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 14px 16px;
+      border: 1px solid var(--ci-border);
+      border-radius: 12px;
+      background: var(--ci-bg);
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: all 0.18s ease;
+    }
+
+    .ci-checkbox-option:hover {
+      border-color: var(--ci-accent);
+    }
+
+    .ci-checkbox-option.checked {
+      border-color: var(--ci-accent);
+      background: var(--ci-accent-light);
+    }
+
+    .ci-checkbox-option input[type="checkbox"] {
+      margin-top: 3px;
+      flex-shrink: 0;
+      accent-color: var(--ci-accent);
+    }
+
+    .ci-checkbox-option span {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--ci-text);
+    }
+
+    .ci-inline-error {
+      display: none;
+      font-size: 13px;
+      color: #b91c1c;
+      margin-top: 4px;
+      margin-bottom: 8px;
+    }
+
+    .ci-inline-error.visible {
+      display: block;
+    }
+
+    @keyframes ci-shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-4px); }
+      40%, 80% { transform: translateX(4px); }
+    }
+
+    .ci-shake {
+      animation: ci-shake 0.4s ease;
+    }
+
+    /* ── Step 4: Import progress ── */
+    .ci-loading {
+      text-align: center;
+      padding: 48px 24px;
+    }
+
+    .ci-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--ci-border);
+      border-top-color: var(--ci-accent);
+      border-radius: 50%;
+      animation: ci-spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes ci-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .ci-loading-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ci-text);
+    }
+
+    .ci-fatal-error {
+      display: none;
+      text-align: center;
+      padding: 36px 24px;
+    }
+
+    .ci-fatal-error.visible {
+      display: block;
+    }
+
+    .ci-fatal-error-msg {
+      font-size: 15px;
+      color: #991b1b;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .ci-btn-retry {
+      appearance: none;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      background: #fef2f2;
+      padding: 10px 24px;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: #991b1b;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .ci-btn-retry:hover {
+      background: #fee2e2;
+    }
   </style>
 </head>
 
@@ -489,11 +654,55 @@
         </div>
       </div>
 
-      <!-- Step 3: Confirm (hidden) -->
-      <div class="ci-step-panel" data-panel="3"></div>
+      <!-- Step 3: Confirm -->
+      <div class="ci-step-panel" data-panel="3">
+        <h1 class="ci-title">Before you import</h1>
 
-      <!-- Step 4: Import (hidden) -->
-      <div class="ci-step-panel" data-panel="4"></div>
+        <p class="ci-consent-body">
+          You're about to add customers to your Hearth audience. Before you do, you
+          need to confirm that you have the right to contact these people through Hearth.
+          This means they've either given you explicit permission to receive marketing
+          communications, or you have a legitimate interest basis &mdash; for example, they're
+          existing customers who would reasonably expect to hear from you about food
+          services you offer.
+        </p>
+
+        <div class="ci-radio-group" id="lawfulBasisGroup">
+          <label class="ci-radio-option" id="optExplicit">
+            <input type="radio" name="lawful_basis" value="explicit_consent" />
+            <span>These customers have given me explicit permission to receive marketing communications from my business.</span>
+          </label>
+          <label class="ci-radio-option" id="optLegitimate">
+            <input type="radio" name="lawful_basis" value="legitimate_interests" />
+            <span>I have a legitimate interest basis &mdash; these are existing customers who would reasonably expect to hear from me about my food services.</span>
+          </label>
+        </div>
+        <div class="ci-inline-error" id="radioError">Please select a lawful basis before continuing.</div>
+
+        <label class="ci-checkbox-option" id="optGdprConfirm">
+          <input type="checkbox" id="gdprCheckbox" />
+          <span>I confirm that I'm responsible for ensuring this data is handled in line with UK GDPR, and that Hearth may use it to help me run and promote drops to these customers.</span>
+        </label>
+        <div class="ci-inline-error" id="checkboxError">You must confirm this before continuing.</div>
+
+        <div class="ci-actions" style="margin-top:24px;">
+          <button class="ci-btn-back" type="button" onclick="goToStep(2)">Back</button>
+          <button class="ci-btn-continue" type="button" id="step3Continue" onclick="handleStep3Continue()">Continue</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Import -->
+      <div class="ci-step-panel" data-panel="4">
+        <div class="ci-loading" id="importLoading">
+          <div class="ci-spinner"></div>
+          <div class="ci-loading-text">Importing your customers&hellip;</div>
+        </div>
+
+        <div class="ci-fatal-error" id="importFatalError">
+          <div class="ci-fatal-error-msg" id="importFatalMsg">Something went wrong while importing your customers. Please check your connection and try again.</div>
+          <button class="ci-btn-retry" type="button" onclick="runImport()">Try again</button>
+        </div>
+      </div>
 
       <!-- Step 5: Done (hidden) -->
       <div class="ci-step-panel" data-panel="5"></div>
@@ -507,8 +716,30 @@
       window.HEARTH_CONFIG.SUPABASE_ANON_KEY
     );
 
+    /* ── Vendor resolution ── */
+    function getUrlParam(key) {
+      return new URLSearchParams(window.location.search).get(key);
+    }
+
     async function resolveVendor() {
-      return null;
+      const explicitId = getUrlParam('vendor_id') || window.HEARTH_VENDOR_ID || null;
+      const explicitSlug = getUrlParam('vendor') || getUrlParam('vendor_slug') || null;
+
+      try {
+        if (explicitId) {
+          const { data } = await sb.from('vendors').select('*').eq('id', explicitId).maybeSingle();
+          if (data) return data;
+        }
+        if (explicitSlug) {
+          const { data } = await sb.from('vendors').select('*').eq('slug', explicitSlug).maybeSingle();
+          if (data) return data;
+        }
+        const { data } = await sb.from('vendors').select('*').limit(1).single();
+        return data || null;
+      } catch (e) {
+        console.error('resolveVendor failed:', e);
+        return null;
+      }
     }
 
     /* ── State ── */
@@ -516,6 +747,8 @@
     const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     let currentStep = 1;
     let parsedRows = [];
+    let lawfulBasis = null;
+    let importResults = null;
 
     /* ── Column name variants ── */
     const COLUMN_MAP = {
@@ -604,6 +837,17 @@
       return issues;
     }
 
+    /* ── Phone normalisation ── */
+    function normalisePhone(phone) {
+      let p = phone.replace(/[\s\-]/g, '');
+      if (p.startsWith('07')) {
+        p = '+447' + p.slice(2);
+      } else if (p.startsWith('00')) {
+        p = '+' + p.slice(2);
+      }
+      return p;
+    }
+
     /* ── Step navigation ── */
     function goToStep(step) {
       currentStep = step;
@@ -632,6 +876,7 @@
       mobileEl.innerHTML = '<strong>' + STEP_LABELS[step - 1] + '</strong> \u2014 Step ' + step + ' of 5';
 
       if (step === 2) renderPreview();
+      if (step === 4) runImport();
     }
 
     /* ── Step 2 rendering ── */
@@ -680,6 +925,262 @@
       const d = document.createElement('div');
       d.textContent = str;
       return d.innerHTML;
+    }
+
+    /* ── Step 3: GDPR validation ── */
+    function applyShake(el) {
+      el.classList.remove('ci-shake');
+      void el.offsetWidth;
+      el.classList.add('ci-shake');
+    }
+
+    function handleStep3Continue() {
+      const radioGroup = document.getElementById('lawfulBasisGroup');
+      const radioError = document.getElementById('radioError');
+      const checkboxWrap = document.getElementById('optGdprConfirm');
+      const checkboxError = document.getElementById('checkboxError');
+      const checkbox = document.getElementById('gdprCheckbox');
+
+      const selectedRadio = document.querySelector('input[name="lawful_basis"]:checked');
+      let valid = true;
+
+      radioError.classList.remove('visible');
+      checkboxError.classList.remove('visible');
+
+      if (!selectedRadio) {
+        radioError.classList.add('visible');
+        applyShake(radioGroup);
+        valid = false;
+      }
+
+      if (!checkbox.checked) {
+        checkboxError.classList.add('visible');
+        applyShake(checkboxWrap);
+        valid = false;
+      }
+
+      if (!valid) return;
+
+      lawfulBasis = selectedRadio.value;
+      goToStep(4);
+    }
+
+    /* ── Step 3: radio/checkbox interactive styling ── */
+    document.querySelectorAll('.ci-radio-option input[type="radio"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        document.querySelectorAll('.ci-radio-option').forEach(opt => opt.classList.remove('selected'));
+        radio.closest('.ci-radio-option').classList.add('selected');
+        document.getElementById('radioError').classList.remove('visible');
+      });
+    });
+
+    document.getElementById('gdprCheckbox').addEventListener('change', function() {
+      const wrap = document.getElementById('optGdprConfirm');
+      wrap.classList.toggle('checked', this.checked);
+      if (this.checked) document.getElementById('checkboxError').classList.remove('visible');
+    });
+
+    /* ── Step 4: Import logic ── */
+    async function runImport() {
+      const loadingEl = document.getElementById('importLoading');
+      const fatalEl = document.getElementById('importFatalError');
+      const fatalMsg = document.getElementById('importFatalMsg');
+
+      loadingEl.style.display = '';
+      fatalEl.classList.remove('visible');
+
+      const counts = {
+        newCustomers: 0,
+        newRelationships: 0,
+        skipped: 0,
+        conflicts: 0,
+        failed: 0
+      };
+
+      try {
+        /* 0. Resolve vendor */
+        const vendor = await resolveVendor();
+        if (!vendor) throw new Error('Could not resolve vendor.');
+        const vendorId = vendor.id;
+
+        /* 1. Fetch existing customer_relationships for this vendor, with linked customers */
+        const { data: rels, error: relErr } = await sb
+          .from('customer_relationships')
+          .select('id, customer_id, customers ( id, email, phone, address )')
+          .eq('owner_type', 'vendor')
+          .eq('owner_id', vendorId);
+
+        if (relErr) throw relErr;
+
+        /* Also fetch all customers that might exist without a relationship to this vendor.
+           We need a complete lookup of all customers to detect email/phone matches. */
+        const { data: allCustomers, error: custErr } = await sb
+          .from('customers')
+          .select('id, email, phone, address');
+
+        if (custErr) throw custErr;
+
+        /* Build lookup: which customer IDs already have a relationship to this vendor */
+        const vendorRelCustomerIds = new Set();
+        for (const rel of (rels || [])) {
+          if (rel.customer_id) vendorRelCustomerIds.add(rel.customer_id);
+        }
+
+        /* Build email → customer and phone → customer maps from all customers */
+        const emailToCustomer = new Map();
+        const phoneToCustomer = new Map();
+
+        for (const c of (allCustomers || [])) {
+          if (c.email) {
+            emailToCustomer.set(c.email.toLowerCase().trim(), {
+              customerId: c.id,
+              hasRelationship: vendorRelCustomerIds.has(c.id),
+              existingAddress: c.address || ''
+            });
+          }
+          if (c.phone) {
+            const normPhone = normalisePhone(c.phone);
+            if (normPhone) {
+              phoneToCustomer.set(normPhone, {
+                customerId: c.id,
+                hasRelationship: vendorRelCustomerIds.has(c.id),
+                existingAddress: c.address || ''
+              });
+            }
+          }
+        }
+
+        /* 2. Classify each valid CSV row */
+        const validRows = parsedRows.filter(r => validateRow(r).length === 0);
+
+        const createNewRows = [];
+        const addRelationshipOnly = [];
+        const skippedRows = [];
+        const conflictRows = [];
+
+        for (const row of validRows) {
+          const normEmail = row.email.toLowerCase().trim();
+          const normPhone = row.phone ? normalisePhone(row.phone) : null;
+
+          const emailMatch = emailToCustomer.get(normEmail) || null;
+          const phoneMatch = normPhone ? (phoneToCustomer.get(normPhone) || null) : null;
+
+          /* d. Conflict: email matches customer A, phone matches different customer B */
+          if (emailMatch && phoneMatch && emailMatch.customerId !== phoneMatch.customerId) {
+            conflictRows.push(row);
+            continue;
+          }
+
+          /* e. Email matches an existing customer */
+          if (emailMatch) {
+            if (emailMatch.hasRelationship) {
+              skippedRows.push(row);
+            } else {
+              addRelationshipOnly.push({
+                customerId: emailMatch.customerId,
+                existingAddress: emailMatch.existingAddress,
+                importAddress: row.address
+              });
+            }
+            continue;
+          }
+
+          /* f. Phone matches an existing customer (email did not match) */
+          if (phoneMatch) {
+            if (phoneMatch.hasRelationship) {
+              skippedRows.push(row);
+            } else {
+              addRelationshipOnly.push({
+                customerId: phoneMatch.customerId,
+                existingAddress: phoneMatch.existingAddress,
+                importAddress: row.address
+              });
+            }
+            continue;
+          }
+
+          /* g. No match — create new */
+          createNewRows.push(row);
+        }
+
+        counts.skipped = skippedRows.length;
+        counts.conflicts = conflictRows.length;
+
+        /* 3a. Create new customers + relationships */
+        for (const row of createNewRows) {
+          try {
+            const customerPayload = { name: row.name, email: row.email };
+            if (row.phone) customerPayload.phone = normalisePhone(row.phone);
+            if (row.postcode) customerPayload.postcode = row.postcode;
+            if (row.address) customerPayload.address = row.address;
+
+            const { data: newCust, error: insertErr } = await sb
+              .from('customers')
+              .insert(customerPayload)
+              .select('id')
+              .single();
+
+            if (insertErr) { counts.failed++; continue; }
+
+            const { error: relInsertErr } = await sb
+              .from('customer_relationships')
+              .insert({
+                customer_id: newCust.id,
+                owner_type: 'vendor',
+                owner_id: vendorId,
+                consent_status: 'imported',
+                source: 'import',
+                lawful_basis: lawfulBasis
+              });
+
+            if (relInsertErr) { counts.failed++; continue; }
+
+            counts.newCustomers++;
+          } catch (e) {
+            counts.failed++;
+          }
+        }
+
+        /* 3b. Add relationships only (+ address backfill) */
+        for (const item of addRelationshipOnly) {
+          try {
+            const { error: relInsertErr } = await sb
+              .from('customer_relationships')
+              .insert({
+                customer_id: item.customerId,
+                owner_type: 'vendor',
+                owner_id: vendorId,
+                consent_status: 'imported',
+                source: 'import',
+                lawful_basis: lawfulBasis
+              });
+
+            if (relInsertErr) { counts.failed++; continue; }
+
+            /* Backfill address if import row has one and existing customer does not */
+            if (item.importAddress && (!item.existingAddress || item.existingAddress.trim() === '')) {
+              await sb
+                .from('customers')
+                .update({ address: item.importAddress })
+                .eq('id', item.customerId);
+            }
+
+            counts.newRelationships++;
+          } catch (e) {
+            counts.failed++;
+          }
+        }
+
+        /* 4. Store results and advance to Step 5 */
+        importResults = counts;
+        goToStep(5);
+
+      } catch (err) {
+        console.error('Import fatal error:', err);
+        loadingEl.style.display = 'none';
+        fatalMsg.textContent = 'Something went wrong while importing your customers. Please check your connection and try again.';
+        fatalEl.classList.add('visible');
+      }
     }
 
     /* ── File handling ── */
