@@ -9,6 +9,7 @@
   <script src="./assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="./assets/hearth-intelligence.js"></script>
 
   <style>
     :root{
@@ -1248,23 +1249,12 @@
 
     function renderHeroSummary(){
       const drops = state.filtered.drops;
-      const revenue = sum(drops, d => d.revenue_pence);
-      const avgCap = avg(drops.filter(d => d.capacity_utilisation_pct != null), d => d.capacity_utilisation_pct);
-      const count = drops.length;
+      const growth = HearthIntelligence.analyseGrowthSignals(drops, null);
+      const count = growth.dropCount;
+      const revenue = growth.totalRevenue;
 
-      let status = 'Getting started';
-      let statusMeta = 'Not enough data yet to infer a clear pattern';
-      if (count >= 8 && revenue > 0) {
-        status = 'Building momentum';
-        statusMeta = 'Enough signal to start seeing repeatable patterns';
-      }
-      if (count >= 14 && avgCap >= 70) {
-        status = 'Strong operating rhythm';
-        statusMeta = 'Frequent drops with healthy capacity usage';
-      }
-
-      document.getElementById('heroStatus').textContent = status;
-      document.getElementById('heroStatusMeta').textContent = statusMeta;
+      document.getElementById('heroStatus').textContent = growth.businessStatus;
+      document.getElementById('heroStatusMeta').textContent = growth.businessStatusMeta;
 
       document.getElementById('heroSignal').textContent =
         `${count} drop${count === 1 ? '' : 's'}`;
@@ -1298,9 +1288,9 @@
 
       container.innerHTML = [
         makeKpiCard('Revenue via Hearth', fmtGBP(totalRevenue), deltaPill(deltaRevenue), `${fmtNum(totalDrops)} drop${totalDrops === 1 ? '' : 's'} in range`),
-        makeKpiCard('Drops run', fmtNum(totalDrops), deltaPill(deltaDrops), `Average ${gapNarrative(drops)}`),
+        makeKpiCard('Drops run', fmtNum(totalDrops), deltaPill(deltaDrops), `Average ${HearthIntelligence.analyseRhythmSignals(drops).gapNarrative}`),
         makeKpiCard('Average revenue / drop', fmtGBP(avgRevenuePerDrop), deltaPill(deltaAvgRev), strongestDropText(drops)),
-        makeKpiCard('Average capacity used', fmtPct(avgCapacity), deltaPill(deltaCap), capacityNarrative(drops)),
+        makeKpiCard('Average capacity used', fmtPct(avgCapacity), deltaPill(deltaCap), HearthIntelligence.analyseCapacitySignals(drops).shortNarrative),
         makeKpiCard('Revenue / capacity unit', revenuePerCapacity == null ? '—' : fmtGBP(revenuePerCapacity), pill('neutral','Efficiency'), `Useful where a vendor declares a real bottleneck`),
         makeKpiCard('Orders', fmtNum(sum(drops, d => d.orders_count || 0)), pill('neutral','Volume'), `${fmtNum(sum(drops, d => d.units_sold || 0))} item units sold`),
         makeKpiCard('Average order value', fmtGBP(avg(drops.filter(d => d.avg_order_value_pence != null), d => d.avg_order_value_pence)), pill('neutral','Basket'), aovNarrative(drops)),
@@ -1339,9 +1329,10 @@
         'Capacity %'
       );
 
-      document.getElementById('momentumStory').textContent = buildMomentumStory(drops, revenueSeries.values);
-      document.getElementById('rhythmStory').textContent = buildRhythmStory(drops);
-      document.getElementById('capacityStory').textContent = buildCapacityStory(drops);
+      const growthSignals = HearthIntelligence.analyseGrowthSignals(drops, null, revenueSeries.values);
+      document.getElementById('momentumStory').textContent = growthSignals.momentumNarrative;
+      document.getElementById('rhythmStory').textContent = HearthIntelligence.analyseRhythmSignals(drops).narrative;
+      document.getElementById('capacityStory').textContent = HearthIntelligence.analyseCapacitySignals(drops).narrative;
     }
 
     function renderSignals(){
@@ -1352,9 +1343,12 @@
         return;
       }
 
-      const bestDrop = drops.slice().sort((a,b) => Number(b.revenue_pence || 0) - Number(a.revenue_pence || 0))[0];
-      const weakestDrop = drops.slice().sort((a,b) => Number(a.capacity_utilisation_pct || 0) - Number(b.capacity_utilisation_pct || 0))[0];
-      const bestItem = state.filtered.items.slice().sort((a,b) => Number(b.revenue_pence || 0) - Number(a.revenue_pence || 0))[0];
+      const growthSig = HearthIntelligence.analyseGrowthSignals(drops, null);
+      const capSig = HearthIntelligence.analyseCapacitySignals(drops);
+      const menuSig = HearthIntelligence.analyseMenuSignals(state.filtered.items);
+      const bestDrop = growthSig.strongestDrop;
+      const weakestDrop = capSig.weakestDrop;
+      const bestItem = menuSig.topRevenueItem;
       const bestHost = state.filtered.hosts[0];
 
       container.innerHTML = [
@@ -1468,17 +1462,17 @@
         'Revenue'
       );
 
-      const bestRevenueItem = items[0];
-      const bestUnitsItem = items.slice().sort((a,b) => Number(b.units_sold || 0) - Number(a.units_sold || 0))[0];
-      const bestEfficiencyItem = items
-        .filter(i => i.revenue_per_capacity_unit_pence != null)
-        .sort((a,b) => Number(b.revenue_per_capacity_unit_pence || 0) - Number(a.revenue_per_capacity_unit_pence || 0))[0];
+      const menuSig = HearthIntelligence.analyseMenuSignals(items);
 
       menuSignals.innerHTML = [
-        actionCard('Top revenue item', `${safe(bestRevenueItem.product_name)} is currently the strongest revenue contributor at ${fmtGBP(bestRevenueItem.revenue_pence)}.`),
-        actionCard('Top volume item', `${safe(bestUnitsItem.product_name)} leads by units sold at ${fmtNum(bestUnitsItem.units_sold)} units.`),
-        actionCard('Best efficiency signal', bestEfficiencyItem
-          ? `${safe(bestEfficiencyItem.product_name)} has the strongest revenue per capacity unit at ${fmtGBP(bestEfficiencyItem.revenue_per_capacity_unit_pence)}.`
+        actionCard('Top revenue item', menuSig.topRevenueItem
+          ? `${safe(menuSig.topRevenueItem.product_name)} is currently the strongest revenue contributor at ${fmtGBP(menuSig.topRevenueItem.revenue_pence)}.`
+          : 'No item sales data yet.'),
+        actionCard('Top volume item', menuSig.topVolumeItem
+          ? `${safe(menuSig.topVolumeItem.product_name)} leads by units sold at ${fmtNum(menuSig.topVolumeItem.units_sold)} units.`
+          : 'No volume data yet.'),
+        actionCard('Best efficiency signal', menuSig.bestEfficiencyItem
+          ? `${safe(menuSig.bestEfficiencyItem.product_name)} has the strongest revenue per capacity unit at ${fmtGBP(menuSig.bestEfficiencyItem.revenue_per_capacity_unit_pence)}.`
           : `No efficiency signal yet because no items currently resolve against capacity.`)
       ].join('');
     }
@@ -1535,7 +1529,14 @@
         return;
       }
 
-      const actions = buildActions(drops, state.filtered.items, state.filtered.hosts, state.vendor);
+      const archetype = HearthIntelligence.detectArchetype(state.vendor);
+      const capacitySignals = HearthIntelligence.analyseCapacitySignals(drops);
+      const menuSignals = HearthIntelligence.analyseMenuSignals(state.filtered.items);
+      const actions = HearthIntelligence.generateRecommendations(archetype, {
+        capacity: capacitySignals,
+        menu: menuSignals,
+        hosts: { bestHost: state.filtered.hosts[0] || null }
+      });
 
       grid.innerHTML = actions.map(a => `
         <div class="ins-action">
@@ -1543,7 +1544,7 @@
             ${pill(a.tone || 'neutral', a.label)}
           </div>
           <h4>${escapeHtml(a.title)}</h4>
-          <p>${escapeHtml(a.text)}</p>
+          <p>${escapeHtml(a.body)}</p>
         </div>
       `).join('');
     }
@@ -1615,38 +1616,6 @@
       return [...map.values()].sort((a,b) => b.revenue_pence - a.revenue_pence);
     }
 
-    function buildMomentumStory(drops, revenueValues){
-      if (!drops.length) return 'No drops match this filter yet.';
-      const totalRevenue = sum(drops, d => d.revenue_pence);
-      const avgRevenue = drops.length ? totalRevenue / drops.length : 0;
-      const trendWord = revenueValues.length >= 2 && revenueValues[revenueValues.length - 1] > revenueValues[0]
-        ? 'improving'
-        : 'still forming';
-      return `Hearth has generated ${fmtGBP(totalRevenue)} across ${fmtNum(drops.length)} drops in this reporting lens. Average revenue per drop is ${fmtGBP(avgRevenue)}, and the revenue pattern looks ${trendWord}.`;
-    }
-
-    function buildRhythmStory(drops){
-      if (drops.length < 2) return 'More drops are needed before rhythm can be assessed properly.';
-      const sorted = drops.slice().sort((a,b) => new Date(a.delivery_start || 0) - new Date(b.delivery_start || 0));
-      const gaps = [];
-      for (let i = 1; i < sorted.length; i++) {
-        gaps.push(daysBetween(sorted[i].delivery_start, sorted[i - 1].delivery_start));
-      }
-      const avgGap = avg(gaps);
-      if (avgGap <= 7) return `Drops are happening roughly every ${Math.round(avgGap)} days, which suggests a strong repeatable rhythm.`;
-      if (avgGap <= 14) return `Drops are happening roughly every ${Math.round(avgGap)} days, showing a decent but improvable operating cadence.`;
-      return `Drops are spaced roughly ${Math.round(avgGap)} days apart, so there may be room to build a more regular rhythm.`;
-    }
-
-    function buildCapacityStory(drops){
-      const withCap = drops.filter(d => d.capacity_utilisation_pct != null);
-      if (!withCap.length) return 'No clear capacity signal yet because capacity is not resolving on enough drops.';
-      const a = avg(withCap, d => d.capacity_utilisation_pct);
-      if (a >= 90) return `Average capacity utilisation is ${fmtPct(a)}. This suggests drops are running very full and may justify testing slightly more declared capacity in similar contexts.`;
-      if (a >= 70) return `Average capacity utilisation is ${fmtPct(a)}. This looks healthy and suggests declared capacity is broadly in the right zone.`;
-      return `Average capacity utilisation is ${fmtPct(a)}. That may indicate under-filled drops or declared capacity set too high for some contexts.`;
-    }
-
     function buildDropNotes(drop){
       const notes = [];
 
@@ -1668,136 +1637,6 @@
       ));
 
       return notes.join('');
-    }
-
-    function buildActions(drops, items, hosts, vendor){
-      const actions = [];
-      const avgCap = avg(drops.filter(d => d.capacity_utilisation_pct != null), d => d.capacity_utilisation_pct);
-      const bestHost = hosts[0];
-      const bestItem = items.slice().sort((a,b) => Number(b.revenue_pence || 0) - Number(a.revenue_pence || 0))[0];
-      const weakestDrop = drops.slice().sort((a,b) => Number(a.capacity_utilisation_pct || 0) - Number(b.capacity_utilisation_pct || 0))[0];
-
-      if (avgCap >= 90) {
-        actions.push({
-          label:'Capacity',
-          tone:'good',
-          title:'Test a slightly larger declared capacity',
-          text:`Recent drops are averaging ${fmtPct(avgCap)} capacity usage. Similar drops may be able to absorb a modest capacity increase without diluting demand.`
-        });
-      } else if (avgCap > 0 && avgCap < 65) {
-        actions.push({
-          label:'Capacity',
-          tone:'warn',
-          title:'Review capacity sizing or demand concentration',
-          text:`Average capacity usage is ${fmtPct(avgCap)}. Consider whether some drops are oversized, or whether demand would perform better if concentrated into fewer, stronger moments.`
-        });
-      } else {
-        actions.push({
-          label:'Capacity',
-          tone:'neutral',
-          title:'Keep monitoring declared capacity',
-          text:`Capacity usage currently looks broadly serviceable. Keep watching how it changes by host and drop type.`
-        });
-      }
-
-      if (bestHost) {
-        actions.push({
-          label:'Host',
-          tone:'good',
-          title:'Lean into the strongest host context',
-          text:`${safe(bestHost.host_name)} is currently your strongest host signal, averaging ${fmtGBP(bestHost.avg_revenue_per_drop_pence)} per drop. That context may deserve repeat activation.`
-        });
-      }
-
-      if (bestItem) {
-        actions.push({
-          label:'Menu',
-          tone:'good',
-          title:'Protect and amplify the strongest menu driver',
-          text:`${safe(bestItem.product_name)} is your top revenue item in this lens. Use it as a commercial anchor, then test which adjacent items improve basket value without adding too much operational load.`
-        });
-      }
-
-      if (weakestDrop && weakestDrop.capacity_utilisation_pct != null && weakestDrop.capacity_utilisation_pct < 50) {
-        actions.push({
-          label:'Attention',
-          tone:'warn',
-          title:'Review under-filled drop patterns',
-          text:`${safe(weakestDrop.drop_name)} only reached ${fmtPct(weakestDrop.capacity_utilisation_pct)} of declared capacity. Compare its host, timing and promotion pattern against stronger drops.`
-        });
-      }
-
-      if (actions.length < 3) {
-        actions.push({
-          label:'Data',
-          tone:'neutral',
-          title:'Build more signal through repeated drops',
-          text:'The more repeatable drops Hearth sees, the better it can identify timing, host and menu patterns that genuinely move the business.'
-        });
-      }
-
-      /* --- Archetype-aware recommendations from vendor onboarding --- */
-      const goals = Array.isArray(vendor?.primary_goal) ? vendor.primary_goal : [];
-      const deliveryModel = vendor?.delivery_model || '';
-      const vendorType = vendor?.vendor_type || '';
-
-      if (goals.includes('grow_customer_base') && actions.length < 6) {
-        actions.push({
-          label:'Growth', tone:'good',
-          title:'Every drop builds your owned customer asset',
-          text:'Unlike aggregator platforms, every Hearth order adds a consented customer record you own permanently. The more drops you run, the faster that asset compounds \u2014 independent of any platform.'
-        });
-      }
-
-      if ((goals.includes('reduce_aggregators') || deliveryModel === 'aggregator') && actions.length < 6) {
-        actions.push({
-          label:'Independence', tone:'good',
-          title:'Hearth builds the asset that aggregators keep from you',
-          text:'Aggregators own your customer relationships. Each Hearth drop reclaims a piece of that \u2014 giving you direct reach, zero commission, and a customer list that compounds over time.'
-        });
-      }
-
-      if (goals.includes('predictable_demand') && actions.length < 6) {
-        actions.push({
-          label:'Demand', tone:'good',
-          title:'Drops create predictable, plannable revenue moments',
-          text:'Each drop has a declared capacity and a fixed window \u2014 giving you clarity on demand before you commit to fulfilment. That predictability compounds as your drop rhythm becomes known to your customers.'
-        });
-      }
-
-      if (goals.includes('new_areas') && actions.length < 6) {
-        actions.push({
-          label:'Expansion', tone:'neutral',
-          title:'Use host contexts to test new areas without fixed cost',
-          text:'A drop at a new host venue is a low-risk way to test demand in a location before committing to it. Strong drops become the evidence base for where to expand next.'
-        });
-      }
-
-      if (goals.includes('weekly_rhythm') && actions.length < 6) {
-        actions.push({
-          label:'Rhythm', tone:'neutral',
-          title:'A recurring series locks in your operating cadence',
-          text:'Set up a recurring drop series in Drop Studio and your weekly rhythm runs itself. Customers learn when to expect you \u2014 and repeat orders follow naturally.'
-        });
-      }
-
-      if (goals.includes('events') && actions.length < 6) {
-        actions.push({
-          label:'Events', tone:'neutral',
-          title:'Hearth is purpose-built for planned food moments',
-          text:'Every drop is a designed event \u2014 fixed window, declared capacity, host context. That structure makes one-off and fundraising events as easy to run as a regular service.'
-        });
-      }
-
-      if ((!vendor || goals.length === 0) && actions.length < 6) {
-        actions.push({
-          label:'Setup', tone:'neutral',
-          title:'Complete your setup to unlock personalised recommendations',
-          text:'Visit Setup to tell Hearth about your goals and how you operate. Recommendations will personalise once your preferences are saved.'
-        });
-      }
-
-      return actions.slice(0, 6);
     }
 
     function buildContextNarrative(){
@@ -1832,21 +1671,6 @@
       return best ? `${safe(best.drop_name)} is strongest at ${fmtGBP(best.revenue_pence)}` : 'No strongest drop yet';
     }
 
-    function gapNarrative(drops){
-      if (drops.length < 2) return 'drop spacing not yet clear';
-      const sorted = drops.slice().sort((a,b) => new Date(a.delivery_start || 0) - new Date(b.delivery_start || 0));
-      const gaps = [];
-      for (let i = 1; i < sorted.length; i++) gaps.push(daysBetween(sorted[i].delivery_start, sorted[i - 1].delivery_start));
-      return `${Math.round(avg(gaps))} day gap between drops`;
-    }
-
-    function capacityNarrative(drops){
-      const a = avg(drops.filter(d => d.capacity_utilisation_pct != null), d => d.capacity_utilisation_pct);
-      if (!a) return 'Capacity signal still forming';
-      if (a >= 85) return 'Healthy fill pattern';
-      if (a >= 65) return 'Reasonable fill pattern';
-      return 'Opportunity to tighten demand or capacity';
-    }
 
     function aovNarrative(drops){
       const withAov = drops.filter(d => d.avg_order_value_pence != null);
