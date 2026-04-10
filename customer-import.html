@@ -886,7 +886,7 @@
         <h1 class="ci-title">Import complete</h1>
 
         <div class="ci-result-card" id="resultCard">
-          <div class="ci-result-title">Your audience is growing</div>
+          <div class="ci-result-title" id="resultTitle">Your audience is growing</div>
           <ul class="ci-result-lines" id="resultLines"></ul>
         </div>
 
@@ -1206,13 +1206,24 @@
     function renderResults() {
       if (!importResults) return;
       const r = importResults;
+      const somethingAdded = r.newCustomers > 0 || r.newRelationships > 0;
+      const titleEl = document.getElementById('resultTitle');
       const lines = [];
 
-      lines.push('<li><strong>' + r.newCustomers + '</strong> new customers added to your audience</li>');
+      if (somethingAdded) {
+        titleEl.textContent = 'Your audience is growing';
 
-      if (r.newRelationships > 0) {
-        lines.push('<li><strong>' + r.newRelationships + '</strong> people were already on Hearth \u2014 added to your audience</li>');
+        lines.push('<li><strong>' + r.newCustomers + '</strong> new customers added to your audience</li>');
+
+        if (r.newRelationships > 0) {
+          lines.push('<li><strong>' + r.newRelationships + '</strong> people were already on Hearth \u2014 added to your audience</li>');
+        }
+      } else {
+        titleEl.textContent = 'Import complete';
+
+        lines.push('<li>No new customers were added \u2014 all valid rows are already in your audience.</li>');
       }
+
       if (r.skipped > 0) {
         lines.push('<li class="ci-result-skipped"><strong>' + r.skipped + '</strong> already in your audience and skipped</li>');
       }
@@ -1267,17 +1278,16 @@
         if (!vendor) throw new Error('Could not resolve vendor.');
         const vendorId = vendor.id;
 
-        /* 1. Fetch existing customer_relationships for this vendor, with linked customers */
+        /* 1. Fetch existing customer_relationships for this vendor (no FK join — just customer_id) */
         const { data: rels, error: relErr } = await sb
           .from('customer_relationships')
-          .select('id, customer_id, customers ( id, email, phone, address )')
+          .select('customer_id')
           .eq('owner_type', 'vendor')
           .eq('owner_id', vendorId);
 
         if (relErr) throw relErr;
 
-        /* Also fetch all customers that might exist without a relationship to this vendor.
-           We need a complete lookup of all customers to detect email/phone matches. */
+        /* Fetch all customers for email/phone lookup */
         const { data: allCustomers, error: custErr } = await sb
           .from('customers')
           .select('id, email, phone, address');
@@ -1289,6 +1299,8 @@
         for (const rel of (rels || [])) {
           if (rel.customer_id) vendorRelCustomerIds.add(rel.customer_id);
         }
+
+        console.log('[Import] Vendor relationships fetched:', (rels || []).length, '| Unique customer IDs with vendor rel:', vendorRelCustomerIds.size);
 
         /* Build email → customer and phone → customer maps from all customers */
         const emailToCustomer = new Map();
@@ -1314,6 +1326,8 @@
           }
         }
 
+        console.log('[Import] Lookup maps — emails:', emailToCustomer.size, '| phones:', phoneToCustomer.size);
+
         /* 2. Classify each valid CSV row */
         const validRows = parsedRows.filter(r => validateRow(r).length === 0);
 
@@ -1331,6 +1345,7 @@
 
           /* d. Conflict: email matches customer A, phone matches different customer B */
           if (emailMatch && phoneMatch && emailMatch.customerId !== phoneMatch.customerId) {
+            console.log('[Import] Row conflict — email→' + emailMatch.customerId + ' phone→' + phoneMatch.customerId + ':', normEmail);
             conflictRows.push(row);
             continue;
           }
@@ -1338,8 +1353,10 @@
           /* e. Email matches an existing customer */
           if (emailMatch) {
             if (emailMatch.hasRelationship) {
+              console.log('[Import] Row skipped (email match, has rel):', normEmail);
               skippedRows.push(row);
             } else {
+              console.log('[Import] Row add-rel-only (email match, no rel):', normEmail);
               addRelationshipOnly.push({
                 customerId: emailMatch.customerId,
                 existingAddress: emailMatch.existingAddress,
@@ -1352,8 +1369,10 @@
           /* f. Phone matches an existing customer (email did not match) */
           if (phoneMatch) {
             if (phoneMatch.hasRelationship) {
+              console.log('[Import] Row skipped (phone match, has rel):', normPhone);
               skippedRows.push(row);
             } else {
+              console.log('[Import] Row add-rel-only (phone match, no rel):', normPhone);
               addRelationshipOnly.push({
                 customerId: phoneMatch.customerId,
                 existingAddress: phoneMatch.existingAddress,
@@ -1364,12 +1383,15 @@
           }
 
           /* g. No match — create new */
+          console.log('[Import] Row create-new:', normEmail);
           createNewRows.push(row);
         }
 
         counts.skipped = skippedRows.length;
         counts.conflicts = conflictRows.length;
         importConflictRows = conflictRows;
+
+        console.log('[Import] Classification complete — new:', createNewRows.length, '| add-rel:', addRelationshipOnly.length, '| skipped:', skippedRows.length, '| conflicts:', conflictRows.length);
 
         /* 3a. Create new customers + relationships */
         for (const row of createNewRows) {
