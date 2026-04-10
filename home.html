@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="./assets/hearth.css?v=30" />
   <script src="./assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./assets/hearth-intelligence.js"></script>
 
   <style>
     :root{
@@ -546,13 +547,145 @@
       font-size:14px;
     }
 
+    /* Today strip */
+    .home-today{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+
+    .home-todayLeft{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+
+    .home-todayDot{
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      flex:0 0 auto;
+    }
+
+    .home-todayDot.live{
+      background:#16a34a;
+      box-shadow:0 0 0 4px rgba(22,163,74,.18);
+      animation:home-pulse-dot 2s infinite;
+    }
+
+    .home-todayDot.scheduled{ background:var(--home-accent); }
+    .home-todayDot.quiet{ background:var(--home-border); }
+
+    @keyframes home-pulse-dot{
+      0%,100%{ box-shadow:0 0 0 4px rgba(22,163,74,.18); }
+      50%{ box-shadow:0 0 0 8px rgba(22,163,74,.10); }
+    }
+
+    .home-todayLabel{
+      font-size:15px;
+      font-weight:700;
+      color:var(--home-text);
+    }
+
+    .home-todayMeta{
+      font-size:13px;
+      color:var(--home-muted);
+      margin-top:2px;
+    }
+
+    /* Asset snapshot */
+    .home-assetGrid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:14px;
+    }
+
+    .home-assetCard{
+      padding:16px;
+      border:1px solid var(--home-border);
+      border-radius:16px;
+      background:linear-gradient(180deg,#fff,#fdfcf9);
+    }
+
+    .home-assetLabel{
+      font-size:12px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.03em;
+      color:var(--home-muted);
+    }
+
+    .home-assetValue{
+      margin-top:10px;
+      font-size:28px;
+      font-weight:800;
+      letter-spacing:-.04em;
+    }
+
+    .home-assetMeta{
+      margin-top:8px;
+      font-size:13px;
+      color:var(--home-muted);
+      line-height:1.5;
+    }
+
+    /* Recommendation action cards (intelligence-driven) */
+    .home-recAction{
+      padding:16px;
+      border:1px solid var(--home-border);
+      border-radius:16px;
+      background:linear-gradient(180deg,#fff,#fbfaf7);
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    .home-recAction h4{
+      margin:0;
+      font-size:16px;
+    }
+
+    .home-recAction p{
+      margin:0;
+      color:var(--home-muted);
+      font-size:14px;
+      line-height:1.55;
+      flex:1;
+    }
+
+    .home-recCta{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:36px;
+      padding:0 12px;
+      border-radius:10px;
+      border:1px solid var(--home-border);
+      color:var(--home-text);
+      background:#fff;
+      font-weight:700;
+      font-size:13px;
+      text-decoration:none;
+      align-self:flex-start;
+      transition:all .18s ease;
+    }
+
+    .home-recCta:hover{
+      border-color:#d8ccb8;
+      background:#fcfbf8;
+    }
+
     @media (max-width: 1100px){
       .home-hero,
       .home-how,
       .home-pulseGrid,
       .home-workGrid,
       .home-flowGrid,
-      .home-actionGrid{
+      .home-actionGrid,
+      .home-assetGrid{
         grid-template-columns:1fr;
       }
 
@@ -663,7 +796,8 @@
       }
 
       /* --- Pulse grid: single column on mobile so card content is not cramped --- */
-      .home-pulseGrid{
+      .home-pulseGrid,
+      .home-assetGrid{
         grid-template-columns:1fr;
       }
 
@@ -761,6 +895,11 @@
         </div>
       </section>
 
+      <!-- TODAY STRIP -->
+      <section class="home-card home-pad" id="todayStrip" style="display:none;">
+        <div class="home-today" id="todayContent"></div>
+      </section>
+
       <!-- HERO -->
       <section class="home-hero">
         <div class="home-card home-pad-lg home-heroMain">
@@ -826,13 +965,29 @@
       <section class="home-card home-pad-lg">
         <div class="home-sectionHead">
           <div>
-            <h2 class="home-sectionTitle">Current operating pulse</h2>
-            <p class="home-sectionSub">A quick view of what is happening now.</p>
+            <h2 class="home-sectionTitle">Business pulse</h2>
+            <p class="home-sectionSub">How Hearth is contributing over the last 30 days.</p>
           </div>
+          <a class="home-button-secondary" href="./insights.html" style="font-size:13px;">View full insights</a>
         </div>
 
         <div class="home-pulseGrid" id="pulseGrid">
           <div class="home-loading">Loading pulse…</div>
+        </div>
+      </section>
+
+      <!-- YOUR AUDIENCE -->
+      <section class="home-card home-pad-lg" id="assetSection" style="display:none;">
+        <div class="home-sectionHead">
+          <div>
+            <h2 class="home-sectionTitle">Your audience</h2>
+            <p class="home-sectionSub">The customer asset you own — independent of any platform.</p>
+          </div>
+          <a class="home-button-secondary" href="./customers.html" style="font-size:13px;">View all customers</a>
+        </div>
+
+        <div class="home-assetGrid" id="assetGrid">
+          <div class="home-loading">Loading customer data…</div>
         </div>
       </section>
 
@@ -940,13 +1095,13 @@
       <section class="home-card home-pad-lg">
         <div class="home-sectionHead">
           <div>
-            <h2 class="home-sectionTitle">Next actions</h2>
-            <p class="home-sectionSub">Suggested next steps based on current platform state.</p>
+            <h2 class="home-sectionTitle">Recommended next actions</h2>
+            <p class="home-sectionSub">Personalised suggestions based on your drop history and operating pattern.</p>
           </div>
         </div>
 
         <div class="home-actionGrid" id="actionsGrid">
-          <div class="home-loading">Loading actions…</div>
+          <div class="home-loading">Loading recommendations…</div>
         </div>
       </section>
 
@@ -973,7 +1128,11 @@
       bundles: [],
       summary: null,
       insightsDrops: [],
-      hosts: []
+      hosts: [],
+      customers: [],
+      segments: { loyalCore: [], occasional: [], lapsed: [] },
+      itemSales: [],
+      hostPerformance: []
     };
 
     function getUrlParam(name){
@@ -1067,14 +1226,22 @@
         bundlesRes,
         summaryRes,
         insightDropsRes,
-        hostsRes
+        hostsRes,
+        relsRes,
+        ordersRes,
+        itemSalesRes,
+        hostPerfRes
       ] = await Promise.all([
         sb.from('drops').select('*').eq('vendor_id', vendorId).order('delivery_start', { ascending:true }),
         sb.from('products').select('*').eq('vendor_id', vendorId),
         sb.from('bundles').select('*').eq('vendor_id', vendorId),
         (async () => { try { return await sb.from('v_hearth_summary').select('*').eq('vendor_id', vendorId).maybeSingle(); } catch(e) { return { data: null }; } })(),
         (async () => { try { return await sb.from('v_hearth_drop_stats').select('*').eq('vendor_id', vendorId).order('delivery_start', { ascending: false }); } catch(e) { return { data: [] }; } })(),
-        (async () => { try { return await sb.from('hosts').select('*').order('name'); } catch(e) { return { data: [] }; } })()
+        (async () => { try { return await sb.from('hosts').select('*').order('name'); } catch(e) { return { data: [] }; } })(),
+        (async () => { try { return await sb.from('customer_relationships').select('*, customers(full_name, email, postcode, phone)').eq('owner_id', vendorId).eq('owner_type', 'vendor'); } catch(e) { return { data: [] }; } })(),
+        (async () => { try { return await sb.from('orders').select('customer_email, created_at').eq('vendor_id', vendorId); } catch(e) { return { data: [] }; } })(),
+        (async () => { try { return await sb.from('v_item_sales').select('*').eq('vendor_id', vendorId); } catch(e) { return { data: [] }; } })(),
+        (async () => { try { return await sb.from('v_host_performance').select('*').eq('vendor_id', vendorId); } catch(e) { return { data: [] }; } })()
       ]);
 
       state.drops = dropsRes.data || [];
@@ -1083,6 +1250,39 @@
       state.summary = summaryRes.data || null;
       state.insightsDrops = insightDropsRes.data || [];
       state.hosts = hostsRes.data || [];
+      state.itemSales = itemSalesRes.data || [];
+      state.hostPerformance = hostPerfRes.data || [];
+
+      /* Build enriched customer array for segmentation */
+      const rels = relsRes.data || [];
+      const orderRows = ordersRes.data || [];
+      const orderMap = {};
+      for (const o of orderRows) {
+        const email = (o.customer_email || '').toLowerCase().trim();
+        if (!email) continue;
+        if (!orderMap[email]) orderMap[email] = { order_count: 0, last_order_at: null };
+        orderMap[email].order_count++;
+        if (!orderMap[email].last_order_at || new Date(o.created_at) > new Date(orderMap[email].last_order_at)) {
+          orderMap[email].last_order_at = o.created_at;
+        }
+      }
+      state.customers = rels.map(rel => {
+        const c = rel.customers || {};
+        const email = (c.email || '').toLowerCase().trim();
+        const info = orderMap[email] || { order_count: 0, last_order_at: null };
+        return {
+          full_name: c.full_name || '',
+          email: c.email || '',
+          postcode: c.postcode || '',
+          source: rel.source || 'unknown',
+          order_count: info.order_count,
+          last_order_at: info.last_order_at
+        };
+      });
+
+      if (window.HearthIntelligence) {
+        state.segments = window.HearthIntelligence.segmentCustomers(state.customers);
+      }
     }
 
     function getStatusModel(){
@@ -1165,6 +1365,146 @@
 
       const signalText = buildSignalText();
       document.getElementById('signalText').textContent = signalText;
+    }
+
+    function renderToday(){
+      const strip = document.getElementById('todayStrip');
+      const content = document.getElementById('todayContent');
+      if (!strip || !content) return;
+
+      const now = new Date();
+      const todayStr = now.toISOString().slice(0, 10);
+
+      const liveDrop = state.drops.find(d => (d.status || '').toLowerCase() === 'live');
+
+      const todayDrops = state.drops.filter(d => {
+        if ((d.status || '').toLowerCase() === 'live') return false;
+        const start = d.delivery_start ? d.delivery_start.slice(0, 10) : null;
+        return start === todayStr && ['scheduled','published','open'].includes((d.status || '').toLowerCase());
+      });
+
+      if (liveDrop) {
+        strip.style.display = '';
+        const name = escapeHtml(liveDrop.name || 'Active drop');
+        content.innerHTML = `
+          <div class="home-todayLeft">
+            <div class="home-todayDot live"></div>
+            <div>
+              <div class="home-todayLabel">Live now — ${name}</div>
+              <div class="home-todayMeta">Orders are coming in. Manage fulfilment from the Service Board.</div>
+            </div>
+          </div>
+          <a class="home-button" href="./index.html">Open Service Board</a>
+        `;
+        return;
+      }
+
+      if (todayDrops.length) {
+        strip.style.display = '';
+        const drop = todayDrops[0];
+        const name = escapeHtml(drop.name || 'Upcoming drop');
+        const startTime = drop.delivery_start
+          ? new Date(drop.delivery_start).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' })
+          : '';
+        const timeNote = startTime ? ` at ${startTime}` : ' later today';
+        content.innerHTML = `
+          <div class="home-todayLeft">
+            <div class="home-todayDot scheduled"></div>
+            <div>
+              <div class="home-todayLabel">${name} — scheduled${escapeHtml(timeNote)}</div>
+              <div class="home-todayMeta">Check timing, capacity and menu before it goes live.</div>
+            </div>
+          </div>
+          <a class="home-button-secondary" href="./drop-manager.html">Open Drop Studio</a>
+        `;
+        return;
+      }
+
+      /* Nothing today — show a calm nudge */
+      strip.style.display = '';
+      content.innerHTML = `
+        <div class="home-todayLeft">
+          <div class="home-todayDot quiet"></div>
+          <div>
+            <div class="home-todayLabel">No drops today</div>
+            <div class="home-todayMeta">A good time to plan the next moment or review recent performance.</div>
+          </div>
+        </div>
+        <a class="home-button-secondary" href="./drop-manager.html">Create next drop</a>
+      `;
+    }
+
+    function renderAssetSnapshot(){
+      const section = document.getElementById('assetSection');
+      const grid = document.getElementById('assetGrid');
+      if (!section || !grid) return;
+
+      const totalCustomers = state.customers.length;
+      if (!totalCustomers) {
+        /* Pre-customer state — show the section with an invitation */
+        section.style.display = '';
+        const dataPosture = state.vendor.data_posture || '';
+        const importCta = dataPosture === 'rich'
+          ? '<a class="home-recCta" href="./customer-import.html">Import your customers</a>'
+          : '<a class="home-recCta" href="./drop-manager.html">Run your first drop</a>';
+        grid.innerHTML = `
+          <div class="home-empty" style="grid-column:1/-1;">
+            Your customer asset starts building with your first drop. Every order adds a customer you own directly — no aggregator in the way.<br><br>
+            ${importCta}
+          </div>
+        `;
+        return;
+      }
+
+      section.style.display = '';
+
+      const earnedCount = state.customers.filter(c => c.source === 'order' || c.source === 'checkout').length;
+      const importedCount = state.customers.filter(c => c.source === 'import').length;
+      const loyalCount = state.segments.loyalCore.length;
+      const lapsedCount = state.segments.lapsed.length;
+
+      const earnedPct = totalCustomers ? Math.round((earnedCount / totalCustomers) * 100) : 0;
+
+      grid.innerHTML = [
+        assetCard(
+          'Total customers',
+          fmtNum(totalCustomers),
+          totalCustomers === 1 ? '1 person in your audience' : `${fmtNum(totalCustomers)} people in your audience`
+        ),
+        assetCard(
+          'Earned through drops',
+          fmtNum(earnedCount),
+          earnedCount
+            ? `${earnedPct}% of your audience came through Hearth orders`
+            : 'Customers earned through drops will appear here'
+        ),
+        assetCard(
+          'Loyal core',
+          fmtNum(loyalCount),
+          loyalCount
+            ? `${fmtNum(loyalCount)} customer${loyalCount === 1 ? '' : 's'} with 3+ orders`
+            : 'Repeat customers build over time'
+        ),
+        assetCard(
+          lapsedCount ? 'Needs attention' : 'Imported',
+          lapsedCount ? fmtNum(lapsedCount) : fmtNum(importedCount),
+          lapsedCount
+            ? `${fmtNum(lapsedCount)} customer${lapsedCount === 1 ? ' has' : 's have'} not ordered in 60+ days`
+            : importedCount
+              ? `${fmtNum(importedCount)} customer${importedCount === 1 ? '' : 's'} from your existing records`
+              : 'No imported records yet'
+        )
+      ].join('');
+    }
+
+    function assetCard(label, value, meta){
+      return `
+        <div class="home-assetCard">
+          <div class="home-assetLabel">${escapeHtml(label)}</div>
+          <div class="home-assetValue">${escapeHtml(String(value))}</div>
+          <div class="home-assetMeta">${escapeHtml(meta)}</div>
+        </div>
+      `;
     }
 
     function renderPulse(){
@@ -1293,6 +1633,17 @@
           primaryHref:'./brand-hearth.html'
         }),
         workspaceCard({
+          icon:'CU',
+          title:'Customers',
+          status: state.customers.length ? pill('good', `${fmtNum(state.customers.length)} known`) : pill('neutral','Building'),
+          description:'See who is in your audience, how they found you and which segments are growing.',
+          meta: state.customers.length
+            ? `${fmtNum(state.customers.length)} customer${state.customers.length === 1 ? '' : 's'} in your owned asset — independent of any platform.`
+            : 'Your audience builds with every drop and every import.',
+          primaryLabel: state.customers.length ? 'View customers' : 'Learn more',
+          primaryHref:'./customers.html'
+        }),
+        workspaceCard({
           icon:'IN',
           title:'Insights',
           status: insightSignal ? pill('good','Signals building') : pill('neutral','Early signal'),
@@ -1329,8 +1680,52 @@
 
     function renderActions(){
       const el = document.getElementById('actionsGrid');
-      const actions = buildActions();
+      const HI = window.HearthIntelligence;
 
+      /* Use intelligence engine when available and there is drop data */
+      if (HI && state.insightsDrops.length > 0) {
+        const archetype = HI.detectArchetype(state.vendor);
+        const capacity = HI.analyseCapacitySignals(state.insightsDrops);
+        const rhythm = HI.analyseRhythmSignals(state.insightsDrops);
+        const menu = HI.analyseMenuSignals(state.itemSales);
+        const growth = HI.analyseGrowthSignals(state.insightsDrops, state.customers, null);
+        const bestHost = (state.hostPerformance || [])
+          .sort((a, b) => Number(b.avg_revenue_per_drop_pence || 0) - Number(a.avg_revenue_per_drop_pence || 0))[0] || null;
+
+        const recs = HI.generateRecommendations(archetype, {
+          capacity, rhythm, menu, growth,
+          hosts: { bestHost }
+        });
+
+        const topRecs = recs.slice(0, 3);
+
+        if (topRecs.length) {
+          const ctaTargetMap = {
+            'drop-manager': './drop-manager.html',
+            'drop-menu': './drop-menu.html',
+            'insights': './insights.html',
+            'customers': './customers.html',
+            'onboarding': './onboarding.html',
+            'brand-hearth': './brand-hearth.html'
+          };
+
+          el.innerHTML = topRecs.map(r => {
+            const href = ctaTargetMap[r.ctaTarget] || './insights.html';
+            return `
+              <div class="home-recAction">
+                ${pill(r.tone || 'neutral', r.label)}
+                <h4>${escapeHtml(r.title)}</h4>
+                <p>${escapeHtml(r.body)}</p>
+                <a class="home-recCta" href="${href}">${escapeHtml(r.cta)}</a>
+              </div>
+            `;
+          }).join('');
+          return;
+        }
+      }
+
+      /* Fallback: use simple rule-based actions (pre-intelligence or no drops) */
+      const actions = buildActions();
       el.innerHTML = actions.map(a => `
         <div class="home-action">
           ${pill(a.tone || 'neutral', a.label)}
@@ -1483,11 +1878,13 @@
     }
 
     function render(){
+      renderSetupNotice();
+      renderToday();
       renderHero();
       renderPulse();
+      renderAssetSnapshot();
       renderWorkspaces();
       renderActions();
-      renderSetupNotice();
     }
 
     function renderSetupNotice(){
