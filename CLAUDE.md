@@ -371,7 +371,13 @@ Read-only page via drop shareable link. Content: drop name, date, time,
 live order count via Realtime, capacity fill bar, revenue share calculated
 in real time. No login. Display only.
 
-T4-14: Vendor customer data import
+T4-14: Vendor customer data import ✓ COMPLETE
+Five-step import flow with CSV parsing, address support, phone normalisation,
+GDPR lawful basis confirmation, and full deduplication on email and normalised
+phone. Writes to customers and customer_relationships with source = import.
+consent_status = 'imported' (distinct from customer-direct consent).
+Cross-vendor customer linking supported — existing platform customers gain
+new vendor relationship without duplicating the customer record.
 Allow vendors to upload existing customer list via CSV (name, email,
 postcode). Must include a non-skippable GDPR lawful basis confirmation
 step — vendor must declare the legal basis for processing before any
