@@ -610,6 +610,11 @@ with geographic intelligence and predictive scoring.
 Dependency: T4-28 (intelligence engine), meaningful customer data from
 real drops.
 
+Note (from T4-30 audit, Issue 2): Intelligence engine should incorporate
+data_posture into recommendation generation — data-rich vendors should
+receive import-first recommendations; data-light vendors should receive
+drop-first or host-first recommendations.
+
 T5-11: Comms engine V1
 Event-driven email and SMS. Triggers: drop_published, order_confirmed,
 order_ready, drop_closing_soon, drop_completed. Maximum 2 messages per
