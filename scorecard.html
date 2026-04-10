@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hearth — Scorecard</title>
+  <link rel="stylesheet" href="./assets/hearth.css?v=30" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./assets/hearth-intelligence.js"></script>
+  <style>
+    :root {
+      --sc-bg: #f7f5f1;
+      --sc-card: #ffffff;
+      --sc-border: #e9e3d8;
+      --sc-text: #1f2937;
+      --sc-muted: #6b7280;
+      --sc-accent: var(--h-accent, #8B6B3F);
+      --sc-radius: 18px;
+      --sc-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+      --sc-good: #166534;
+      --sc-good-bg: #ecfdf3;
+      --sc-warn: #92400e;
+      --sc-warn-bg: #fffbeb;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: var(--sc-bg);
+      color: var(--sc-text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 768px;
+      margin: 0 auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* ── Header bar ── */
+    .sc-header {
+      background: var(--sc-card);
+      border: 1px solid var(--sc-border);
+      border-radius: var(--sc-radius);
+      box-shadow: var(--sc-shadow);
+      padding: 18px;
+    }
+
+    .sc-header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .sc-back {
+      font-size: 13px;
+      color: var(--sc-muted);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color .18s ease;
+    }
+
+    .sc-back:hover {
+      color: var(--sc-text);
+    }
+
+    .sc-eyebrow {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--sc-accent);
+      margin-bottom: 6px;
+    }
+
+    .sc-drop-name {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .sc-drop-date {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: var(--sc-muted);
+    }
+
+    /* ── Stat tiles ── */
+    .sc-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .sc-stat {
+      background: var(--sc-card);
+      border: 1px solid var(--sc-border);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: var(--sc-shadow);
+    }
+
+    .sc-stat-label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--sc-muted);
+      margin-bottom: 6px;
+    }
+
+    .sc-stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .sc-stat-meta {
+      font-size: 12px;
+      color: var(--sc-muted);
+      margin-top: 4px;
+    }
+
+    .sc-signal-sold-out { color: #b45309; }
+    .sc-signal-strong { color: var(--sc-good); }
+    .sc-signal-moderate { color: var(--sc-text); }
+    .sc-signal-light { color: var(--sc-muted); }
+
+    /* ── Section cards ── */
+    .sc-section {
+      background: var(--sc-card);
+      border: 1px solid var(--sc-border);
+      border-radius: var(--sc-radius);
+      box-shadow: var(--sc-shadow);
+      padding: 22px;
+    }
+
+    .sc-section h2 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .sc-section-sub {
+      margin: 0 0 16px;
+      font-size: 13px;
+      color: var(--sc-muted);
+    }
+
+    .sc-narrative {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--sc-text);
+      margin: 0;
+    }
+
+    /* ── Top items ── */
+    .sc-items-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .sc-items-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--sc-border);
+      font-size: 14px;
+    }
+
+    .sc-items-list li:last-child {
+      border-bottom: none;
+    }
+
+    .sc-item-rank {
+      font-weight: 800;
+      color: var(--sc-muted);
+      width: 24px;
+      flex-shrink: 0;
+    }
+
+    .sc-item-name {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .sc-item-qty {
+      font-weight: 700;
+      color: var(--sc-text);
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+
+    /* ── Customer breakdown ── */
+    .sc-customer-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .sc-customer-tile {
+      border: 1px solid var(--sc-border);
+      border-radius: 14px;
+      padding: 16px;
+      text-align: center;
+      background: linear-gradient(180deg, #fff, #fbfaf7);
+    }
+
+    .sc-customer-tile-value {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .sc-customer-tile-label {
+      font-size: 13px;
+      color: var(--sc-muted);
+      margin-top: 4px;
+    }
+
+    .sc-neutral-state {
+      border: 1px dashed #d8d1c6;
+      border-radius: 14px;
+      padding: 22px;
+      background: #fcfbf8;
+      color: var(--sc-muted);
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.5;
+      grid-column: 1 / -1;
+    }
+
+    /* ── Recommendations ── */
+    .sc-recs-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .sc-action {
+      border: 1px solid var(--sc-border);
+      border-radius: 16px;
+      padding: 16px;
+      background: linear-gradient(180deg, #fff, #fbfaf7);
+    }
+
+    .sc-action-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .sc-action h4 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .sc-action p {
+      margin: 0;
+      color: var(--sc-muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .sc-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .sc-pill.good { background: var(--sc-good-bg); color: var(--sc-good); }
+    .sc-pill.warn { background: var(--sc-warn-bg); color: var(--sc-warn); }
+    .sc-pill.neutral { background: #f3f4f6; color: #374151; }
+
+    .sc-empty {
+      border: 1px dashed #d8d1c6;
+      border-radius: 16px;
+      padding: 22px;
+      background: #fcfbf8;
+      color: var(--sc-muted);
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Action row ── */
+    .sc-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .sc-btn {
+      appearance: none;
+      border: none;
+      text-decoration: none;
+      min-height: 44px;
+      padding: 0 18px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .18s ease;
+    }
+
+    .sc-btn-primary {
+      background: var(--sc-accent);
+      color: #fff;
+    }
+
+    .sc-btn-primary:hover {
+      opacity: 0.9;
+    }
+
+    .sc-btn-secondary {
+      background: #fff;
+      border: 1px solid var(--sc-border);
+      color: var(--sc-text);
+    }
+
+    .sc-btn-secondary:hover {
+      background: var(--sc-bg);
+    }
+
+    /* ── Loading state ── */
+    .sc-loading {
+      text-align: center;
+      padding: 48px 18px;
+      color: var(--sc-muted);
+      font-size: 15px;
+    }
+
+    .sc-error {
+      text-align: center;
+      padding: 48px 18px;
+      color: var(--sc-warn);
+      font-size: 15px;
+    }
+
+    @keyframes sc-pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 0.3; }
+    }
+
+    .sc-skeleton {
+      background: var(--sc-border);
+      border-radius: 8px;
+      height: 20px;
+      animation: sc-pulse 1.5s ease-in-out infinite;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .container {
+        padding: 10px;
+        gap: 10px;
+      }
+
+      .sc-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .sc-stat-value {
+        font-size: 22px;
+      }
+
+      .sc-drop-name {
+        font-size: 18px;
+      }
+
+      .sc-actions {
+        flex-direction: column;
+      }
+
+      .sc-btn {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .sc-stat {
+        padding: 10px;
+      }
+
+      .sc-stat-label {
+        font-size: 10px;
+      }
+
+      .sc-stat-value {
+        font-size: 20px;
+      }
+
+      .sc-section {
+        padding: 16px;
+      }
+
+      .sc-customer-tile-value {
+        font-size: 26px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <!-- NAV BAR -->
+    <div class="card headerBar">
+      <div class="brand">
+        <div class="brandMark">H</div>
+        <div>
+          <div class="brandTitle">Hearth — Scorecard</div>
+          <div class="brandSubtitle">Post-drop performance</div>
+        </div>
+      </div>
+
+      <div class="nav">
+        <a href="home.html">Home</a>
+        <a href="brand-hearth.html">Brand Hearth</a>
+        <a href="drop-menu.html">Menu Library</a>
+        <a href="drop-manager.html">Drop Studio</a>
+        <a href="index.html">Service Board</a>
+        <a href="insights.html">Insights</a>
+        <a href="onboarding.html">Setup</a>
+      </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="scorecardShell">
+
+      <!-- Loading state -->
+      <div id="loadingState" class="sc-section sc-loading">
+        <div class="sc-skeleton" style="width:60%; margin:0 auto 12px;"></div>
+        <div class="sc-skeleton" style="width:40%; margin:0 auto 12px;"></div>
+        <div class="sc-skeleton" style="width:50%; margin:0 auto;"></div>
+        <p style="margin-top:16px;">Loading scorecard…</p>
+      </div>
+
+      <!-- Error state (hidden by default) -->
+      <div id="errorState" class="sc-section sc-error" style="display:none;">
+        <p id="errorMessage">This scorecard could not be loaded.</p>
+      </div>
+
+      <!-- Scorecard content (hidden until loaded) -->
+      <div id="scorecardContent" style="display:none;">
+
+        <!-- 1. Header bar -->
+        <section class="sc-header">
+          <div class="sc-header-top">
+            <div>
+              <div class="sc-eyebrow">Scorecard</div>
+              <h1 class="sc-drop-name" id="dropName">—</h1>
+              <p class="sc-drop-date" id="dropDate">—</p>
+            </div>
+            <a class="sc-back" href="./drop-manager.html">← Back to drops</a>
+          </div>
+        </section>
+
+        <!-- 2. Performance strip -->
+        <div class="sc-stats" id="perfStats">
+          <div class="sc-stat">
+            <div class="sc-stat-label">Orders / Capacity</div>
+            <div class="sc-stat-value" id="statOrders">—</div>
+            <div class="sc-stat-meta" id="statOrdersMeta"></div>
+          </div>
+          <div class="sc-stat">
+            <div class="sc-stat-label">Fill rate</div>
+            <div class="sc-stat-value" id="statFill">—</div>
+            <div class="sc-stat-meta" id="statFillSignal"></div>
+          </div>
+          <div class="sc-stat">
+            <div class="sc-stat-label">Revenue</div>
+            <div class="sc-stat-value" id="statRevenue">—</div>
+            <div class="sc-stat-meta" id="statRevenueMeta"></div>
+          </div>
+          <div class="sc-stat">
+            <div class="sc-stat-label">New customers</div>
+            <div class="sc-stat-value" id="statNewCustomers">—</div>
+            <div class="sc-stat-meta" id="statNewCustomersMeta"></div>
+          </div>
+        </div>
+
+        <!-- 3. Capacity signal panel -->
+        <section class="sc-section" id="capacitySection">
+          <h2>Capacity signal</h2>
+          <p class="sc-narrative" id="capacityNarrative">—</p>
+        </section>
+
+        <!-- 4. Top items -->
+        <section class="sc-section" id="itemsSection">
+          <h2>What sold</h2>
+          <p class="sc-section-sub" id="itemsSub">Top items by quantity</p>
+          <ol class="sc-items-list" id="itemsList"></ol>
+        </section>
+
+        <!-- 5. Customer breakdown -->
+        <section class="sc-section" id="customerSection">
+          <h2>Your audience tonight</h2>
+          <p class="sc-section-sub" id="customerSub">New vs returning customers</p>
+          <div class="sc-customer-grid" id="customerGrid"></div>
+        </section>
+
+        <!-- 6. Recommendations -->
+        <section class="sc-section" id="recsSection">
+          <h2>For your next drop</h2>
+          <p class="sc-section-sub">Actions based on this drop's signals</p>
+          <div class="sc-recs-grid" id="recsGrid"></div>
+        </section>
+
+        <!-- 7. Action row -->
+        <div class="sc-actions">
+          <a class="sc-btn sc-btn-primary" id="duplicateBtn" href="./drop-manager.html">Duplicate this drop</a>
+          <a class="sc-btn sc-btn-secondary" href="./insights.html">View all insights</a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const sb = supabase.createClient(
+      window.HEARTH_CONFIG.SUPABASE_URL,
+      window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+    );
+
+    const HearthIntelligence = window.HearthIntelligence;
+
+    /* ── Helpers ── */
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function fmtDate(v) {
+      if (!v) return '—';
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function fmtCurrency(pence) {
+      const pounds = Number(pence || 0) / 100;
+      return '£' + pounds.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function fmtNum(n) {
+      return new Intl.NumberFormat('en-GB').format(Number(n || 0));
+    }
+
+    function getUrlParam(name) {
+      return new URLSearchParams(window.location.search).get(name);
+    }
+
+    /* ── Vendor resolution ── */
+    async function resolveVendor() {
+      const explicitVendorId = getUrlParam('vendor_id') || window.HEARTH_VENDOR_ID || null;
+      const explicitSlug = getUrlParam('vendor') || getUrlParam('vendor_slug') || null;
+
+      if (explicitVendorId) {
+        const { data, error } = await sb.from('vendors').select('*').eq('id', explicitVendorId).maybeSingle();
+        if (!error && data) return data;
+      }
+
+      if (explicitSlug) {
+        for (const field of ['slug', 'vendor_slug']) {
+          try {
+            const { data, error } = await sb.from('vendors').select('*').eq(field, explicitSlug).maybeSingle();
+            if (!error && data) return data;
+          } catch (e) {}
+        }
+      }
+
+      const { data, error } = await sb.from('vendors').select('*').limit(1);
+      if (error) throw error;
+      return data?.[0] || null;
+    }
+
+    /* ── State ── */
+    let state = {
+      vendor: null,
+      vendorId: null,
+      drop: null,
+      dropStats: null,
+      itemSales: [],
+      newCustomers: 0,
+      returningCustomers: 0,
+      customerDataAvailable: false
+    };
+
+    /* ── Show / hide states ── */
+    function showLoading() {
+      document.getElementById('loadingState').style.display = '';
+      document.getElementById('errorState').style.display = 'none';
+      document.getElementById('scorecardContent').style.display = 'none';
+    }
+
+    function showError(msg) {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('errorState').style.display = '';
+      document.getElementById('errorMessage').textContent = msg;
+      document.getElementById('scorecardContent').style.display = 'none';
+    }
+
+    function showContent() {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('errorState').style.display = 'none';
+      document.getElementById('scorecardContent').style.display = '';
+    }
+
+    /* ── Data loading ── */
+    async function loadData() {
+      const dropId = getUrlParam('drop');
+      if (!dropId) {
+        showError('No drop specified. Add ?drop=<drop_id> to the URL.');
+        return false;
+      }
+
+      state.vendor = await resolveVendor();
+      if (!state.vendor) {
+        showError('No vendor found. Check your vendor configuration.');
+        return false;
+      }
+      state.vendorId = state.vendor.id;
+
+      /* Fetch drop summary */
+      const { data: dropData, error: dropErr } = await sb
+        .from('v_drop_summary')
+        .select('*')
+        .eq('drop_id', dropId)
+        .maybeSingle();
+
+      if (dropErr || !dropData) {
+        showError('Drop not found or could not be loaded.');
+        return false;
+      }
+
+      /* Verify drop belongs to this vendor */
+      if (dropData.vendor_id !== state.vendorId) {
+        showError('This drop does not belong to your vendor account.');
+        return false;
+      }
+
+      state.drop = dropData;
+
+      /* Fetch item sales and orders in parallel */
+      const [itemSalesRes, ordersRes, allOrdersRes] = await Promise.all([
+        sb.from('v_item_sales').select('*').eq('drop_id', dropId),
+        sb.from('orders').select('customer_email, drop_id').eq('drop_id', dropId),
+        sb.from('orders').select('customer_email, drop_id').eq('vendor_id', state.vendorId)
+      ]);
+
+      state.itemSales = itemSalesRes.data || [];
+
+      /* Determine new vs returning customers */
+      const dropOrders = ordersRes.data || [];
+      const allOrders = allOrdersRes.data || [];
+
+      if (dropOrders.length > 0) {
+        /* Build set of emails from other drops for this vendor */
+        const priorCustomers = new Set();
+        for (const o of allOrders) {
+          if (o.drop_id !== dropId && o.customer_email) {
+            priorCustomers.add(o.customer_email.toLowerCase().trim());
+          }
+        }
+
+        /* Unique customers in this drop */
+        const thisDropEmails = new Set();
+        for (const o of dropOrders) {
+          if (o.customer_email) {
+            thisDropEmails.add(o.customer_email.toLowerCase().trim());
+          }
+        }
+
+        let newCount = 0;
+        let returningCount = 0;
+        for (const email of thisDropEmails) {
+          if (priorCustomers.has(email)) {
+            returningCount++;
+          } else {
+            newCount++;
+          }
+        }
+
+        state.newCustomers = newCount;
+        state.returningCustomers = returningCount;
+        state.customerDataAvailable = true;
+      } else {
+        state.customerDataAvailable = false;
+      }
+
+      /* Build drop stats object for HearthIntelligence */
+      const drop = state.drop;
+      const capacityTotal = Number(drop.capacity_units_total || 0);
+      const capacityUsed = Number(drop.capacity_units_used || 0);
+      const utilPct = capacityTotal > 0 ? Math.round((capacityUsed / capacityTotal) * 100) : null;
+
+      state.dropStats = {
+        drop_id: drop.drop_id,
+        drop_name: drop.drop_name || drop.name,
+        vendor_id: state.vendorId,
+        delivery_start: drop.delivery_start,
+        delivery_end: drop.delivery_end,
+        capacity_units_total: capacityTotal,
+        capacity_units_used: capacityUsed,
+        capacity_utilisation_pct: utilPct,
+        order_count: Number(drop.order_count || 0),
+        total_revenue_pence: Number(drop.total_revenue_pence || 0)
+      };
+
+      return true;
+    }
+
+    /* ── Rendering ── */
+    function render() {
+      const drop = state.drop;
+      const stats = state.dropStats;
+
+      /* Header */
+      document.getElementById('dropName').textContent = drop.drop_name || drop.name || 'Untitled drop';
+      document.getElementById('dropDate').textContent = fmtDate(drop.delivery_start);
+
+      /* Duplicate button */
+      document.getElementById('duplicateBtn').href = `./drop-manager.html?duplicate=${encodeURIComponent(drop.drop_id)}`;
+
+      /* Performance stats */
+      const capacityTotal = stats.capacity_units_total;
+      const capacityUsed = stats.capacity_units_used;
+      const orderCount = stats.order_count;
+      const fillPct = stats.capacity_utilisation_pct;
+      const revenuePence = stats.total_revenue_pence;
+
+      document.getElementById('statOrders').textContent = `${fmtNum(orderCount)} / ${fmtNum(capacityTotal)}`;
+      document.getElementById('statOrdersMeta').textContent = `${fmtNum(orderCount)} orders placed`;
+
+      if (fillPct !== null) {
+        document.getElementById('statFill').textContent = fillPct + '%';
+        let signal, signalClass;
+        if (fillPct >= 90) {
+          signal = 'Sold out';
+          signalClass = 'sc-signal-sold-out';
+        } else if (fillPct >= 70) {
+          signal = 'Strong';
+          signalClass = 'sc-signal-strong';
+        } else if (fillPct >= 50) {
+          signal = 'Moderate';
+          signalClass = 'sc-signal-moderate';
+        } else {
+          signal = 'Light';
+          signalClass = 'sc-signal-light';
+        }
+        const fillEl = document.getElementById('statFillSignal');
+        fillEl.textContent = signal;
+        fillEl.className = 'sc-stat-meta ' + signalClass;
+      } else {
+        document.getElementById('statFill').textContent = '—';
+        document.getElementById('statFillSignal').textContent = 'No capacity data';
+      }
+
+      document.getElementById('statRevenue').textContent = fmtCurrency(revenuePence);
+
+      document.getElementById('statNewCustomers').textContent = fmtNum(state.newCustomers);
+      document.getElementById('statNewCustomersMeta').textContent = 'First time with you';
+
+      /* Capacity narrative */
+      renderCapacityNarrative();
+
+      /* Top items */
+      renderTopItems();
+
+      /* Customer breakdown */
+      renderCustomerBreakdown();
+
+      /* Recommendations */
+      renderRecommendations();
+
+      showContent();
+    }
+
+    function renderCapacityNarrative() {
+      const el = document.getElementById('capacityNarrative');
+
+      if (HearthIntelligence) {
+        const signals = HearthIntelligence.analyseCapacitySignals([state.dropStats]);
+        if (signals.narrative && signals.status !== 'no_signal') {
+          el.textContent = signals.narrative;
+          return;
+        }
+      }
+
+      /* Fallback narrative */
+      const fillPct = state.dropStats.capacity_utilisation_pct;
+      if (fillPct === null) {
+        el.textContent = 'No capacity data available for this drop.';
+      } else if (fillPct >= 90) {
+        el.textContent = `This drop filled to ${fillPct}% — a strong result. Consider adding 5–10 more slots next time to test whether demand has headroom.`;
+      } else if (fillPct >= 70) {
+        el.textContent = `This drop filled to ${fillPct}% — a solid performance. There may be room to push capacity slightly higher with a targeted promotion or a wider audience.`;
+      } else if (fillPct >= 50) {
+        el.textContent = `This drop reached ${fillPct}% capacity — a reasonable start. Consider refining the menu or timing to strengthen demand next time.`;
+      } else {
+        el.textContent = `This drop had capacity to spare at ${fillPct}%. Consider a smaller menu or a more targeted promotion before the next one.`;
+      }
+    }
+
+    function renderTopItems() {
+      const list = document.getElementById('itemsList');
+      const section = document.getElementById('itemsSection');
+
+      if (!state.itemSales.length) {
+        list.innerHTML = '';
+        document.getElementById('itemsSub').textContent = 'No item data available for this drop.';
+        return;
+      }
+
+      /* Sort by units sold descending, take top 5 */
+      const sorted = [...state.itemSales]
+        .sort((a, b) => Number(b.units_sold || 0) - Number(a.units_sold || 0))
+        .slice(0, 5);
+
+      list.innerHTML = sorted.map((item, i) => `
+        <li>
+          <span class="sc-item-rank">${i + 1}</span>
+          <span class="sc-item-name">${escapeHtml(item.product_name || item.item_name || 'Unknown item')}</span>
+          <span class="sc-item-qty">${fmtNum(item.units_sold)} sold</span>
+        </li>
+      `).join('');
+    }
+
+    function renderCustomerBreakdown() {
+      const grid = document.getElementById('customerGrid');
+
+      if (!state.customerDataAvailable) {
+        grid.innerHTML = `
+          <div class="sc-neutral-state">
+            Customer history builds after your first few drops.
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = `
+        <div class="sc-customer-tile">
+          <div class="sc-customer-tile-value">${fmtNum(state.newCustomers)}</div>
+          <div class="sc-customer-tile-label">New customers</div>
+        </div>
+        <div class="sc-customer-tile">
+          <div class="sc-customer-tile-value">${fmtNum(state.returningCustomers)}</div>
+          <div class="sc-customer-tile-label">Returning customers</div>
+        </div>
+      `;
+
+      /* Update sub-heading with framing text */
+      const sub = document.getElementById('customerSub');
+      const total = state.newCustomers + state.returningCustomers;
+      if (total > 0 && state.returningCustomers > 0) {
+        const repeatPct = Math.round((state.returningCustomers / total) * 100);
+        sub.textContent = `Tonight you served ${fmtNum(total)} customers. ${fmtNum(state.newCustomers)} are new to your audience. ${fmtNum(state.returningCustomers)} have ordered from you before — your repeat rate is ${repeatPct}%.`;
+      } else if (total > 0) {
+        sub.textContent = `Tonight you served ${fmtNum(total)} customers. All ${fmtNum(state.newCustomers)} are new to your audience — your customer base is growing.`;
+      }
+    }
+
+    function renderRecommendations() {
+      const grid = document.getElementById('recsGrid');
+
+      if (!HearthIntelligence) {
+        grid.innerHTML = '<div class="sc-empty">Intelligence module not loaded.</div>';
+        return;
+      }
+
+      const archetype = HearthIntelligence.detectArchetype(state.vendor);
+      const capacitySignals = HearthIntelligence.analyseCapacitySignals([state.dropStats]);
+      const menuSignals = HearthIntelligence.analyseMenuSignals(state.itemSales);
+      const growthSignals = HearthIntelligence.analyseGrowthSignals([state.dropStats], [], null);
+
+      const allActions = HearthIntelligence.generateRecommendations(archetype, {
+        capacity: capacitySignals,
+        menu: menuSignals,
+        growth: growthSignals,
+        hosts: { bestHost: null }
+      });
+
+      if (!allActions.length) {
+        grid.innerHTML = '<div class="sc-empty">No specific actions right now. Keep running drops to build your picture.</div>';
+        return;
+      }
+
+      /* Show up to 2 recommendations */
+      const shown = allActions.slice(0, 2);
+
+      grid.innerHTML = shown.map(a => `
+        <div class="sc-action">
+          <div class="sc-action-top">
+            <span class="sc-pill ${escapeHtml(a.tone || 'neutral')}">${escapeHtml(a.label)}</span>
+          </div>
+          <h4>${escapeHtml(a.title)}</h4>
+          <p>${escapeHtml(a.body)}</p>
+        </div>
+      `).join('');
+    }
+
+    /* ── Init ── */
+    async function init() {
+      showLoading();
+      try {
+        const success = await loadData();
+        if (success) {
+          render();
+        }
+      } catch (err) {
+        console.error('Scorecard init error:', err);
+        showError('Something went wrong loading this scorecard. Please try again.');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

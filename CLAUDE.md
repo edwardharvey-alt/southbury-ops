@@ -38,6 +38,7 @@ Core belief: great local food should strengthen communities, not bypass them.
 - home.html — Platform home dashboard
 - order.html — Customer-facing ordering page
 - order-entry.html — Dev tool for test order entry (legacy, needs rebuild)
+- scorecard.html — Post-drop scorecard (per-drop performance view)
 - assets/hearth.css — shared platform stylesheet
 - assets/config.js — Supabase config
 - assets/vendors/southbury-farm-pizza/ — vendor image assets
@@ -313,22 +314,15 @@ Address fields (line 1, line 2, town/city, postcode), phone number validation,
 marketing opt-in checkbox. Written to delivery_address and customer_postcode
 on orders table.
 
-T4-12: Post-drop scorecard — making the compounding asset visible
-
-When a drop closes, the Home dashboard surfaces a scorecard that frames
-the drop not just as a revenue event but as a moment that grew the
-vendor's audience.
-
-Content: orders placed, revenue, fill rate, fastest-selling item, new
-customers added tonight, customers who have ordered before. One
-plain-English observation in Hearth's voice.
-
-Framing example: "Tonight you served 23 customers. 18 are new to your
-audience. 4 have ordered from you before — your repeat rate is growing."
-
-This is the moment a vendor first sees that Hearth is building something
-for them beyond a single service. The language must make the compounding
-effect tangible without overstating it.
+T4-12: Post-drop scorecard — making the compounding asset visible ✓ COMPLETE
+scorecard.html created as a standalone page accepting ?drop= parameter.
+Four-tile performance strip (orders/capacity, fill rate with signal,
+revenue, new customers), capacity narrative from HearthIntelligence,
+top 5 items by quantity, new vs returning customer breakdown with
+plain-English framing, two recommendation cards, and action row
+(duplicate drop, view insights). Home dashboard shows scorecard prompt
+for drops closed within the last 48 hours. Drop Studio shows
+"Scorecard →" text link on closed drop cards.
 
 Dependency: T3-9 (customer capture — complete)
 
@@ -733,7 +727,7 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
     complete and strategically aligned. Review the T4/T5 backlog to
     determine the next priority.
 26. T4-29 — Series intelligence in Insights
-27. T4-12 — Post-drop scorecard
+27. T4-12 — Post-drop scorecard ✓ COMPLETE
 28. T4-13 — Minimal host-facing view
 29. T4-15 — Multiple drops within a single event
 30. T4-16 — Host onboarding as first-class entity
