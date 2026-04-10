@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hearth — Customers</title>
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=30" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./assets/hearth-intelligence.js"></script>
+
+  <style>
+    :root {
+      --cu-bg: #f7f5f1;
+      --cu-card: #ffffff;
+      --cu-border: #e9e3d8;
+      --cu-text: #1f2937;
+      --cu-muted: #6b7280;
+      --cu-accent: var(--h-accent, #f97316);
+      --cu-accent-light: rgba(249, 115, 22, 0.08);
+      --cu-radius: 18px;
+      --cu-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+      --cu-good: #166534;
+      --cu-good-bg: #ecfdf3;
+      --cu-warn: #92400e;
+      --cu-warn-bg: #fffbeb;
+    }
+
+    body {
+      background: var(--cu-bg);
+      color: var(--cu-text);
+    }
+
+    #customersShell {
+      display: grid;
+      gap: 18px;
+      padding-bottom: 40px;
+    }
+
+    /* ── Asset summary bar ── */
+    #assetSummary {
+      background:
+        radial-gradient(circle at top right, rgba(203,184,157,0.18), transparent 28%),
+        linear-gradient(180deg, #fff, #fcfbf8);
+      border: 1px solid var(--cu-border);
+      border-radius: var(--cu-radius);
+      box-shadow: var(--cu-shadow);
+      padding: 22px;
+    }
+
+    #assetSummaryEyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(139, 107, 63, 0.08);
+      color: var(--cu-accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    #assetSummary h1 {
+      margin: 14px 0 8px;
+      font-size: 28px;
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+    }
+
+    #assetSummaryFraming {
+      margin: 0 0 18px;
+      color: var(--cu-muted);
+      font-size: 15px;
+      line-height: 1.5;
+      max-width: 62ch;
+    }
+
+    #assetStats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .cu-stat {
+      border: 1px solid var(--cu-border);
+      border-radius: 16px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    .cu-stat-label {
+      color: var(--cu-muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 6px;
+    }
+
+    .cu-stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .cu-stat-meta {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--cu-muted);
+    }
+
+    /* ── Segment cards ── */
+    #segmentCards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .cu-segment {
+      border: 1px solid var(--cu-border);
+      border-radius: var(--cu-radius);
+      box-shadow: var(--cu-shadow);
+      padding: 18px;
+      background: linear-gradient(180deg, #fff, #fcfbf8);
+    }
+
+    .cu-segment-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .cu-segment-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .cu-segment-pill.loyal {
+      background: var(--cu-good-bg);
+      color: var(--cu-good);
+    }
+
+    .cu-segment-pill.occasional {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .cu-segment-pill.lapsed {
+      background: var(--cu-warn-bg);
+      color: var(--cu-warn);
+    }
+
+    .cu-segment-count {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      margin-bottom: 6px;
+    }
+
+    .cu-segment-desc {
+      margin: 0;
+      color: var(--cu-muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .cu-segment.has-lapsed {
+      border-color: rgba(146, 64, 14, 0.22);
+    }
+
+    /* ── Recommendations strip ── */
+    #recsSection {
+      border: 1px solid var(--cu-border);
+      border-radius: var(--cu-radius);
+      box-shadow: var(--cu-shadow);
+      padding: 22px;
+      background: var(--cu-card);
+    }
+
+    #recsSection h2 {
+      margin: 0 0 4px;
+      font-size: 20px;
+      letter-spacing: -0.02em;
+    }
+
+    #recsSub {
+      margin: 0 0 16px;
+      color: var(--cu-muted);
+      font-size: 13px;
+    }
+
+    #recsGrid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .cu-action {
+      border: 1px solid var(--cu-border);
+      border-radius: 16px;
+      padding: 16px;
+      background: linear-gradient(180deg, #fff, #fbfaf7);
+    }
+
+    .cu-action-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .cu-action h4 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .cu-action p {
+      margin: 0;
+      color: var(--cu-muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .cu-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .cu-pill.good { background: var(--cu-good-bg); color: var(--cu-good); }
+    .cu-pill.warn { background: var(--cu-warn-bg); color: var(--cu-warn); }
+    .cu-pill.neutral { background: #f3f4f6; color: #374151; }
+
+    .cu-empty {
+      border: 1px dashed #d8d1c6;
+      border-radius: 16px;
+      padding: 22px;
+      background: #fcfbf8;
+      color: var(--cu-muted);
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Customer list ── */
+    #listSection {
+      border: 1px solid var(--cu-border);
+      border-radius: var(--cu-radius);
+      box-shadow: var(--cu-shadow);
+      padding: 22px;
+      background: var(--cu-card);
+    }
+
+    #listSection h2 {
+      margin: 0 0 4px;
+      font-size: 20px;
+      letter-spacing: -0.02em;
+    }
+
+    #listSub {
+      margin: 0 0 16px;
+      color: var(--cu-muted);
+      font-size: 13px;
+    }
+
+    #filterBar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .cu-filter-btn {
+      border-radius: 10px;
+      border: 1px solid var(--cu-border);
+      background: var(--cu-card);
+      color: var(--cu-text);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 14px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .cu-filter-btn:hover {
+      border-color: #d9cfbf;
+    }
+
+    .cu-filter-btn.active {
+      border-color: rgba(249, 115, 22, 0.28);
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(251, 146, 60, 0.08));
+      color: var(--h-accent-ink, #7c2d12);
+    }
+
+    #customerTableWrap {
+      overflow-x: auto;
+    }
+
+    #customerTable {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    #customerTable th {
+      text-align: left;
+      padding: 10px 12px;
+      font-weight: 700;
+      color: var(--cu-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--cu-border);
+    }
+
+    #customerTable td {
+      padding: 12px 12px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+      color: var(--cu-text);
+    }
+
+    #customerTable tr:last-child td {
+      border-bottom: none;
+    }
+
+    .cu-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .cu-badge.order {
+      background: var(--cu-good-bg);
+      color: var(--cu-good);
+    }
+
+    .cu-badge.import {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    #listNote {
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--cu-muted);
+      display: none;
+    }
+
+    .cu-loading {
+      color: var(--cu-muted);
+      font-size: 14px;
+      padding: 18px 0;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .headerBar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 14px;
+      }
+      .brand { min-width: 0; }
+      .nav {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+        flex-wrap: nowrap;
+        gap: 2px;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+        justify-content: flex-start;
+      }
+      .nav::-webkit-scrollbar { display: none; }
+      .nav a {
+        flex-shrink: 0;
+        white-space: nowrap;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      #assetSummary h1 {
+        font-size: 24px;
+      }
+
+      #assetStats {
+        grid-template-columns: 1fr;
+      }
+
+      #segmentCards {
+        grid-template-columns: 1fr;
+      }
+
+      #recsSection,
+      #listSection {
+        padding: 16px;
+      }
+
+      * { box-sizing: border-box; }
+      body { overflow-x: hidden; }
+      .container { max-width: 100vw; overflow-x: hidden; }
+    }
+
+    @media (max-width: 480px) {
+      #assetSummary {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="card headerBar">
+      <div class="brand">
+        <div class="brandMark">H</div>
+        <div>
+          <div class="brandTitle">Hearth — Customers</div>
+          <div class="brandSubtitle">Your owned customer asset</div>
+        </div>
+      </div>
+
+      <div class="nav">
+        <a href="home.html">Home</a>
+        <a href="brand-hearth.html">Brand Hearth</a>
+        <a href="drop-menu.html">Menu Library</a>
+        <a href="drop-manager.html">Drop Studio</a>
+        <a href="index.html">Service Board</a>
+        <a href="insights.html">Insights</a>
+        <a href="onboarding.html">Setup</a>
+      </div>
+    </div>
+
+    <div id="customersShell">
+
+      <!-- SECTION 1: Asset summary bar -->
+      <section id="assetSummary">
+        <div id="assetSummaryEyebrow">Customers</div>
+        <h1 id="assetTitle">Your customer asset</h1>
+        <p id="assetSummaryFraming">Your owned customer asset — independent of any platform.</p>
+
+        <div id="assetStats">
+          <div class="cu-stat">
+            <div class="cu-stat-label">Total customers</div>
+            <div class="cu-stat-value" id="statTotal">—</div>
+            <div class="cu-stat-meta">Across all sources</div>
+          </div>
+          <div class="cu-stat">
+            <div class="cu-stat-label">Earned through drops</div>
+            <div class="cu-stat-value" id="statOrders">—</div>
+            <div class="cu-stat-meta">Source: order</div>
+          </div>
+          <div class="cu-stat">
+            <div class="cu-stat-label">Brought by you</div>
+            <div class="cu-stat-value" id="statImports">—</div>
+            <div class="cu-stat-meta">Source: import</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 2: Segment cards -->
+      <section id="segmentCards">
+        <div class="cu-segment" id="segLoyal">
+          <div class="cu-segment-header">
+            <span class="cu-segment-pill loyal">Loyal core</span>
+          </div>
+          <div class="cu-segment-count" id="segLoyalCount">—</div>
+          <p class="cu-segment-desc">3 or more orders. Your most engaged customers.</p>
+        </div>
+        <div class="cu-segment" id="segOccasional">
+          <div class="cu-segment-header">
+            <span class="cu-segment-pill occasional">Occasional</span>
+          </div>
+          <div class="cu-segment-count" id="segOccasionalCount">—</div>
+          <p class="cu-segment-desc">Ordered twice. Worth re-engaging.</p>
+        </div>
+        <div class="cu-segment" id="segLapsed">
+          <div class="cu-segment-header">
+            <span class="cu-segment-pill lapsed">Lapsed</span>
+          </div>
+          <div class="cu-segment-count" id="segLapsedCount">—</div>
+          <p class="cu-segment-desc">No order in 60+ days.</p>
+        </div>
+      </section>
+
+      <!-- SECTION 3: Recommendations strip -->
+      <section id="recsSection">
+        <h2>Recommended actions</h2>
+        <p id="recsSub">Suggestions based on your customer patterns and operating model.</p>
+        <div id="recsGrid">
+          <div class="cu-loading">Loading recommendations…</div>
+        </div>
+      </section>
+
+      <!-- SECTION 4: Customer list -->
+      <section id="listSection">
+        <h2>All customers</h2>
+        <p id="listSub">Everyone in your audience, across all sources.</p>
+
+        <div id="filterBar">
+          <button class="cu-filter-btn active" data-filter="all">All</button>
+          <button class="cu-filter-btn" data-filter="loyal">Loyal core</button>
+          <button class="cu-filter-btn" data-filter="occasional">Occasional</button>
+          <button class="cu-filter-btn" data-filter="lapsed">Lapsed</button>
+        </div>
+
+        <div id="customerTableWrap">
+          <table id="customerTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Postcode</th>
+                <th>Source</th>
+                <th>Orders</th>
+                <th>Last order</th>
+              </tr>
+            </thead>
+            <tbody id="customerTableBody">
+              <tr><td colspan="5" class="cu-loading">Loading customers…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="listNote"></div>
+      </section>
+
+    </div>
+  </div>
+
+  <script>
+    const sb = supabase.createClient(
+      window.HEARTH_CONFIG.SUPABASE_URL,
+      window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+    );
+
+    const HearthIntelligence = window.HearthIntelligence;
+
+    /* ── Helpers ── */
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function fmtDate(v) {
+      if (!v) return '—';
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function fmtNum(n) {
+      return new Intl.NumberFormat('en-GB').format(Number(n || 0));
+    }
+
+    function getUrlParam(name) {
+      return new URLSearchParams(window.location.search).get(name);
+    }
+
+    /* ── Vendor resolution ── */
+    async function resolveVendor() {
+      const explicitVendorId = getUrlParam('vendor_id') || window.HEARTH_VENDOR_ID || null;
+      const explicitSlug = getUrlParam('vendor') || getUrlParam('vendor_slug') || null;
+
+      if (explicitVendorId) {
+        const { data, error } = await sb.from('vendors').select('*').eq('id', explicitVendorId).maybeSingle();
+        if (!error && data) return data;
+      }
+
+      if (explicitSlug) {
+        const slugFields = ['slug', 'vendor_slug'];
+        for (const field of slugFields) {
+          try {
+            const { data, error } = await sb.from('vendors').select('*').eq(field, explicitSlug).maybeSingle();
+            if (!error && data) return data;
+          } catch (e) {}
+        }
+      }
+
+      const { data, error } = await sb.from('vendors').select('*').limit(1);
+      if (error) throw error;
+      return data?.[0] || null;
+    }
+
+    /* ── State ── */
+    let state = {
+      vendor: null,
+      vendorId: null,
+      allCustomers: [],
+      segments: { loyalCore: [], occasional: [], lapsed: [] },
+      activeFilter: 'all'
+    };
+
+    /* ── Data loading ── */
+    async function loadData() {
+      state.vendor = await resolveVendor();
+      if (!state.vendor) {
+        document.getElementById('assetTitle').textContent = 'No vendor found';
+        return;
+      }
+      state.vendorId = state.vendor.id;
+
+      /* 1. Customer relationships joined to customers */
+      const { data: rels, error: relsErr } = await sb
+        .from('customer_relationships')
+        .select('*, customers(full_name, email, postcode, phone)')
+        .eq('owner_id', state.vendorId)
+        .eq('owner_type', 'vendor');
+
+      if (relsErr) {
+        console.error('Failed to load customer relationships:', relsErr);
+        return;
+      }
+
+      /* 2. Per-customer order count and last order date */
+      const { data: orderAgg, error: orderErr } = await sb
+        .from('orders')
+        .select('customer_email, created_at')
+        .eq('vendor_id', state.vendorId);
+
+      if (orderErr) {
+        console.error('Failed to load order data:', orderErr);
+      }
+
+      /* Aggregate orders by email client-side */
+      const orderMap = {};
+      if (orderAgg) {
+        for (const o of orderAgg) {
+          const email = (o.customer_email || '').toLowerCase().trim();
+          if (!email) continue;
+          if (!orderMap[email]) {
+            orderMap[email] = { order_count: 0, last_order_at: null };
+          }
+          orderMap[email].order_count++;
+          if (!orderMap[email].last_order_at || new Date(o.created_at) > new Date(orderMap[email].last_order_at)) {
+            orderMap[email].last_order_at = o.created_at;
+          }
+        }
+      }
+
+      /* Build enriched customer array */
+      const customers = (rels || []).map(rel => {
+        const c = rel.customers || {};
+        const email = (c.email || '').toLowerCase().trim();
+        const orderInfo = orderMap[email] || { order_count: 0, last_order_at: null };
+
+        return {
+          full_name: c.full_name || '—',
+          email: c.email || '',
+          postcode: c.postcode || '—',
+          phone: c.phone || '',
+          source: rel.source || 'unknown',
+          order_count: orderInfo.order_count,
+          last_order_at: orderInfo.last_order_at,
+          customer_id: rel.customer_id
+        };
+      });
+
+      state.allCustomers = customers;
+
+      /* ── Section 1: Asset summary ── */
+      const totalCount = customers.length;
+      const orderSourceCount = customers.filter(c => c.source === 'order').length;
+      const importSourceCount = customers.filter(c => c.source === 'import').length;
+
+      document.getElementById('statTotal').textContent = fmtNum(totalCount);
+      document.getElementById('statOrders').textContent = fmtNum(orderSourceCount);
+      document.getElementById('statImports').textContent = fmtNum(importSourceCount);
+
+      /* ── Section 2: Segments ── */
+      state.segments = HearthIntelligence.segmentCustomers(customers);
+
+      document.getElementById('segLoyalCount').textContent = fmtNum(state.segments.loyalCore.length);
+      document.getElementById('segOccasionalCount').textContent = fmtNum(state.segments.occasional.length);
+      document.getElementById('segLapsedCount').textContent = fmtNum(state.segments.lapsed.length);
+
+      /* Lapsed visual indicator */
+      if (state.segments.lapsed.length > 0) {
+        document.getElementById('segLapsed').classList.add('has-lapsed');
+      }
+
+      /* ── Section 3: Recommendations ── */
+      await renderRecommendations();
+
+      /* ── Section 4: Customer list ── */
+      renderCustomerList();
+    }
+
+    /* ── Recommendations ── */
+    async function renderRecommendations() {
+      const grid = document.getElementById('recsGrid');
+
+      /* Fetch drop stats for generateRecommendations */
+      let dropStats = [];
+      let itemSales = [];
+      let hostPerf = [];
+
+      try {
+        const [dsResult, isResult, hpResult] = await Promise.all([
+          sb.from('v_hearth_drop_stats').select('*').eq('vendor_id', state.vendorId),
+          sb.from('v_item_sales').select('*').eq('vendor_id', state.vendorId),
+          sb.from('v_host_performance').select('*').eq('vendor_id', state.vendorId)
+        ]);
+
+        dropStats = dsResult.data || [];
+        itemSales = isResult.data || [];
+        hostPerf = hpResult.data || [];
+      } catch (e) {
+        console.error('Failed to load intelligence data:', e);
+      }
+
+      if (!dropStats.length && !state.allCustomers.length) {
+        grid.innerHTML = '<div class="cu-empty">No specific actions right now. Keep running drops to build your picture.</div>';
+        return;
+      }
+
+      const archetype = HearthIntelligence.detectArchetype(state.vendor);
+      const capacitySignals = HearthIntelligence.analyseCapacitySignals(dropStats);
+      const menuSignals = HearthIntelligence.analyseMenuSignals(itemSales);
+      const growthSignals = HearthIntelligence.analyseGrowthSignals(dropStats, state.allCustomers, null);
+
+      const allActions = HearthIntelligence.generateRecommendations(archetype, {
+        capacity: capacitySignals,
+        menu: menuSignals,
+        growth: growthSignals,
+        hosts: { bestHost: hostPerf[0] || null }
+      });
+
+      /* Filter to customer-relevant recommendations */
+      const customerRelevantIds = new Set([
+        'archetype_grow_customer_base',
+        'archetype_reduce_aggregators',
+        'capacity_review',
+        'capacity_increase',
+        'weak_drop_review',
+        'build_signal',
+        'archetype_unconfigured'
+      ]);
+
+      const filtered = allActions.filter(a =>
+        customerRelevantIds.has(a.id) ||
+        (a.ctaTarget === 'customers') ||
+        (a.label && ['Growth', 'Independence', 'Attention', 'Data'].includes(a.label))
+      );
+
+      if (!filtered.length) {
+        grid.innerHTML = '<div class="cu-empty">No specific actions right now. Keep running drops to build your picture.</div>';
+        return;
+      }
+
+      grid.innerHTML = filtered.map(a => `
+        <div class="cu-action">
+          <div class="cu-action-top">
+            <span class="cu-pill ${escapeHtml(a.tone || 'neutral')}">${escapeHtml(a.label)}</span>
+          </div>
+          <h4>${escapeHtml(a.title)}</h4>
+          <p>${escapeHtml(a.body)}</p>
+        </div>
+      `).join('');
+    }
+
+    /* ── Customer list rendering ── */
+    function getFilteredCustomers() {
+      const filter = state.activeFilter;
+
+      if (filter === 'all') return state.allCustomers;
+      if (filter === 'loyal') return state.segments.loyalCore;
+      if (filter === 'occasional') return state.segments.occasional;
+      if (filter === 'lapsed') return state.segments.lapsed;
+      return state.allCustomers;
+    }
+
+    function renderCustomerList() {
+      const tbody = document.getElementById('customerTableBody');
+      const noteEl = document.getElementById('listNote');
+      const customers = getFilteredCustomers();
+      const total = customers.length;
+      const MAX_ROWS = 200;
+      const displayCustomers = customers.slice(0, MAX_ROWS);
+
+      if (!displayCustomers.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="cu-empty" style="border:none;">No customers match this filter.</td></tr>';
+        noteEl.style.display = 'none';
+        return;
+      }
+
+      tbody.innerHTML = displayCustomers.map(c => `
+        <tr>
+          <td>${escapeHtml(c.full_name)}</td>
+          <td>${escapeHtml(c.postcode)}</td>
+          <td><span class="cu-badge ${escapeHtml(c.source)}">${escapeHtml(c.source)}</span></td>
+          <td>${fmtNum(c.order_count)}</td>
+          <td>${c.order_count > 0 ? fmtDate(c.last_order_at) : 'No orders yet'}</td>
+        </tr>
+      `).join('');
+
+      if (total > MAX_ROWS) {
+        noteEl.textContent = `Showing 200 of ${fmtNum(total)}. Use filters to narrow.`;
+        noteEl.style.display = 'block';
+      } else {
+        noteEl.style.display = 'none';
+      }
+    }
+
+    /* ── Filter buttons ── */
+    document.getElementById('filterBar').addEventListener('click', (e) => {
+      const btn = e.target.closest('.cu-filter-btn');
+      if (!btn) return;
+
+      document.querySelectorAll('.cu-filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      state.activeFilter = btn.dataset.filter;
+      renderCustomerList();
+    });
+
+    /* ── Init ── */
+    (async function init() {
+      try {
+        await loadData();
+      } catch (err) {
+        console.error('Customers page error:', err);
+        document.getElementById('assetTitle').textContent = 'Failed to load customer data';
+      }
+    })();
+  </script>
+</body>
+</html>
