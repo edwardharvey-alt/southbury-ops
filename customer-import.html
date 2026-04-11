@@ -600,49 +600,182 @@
       background: #fee2e2;
     }
 
-    /* ── Step 5: Results ── */
-    .ci-result-card {
-      padding: 28px 24px;
+    /* ── Step 5: Post-import view ── */
+    .ci-import-summary-card {
+      padding: 18px 20px;
       border-radius: 14px;
-      background: var(--ci-good-bg);
-      border: 1px solid #bbf7d0;
+      background: var(--ci-bg);
+      border: 1px solid var(--ci-border);
       margin-bottom: 24px;
     }
 
-    .ci-result-title {
-      font-size: 18px;
-      font-weight: 800;
-      color: var(--ci-good);
-      margin: 0 0 16px;
-    }
-
-    .ci-result-lines {
-      list-style: none;
-      padding: 0;
+    .ci-import-summary-text {
       margin: 0;
-    }
-
-    .ci-result-lines li {
-      font-size: 14px;
-      line-height: 1.6;
+      font-size: 15px;
+      line-height: 1.55;
       color: var(--ci-text);
-      padding: 4px 0;
+      font-weight: 600;
     }
 
-    .ci-result-lines li strong {
-      font-weight: 700;
-    }
-
-    .ci-result-lines li.ci-result-skipped {
+    .ci-import-issues-text {
+      margin: 10px 0 0;
+      font-size: 13px;
+      line-height: 1.5;
       color: var(--ci-muted);
     }
 
-    .ci-result-lines li.ci-result-warn {
-      color: #92400e;
+    .ci-section-heading {
+      margin: 0 0 14px;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: var(--ci-text);
     }
 
-    .ci-result-lines li.ci-result-error {
-      color: #991b1b;
+    .ci-demand-section {
+      margin-bottom: 28px;
+    }
+
+    .ci-demand-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .ci-demand-row {
+      padding: 0;
+    }
+
+    .ci-demand-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+
+    .ci-demand-area {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ci-text);
+      letter-spacing: 0.02em;
+    }
+
+    .ci-demand-count {
+      font-size: 13px;
+      color: var(--ci-muted);
+      font-weight: 600;
+    }
+
+    .ci-demand-bar {
+      height: 8px;
+      border-radius: 999px;
+      background: var(--ci-bg);
+      border: 1px solid var(--ci-border);
+      overflow: hidden;
+    }
+
+    .ci-demand-bar-fill {
+      height: 100%;
+      background: var(--ci-accent);
+      border-radius: 999px;
+      transition: width 0.3s ease;
+    }
+
+    .ci-recommendation-section {
+      padding: 20px 22px;
+      border-radius: 14px;
+      background: var(--ci-accent-light);
+      border: 1px solid rgba(249, 115, 22, 0.18);
+      margin-bottom: 28px;
+    }
+
+    .ci-recommendation-text {
+      margin: 0 0 10px;
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--ci-text);
+      font-weight: 600;
+    }
+
+    .ci-recommendation-followup {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--ci-muted);
+    }
+
+    .ci-thin-text {
+      margin: 0 0 28px;
+      padding: 20px 22px;
+      border-radius: 14px;
+      background: var(--ci-bg);
+      border: 1px solid var(--ci-border);
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--ci-text);
+    }
+
+    .ci-post-import-ctas {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .ci-cta-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 22px;
+      border-radius: 10px;
+      background: var(--ci-accent);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: opacity 0.18s ease;
+    }
+
+    .ci-cta-primary:hover {
+      opacity: 0.9;
+      text-decoration: none;
+    }
+
+    .ci-cta-secondary {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ci-accent);
+      text-decoration: none;
+      transition: opacity 0.18s ease;
+    }
+
+    .ci-cta-secondary:hover {
+      opacity: 0.8;
+      text-decoration: underline;
+    }
+
+    @media (max-width: 768px) {
+      .ci-recommendation-section,
+      .ci-thin-text {
+        padding: 16px 18px;
+      }
+
+      .ci-post-import-ctas {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+      }
+
+      .ci-cta-primary {
+        width: 100%;
+      }
+
+      .ci-cta-secondary {
+        text-align: center;
+      }
     }
 
     .ci-conflicts-toggle {
@@ -695,24 +828,6 @@
       margin-left: 8px;
     }
 
-    .ci-result-links {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .ci-result-links a {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--ci-accent);
-      text-decoration: none;
-      transition: opacity 0.18s ease;
-    }
-
-    .ci-result-links a:hover {
-      opacity: 0.8;
-      text-decoration: underline;
-    }
   </style>
 </head>
 
@@ -885,9 +1000,9 @@
       <div class="ci-step-panel" data-panel="5">
         <h1 class="ci-title">Import complete</h1>
 
-        <div class="ci-result-card" id="resultCard">
-          <div class="ci-result-title" id="resultTitle">Your audience is growing</div>
-          <ul class="ci-result-lines" id="resultLines"></ul>
+        <div class="ci-import-summary-card">
+          <p class="ci-import-summary-text" id="importSummaryText"></p>
+          <p class="ci-import-issues-text" id="importIssuesText" style="display:none;"></p>
         </div>
 
         <div id="conflictsSection" style="display:none;">
@@ -895,9 +1010,28 @@
           <ul class="ci-conflicts-list" id="conflictsList"></ul>
         </div>
 
-        <div class="ci-result-links">
-          <a href="insights.html">View Insights &rarr;</a>
-          <a href="home.html">Back to home &rarr;</a>
+        <!-- State A: Rich demand view (10+ customers) -->
+        <div id="richDemandSection" style="display:none;">
+          <div class="ci-demand-section">
+            <h2 class="ci-section-heading">Where your audience is</h2>
+            <ul class="ci-demand-list" id="demandAreaList"></ul>
+          </div>
+
+          <div class="ci-recommendation-section">
+            <h2 class="ci-section-heading">Your first drop</h2>
+            <p class="ci-recommendation-text" id="recommendationText"></p>
+            <p class="ci-recommendation-followup">Once your first drop runs, Hearth will sharpen these recommendations using real order data.</p>
+          </div>
+        </div>
+
+        <!-- State B: Thin data (fewer than 10 customers) -->
+        <div id="thinDataSection" style="display:none;">
+          <p class="ci-thin-text">As you run drops and your audience grows, Hearth will show you where demand is strongest and recommend where to go next.</p>
+        </div>
+
+        <div class="ci-post-import-ctas">
+          <a class="ci-cta-primary" href="drop-manager.html">Create your first drop &rarr;</a>
+          <a class="ci-cta-secondary" id="viewAudienceLink" href="customers.html" style="display:none;">View your audience &rarr;</a>
         </div>
       </div>
 
@@ -947,6 +1081,7 @@
     let lawfulBasis = null;
     let importResults = null;
     let importConflictRows = [];
+    let importVendorId = null;
 
     /* ── Column name variants ── */
     const COLUMN_MAP = {
@@ -1203,39 +1338,40 @@
     });
 
     /* ── Step 5: Results rendering ── */
-    function renderResults() {
+    async function renderResults() {
       if (!importResults) return;
       const r = importResults;
-      const somethingAdded = r.newCustomers > 0 || r.newRelationships > 0;
-      const titleEl = document.getElementById('resultTitle');
-      const lines = [];
 
-      if (somethingAdded) {
-        titleEl.textContent = 'Your audience is growing';
-
-        lines.push('<li><strong>' + r.newCustomers + '</strong> new customers added to your audience</li>');
-
-        if (r.newRelationships > 0) {
-          lines.push('<li><strong>' + r.newRelationships + '</strong> people were already on Hearth \u2014 added to your audience</li>');
-        }
+      /* 1. Import summary — calm confirmation, not celebration */
+      const addedCount = (r.newCustomers || 0) + (r.newRelationships || 0);
+      const summaryParts = [];
+      if (addedCount > 0) {
+        summaryParts.push(addedCount + ' ' + (addedCount === 1 ? 'customer' : 'customers') + ' added to your audience.');
       } else {
-        titleEl.textContent = 'Import complete';
-
-        lines.push('<li>No new customers were added \u2014 all valid rows are already in your audience.</li>');
+        summaryParts.push('No new customers were added \u2014 all valid rows are already in your audience.');
       }
-
       if (r.skipped > 0) {
-        lines.push('<li class="ci-result-skipped"><strong>' + r.skipped + '</strong> already in your audience and skipped</li>');
+        summaryParts.push(r.skipped + ' already existed and ' + (r.skipped === 1 ? 'was' : 'were') + ' skipped.');
       }
+      document.getElementById('importSummaryText').textContent = summaryParts.join(' ');
+
+      /* Quiet note for conflicts / failed rows */
+      const issueParts = [];
       if (r.conflicts > 0) {
-        lines.push('<li class="ci-result-warn"><strong>' + r.conflicts + '</strong> rows skipped \u2014 email and phone point to different existing customers. Review manually.</li>');
+        issueParts.push(r.conflicts + ' ' + (r.conflicts === 1 ? 'row' : 'rows') + ' skipped \u2014 email and phone point to different existing customers.');
       }
       if (r.failed > 0) {
-        lines.push('<li class="ci-result-error"><strong>' + r.failed + '</strong> rows could not be imported due to an error.</li>');
+        issueParts.push(r.failed + ' ' + (r.failed === 1 ? 'row' : 'rows') + ' could not be imported due to an error.');
+      }
+      const issuesEl = document.getElementById('importIssuesText');
+      if (issueParts.length > 0) {
+        issuesEl.textContent = issueParts.join(' ');
+        issuesEl.style.display = '';
+      } else {
+        issuesEl.style.display = 'none';
       }
 
-      document.getElementById('resultLines').innerHTML = lines.join('');
-
+      /* Conflicts expandable list — unchanged behaviour */
       const conflictsSection = document.getElementById('conflictsSection');
       if (r.conflicts > 0 && importConflictRows.length > 0) {
         conflictsSection.style.display = '';
@@ -1246,6 +1382,107 @@
       } else {
         conflictsSection.style.display = 'none';
       }
+
+      /* 2. Fetch demand breakdown and render rich or thin state */
+      try {
+        const demand = await fetchDemandBreakdown();
+        if (demand.total >= 10) {
+          renderDemandView(demand);
+        } else {
+          renderThinView();
+        }
+      } catch (err) {
+        console.error('[Import] Failed to fetch demand breakdown:', err);
+        renderThinView();
+      }
+    }
+
+    /* ── Step 5: Demand breakdown query ── */
+    async function fetchDemandBreakdown() {
+      if (!importVendorId) {
+        return { total: 0, areas: [] };
+      }
+
+      /* Fetch the vendor's full imported customer base (all sessions, source=import) */
+      const { data: rels, error: relErr } = await sb
+        .from('customer_relationships')
+        .select('customer_id')
+        .eq('owner_type', 'vendor')
+        .eq('owner_id', importVendorId)
+        .eq('source', 'import');
+
+      if (relErr) throw relErr;
+
+      const customerIds = Array.from(new Set(
+        (rels || []).map(row => row.customer_id).filter(Boolean)
+      ));
+
+      if (customerIds.length === 0) {
+        return { total: 0, areas: [] };
+      }
+
+      const { data: customers, error: custErr } = await sb
+        .from('customers')
+        .select('id, postcode')
+        .in('id', customerIds);
+
+      if (custErr) throw custErr;
+
+      /* Group by outward postcode code — skip null / empty postcodes */
+      const byArea = new Map();
+      let totalWithPostcode = 0;
+      for (const c of (customers || [])) {
+        if (!c.postcode) continue;
+        const outward = c.postcode.trim().split(' ')[0].toUpperCase();
+        if (!outward) continue;
+        byArea.set(outward, (byArea.get(outward) || 0) + 1);
+        totalWithPostcode++;
+      }
+
+      const areas = Array.from(byArea.entries())
+        .map(([code, count]) => ({ code, count }))
+        .sort((a, b) => b.count - a.count);
+
+      return { total: totalWithPostcode, areas };
+    }
+
+    /* ── Step 5: State A — rich demand view ── */
+    function renderDemandView(demand) {
+      document.getElementById('richDemandSection').style.display = '';
+      document.getElementById('thinDataSection').style.display = 'none';
+      document.getElementById('viewAudienceLink').style.display = '';
+
+      const top = demand.areas.slice(0, 5);
+      const topCount = top[0] ? top[0].count : 1;
+
+      const listEl = document.getElementById('demandAreaList');
+      listEl.innerHTML = top.map(area => {
+        const pct = topCount > 0 ? Math.max(4, Math.round((area.count / topCount) * 100)) : 0;
+        const countLabel = area.count + ' ' + (area.count === 1 ? 'customer' : 'customers');
+        return '<li class="ci-demand-row">' +
+          '<div class="ci-demand-head">' +
+            '<span class="ci-demand-area">' + esc(area.code) + '</span>' +
+            '<span class="ci-demand-count">' + esc(countLabel) + '</span>' +
+          '</div>' +
+          '<div class="ci-demand-bar"><div class="ci-demand-bar-fill" style="width:' + pct + '%"></div></div>' +
+        '</li>';
+      }).join('');
+
+      /* Recommendation logic — top area drives the pattern */
+      const topArea = top[0];
+      const recEl = document.getElementById('recommendationText');
+      if (topArea && topArea.count >= 15) {
+        recEl.textContent = 'You have ' + topArea.count + ' customers in ' + topArea.code + '. We recommend starting with a neighbourhood drop here \u2014 you have enough demand to fill a first service.';
+      } else {
+        recEl.textContent = 'Your audience is spread across several areas. A host-led drop is the best starting point \u2014 it concentrates demand and lets you build from there.';
+      }
+    }
+
+    /* ── Step 5: State B — thin data ── */
+    function renderThinView() {
+      document.getElementById('richDemandSection').style.display = 'none';
+      document.getElementById('thinDataSection').style.display = '';
+      document.getElementById('viewAudienceLink').style.display = 'none';
     }
 
     document.getElementById('conflictsToggle').addEventListener('click', function() {
@@ -1277,6 +1514,7 @@
         const vendor = await resolveVendor();
         if (!vendor) throw new Error('Could not resolve vendor.');
         const vendorId = vendor.id;
+        importVendorId = vendorId;
 
         /* 1. Fetch existing customer_relationships for this vendor (no FK join — just customer_id) */
         const { data: rels, error: relErr } = await sb
