@@ -426,6 +426,36 @@
       .obStageCard{ padding:16px 14px; border-radius:18px; }
       .brandActions{ flex-direction:column; align-items:stretch; }
       .brandActions .btnAccent{ width:100%; min-height:44px; font-size:13px; }
+
+      /* Shared headerBar / nav treatment — matches drop-manager.html,
+         brand-hearth.html, drop-menu.html, index.html, insights.html,
+         customers.html so operator nav renders consistently across
+         every page at mobile width. */
+      .headerBar{
+        flex-direction:column;
+        align-items:stretch;
+        gap:10px;
+        padding:14px;
+      }
+      .brand{ min-width:0; }
+      .nav{
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+        white-space:nowrap;
+        flex-wrap:nowrap;
+        gap:2px;
+        padding-bottom:2px;
+        scrollbar-width:none;
+        justify-content:flex-start;
+      }
+      .nav::-webkit-scrollbar{ display:none; }
+      .nav a{
+        flex-shrink:0;
+        white-space:nowrap;
+        min-height:44px;
+        display:inline-flex;
+        align-items:center;
+      }
     }
 
     /* ── Identity fields grid ── */

@@ -509,6 +509,47 @@
         min-height:44px;
       }
     }
+
+    /* ── Operating Setup density
+       Tighten row spacing inside the Basics stage so the many form
+       rows in Operating Setup feel grouped rather than spread out.
+       Scoped to #pane-basics so other stages are unaffected. ── */
+    #pane-basics .stageSection .studioGrid2{
+      gap:7px 10px;
+    }
+    #pane-basics .stageSection .field{
+      gap:4px;
+    }
+    #pane-basics .stageSection .field .helperText{
+      margin-top:2px;
+    }
+
+    /* ── Inline checkbox field (e.g. "Allow customer notes")
+       .field label is styled as a tiny uppercase form label, which
+       visually disconnects the text from a checkbox. Override for
+       the specific inline-check case so label + checkbox sit on a
+       single row with normal reading typography. ── */
+    .field.fieldInlineCheck{
+      gap:0;
+    }
+    .field.fieldInlineCheck .inlineCheckLabel{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size:13px;
+      font-weight:600;
+      color:var(--h-text);
+      text-transform:none;
+      letter-spacing:normal;
+      cursor:pointer;
+      padding:4px 0;
+    }
+    .field.fieldInlineCheck .inlineCheckLabel input[type="checkbox"]{
+      width:16px;
+      height:16px;
+      margin:0;
+      flex-shrink:0;
+    }
   </style>
 </head>
 <body>
@@ -737,8 +778,8 @@
                       <textarea id="deliveryAreaDescription" placeholder="e.g. Southbury Road and surrounding streets"></textarea>
                     </div>
 
-                    <div class="field" style="grid-column:1 / -1;">
-                      <label><input id="customerNotesEnabled" type="checkbox" checked /> Allow customer notes</label>
+                    <div class="field fieldInlineCheck" style="grid-column:1 / -1;">
+                      <label class="inlineCheckLabel" for="customerNotesEnabled"><input id="customerNotesEnabled" type="checkbox" checked /> Allow customer notes</label>
                     </div>
 
                     <div class="field">
