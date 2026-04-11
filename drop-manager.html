@@ -398,6 +398,75 @@
         top:auto;
       }
     }
+
+    /* ── Demand preview panel (T4-17) ── */
+    #demandPreviewSection .demandPreviewHeadRow{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+    #demandPreviewSection .demandPreviewBody{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    #demandPreviewSection .demandPreviewLine{
+      font-size:13px;
+      line-height:1.45;
+      color:var(--h-text);
+      margin:0;
+    }
+    #demandPreviewSection .demandPreviewLine.muted{
+      color:var(--h-muted);
+    }
+    #demandPreviewSection .demandChip{
+      display:inline-flex;
+      align-items:center;
+      min-height:24px;
+      padding:2px 10px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:0.02em;
+      border:1px solid rgba(15,23,42,0.10);
+      background:#fff;
+      color:var(--h-text);
+      white-space:nowrap;
+    }
+    #demandPreviewSection .demandChip.isStrong{
+      background:rgba(139,107,63,0.12);
+      border-color:rgba(139,107,63,0.28);
+      color:#6b4a22;
+    }
+    #demandPreviewSection .demandChip.isBuilding{
+      background:rgba(222,199,156,0.22);
+      border-color:rgba(180,150,100,0.28);
+      color:#7a5a2a;
+    }
+    #demandPreviewSection .demandChip.isNew{
+      background:rgba(15,23,42,0.05);
+      border-color:rgba(15,23,42,0.14);
+      color:var(--h-muted);
+    }
+    #demandPreviewSection .demandChipWrap{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:2px;
+    }
+    #demandPreviewSection .demandHostHint{
+      font-size:12px;
+      color:var(--h-muted);
+      margin:4px 0 0;
+      padding:8px 10px;
+      border-left:3px solid rgba(139,107,63,0.28);
+      background:rgba(139,107,63,0.05);
+      border-radius:0 8px 8px 0;
+    }
   </style>
 </head>
 <body>
@@ -662,6 +731,18 @@
                       <label for="notesInternal">Internal Notes</label>
                       <textarea id="notesInternal" placeholder="Any internal operational notes for this drop"></textarea>
                     </div>
+                  </div>
+                </div>
+
+                <div class="stageSection" id="demandPreviewSection" style="display:none;">
+                  <div class="demandPreviewHeadRow">
+                    <div>
+                      <h4 class="stageSectionTitle">Audience Preview</h4>
+                      <p class="stageSectionSub" id="demandPreviewSub">Known customers and drop history for this area.</p>
+                    </div>
+                  </div>
+                  <div class="demandPreviewBody" id="demandPreviewBody">
+                    <p class="demandPreviewLine muted">Loading audience data…</p>
                   </div>
                 </div>
               </div>
@@ -1720,6 +1801,205 @@
       if (!exists) state.selectedDropId = (state.drops[0] || {}).drop_id || null;
     }
 
+    /* ── Demand preview (T4-17) ── */
+
+    function extractOutwardCode(postcode) {
+      const raw = String(postcode || "").trim().toUpperCase();
+      if (raw.length < 2) return null;
+      const outward = raw.split(" ")[0];
+      return outward || null;
+    }
+
+    function resolveDemandPreviewOutwardCode() {
+      const centreInput = byId("centrePostcode");
+      const centreValue = String(centreInput?.value || "").trim();
+      if (centreValue.length >= 2) {
+        const outward = extractOutwardCode(centreValue);
+        if (outward) return outward;
+      }
+      const hostSelect = byId("hostSelect");
+      const hostId = hostSelect?.value || "";
+      if (hostId) {
+        const host = state.hosts.find((h) => h.id === hostId);
+        if (host && host.postcode) {
+          const outward = extractOutwardCode(host.postcode);
+          if (outward) return outward;
+        }
+      }
+      return null;
+    }
+
+    function hideDemandPreview() {
+      const section = byId("demandPreviewSection");
+      if (section) section.style.display = "none";
+    }
+
+    function showDemandPreviewLoading(outwardCode) {
+      const section = byId("demandPreviewSection");
+      const sub = byId("demandPreviewSub");
+      const body = byId("demandPreviewBody");
+      if (!section || !body) return;
+      section.style.display = "block";
+      if (sub) sub.textContent = `Known customers and drop history for ${outwardCode}`;
+      body.innerHTML = `<p class="demandPreviewLine muted">Loading audience data…</p>`;
+    }
+
+    function showDemandPreviewError() {
+      const body = byId("demandPreviewBody");
+      if (!body) return;
+      body.innerHTML = `<p class="demandPreviewLine muted">Audience data unavailable.</p>`;
+    }
+
+    function formatCustomerLine(count) {
+      if (count === 0) {
+        return "No customers in your audience are in this area yet.";
+      }
+      if (count === 1) {
+        return "1 customer in your audience is in this area.";
+      }
+      return `${count} customers in your audience are in this area.`;
+    }
+
+    function formatHistoryLine(dropCount, avgOrders) {
+      if (dropCount === 0) {
+        return "No previous drops in this area — this will be your first.";
+      }
+      const avgDisplay = Math.round(avgOrders);
+      if (dropCount === 1) {
+        return `1 previous drop in this area, averaging ${avgDisplay} orders.`;
+      }
+      return `${dropCount} previous drops in this area, averaging ${avgDisplay} orders.`;
+    }
+
+    function computeConfidenceSignal(customerCount, historicalDropCount) {
+      if (customerCount >= 20 && historicalDropCount >= 2) {
+        return { label: "Strong", cls: "isStrong" };
+      }
+      if ((customerCount >= 10 && customerCount <= 19) || historicalDropCount === 1) {
+        return { label: "Building", cls: "isBuilding" };
+      }
+      return { label: "New territory", cls: "isNew" };
+    }
+
+    function renderDemandPreview({ outwardCode, customerCount, historicalDrops, avgOrders, hostMatch }) {
+      const section = byId("demandPreviewSection");
+      const sub = byId("demandPreviewSub");
+      const body = byId("demandPreviewBody");
+      if (!section || !body) return;
+      section.style.display = "block";
+      if (sub) sub.textContent = `Known customers and drop history for ${outwardCode}`;
+
+      const signal = computeConfidenceSignal(customerCount, historicalDrops);
+      const customerLine = formatCustomerLine(customerCount);
+      const historyLine = formatHistoryLine(historicalDrops, avgOrders);
+
+      let hostHint = "";
+      if (hostMatch) {
+        const hostType = titleCase(String(hostMatch.host_type || "host").replace(/_/g, " "));
+        hostHint = `<p class="demandHostHint">You have a host in this area: <strong>${escapeHtml(hostMatch.name || "Unnamed host")}</strong> (${escapeHtml(hostType)}). Consider linking this drop.</p>`;
+      }
+
+      body.innerHTML = `
+        <p class="demandPreviewLine">${escapeHtml(customerLine)}</p>
+        <p class="demandPreviewLine">${escapeHtml(historyLine)}</p>
+        <div class="demandChipWrap">
+          <span class="demandChip ${signal.cls}">${escapeHtml(signal.label)}</span>
+        </div>
+        ${hostHint}
+      `;
+    }
+
+    let demandPreviewRequestId = 0;
+
+    async function loadDemandPreview(outwardCode) {
+      if (!outwardCode) {
+        hideDemandPreview();
+        return;
+      }
+
+      const requestId = ++demandPreviewRequestId;
+      showDemandPreviewLoading(outwardCode);
+
+      try {
+        /* Customer count — relationships + customers join done client-side */
+        let customerCount = 0;
+        if (state.vendorId) {
+          const relRes = await supabase
+            .from("customer_relationships")
+            .select("customer_id")
+            .eq("owner_id", state.vendorId)
+            .eq("owner_type", "vendor");
+
+          if (relRes.error) throw relRes.error;
+
+          const customerIds = Array.from(
+            new Set((relRes.data || []).map((r) => r.customer_id).filter(Boolean))
+          );
+
+          if (customerIds.length > 0) {
+            const custRes = await supabase
+              .from("customers")
+              .select("id, postcode")
+              .in("id", customerIds);
+
+            if (custRes.error) throw custRes.error;
+
+            customerCount = (custRes.data || []).filter((c) => {
+              const cOutward = extractOutwardCode(c.postcode);
+              return cOutward && cOutward === outwardCode;
+            }).length;
+          }
+        }
+
+        /* Historical drops — from already-loaded state.drops */
+        const matchingDrops = (state.drops || []).filter((drop) => {
+          if (!drop || !drop.centre_postcode) return false;
+          const dOutward = extractOutwardCode(drop.centre_postcode);
+          return dOutward && dOutward === outwardCode;
+        });
+        const historicalDropCount = matchingDrops.length;
+        const dropsWithOrderCounts = matchingDrops.filter(
+          (d) => d.order_count != null && !Number.isNaN(Number(d.order_count))
+        );
+        const avgOrders = dropsWithOrderCounts.length
+          ? dropsWithOrderCounts.reduce((sum, d) => sum + Number(d.order_count || 0), 0) / dropsWithOrderCounts.length
+          : 0;
+
+        /* Host suggestion — first match not already selected */
+        const currentHostId = byId("hostSelect")?.value || "";
+        const hostMatch = (state.hosts || []).find((host) => {
+          if (!host || !host.postcode) return false;
+          if (host.id === currentHostId) return false;
+          const hOutward = extractOutwardCode(host.postcode);
+          return hOutward && hOutward === outwardCode;
+        }) || null;
+
+        /* Abort render if a newer request superseded this one */
+        if (requestId !== demandPreviewRequestId) return;
+
+        renderDemandPreview({
+          outwardCode,
+          customerCount,
+          historicalDrops: historicalDropCount,
+          avgOrders,
+          hostMatch
+        });
+      } catch (err) {
+        console.error("Demand preview failed:", err);
+        if (requestId !== demandPreviewRequestId) return;
+        showDemandPreviewError();
+      }
+    }
+
+    function refreshDemandPreview() {
+      const outward = resolveDemandPreviewOutwardCode();
+      if (!outward) {
+        hideDemandPreview();
+        return;
+      }
+      loadDemandPreview(outward);
+    }
+
     async function loadSelectedDrop() {
       if (!state.selectedDropId) {
         state.drop = null;
@@ -2054,6 +2334,7 @@
       renderHostOptions();
       renderHostPreview();
       renderHostHelper();
+      refreshDemandPreview();
     }
 
     function getVisibleMenuAssignments() {
@@ -3237,6 +3518,20 @@
       byId("dropBandWrap").addEventListener("scroll", () => {
         updateCarouselIndicator();
       }, { passive: true });
+
+      /* Demand preview (T4-17) */
+      const centrePostcodeInput = byId("centrePostcode");
+      if (centrePostcodeInput) {
+        centrePostcodeInput.addEventListener("blur", () => {
+          refreshDemandPreview();
+        });
+      }
+      const hostSelectEl = byId("hostSelect");
+      if (hostSelectEl) {
+        hostSelectEl.addEventListener("change", () => {
+          refreshDemandPreview();
+        });
+      }
 
       byId("dropSearch").addEventListener("input", (e) => {
         state.search = e.target.value || "";
