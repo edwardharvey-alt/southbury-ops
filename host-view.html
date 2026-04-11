@@ -389,27 +389,17 @@
       }
 
       try {
-        /* Resolve the drop by slug. The drops table has the canonical slug
-           field used across the platform (see order.html). We look up the
-           drop_id here, then read the operational view for live stats. */
-        const { data: dropRow, error: dropErr } = await supabase
-          .from("drops")
-          .select("id, slug, status")
+        /* Resolve the drop directly from v_drop_summary by slug. Going
+           through the base drops table would require an RLS policy for
+           anonymous reads; the view is the read-only surface exposed
+           to unauthenticated clients. */
+        const { data: summary, error: summaryErr } = await supabase
+          .from("v_drop_summary")
+          .select("*")
           .eq("slug", state.dropSlug)
           .maybeSingle();
 
-        if (dropErr) throw dropErr;
-        if (!dropRow){
-          renderEmpty(
-            "This drop couldn't be found.",
-            "Check your link and try again."
-          );
-          return;
-        }
-
-        state.dropId = dropRow.id;
-
-        const summary = await fetchDropSummary();
+        if (summaryErr) throw summaryErr;
         if (!summary){
           renderEmpty(
             "This drop couldn't be found.",
@@ -418,6 +408,7 @@
           return;
         }
 
+        state.dropId = summary.drop_id;
         state.drop = summary;
 
         renderDrop(summary);
