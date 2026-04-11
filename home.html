@@ -7,7 +7,7 @@
 
   <link rel="stylesheet" href="./assets/hearth.css?v=30" />
   <script src="./assets/config.js"></script>
-  <script src="./assets/vendor-nav.js"></script>
+  <script src="./assets/vendor-nav.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./assets/hearth-intelligence.js"></script>
 
@@ -873,15 +873,8 @@
             </div>
           </div>
 
-          <nav class="home-nav" aria-label="Primary">
-            <a href="./home.html" class="active">Home</a>
-            <a href="./brand-hearth.html">Brand Hearth</a>
-            <a href="./drop-menu.html">Menu Library</a>
-            <a href="./drop-manager.html">Drop Studio</a>
-            <a href="./index.html">Service Board</a>
-            <a href="./insights.html">Insights</a>
-            <a href="./onboarding.html">Setup</a>
-          </nav>
+          <nav class="home-nav" id="operatorNav" aria-label="Primary"></nav>
+          <script>HearthNav.renderNav('operatorNav', 'home.html', { dotSlash: true });</script>
         </div>
       </section>
 
@@ -1408,7 +1401,7 @@
               <div class="home-todayMeta">Orders are coming in. Manage fulfilment from the Service Board.</div>
             </div>
           </div>
-          <a class="home-button" href="./index.html">Open Service Board</a>
+          <a class="home-button" href="${HearthNav.withVendor('./index.html')}">Open Service Board</a>
         `;
         return;
       }
@@ -1429,7 +1422,7 @@
               <div class="home-todayMeta">Check timing, capacity and menu before it goes live.</div>
             </div>
           </div>
-          <a class="home-button-secondary" href="./drop-manager.html">Open Drop Studio</a>
+          <a class="home-button-secondary" href="${HearthNav.withVendor('./drop-manager.html')}">Open Drop Studio</a>
         `;
         return;
       }
@@ -1444,7 +1437,7 @@
             <div class="home-todayMeta">A good time to plan the next moment or review recent performance.</div>
           </div>
         </div>
-        <a class="home-button-secondary" href="./drop-manager.html">Create next drop</a>
+        <a class="home-button-secondary" href="${HearthNav.withVendor('./drop-manager.html')}">Create next drop</a>
       `;
     }
 
@@ -1488,7 +1481,7 @@
             <div class="home-todayMeta">Your scorecard is ready.</div>
           </div>
         </div>
-        <a class="home-button" href="./scorecard.html?drop=${dropId}">View scorecard</a>
+        <a class="home-button" href="${HearthNav.withVendor('./scorecard.html?drop=' + encodeURIComponent(dropId))}">View scorecard</a>
       `;
     }
 
@@ -1503,8 +1496,8 @@
         section.style.display = '';
         const dataPosture = state.vendor.data_posture || '';
         const importCta = dataPosture === 'rich'
-          ? '<a class="home-recCta" href="./customer-import.html">Import your customers</a>'
-          : '<a class="home-recCta" href="./drop-manager.html">Run your first drop</a>';
+          ? `<a class="home-recCta" href="${HearthNav.withVendor('./customer-import.html')}">Import your customers</a>`
+          : `<a class="home-recCta" href="${HearthNav.withVendor('./drop-manager.html')}">Run your first drop</a>`;
         grid.innerHTML = `
           <div class="home-empty" style="grid-column:1/-1;">
             Your customer asset starts building with your first drop. Every order adds a customer you own directly — no aggregator in the way.<br><br>
@@ -1972,5 +1965,6 @@
 
     init();
   </script>
+  <script>HearthNav.decorateLinks();</script>
 </body>
 </html>

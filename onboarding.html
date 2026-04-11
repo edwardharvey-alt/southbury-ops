@@ -7,7 +7,7 @@
 
   <link rel="stylesheet" href="./assets/hearth.css?v=30" />
   <script src="./assets/config.js"></script>
-  <script src="./assets/vendor-nav.js"></script>
+  <script src="./assets/vendor-nav.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -459,15 +459,8 @@
           </div>
         </div>
 
-        <div class="nav">
-          <a href="home.html">Home</a>
-          <a href="brand-hearth.html">Brand Hearth</a>
-          <a href="drop-menu.html">Menu Library</a>
-          <a href="drop-manager.html">Drop Studio</a>
-          <a href="index.html">Service Board</a>
-          <a href="insights.html">Insights</a>
-          <a href="onboarding.html" class="active">Setup</a>
-        </div>
+        <div class="nav" id="operatorNav"></div>
+        <script>HearthNav.renderNav('operatorNav', 'onboarding.html');</script>
       </div>
 
       <!-- PAGE STATUS NOTICE -->
@@ -1295,13 +1288,13 @@
       if (posture === 'rich') {
         sub.textContent = 'You have customer data — bring it into Hearth to unlock demand targeting.';
         actions.innerHTML =
-          '<a class="btnAccent" href="customer-import.html">Import your customers →</a>' +
-          '<a class="brandMiniLink" href="brand-hearth.html">Set up your brand</a>';
+          '<a class="btnAccent" href="' + HearthNav.withVendor('customer-import.html') + '">Import your customers →</a>' +
+          '<a class="brandMiniLink" href="' + HearthNav.withVendor('brand-hearth.html') + '">Set up your brand</a>';
       } else {
         sub.textContent = 'Start with a host you know — it\'s the fastest way to fill capacity and build your audience.';
         actions.innerHTML =
-          '<a class="btnAccent" href="drop-manager.html">Create your first drop →</a>' +
-          '<a class="brandMiniLink" href="brand-hearth.html">Set up your brand</a>';
+          '<a class="btnAccent" href="' + HearthNav.withVendor('drop-manager.html') + '">Create your first drop →</a>' +
+          '<a class="brandMiniLink" href="' + HearthNav.withVendor('brand-hearth.html') + '">Set up your brand</a>';
       }
     }
 
@@ -1447,5 +1440,6 @@
 
     init();
   </script>
+  <script>HearthNav.decorateLinks();</script>
 </body>
 </html>

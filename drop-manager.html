@@ -7,7 +7,7 @@
 
   <link rel="stylesheet" href="./assets/hearth.css?v=30" />
   <script src="./assets/config.js"></script>
-  <script src="./assets/vendor-nav.js"></script>
+  <script src="./assets/vendor-nav.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -522,15 +522,8 @@
         </div>
       </div>
 
-      <div class="nav">
-        <a href="home.html">Home</a>
-        <a href="brand-hearth.html">Brand Hearth</a>
-        <a href="drop-menu.html">Menu Library</a>
-        <a href="drop-manager.html" class="active">Drop Studio</a>
-        <a href="index.html">Service Board</a>
-        <a href="insights.html">Insights</a>
-        <a href="onboarding.html">Setup</a>
-      </div>
+      <div class="nav" id="operatorNav"></div>
+      <script>HearthNav.renderNav('operatorNav', 'drop-manager.html');</script>
     </div>
 
     <div class="studioPage">
@@ -2328,7 +2321,7 @@
               <button class="btnSmall js-duplicate-drop" type="button" data-drop-id="${drop.drop_id}">Duplicate</button>
               ${drop.host_name ? `<button class="btnSmall js-copy-host-link" type="button" data-drop-slug="${escapeHtml(drop.drop_slug || drop.slug || "")}">Copy host link</button>` : ""}
             </div>
-            ${(drop.status || '').toLowerCase() === 'closed' ? `<a class="scorecardLink" href="./scorecard.html?drop=${encodeURIComponent(drop.drop_id)}">Scorecard →</a>` : ''}
+            ${(drop.status || '').toLowerCase() === 'closed' ? `<a class="scorecardLink" href="${HearthNav.withVendor('./scorecard.html?drop=' + encodeURIComponent(drop.drop_id))}">Scorecard →</a>` : ''}
           </div>
         `;
       }).join("");
@@ -3639,11 +3632,7 @@
     function openServiceBoard() {
       if (!state.selectedDropId) return;
       localStorage.setItem("hearth:selectedDropId", state.selectedDropId);
-      const vendorSlug = getUrlParam("vendor") || getUrlParam("vendor_slug");
-      const target = vendorSlug
-        ? `index.html?vendor=${encodeURIComponent(vendorSlug)}`
-        : "index.html";
-      window.location.href = target;
+      window.location.href = HearthNav.withVendor("index.html");
     }
 
     function showModalMessage(id, message, isError = false) {
@@ -4160,6 +4149,7 @@
     init();
   })();
 </script>
+<script>HearthNav.decorateLinks();</script>
 
 </body>
 </html>

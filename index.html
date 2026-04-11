@@ -7,7 +7,7 @@
 
   <link rel="stylesheet" href="./assets/hearth.css?v=30" />
   <script src="./assets/config.js"></script>
-  <script src="./assets/vendor-nav.js"></script>
+  <script src="./assets/vendor-nav.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     .dropHeroTopRight {
@@ -564,15 +564,8 @@
         </div>
       </div>
 
-      <div class="nav">
-        <a href="home.html">Home</a>
-        <a href="brand-hearth.html">Brand Hearth</a>
-        <a href="drop-menu.html">Menu Library</a>
-        <a href="drop-manager.html">Drop Studio</a>
-        <a href="index.html" class="active">Service Board</a>
-        <a href="insights.html">Insights</a>
-        <a href="onboarding.html">Setup</a>
-      </div>
+      <div class="nav" id="operatorNav"></div>
+      <script>HearthNav.renderNav('operatorNav', 'index.html');</script>
     </div>
 
     <div class="boardShell">
@@ -2315,6 +2308,7 @@
     init();
   })();
 </script>
+<script>HearthNav.decorateLinks();</script>
 
 </body>
 </html>
