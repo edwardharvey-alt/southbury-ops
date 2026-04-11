@@ -306,7 +306,7 @@
       refreshInFlight: false,
     };
 
-    let supabase;
+    let _sb;
 
     function getQueryParam(name){
       return new URLSearchParams(window.location.search).get(name);
@@ -376,7 +376,7 @@
       }
 
       try {
-        supabase = window.supabase.createClient(
+        _sb = window.supabase.createClient(
           window.HEARTH_CONFIG.SUPABASE_URL,
           window.HEARTH_CONFIG.SUPABASE_ANON_KEY
         );
@@ -393,7 +393,7 @@
            through the base drops table would require an RLS policy for
            anonymous reads; the view is the read-only surface exposed
            to unauthenticated clients. */
-        const { data: summary, error: summaryErr } = await supabase
+        const { data: summary, error: summaryErr } = await _sb
           .from("v_drop_summary")
           .select("*")
           .eq("slug", state.dropSlug)
@@ -424,7 +424,7 @@
     }
 
     async function fetchDropSummary(){
-      const { data, error } = await supabase
+      const { data, error } = await _sb
         .from("v_drop_summary")
         .select("*")
         .eq("drop_id", state.dropId)
@@ -618,7 +618,7 @@
       if (!state.dropId) return;
       if (state.realtimeChannel) return;
 
-      state.realtimeChannel = supabase
+      state.realtimeChannel = _sb
         .channel(`host-view:orders:${state.dropId}`)
         .on(
           "postgres_changes",
