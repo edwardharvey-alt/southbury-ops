@@ -420,9 +420,7 @@
 
         state.drop = summary;
 
-        const revenuePence = await fetchLiveRevenuePence();
-
-        renderDrop(summary, revenuePence);
+        renderDrop(summary);
         subscribeRealtime();
 
       } catch (err){
@@ -444,37 +442,29 @@
       return data;
     }
 
-    async function fetchLiveRevenuePence(){
-      /* Live revenue is computed fresh here rather than read from
-         v_drop_summary.total_revenue_pence so we can explicitly exclude
-         cancelled orders as specified for the host-facing figure. */
-      const { data, error } = await supabase
-        .from("orders")
-        .select("total_pence, status")
-        .eq("drop_id", state.dropId)
-        .neq("status", "cancelled");
-      if (error) throw error;
-      let sum = 0;
-      for (const row of (data || [])){
-        sum += Number(row.total_pence || 0);
-      }
-      return sum;
-    }
-
     function computeDropState(drop){
       const status = String(drop.status || "").toLowerCase();
       if (status === "closed") return "closed";
 
       const now = Date.now();
-      const opensAt = drop.opens_at ? new Date(drop.opens_at).getTime() : null;
-      const closesAt = drop.closes_at ? new Date(drop.closes_at).getTime() : null;
 
-      if (opensAt && now < opensAt) return "pre-open";
-      if (closesAt && now > closesAt) return "closed";
+      // Treat opens_at === null as already open — a drop with no scheduled
+      // open time is live from creation. Only flag pre-open when opens_at
+      // is non-null AND resolves to a future moment.
+      if (drop.opens_at != null){
+        const opensAt = new Date(drop.opens_at).getTime();
+        if (!isNaN(opensAt) && now < opensAt) return "pre-open";
+      }
+
+      if (drop.closes_at != null){
+        const closesAt = new Date(drop.closes_at).getTime();
+        if (!isNaN(closesAt) && now > closesAt) return "closed";
+      }
+
       return "live";
     }
 
-    function renderDrop(drop, revenuePence){
+    function renderDrop(drop){
       const page = document.getElementById("hvPage");
 
       const dropName = drop.drop_name || drop.name || "This drop";
@@ -492,9 +482,7 @@
         ? Math.min(100, Math.round((capacityUsed / capacityTotal) * 100))
         : 0;
 
-      const liveRevenue = isPreOpen ? 0 : Number(revenuePence || 0);
-      // Revenue share % placeholder: enrich with hosts.revenue_share_pct in T4-16
-      const shareAmountPence = Math.round(liveRevenue * 0.10);
+      const share = computeHostShare(drop);
 
       let noteHTML = "";
       if (isPreOpen){
@@ -547,18 +535,45 @@
           </div>
         </div>
 
+        ${share.show ? `
         <div class="hvShareCard">
-          <p class="hvShareLabel">Your share so far</p>
-          <p class="hvShareValue" id="hvShareValue">${formatMoneyPence(shareAmountPence)}</p>
+          <p class="hvShareLabel">${escapeHtml(share.label)}</p>
+          <p class="hvShareValue" id="hvShareValue">${formatMoneyPence(share.pence)}</p>
           <!-- Revenue share % placeholder: enrich with hosts.revenue_share_pct in T4-16 -->
-          <p class="hvShareHint">Updated live as orders come in.</p>
+          ${share.live ? `<p class="hvShareHint">Updated live as orders come in.</p>` : ""}
         </div>
+        ` : ""}
 
         <div class="hvFooter">Powered by Hearth</div>
       `;
     }
 
-    function updateLiveValues(summary, revenuePence){
+    function computeHostShare(drop){
+      // Revenue share % placeholder: enrich with hosts.revenue_share_pct in T4-16
+      const enabled = drop.host_share_enabled === true;
+      const model = drop.host_share_model;
+
+      if (!enabled || !model){
+        return { show: false };
+      }
+
+      if (model === "fixed"){
+        const pence = Number(drop.host_share_fixed_pence || 0);
+        // Fixed share doesn't move with order volume, so drop "so far".
+        return { show: true, pence, label: "Your share", live: false };
+      }
+
+      if (model === "percentage"){
+        const gmv = Number(drop.drop_gmv_pence || 0);
+        const pct = Number(drop.host_share_percentage || 0);
+        const pence = Math.round(gmv * pct / 100);
+        return { show: true, pence, label: "Your share so far", live: true };
+      }
+
+      return { show: false };
+    }
+
+    function updateLiveValues(summary){
       const drop = summary || state.drop;
       if (!drop) return;
 
@@ -572,9 +587,6 @@
         ? Math.min(100, Math.round((capacityUsed / capacityTotal) * 100))
         : 0;
 
-      const liveRevenue = isPreOpen ? 0 : Number(revenuePence || 0);
-      const shareAmountPence = Math.round(liveRevenue * 0.10);
-
       const orderEl = document.getElementById("hvOrderCount");
       if (orderEl) orderEl.textContent = String(orderCount);
 
@@ -587,8 +599,11 @@
       const metaEl = document.getElementById("hvCapacityMeta");
       if (metaEl) metaEl.textContent = `${capacityUsed} of ${capacityTotal} units taken`;
 
+      const share = computeHostShare(drop);
       const shareEl = document.getElementById("hvShareValue");
-      if (shareEl) shareEl.textContent = formatMoneyPence(shareAmountPence);
+      if (shareEl && share.show){
+        shareEl.textContent = formatMoneyPence(share.pence);
+      }
     }
 
     async function refreshLiveValues(){
@@ -596,13 +611,10 @@
       if (state.refreshInFlight) return;
       state.refreshInFlight = true;
       try {
-        const [summary, revenuePence] = await Promise.all([
-          fetchDropSummary(),
-          fetchLiveRevenuePence(),
-        ]);
+        const summary = await fetchDropSummary();
         if (summary){
           state.drop = summary;
-          updateLiveValues(summary, revenuePence);
+          updateLiveValues(summary);
         }
       } catch (err){
         console.error("host-view refresh failed", err);
