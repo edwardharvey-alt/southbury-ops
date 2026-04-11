@@ -1214,8 +1214,15 @@
             if (data) return data;
           } catch (e) {}
         }
+        // Slug was provided but no match found — do not fall back to
+        // another vendor. Returning null lets the caller show a clear
+        // "Vendor not found" error instead of silently loading the wrong
+        // vendor's data.
+        return null;
       }
 
+      // Only reached when no slug was provided at all — dev convenience
+      // fallback so the page loads against the first vendor in the DB.
       const { data, error } = await sb.from('vendors').select('*').limit(1);
       if (error) throw error;
       return data?.[0] || null;
@@ -1223,7 +1230,14 @@
 
     async function loadData(){
       state.vendor = await resolveVendor();
-      if (!state.vendor) throw new Error('No vendor found');
+      if (!state.vendor) {
+        const requestedSlug = getUrlParam('vendor') || getUrlParam('vendor_slug');
+        throw new Error(
+          requestedSlug
+            ? `Vendor "${requestedSlug}" not found. Check the ?vendor= URL parameter.`
+            : 'No vendor found. Add at least one vendor to the database.'
+        );
+      }
 
       const vendorId = state.vendor.id;
 

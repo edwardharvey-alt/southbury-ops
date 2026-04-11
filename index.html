@@ -890,6 +890,8 @@
     var _notifyToStatus = null;
 
     const state = {
+      vendor: null,
+      vendorId: null,
       drops: [],
       filteredDrops: [],
       selectedDropId: null,
@@ -909,6 +911,54 @@
 
     function byId(id) {
       return document.getElementById(id);
+    }
+
+    function getUrlParam(name) {
+      return new URLSearchParams(window.location.search).get(name);
+    }
+
+    async function resolveVendor() {
+      const explicitVendorId = getUrlParam('vendor_id') || window.HEARTH_VENDOR_ID || null;
+      const explicitSlug = getUrlParam('vendor') || getUrlParam('vendor_slug') || null;
+
+      if (explicitVendorId) {
+        const { data } = await supabase.from('vendors').select('*').eq('id', explicitVendorId).maybeSingle();
+        if (data) return data;
+      }
+
+      if (explicitSlug) {
+        for (const field of ['slug', 'vendor_slug']) {
+          try {
+            const { data } = await supabase.from('vendors').select('*').eq(field, explicitSlug).maybeSingle();
+            if (data) return data;
+          } catch (e) {}
+        }
+        // Slug was provided but no match found — do not fall back to
+        // another vendor. Returning null lets the caller show a clear
+        // "Vendor not found" error instead of silently loading the wrong
+        // vendor's data.
+        return null;
+      }
+
+      // Only reached when no slug was provided at all — dev convenience
+      // fallback so the page loads against the first vendor in the DB.
+      const { data, error } = await supabase.from('vendors').select('*').limit(1);
+      if (error) throw error;
+      return data?.[0] || null;
+    }
+
+    async function loadVendorId() {
+      const vendor = await resolveVendor();
+      if (!vendor) {
+        const requestedSlug = getUrlParam('vendor') || getUrlParam('vendor_slug');
+        throw new Error(
+          requestedSlug
+            ? `Vendor "${requestedSlug}" not found. Check the ?vendor= URL parameter.`
+            : 'No vendor found. Add at least one vendor to the database.'
+        );
+      }
+      state.vendor = vendor;
+      state.vendorId = vendor.id;
     }
 
     function showError(message) {
@@ -1616,6 +1666,7 @@
       const { data, error } = await supabase
         .from("v_drop_summary")
         .select("*")
+        .eq("vendor_id", state.vendorId)
         .order("delivery_start", { ascending: false });
 
       if (error) throw error;
@@ -1722,8 +1773,6 @@
         return;
       }
 
-      localStorage.setItem("hearth:selectedDropId", state.selectedDropId);
-
       const [dropRes, summaryRes, ordersRes, items] = await Promise.all([
         supabase.from("drops").select("*").eq("id", state.selectedDropId).single(),
         supabase.from("v_drop_summary").select("*").eq("drop_id", state.selectedDropId).single(),
@@ -1734,6 +1783,23 @@
       if (dropRes.error) throw dropRes.error;
       if (summaryRes.error) throw summaryRes.error;
       if (ordersRes.error) throw ordersRes.error;
+
+      // Vendor isolation assertion — defends against a stale
+      // selectedDropId (e.g. from localStorage hearth:selectedDropId
+      // written by a previous session on another vendor) pointing at a
+      // drop that belongs to a different vendor. Mirrors scorecard.html.
+      if (dropRes.data && dropRes.data.vendor_id !== state.vendorId) {
+        localStorage.removeItem("hearth:selectedDropId");
+        state.selectedDropId = null;
+        state.drop = null;
+        state.dropSummary = null;
+        state.ordersSummary = [];
+        state.itemDetails = [];
+        await loadDrops();
+        return;
+      }
+
+      localStorage.setItem("hearth:selectedDropId", state.selectedDropId);
 
       state.drop = dropRes.data;
       state.dropSummary = summaryRes.data;
@@ -2296,6 +2362,7 @@
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         attachEvents();
+        await loadVendorId();
         await loadDrops();
         await refreshData();
         subscribeToDropOrders(state.selectedDropId);
