@@ -97,13 +97,6 @@
       font-size:13px;
     }
 
-    .home-nav{
-      display:flex;
-      gap:8px;
-      flex-wrap:nowrap;
-    }
-
-    .home-nav a,
     .home-button,
     .home-button-secondary{
       appearance:none;
@@ -120,7 +113,6 @@
       transition:all .18s ease;
     }
 
-    .home-nav a,
     .home-button-secondary{
       background:#fff;
       border:1px solid var(--home-border);
@@ -133,7 +125,6 @@
       font-weight:700;
     }
 
-    .home-nav a:hover,
     .home-button-secondary:hover{
       border-color:#d8ccb8;
       background:#fcfbf8;
@@ -747,38 +738,6 @@
         overflow:hidden;
       }
 
-      /* --- Home nav: horizontally scrollable, no wrapping, plain link appearance --- */
-      .home-nav{
-        overflow-x:auto;
-        -webkit-overflow-scrolling:touch;
-        flex-wrap:nowrap;
-        white-space:nowrap;
-        gap:4px;
-        padding-bottom:2px;
-        scrollbar-width:none;
-        width:100%;
-      }
-      .home-nav::-webkit-scrollbar{ display:none; }
-      .home-nav a{
-        flex-shrink:0;
-        white-space:nowrap;
-        min-height:44px;
-        display:inline-flex;
-        align-items:center;
-        border:none;
-        background:none;
-        padding:0 8px;
-        font-size:13px;
-        font-weight:normal;
-        color:var(--home-muted);
-      }
-      .home-nav a.active{
-        border:none;
-        background:none;
-        color:var(--home-text);
-        font-weight:600;
-      }
-
       /* --- Hero: h1 reduced for mobile (720px handles ≤720; this covers 721–768) --- */
       .home-hero h1{
         font-size:26px;
@@ -873,7 +832,7 @@
             </div>
           </div>
 
-          <nav class="home-nav" id="operatorNav" aria-label="Primary"></nav>
+          <nav class="nav" id="operatorNav" aria-label="Primary"></nav>
           <script>HearthNav.renderNav('operatorNav', 'home.html', { dotSlash: true });</script>
         </div>
       </section>
