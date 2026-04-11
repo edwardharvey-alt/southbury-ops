@@ -467,6 +467,47 @@
       background:rgba(139,107,63,0.05);
       border-radius:0 8px 8px 0;
     }
+
+    /* ── First-drop guidance card (T4-23) ── */
+    #firstDropGuidance{
+      margin:14px 0 4px;
+      padding:20px 22px;
+      border:1px solid var(--h-border);
+      border-radius:16px;
+      background:rgba(139,107,63,0.05);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    #firstDropGuidance .firstDropGuidanceHeading{
+      margin:0;
+      font-size:16px;
+      font-weight:800;
+      letter-spacing:-0.01em;
+      color:var(--h-text);
+    }
+    #firstDropGuidance .firstDropGuidanceBody{
+      margin:0;
+      font-size:13px;
+      line-height:1.55;
+      color:var(--h-muted);
+      max-width:62ch;
+    }
+    #firstDropGuidance .firstDropGuidanceActions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:4px;
+    }
+    @media (max-width:768px){
+      #firstDropGuidance{
+        padding:16px;
+      }
+      #firstDropGuidance .firstDropGuidanceActions .btnAccent{
+        width:100%;
+        min-height:44px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -547,6 +588,8 @@
 
           <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
         </div>
+
+        <div id="firstDropGuidance" style="display:none;"></div>
 
         <div class="dropBandWrap" id="dropBandWrap">
           <div class="dropBand" id="dropBand"></div>
@@ -1731,6 +1774,7 @@
       if (!vendor) throw new Error('No vendor found');
       state.vendor = vendor;
       state.vendorId = vendor.id;
+      state.inboundHostContext = getUrlParam('host_context') || null;
       const el = byId('headerVendorSub');
       if (el) el.textContent = vendor.display_name || vendor.name || 'Vendor workspace';
     }
@@ -3358,6 +3402,7 @@
       updateStatusFilterSummary();
       updateTypeFilterSummary();
       renderDropBand();
+      renderFirstDropGuidance();
       populateForm();
       renderAssignments();
       renderConditionalFields();
@@ -3367,6 +3412,94 @@
       renderContextBar();
       updateWorkspaceHeader();
       renderReview();
+    }
+
+    /* ── First-drop guidance card (T4-23) ────────────────────────────────── */
+    const FIRST_DROP_HOST_CONTEXT_LABELS = {
+      pub_venue:       "a pub",
+      sports_club:     "a sports club",
+      school:          "a school",
+      community_group: "a community group",
+      workplace:       "a workplace"
+    };
+
+    function renderFirstDropGuidance() {
+      const el = byId("firstDropGuidance");
+      if (!el) return;
+
+      const vendor = state.vendor || {};
+      const hasNoDrops = (state.drops || []).length === 0;
+      const onboardingDone = !!vendor.onboarding_completed;
+
+      if (!hasNoDrops || !onboardingDone) {
+        el.style.display = "none";
+        el.innerHTML = "";
+        return;
+      }
+
+      const hostContexts = Array.isArray(vendor.existing_host_contexts)
+        ? vendor.existing_host_contexts.filter((c) => c && c !== "none")
+        : [];
+      const hostDetails = Array.isArray(vendor.existing_host_details)
+        ? vendor.existing_host_details
+        : [];
+      const posture = vendor.customer_data_posture || null;
+      const inboundHostContext = state.inboundHostContext || null;
+
+      let heading = "";
+      let body = "";
+
+      if (hostContexts.length > 0) {
+        // State 1 — vendor has declared existing host relationships
+        let hostReference = null;
+
+        const namedDetail = hostDetails.find(
+          (d) => d && typeof d.name === "string" && d.name.trim()
+        );
+        if (namedDetail) {
+          hostReference = namedDetail.name.trim();
+        } else {
+          const firstContext = hostContexts[0];
+          hostReference = FIRST_DROP_HOST_CONTEXT_LABELS[firstContext] || "a host you know";
+        }
+
+        heading = "Start with what you know";
+        body = `You mentioned working with ${hostReference} — a hosted drop is the natural first step. Your host brings the audience; you bring the food. It's the lowest-risk way to run your first Hearth drop.`;
+      } else if (inboundHostContext && FIRST_DROP_HOST_CONTEXT_LABELS[inboundHostContext]) {
+        // State 1 (soft signal via ?host_context= URL param from Brand Hearth nudge)
+        const hostReference = FIRST_DROP_HOST_CONTEXT_LABELS[inboundHostContext];
+        heading = "Start with what you know";
+        body = `You mentioned working with ${hostReference} — a hosted drop is the natural first step. Your host brings the audience; you bring the food. It's the lowest-risk way to run your first Hearth drop.`;
+      } else if (posture === "rich" || posture === "partial") {
+        // State 2 — has customer data, no host context
+        heading = "You have a head start";
+        body = "You have existing customers to reach. A neighbourhood drop into the areas where they already are is a strong first move. Promote it through social media or in-store to fill your first capacity.";
+      } else {
+        // State 3 — fallback (customer_data_posture 'light' or null, no host)
+        heading = "Your first drop starts here";
+        body = "A neighbourhood drop is a solid starting point — promote it through social media or in-store to build your first orders. Or find a local host to partner with and let their audience do the work.";
+      }
+
+      el.innerHTML = `
+        <h4 class="firstDropGuidanceHeading">${escapeHtml(heading)}</h4>
+        <p class="firstDropGuidanceBody">${escapeHtml(body)}</p>
+        <div class="firstDropGuidanceActions">
+          <button class="btnAccent" id="firstDropGuidanceCta" type="button">Create your first drop</button>
+        </div>
+      `;
+      el.style.display = "";
+
+      const cta = byId("firstDropGuidanceCta");
+      if (cta) {
+        cta.addEventListener("click", async () => {
+          try {
+            await createNewDrop();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to create drop.");
+          }
+        });
+      }
     }
 
     async function refreshAll() {
