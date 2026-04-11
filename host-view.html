@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hearth — Host View</title>
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=30" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --hv-brand-primary: var(--h-accent, #8B6B3F);
+      --hv-brand-secondary: var(--h-accent-2, #CBB89D);
+      --hv-brand-soft: rgba(139,107,63,0.10);
+      --hv-brand-soft-2: rgba(203,184,157,0.08);
+    }
+
+    body.hvBody{
+      background:
+        radial-gradient(1200px 600px at 15% -10%, var(--hv-brand-soft), rgba(249,115,22,0) 60%),
+        radial-gradient(900px 450px at 90% 0%, var(--hv-brand-soft-2), rgba(251,146,60,0) 55%),
+        #f7f5f1;
+      min-height:100vh;
+    }
+
+    .hvPage{
+      max-width:620px;
+      margin:0 auto;
+      padding:48px 20px 64px;
+      display:grid;
+      gap:20px;
+    }
+
+    /* Header / drop identity */
+    .hvHeader{
+      display:grid;
+      gap:8px;
+      padding:4px 4px 4px;
+    }
+
+    .hvEyebrow{
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:#8b6b3f;
+      margin:0 0 2px;
+    }
+
+    .hvDropName{
+      font-size:34px;
+      font-weight:950;
+      letter-spacing:-0.035em;
+      line-height:1.08;
+      color:#1f2937;
+      margin:0;
+    }
+
+    .hvHostSub{
+      font-size:16px;
+      font-weight:700;
+      color:#4b5563;
+      margin:2px 0 0;
+      line-height:1.45;
+    }
+
+    .hvHostSub strong{
+      color:#1f2937;
+      font-weight:900;
+    }
+
+    .hvTiming{
+      font-size:14px;
+      font-weight:700;
+      color:#6b7280;
+      margin:2px 0 0;
+    }
+
+    /* Status note banner */
+    .hvNote{
+      background:rgba(139,107,63,0.08);
+      border:1px solid rgba(139,107,63,0.18);
+      border-radius:14px;
+      padding:12px 16px;
+      font-size:13px;
+      font-weight:700;
+      color:#6b4c1f;
+      line-height:1.5;
+    }
+
+    .hvNote.closed{
+      background:rgba(15,23,42,0.04);
+      border-color:rgba(15,23,42,0.12);
+      color:#374151;
+    }
+
+    /* Primary live card */
+    .hvCard{
+      background:#fff;
+      border:1px solid #e9e3d8;
+      border-radius:22px;
+      box-shadow:0 2px 12px rgba(15,23,42,0.04);
+      padding:24px 22px;
+      display:grid;
+      gap:18px;
+    }
+
+    .hvStatRow{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:14px;
+    }
+
+    .hvStatLabel{
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#6b7280;
+      margin:0;
+    }
+
+    .hvStatValue{
+      font-size:30px;
+      font-weight:950;
+      letter-spacing:-0.03em;
+      color:#1f2937;
+      margin:0;
+      line-height:1;
+    }
+
+    .hvStatValue.secondary{
+      font-size:22px;
+    }
+
+    /* Capacity bar */
+    .hvCapacity{
+      display:grid;
+      gap:10px;
+    }
+
+    .hvCapacityHead{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .hvCapacityLabel{
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#6b7280;
+      margin:0;
+    }
+
+    .hvCapacityPct{
+      font-size:14px;
+      font-weight:900;
+      color:#1f2937;
+      letter-spacing:-0.01em;
+    }
+
+    .hvCapacityTrack{
+      position:relative;
+      width:100%;
+      height:10px;
+      background:rgba(15,23,42,0.07);
+      border-radius:999px;
+      overflow:hidden;
+    }
+
+    .hvCapacityFill{
+      position:absolute;
+      inset:0 auto 0 0;
+      width:0%;
+      background:linear-gradient(90deg, var(--hv-brand-primary), var(--hv-brand-secondary));
+      border-radius:999px;
+      transition:width .45s ease;
+    }
+
+    .hvCapacityMeta{
+      font-size:12px;
+      font-weight:700;
+      color:#6b7280;
+      margin:0;
+    }
+
+    /* Divider */
+    .hvDivider{
+      height:1px;
+      background:rgba(15,23,42,0.06);
+      margin:0;
+    }
+
+    /* Revenue share card */
+    .hvShareCard{
+      background:linear-gradient(135deg, var(--hv-brand-primary), var(--hv-brand-secondary));
+      border-radius:22px;
+      padding:24px 22px;
+      color:#fff;
+      display:grid;
+      gap:6px;
+    }
+
+    .hvShareLabel{
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.1em;
+      opacity:.82;
+      margin:0;
+    }
+
+    .hvShareValue{
+      font-size:38px;
+      font-weight:950;
+      letter-spacing:-0.04em;
+      line-height:1;
+      margin:0;
+    }
+
+    .hvShareHint{
+      font-size:12px;
+      font-weight:700;
+      opacity:.78;
+      margin:2px 0 0;
+      line-height:1.4;
+    }
+
+    /* Footer */
+    .hvFooter{
+      text-align:center;
+      font-size:12px;
+      font-weight:700;
+      color:#9ca3af;
+      padding-top:10px;
+    }
+
+    /* States */
+    .hvState{
+      text-align:center;
+      padding:72px 24px;
+      display:grid;
+      gap:14px;
+      justify-items:center;
+    }
+
+    .hvStateIcon{
+      font-size:38px;
+    }
+
+    .hvStateTitle{
+      font-size:22px;
+      font-weight:950;
+      letter-spacing:-0.03em;
+      color:#1f2937;
+      margin:0;
+    }
+
+    .hvStateSub{
+      font-size:14px;
+      font-weight:600;
+      color:#6b7280;
+      max-width:38ch;
+      line-height:1.5;
+      margin:0;
+    }
+
+    @media (max-width:600px){
+      .hvPage{
+        padding:28px 14px 64px;
+        gap:16px;
+      }
+      .hvDropName{
+        font-size:28px;
+      }
+      .hvShareValue{
+        font-size:32px;
+      }
+      .hvStatValue{
+        font-size:26px;
+      }
+    }
+  </style>
+</head>
+<body class="hvBody">
+
+  <div class="hvPage" id="hvPage">
+    <div class="hvState" id="loadingState">
+      <div class="hvStateIcon">⏳</div>
+      <h2 class="hvStateTitle">Loading your drop…</h2>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      dropSlug: null,
+      dropId: null,
+      drop: null,
+      realtimeChannel: null,
+      refreshInFlight: false,
+    };
+
+    let supabase;
+
+    function getQueryParam(name){
+      return new URLSearchParams(window.location.search).get(name);
+    }
+
+    function escapeHtml(str){
+      if (str == null) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function formatMoneyPence(pence){
+      const n = Number(pence || 0);
+      return "£" + (n / 100).toFixed(2);
+    }
+
+    function formatDateLong(value){
+      if (!value) return null;
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return null;
+      return d.toLocaleDateString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      });
+    }
+
+    function formatTime(value){
+      if (!value) return null;
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return null;
+      return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+    }
+
+    function formatDropWindow(startISO, endISO){
+      const startDate = formatDateLong(startISO) || formatDateLong(endISO);
+      const startTime = formatTime(startISO);
+      const endTime = formatTime(endISO);
+      if (!startDate) return "";
+      if (startTime && endTime) return `${startDate}, ${startTime}–${endTime}`;
+      if (startTime) return `${startDate}, from ${startTime}`;
+      if (endTime) return `${startDate}, until ${endTime}`;
+      return startDate;
+    }
+
+    function formatOpensAtLong(value){
+      if (!value) return "soon";
+      const date = formatDateLong(value);
+      const time = formatTime(value);
+      if (date && time) return `${date} at ${time}`;
+      if (date) return date;
+      return "soon";
+    }
+
+    async function loadDrop(){
+      state.dropSlug = getQueryParam("drop");
+
+      if (!state.dropSlug){
+        renderEmpty(
+          "This drop couldn't be found.",
+          "Check your link and try again."
+        );
+        return;
+      }
+
+      try {
+        supabase = window.supabase.createClient(
+          window.HEARTH_CONFIG.SUPABASE_URL,
+          window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+        );
+      } catch (initErr){
+        renderEmpty(
+          "Couldn't connect to the platform.",
+          "Please try refreshing the page."
+        );
+        return;
+      }
+
+      try {
+        /* Resolve the drop by slug. The drops table has the canonical slug
+           field used across the platform (see order.html). We look up the
+           drop_id here, then read the operational view for live stats. */
+        const { data: dropRow, error: dropErr } = await supabase
+          .from("drops")
+          .select("id, slug, status")
+          .eq("slug", state.dropSlug)
+          .maybeSingle();
+
+        if (dropErr) throw dropErr;
+        if (!dropRow){
+          renderEmpty(
+            "This drop couldn't be found.",
+            "Check your link and try again."
+          );
+          return;
+        }
+
+        state.dropId = dropRow.id;
+
+        const summary = await fetchDropSummary();
+        if (!summary){
+          renderEmpty(
+            "This drop couldn't be found.",
+            "Check your link and try again."
+          );
+          return;
+        }
+
+        state.drop = summary;
+
+        const revenuePence = await fetchLiveRevenuePence();
+
+        renderDrop(summary, revenuePence);
+        subscribeRealtime();
+
+      } catch (err){
+        console.error(err);
+        renderEmpty(
+          "Something went wrong loading this drop.",
+          "Please try refreshing the page."
+        );
+      }
+    }
+
+    async function fetchDropSummary(){
+      const { data, error } = await supabase
+        .from("v_drop_summary")
+        .select("*")
+        .eq("drop_id", state.dropId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+
+    async function fetchLiveRevenuePence(){
+      /* Live revenue is computed fresh here rather than read from
+         v_drop_summary.total_revenue_pence so we can explicitly exclude
+         cancelled orders as specified for the host-facing figure. */
+      const { data, error } = await supabase
+        .from("orders")
+        .select("total_pence, status")
+        .eq("drop_id", state.dropId)
+        .neq("status", "cancelled");
+      if (error) throw error;
+      let sum = 0;
+      for (const row of (data || [])){
+        sum += Number(row.total_pence || 0);
+      }
+      return sum;
+    }
+
+    function computeDropState(drop){
+      const status = String(drop.status || "").toLowerCase();
+      if (status === "closed") return "closed";
+
+      const now = Date.now();
+      const opensAt = drop.opens_at ? new Date(drop.opens_at).getTime() : null;
+      const closesAt = drop.closes_at ? new Date(drop.closes_at).getTime() : null;
+
+      if (opensAt && now < opensAt) return "pre-open";
+      if (closesAt && now > closesAt) return "closed";
+      return "live";
+    }
+
+    function renderDrop(drop, revenuePence){
+      const page = document.getElementById("hvPage");
+
+      const dropName = drop.drop_name || drop.name || "This drop";
+      const hostName = drop.host_name || null;
+      const windowText = formatDropWindow(drop.delivery_start, drop.delivery_end);
+
+      const dropState = computeDropState(drop);
+      const isPreOpen = dropState === "pre-open";
+      const isClosed = dropState === "closed";
+
+      const orderCount = isPreOpen ? 0 : Number(drop.order_count || 0);
+      const capacityTotal = Number(drop.capacity_units_total || 0);
+      const capacityUsed = isPreOpen ? 0 : Number(drop.capacity_units_used || 0);
+      const pct = capacityTotal > 0
+        ? Math.min(100, Math.round((capacityUsed / capacityTotal) * 100))
+        : 0;
+
+      const liveRevenue = isPreOpen ? 0 : Number(revenuePence || 0);
+      // Revenue share % placeholder: enrich with hosts.revenue_share_pct in T4-16
+      const shareAmountPence = Math.round(liveRevenue * 0.10);
+
+      let noteHTML = "";
+      if (isPreOpen){
+        noteHTML = `
+          <div class="hvNote">
+            Ordering opens ${escapeHtml(formatOpensAtLong(drop.opens_at))}.
+          </div>
+        `;
+      } else if (isClosed){
+        noteHTML = `
+          <div class="hvNote closed">
+            This drop has closed. Here are the final figures.
+          </div>
+        `;
+      }
+
+      const hostLine = hostName
+        ? `You're hosting this drop at <strong>${escapeHtml(hostName)}</strong>.`
+        : `You're hosting this drop.`;
+
+      page.innerHTML = `
+        <div class="hvHeader">
+          <p class="hvEyebrow">A Hearth drop</p>
+          <h1 class="hvDropName">${escapeHtml(dropName)}</h1>
+          <p class="hvHostSub">${hostLine}</p>
+          ${windowText ? `<p class="hvTiming">${escapeHtml(windowText)}</p>` : ""}
+        </div>
+
+        ${noteHTML}
+
+        <div class="hvCard">
+          <div class="hvStatRow">
+            <p class="hvStatLabel">Orders placed</p>
+            <p class="hvStatValue" id="hvOrderCount">${orderCount}</p>
+          </div>
+
+          <div class="hvDivider"></div>
+
+          <div class="hvCapacity">
+            <div class="hvCapacityHead">
+              <p class="hvCapacityLabel">Capacity filled</p>
+              <span class="hvCapacityPct" id="hvCapacityPct">${pct}%</span>
+            </div>
+            <div class="hvCapacityTrack">
+              <div class="hvCapacityFill" id="hvCapacityFill" style="width:${pct}%"></div>
+            </div>
+            <p class="hvCapacityMeta" id="hvCapacityMeta">
+              ${capacityUsed} of ${capacityTotal} units taken
+            </p>
+          </div>
+        </div>
+
+        <div class="hvShareCard">
+          <p class="hvShareLabel">Your share so far</p>
+          <p class="hvShareValue" id="hvShareValue">${formatMoneyPence(shareAmountPence)}</p>
+          <!-- Revenue share % placeholder: enrich with hosts.revenue_share_pct in T4-16 -->
+          <p class="hvShareHint">Updated live as orders come in.</p>
+        </div>
+
+        <div class="hvFooter">Powered by Hearth</div>
+      `;
+    }
+
+    function updateLiveValues(summary, revenuePence){
+      const drop = summary || state.drop;
+      if (!drop) return;
+
+      const dropState = computeDropState(drop);
+      const isPreOpen = dropState === "pre-open";
+
+      const orderCount = isPreOpen ? 0 : Number(drop.order_count || 0);
+      const capacityTotal = Number(drop.capacity_units_total || 0);
+      const capacityUsed = isPreOpen ? 0 : Number(drop.capacity_units_used || 0);
+      const pct = capacityTotal > 0
+        ? Math.min(100, Math.round((capacityUsed / capacityTotal) * 100))
+        : 0;
+
+      const liveRevenue = isPreOpen ? 0 : Number(revenuePence || 0);
+      const shareAmountPence = Math.round(liveRevenue * 0.10);
+
+      const orderEl = document.getElementById("hvOrderCount");
+      if (orderEl) orderEl.textContent = String(orderCount);
+
+      const pctEl = document.getElementById("hvCapacityPct");
+      if (pctEl) pctEl.textContent = `${pct}%`;
+
+      const fillEl = document.getElementById("hvCapacityFill");
+      if (fillEl) fillEl.style.width = `${pct}%`;
+
+      const metaEl = document.getElementById("hvCapacityMeta");
+      if (metaEl) metaEl.textContent = `${capacityUsed} of ${capacityTotal} units taken`;
+
+      const shareEl = document.getElementById("hvShareValue");
+      if (shareEl) shareEl.textContent = formatMoneyPence(shareAmountPence);
+    }
+
+    async function refreshLiveValues(){
+      if (!state.dropId) return;
+      if (state.refreshInFlight) return;
+      state.refreshInFlight = true;
+      try {
+        const [summary, revenuePence] = await Promise.all([
+          fetchDropSummary(),
+          fetchLiveRevenuePence(),
+        ]);
+        if (summary){
+          state.drop = summary;
+          updateLiveValues(summary, revenuePence);
+        }
+      } catch (err){
+        console.error("host-view refresh failed", err);
+      } finally {
+        state.refreshInFlight = false;
+      }
+    }
+
+    function subscribeRealtime(){
+      if (!state.dropId) return;
+      if (state.realtimeChannel) return;
+
+      state.realtimeChannel = supabase
+        .channel(`host-view:orders:${state.dropId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "orders",
+            filter: `drop_id=eq.${state.dropId}`,
+          },
+          () => { refreshLiveValues(); }
+        )
+        .subscribe();
+    }
+
+    function renderEmpty(title, sub){
+      document.getElementById("hvPage").innerHTML = `
+        <div class="hvState">
+          <div class="hvStateIcon">🔍</div>
+          <h2 class="hvStateTitle">${escapeHtml(title)}</h2>
+          <p class="hvStateSub">${escapeHtml(sub)}</p>
+        </div>
+      `;
+    }
+
+    loadDrop();
+  </script>
+</body>
+</html>
