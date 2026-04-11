@@ -35,17 +35,56 @@ Core belief: great local food should strengthen communities, not bypass them.
 - drop-menu.html — Menu Library (products, bundles, categories)
 - brand-hearth.html — Brand Hearth (vendor identity editor)
 - insights.html — Insights (analytics dashboard)
+- customers.html — Customers workspace (owned-customer asset view)
+- customer-import.html — CSV import flow for existing vendor customer lists
+- onboarding.html — Vendor onboarding / Setup (two-pathway journey)
 - home.html — Platform home dashboard
 - order.html — Customer-facing ordering page
+- order-confirmation.html — Post-order confirmation destination
 - order-entry.html — Dev tool for test order entry (legacy, needs rebuild)
 - scorecard.html — Post-drop scorecard (per-drop performance view)
+- host-view.html — Read-only host-facing drop view (no login)
 - assets/hearth.css — shared platform stylesheet
 - assets/config.js — Supabase config
+- assets/hearth-intelligence.js — shared intelligence engine module
+  (archetype detection, capacity/rhythm/menu/growth signals, recommendation
+  generation, customer segmentation) consumed by insights.html,
+  customers.html and home.html
+- assets/vendor-nav.js — HearthNav helper module exposing
+  withVendor(href), renderNav(container, activeFile), and decorateLinks(root).
+  Loaded synchronously in every operator page's <head>. Used to build nav
+  bars at parse time and preserve the ?vendor= URL param across all internal
+  navigation. Cache-busted via ?v=2
 - assets/vendors/southbury-farm-pizza/ — vendor image assets
+
+## Vendors currently in the database
+
+- Southbury Farm Pizza Company (slug: southbury-farm-pizza) — the
+  founding vendor, used as the default historical test workspace with
+  real product/bundle/drop data
+- Healthy Habits Cafe (slug: healthy-habits) — real vendor added this
+  session. Restaurant in Broadstone, Poole. Instagram: healthyhabits_.
+  onboarding_completed: false — first workspace a real vendor will
+  walk through
+- Test Vendor (slug: test-vendor) — clean test workspace with no drops
+  or catalogue, used to verify first-drop guidance, vendor isolation,
+  and empty-state rendering. onboarding_completed: false
+
+Load any vendor's workspace via the ?vendor=<slug> URL param on any
+operator page (see the Operational learnings section on resolveVendor
+and HearthNav.withVendor).
 
 ## Database — key tables
 
-- vendors — vendor identity and brand settings
+- vendors — vendor identity and brand settings. Key columns include
+  `slug`, `display_name`, `name`, `contact_phone`, `address` (text,
+  physical address — added this session), `social_handles` (jsonb,
+  default `{}`, shape `{"instagram": "handle", "tiktok": "handle", ...}`
+  — added this session), `onboarding_completed` (boolean), and the
+  onboarding answer columns (`primary_goal`, `delivery_model`,
+  `customer_data_posture`, `existing_host_contexts`, etc.) populated
+  by the onboarding flow. `terms_accepted` / `terms_accepted_at` to
+  be added when T4-25 is built
 - drops — the core unit: each drop has slug, timing, capacity, host, status,
   collection_point_description (text), delivery_area_description (text),
   customer_notes_enabled (boolean, default true)
@@ -114,6 +153,54 @@ Core belief: great local food should strengthen communities, not bypass them.
      selector (#elementId) for guaranteed specificity
    - Never add new page-specific rules to hearth.css — all page-specific
      styles belong in the page's own <style> block
+
+## Operational learnings
+
+Gotchas and patterns captured from real bugs. Treat these as hard rules
+on top of the coding rules above.
+
+1. **Vendor isolation — `v_drop_summary` has no RLS safety net.** Any
+   page that queries `v_drop_summary` as a list MUST filter with
+   `.eq("vendor_id", state.vendorId)`. The view exposes every vendor's
+   drops; the frontend is the only thing scoping them. `loadDrops()` in
+   drop-manager.html and index.html were both missing this filter and
+   leaked cross-vendor data until it was fixed. The same rule applies to
+   any future view or page that reads drops as a collection. Fetching
+   by drop_id (`.eq("id", …)`) must additionally assert
+   `row.vendor_id === state.vendorId` after the fetch, mirroring
+   scorecard.html:657 — this defends against stale
+   `localStorage.hearth:selectedDropId` values pointing at another
+   vendor's drop.
+
+2. **`resolveVendor()` must never silently fall back when a slug was
+   provided.** The `.limit(1)` fallback is a dev convenience that only
+   fires when NO `?vendor=` / `?vendor_slug=` param was given. If a slug
+   WAS provided but no row matches, the function must `return null` and
+   the caller must show a clear "Vendor not found" error state — never
+   load another vendor's data. Silent wrong-vendor fallback is a data
+   exposure risk and was fixed across all 10 operator pages this
+   session.
+
+3. **Always use `HearthNav.withVendor(href)` when generating operator
+   page URLs in JS.** This applies to template literals that build
+   anchor HTML AND to every `window.location.href` / `location.assign`
+   assignment that targets an operator page. Never construct an
+   internal operator URL in JS without routing it through
+   `HearthNav.withVendor()` — otherwise the active vendor context is
+   lost on navigation. Nav bars themselves are built synchronously by
+   `HearthNav.renderNav(containerId, activeFile, opts)` called inline
+   right after the nav placeholder element. Static content CTAs that
+   live in HTML are covered by `HearthNav.decorateLinks()` called as
+   the last script tag inside each operator page's `<body>`.
+   Customer-facing pages (order.html, order-confirmation.html) and
+   host-facing pages (host-view.html) intentionally do NOT load
+   vendor-nav.js — the vendor slug must not appear in URLs those
+   audiences see.
+
+4. **Netlify free tier has bandwidth limits.** Upgrade to Pro before
+   the first real vendor goes live. Current hosting is fine for
+   development and demos but will not cover sustained real-drop
+   traffic.
 
 ## Brand and tone
 
@@ -428,15 +515,24 @@ All operator pages audited — "Setup" appears consistently and links to
 Hearth, Menu Library, Drop Studio, Service Board, Insights, Setup.
 Setup excluded from customer-facing `order.html`.
 
-T4-23: Drop Studio — first drop guidance for new vendors
-When a vendor opens Drop Studio for the first time (no existing drops),
-surface a quiet guidance state above the drop list: "Ready to create
-your first drop? Start with a host you know — it's the fastest way to
-fill capacity and build your audience." If the vendor flagged existing
-host relationships in onboarding, reference that context: "You mentioned
-you already work with a pub or venue — add them as a host and create
-your first drop together." Links to the host creation flow and new drop
-creation. Disappears once the vendor has at least one drop.
+T4-23: Drop Studio — first drop guidance for new vendors ✓ COMPLETE
+First-drop guidance card rendered in drop-manager.html only. Appears
+when the vendor has zero drops AND `onboarding_completed` is true
+(vendors who have not finished setup are routed to onboarding first).
+Three personalised states driven entirely off `state.vendor` with no
+extra queries:
+- **Host-first** — when `existing_host_contexts` is non-empty. Copy
+  references the host types the vendor flagged in onboarding and
+  nudges them to add a host and create their first drop together.
+- **Data-first** — when `customer_data_posture` is `rich` or
+  `partial`. Nudges the vendor toward customer import as a demand
+  accelerant before building the first drop.
+- **Fallback** — generic "start with a host you know" copy for
+  vendors with neither host context nor customer data.
+Also handles an inbound `?host_context=` URL param from Brand Hearth
+nudge links, pre-filling the host context when the vendor lands in
+Drop Studio from the brand setup flow. The card disappears completely
+once the vendor has any drop (including drafts).
 
 T4-24: Customer privacy policy — order page
 
@@ -700,6 +796,96 @@ communications go to consented community members through available
 channels. Community context shown on drop card. Capacity optionally
 reserved exclusively for community members. Dependency: T5-19, T5-11.
 
+### Tier 5-A — Auth workstream
+
+Must complete before any real vendor enters live data. The current
+`?vendor=<slug>` URL param model is fine for dev and demos but is not
+a security boundary — any operator can load any vendor's workspace by
+guessing a slug. Auth replaces URL-based vendor resolution with
+session-based identity, and RLS moves from frontend filtering to
+server-side enforcement.
+
+T5-A1: Enable Supabase Auth — magic link / passwordless email
+Turn on Supabase Auth with email magic-link sign-in. Configure the
+email template to match Hearth's voice. No passwords.
+
+T5-A2: Link vendors to auth users
+Add `auth_user_id uuid` to the vendors table with a foreign key to
+`auth.users(id)`. A vendor row becomes a workspace owned by exactly
+one authenticated user. Provisioning flow (T5-A6) populates this.
+
+T5-A3: RLS rewrite — server-side vendor scoping
+Every vendor-scoped table and view (`drops`, `products`, `bundles`,
+`categories`, `orders`, `customer_relationships`, `v_drop_summary`,
+`v_hearth_drop_stats`, `v_item_sales`, `v_host_performance`, etc.)
+gets RLS policies filtering on `vendor_id IN (SELECT id FROM vendors
+WHERE auth_user_id = auth.uid())`. Frontend no longer needs to pass
+vendor_id as a filter for correctness — the server enforces it.
+Frontend filters stay for clarity but become belt-and-braces rather
+than the only defence.
+
+T5-A4: Login page
+New static page `login.html` with email input, magic-link request,
+and a clear "check your inbox" state. Magic link lands back on
+`home.html`.
+
+T5-A5: Session-aware `resolveVendor()`
+Replace the URL-param fallback in the shared resolveVendor pattern
+with a session lookup: read `auth.uid()` and return the vendor row
+linked to that user. If the user is not signed in, redirect to
+`login.html`. This retires the silent-fallback bug class entirely —
+there is no way to impersonate another vendor because the URL param
+stops being the vendor identity.
+
+T5-A6: Vendor provisioning
+Admin-only flow (Ed, initially) to create a vendor row, send a
+magic-link invite to the owner's email, and link the auth user on
+first sign-in. Lightweight — one form and one email.
+
+T5-A7: Logout
+Session clear via `supabase.auth.signOut()` and redirect to
+`login.html`. Surfaced in the operator nav or the Brand Hearth
+workspace card.
+
+### Tier 5-B — Platform improvements
+
+Smaller cleanups and onboarding enrichments that don't gate anything
+but pay down friction and tech debt.
+
+T5-B1: Extract `resolveVendor()` into a shared module
+`resolveVendor()` is currently duplicated verbatim across 10 operator
+pages. Pull it into `assets/hearth-vendor.js` alongside
+`hearth-intelligence.js` and `vendor-nav.js`, then delete the per-page
+copies. Note: this was deliberately deferred from the vendor
+isolation fix this session to keep the fix surgical — every page
+still has its own copy today. When T5-A5 lands, this module can
+absorb the session-aware rewrite so the change happens in one place
+instead of ten.
+
+T5-B2: Onboarding — capture social handles
+Add a socials question to the onboarding flow (Q10 or similar)
+capturing Instagram, Facebook, TikTok, and WhatsApp Business handles.
+Writes to `vendors.social_handles` (jsonb) in the shape
+`{"instagram": "handle", "facebook": "handle", "tiktok": "handle",
+"whatsapp": "+44..."}`. Optional — skippable. Populated handles
+flow through to Brand Hearth (T5-B4) and are visible to customers
+on order.html as a footer treatment.
+
+T5-B3: Onboarding — capture vendor address
+Add an address question to the onboarding flow capturing the
+vendor's primary physical address as a single free-text field
+(house/street, town/city, postcode). Writes to `vendors.address`
+(text). Used downstream by demand targeting (T4-17) as an implicit
+centre for neighbourhood drops when no explicit centre postcode is
+set, and surfaced in Brand Hearth.
+
+T5-B4: Brand Hearth — edit social handles and address
+Brand Hearth's Brand Identity section currently shows business name,
+phone, website, and tagline. Extend it to display and edit the
+address captured in T5-B3 and the social handles captured in T5-B2,
+alongside the existing website URL field. Save pattern mirrors the
+existing vendors-table upserts on that page.
+
 ## Recommended next session order
 
 All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
@@ -747,7 +933,26 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
     a specific host) deferred to T4-16 when host becomes a first-class
     entity.
 34. T4-21 ✓ — Customer import post-import demand view
-35. T4-23 — Drop Studio first drop guidance for new vendors ← NEXT
-36. T4-24 — Customer privacy policy
-37. T4-25 — Vendor terms of participation
-38. T4-26 — Host participation terms
+35. T4-23 ✓ — Drop Studio first drop guidance for new vendors
+36. T4-16 — Host as first-class entity ← SUGGESTED NEXT
+    Hosts currently exist as simple records. This task promotes them
+    to a properly managed entity with their own onboarding, service
+    windows, and audience context. Higher effort than most backlog
+    items but gates T4-26 (host-vendor matching) and enriches T4-17
+    (audience targeting). Deserves a dedicated session.
+37. T4-24 — Customer privacy policy
+38. T4-25 — Vendor terms of participation
+39. T4-26 — Host participation terms
+
+Parallel workstream — schedule before any real vendor goes live:
+T5-A1 → T5-A7 (Auth) must be done before Healthy Habits Cafe (or
+any real vendor) starts capturing live data. Vendor isolation is
+enforced by frontend filtering today; auth moves that enforcement
+server-side and closes the URL-param impersonation path.
+
+Also on deck (low effort, high value):
+T5-B1 — extract resolveVendor() into shared module (pay down the
+10-page duplication before Auth rewrites it)
+T5-B2 / T5-B3 — onboarding capture for social handles and address
+(schema columns already exist; just need the UI)
+T5-B4 — surface social handles and address in Brand Hearth
