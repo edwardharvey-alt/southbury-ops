@@ -2281,6 +2281,7 @@
 
             <div class="dropCardActions">
               <button class="btnSmall js-duplicate-drop" type="button" data-drop-id="${drop.drop_id}">Duplicate</button>
+              ${drop.host_name ? `<button class="btnSmall js-copy-host-link" type="button" data-drop-slug="${escapeHtml(drop.drop_slug || drop.slug || "")}">Copy host link</button>` : ""}
             </div>
             ${(drop.status || '').toLowerCase() === 'closed' ? `<a class="scorecardLink" href="./scorecard.html?drop=${encodeURIComponent(drop.drop_id)}">Scorecard →</a>` : ''}
           </div>
@@ -3908,7 +3909,7 @@
 
       document.body.addEventListener("click", async (e) => {
         const card = e.target.closest(".dropCard");
-        if (card && !e.target.closest(".js-duplicate-drop")) {
+        if (card && !e.target.closest(".js-duplicate-drop") && !e.target.closest(".js-copy-host-link")) {
           state.selectedDropId = card.dataset.dropId;
           try {
             await loadSelectedDrop();
@@ -3928,6 +3929,42 @@
           } catch (err) {
             console.error(err);
             showError(err.message || "Unable to duplicate drop.");
+          }
+          return;
+        }
+
+        const copyHost = e.target.closest(".js-copy-host-link");
+        if (copyHost) {
+          const slug = copyHost.dataset.dropSlug;
+          if (!slug) {
+            showError("This drop has no slug set, so a host link can't be built.");
+            return;
+          }
+          const url = `${window.location.origin}/host-view.html?drop=${encodeURIComponent(slug)}`;
+          const originalLabel = copyHost.textContent;
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(url);
+            } else {
+              const ta = document.createElement("textarea");
+              ta.value = url;
+              ta.setAttribute("readonly", "");
+              ta.style.position = "absolute";
+              ta.style.left = "-9999px";
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand("copy");
+              document.body.removeChild(ta);
+            }
+            copyHost.textContent = "Copied ✓";
+            copyHost.disabled = true;
+            setTimeout(() => {
+              copyHost.textContent = originalLabel;
+              copyHost.disabled = false;
+            }, 2000);
+          } catch (err) {
+            console.error(err);
+            showError("Unable to copy host link to clipboard.");
           }
         }
       });
