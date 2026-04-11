@@ -731,9 +731,19 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 28. T4-13 — Minimal host-facing view
 29. T4-15 — Multiple drops within a single event
 30. T4-16 — Host onboarding as first-class entity
-31. T4-17 — Drop Studio audience targeting and demand preview (dep: T4-14 ✓, T4-21 ✓)
-32. T4-19 — Onboarding to Brand Hearth continuity
-33. T4-20 — Onboarding to first drop pathway
+31. T4-17 ✓ — Drop Studio audience targeting and demand preview
+    Audience Preview panel added to Basics stage of Drop Studio.
+    Triggers on centre postcode blur or host selection change. Shows
+    customer count in postcode area, area drop history, host-specific
+    drop history (count and avg orders), and a confidence signal
+    (Strong / Building / New territory). Signal factors in both area
+    and host drop history. Host suggestion hint removed — not
+    appropriate for the Hearth model. Panel is context-aware by drop
+    type: hosted/community drops lead with host history and suppress
+    postcode customer count; neighbourhood drops lead with area
+    signals. Host-customer relationship intel (customers acquired via
+    a specific host) deferred to T4-16 when host becomes a first-class
+    entity.
 34. T4-21 ✓ — Customer import post-import demand view
 35. T4-23 — Drop Studio first drop guidance for new vendors
 36. T4-24 — Customer privacy policy
