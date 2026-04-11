@@ -1908,12 +1908,6 @@
       }
 
       const dropType = document.getElementById('dropType')?.value || '';
-      const currentHostId = document.getElementById('hostSelect')?.value || '';
-      let hostHint = '';
-      if (hostMatch && dropType === 'neighbourhood' && !currentHostId) {
-        const hostType = titleCase(String(hostMatch.host_type || 'host').replace(/_/g, ' '));
-        hostHint = `<p class="demandHostHint">You have a host in this area: <strong>${escapeHtml(hostMatch.name || 'Unnamed host')}</strong> (${escapeHtml(hostType)}). Consider linking this drop.</p>`;
-      }
 
       const isHostedDrop = (dropType === 'community' || dropType === 'event') && selectedHost;
 
@@ -1936,7 +1930,6 @@
         <div class="demandChipWrap">
           <span class="demandChip ${signal.cls}">${escapeHtml(signal.label)}</span>
         </div>
-        ${hostHint}
       `;
     }
 
