@@ -326,10 +326,15 @@ for drops closed within the last 48 hours. Drop Studio shows
 
 Dependency: T3-9 (customer capture — complete)
 
-T4-13: Minimal host-facing view
-Read-only page via drop shareable link. Content: drop name, date, time,
-live order count via Realtime, capacity fill bar, revenue share calculated
-in real time. No login. Display only.
+T4-13: Minimal host-facing view ✓ COMPLETE
+host-view.html created as a read-only, no-login page accepting
+?drop=<slug>. Queries v_drop_summary directly (bypassing drops table
+RLS). Displays drop name, host context, timing, live order count,
+capacity fill bar, and host share (model-aware: fixed vs percentage).
+Handles loading / not-found / pre-open / closed states. Realtime
+subscription on orders table re-renders live values on each event.
+No nav. Copy host link button added to drop cards in drop-manager.html,
+shown only when host_name is present.
 
 T4-14: Vendor customer data import ✓ COMPLETE
 Five-step import flow with CSV parsing, address support, phone normalisation,
@@ -722,13 +727,10 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 22. T4-28 — Intelligence engine — extract to shared module ✓ COMPLETE
 23. T4-27 — Customers page — first-class customer asset view ✓ COMPLETE
 24. T4-4  — Home dashboard intelligence surface and next action centre ✓ COMPLETE
-25. T4-30 — Onboarding delivery model audit ← NEXT
-    The three intelligence surfaces (Insights, Customers, Home) are now
-    complete and strategically aligned. Review the T4/T5 backlog to
-    determine the next priority.
+25. T4-30 — Onboarding delivery model audit
 26. T4-29 — Series intelligence in Insights
 27. T4-12 — Post-drop scorecard ✓ COMPLETE
-28. T4-13 — Minimal host-facing view
+28. T4-13 — Minimal host-facing view ✓ COMPLETE
 29. T4-15 — Multiple drops within a single event
 30. T4-16 — Host onboarding as first-class entity
 31. T4-17 ✓ — Drop Studio audience targeting and demand preview
@@ -745,7 +747,7 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
     a specific host) deferred to T4-16 when host becomes a first-class
     entity.
 34. T4-21 ✓ — Customer import post-import demand view
-35. T4-23 — Drop Studio first drop guidance for new vendors
+35. T4-23 — Drop Studio first drop guidance for new vendors ← NEXT
 36. T4-24 — Customer privacy policy
 37. T4-25 — Vendor terms of participation
 38. T4-26 — Host participation terms
