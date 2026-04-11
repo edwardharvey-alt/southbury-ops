@@ -1907,16 +1907,32 @@
         hostHistoryLine = `<div class="demandLine demandPreviewLine">${escapeHtml(text)}</div>`;
       }
 
-      let hostHint = "";
-      if (hostMatch) {
-        const hostType = titleCase(String(hostMatch.host_type || "host").replace(/_/g, " "));
-        hostHint = `<p class="demandHostHint">You have a host in this area: <strong>${escapeHtml(hostMatch.name || "Unnamed host")}</strong> (${escapeHtml(hostType)}). Consider linking this drop.</p>`;
+      const dropType = document.getElementById('dropType')?.value || '';
+      const currentHostId = document.getElementById('hostSelect')?.value || '';
+      let hostHint = '';
+      if (hostMatch && dropType === 'neighbourhood' && !currentHostId) {
+        const hostType = titleCase(String(hostMatch.host_type || 'host').replace(/_/g, ' '));
+        hostHint = `<p class="demandHostHint">You have a host in this area: <strong>${escapeHtml(hostMatch.name || 'Unnamed host')}</strong> (${escapeHtml(hostType)}). Consider linking this drop.</p>`;
+      }
+
+      const isHostedDrop = (dropType === 'community' || dropType === 'event') && selectedHost;
+
+      let linesHtml;
+      if (isHostedDrop) {
+        linesHtml = `
+          ${hostHistoryLine}
+          <p class="demandPreviewLine muted">${escapeHtml('Customer area data is not shown for hosted drops.')}</p>
+        `;
+      } else {
+        linesHtml = `
+          <p class="demandPreviewLine">${escapeHtml(customerLine)}</p>
+          <p class="demandPreviewLine">${escapeHtml(historyLine)}</p>
+          ${hostHistoryLine}
+        `;
       }
 
       body.innerHTML = `
-        <p class="demandPreviewLine">${escapeHtml(customerLine)}</p>
-        <p class="demandPreviewLine">${escapeHtml(historyLine)}</p>
-        ${hostHistoryLine}
+        ${linesHtml}
         <div class="demandChipWrap">
           <span class="demandChip ${signal.cls}">${escapeHtml(signal.label)}</span>
         </div>
