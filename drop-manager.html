@@ -1871,17 +1871,17 @@
       return `${dropCount} previous drops in this area, averaging ${avgDisplay} orders.`;
     }
 
-    function computeConfidenceSignal(customerCount, historicalDropCount) {
-      if (customerCount >= 20 && historicalDropCount >= 2) {
+    function computeConfidenceSignal(customerCount, historicalDropCount, hostDropCount = 0) {
+      if (customerCount >= 20 && (historicalDropCount >= 2 || hostDropCount >= 2)) {
         return { label: "Strong", cls: "isStrong" };
       }
-      if ((customerCount >= 10 && customerCount <= 19) || historicalDropCount === 1) {
+      if ((customerCount >= 10 && customerCount <= 19) || historicalDropCount === 1 || hostDropCount === 1) {
         return { label: "Building", cls: "isBuilding" };
       }
       return { label: "New territory", cls: "isNew" };
     }
 
-    function renderDemandPreview({ outwardCode, customerCount, historicalDrops, avgOrders, hostMatch }) {
+    function renderDemandPreview({ outwardCode, customerCount, historicalDrops, avgOrders, hostMatch, hostDropCount, hostAvgOrders, selectedHost }) {
       const section = byId("demandPreviewSection");
       const sub = byId("demandPreviewSub");
       const body = byId("demandPreviewBody");
@@ -1889,9 +1889,23 @@
       section.style.display = "block";
       if (sub) sub.textContent = `Known customers and drop history for ${outwardCode}`;
 
-      const signal = computeConfidenceSignal(customerCount, historicalDrops);
+      const signal = computeConfidenceSignal(customerCount, historicalDrops, hostDropCount || 0);
       const customerLine = formatCustomerLine(customerCount);
       const historyLine = formatHistoryLine(historicalDrops, avgOrders);
+
+      let hostHistoryLine = "";
+      if (selectedHost) {
+        const hostName = selectedHost.name || "this host";
+        let text;
+        if (!hostDropCount) {
+          text = `No previous drops at ${hostName} — this will be your first.`;
+        } else if (hostDropCount === 1) {
+          text = `1 previous drop at ${hostName}, averaging ${hostAvgOrders} orders.`;
+        } else {
+          text = `${hostDropCount} previous drops at ${hostName}, averaging ${hostAvgOrders} orders.`;
+        }
+        hostHistoryLine = `<div class="demandLine demandPreviewLine">${escapeHtml(text)}</div>`;
+      }
 
       let hostHint = "";
       if (hostMatch) {
@@ -1902,6 +1916,7 @@
       body.innerHTML = `
         <p class="demandPreviewLine">${escapeHtml(customerLine)}</p>
         <p class="demandPreviewLine">${escapeHtml(historyLine)}</p>
+        ${hostHistoryLine}
         <div class="demandChipWrap">
           <span class="demandChip ${signal.cls}">${escapeHtml(signal.label)}</span>
         </div>
@@ -1965,6 +1980,23 @@
           ? dropsWithOrderCounts.reduce((sum, d) => sum + Number(d.order_count || 0), 0) / dropsWithOrderCounts.length
           : 0;
 
+        /* Host history — drops previously run at the currently selected host */
+        const selectedHostId = document.getElementById('hostSelect')?.value || null;
+        const hostDrops = selectedHostId
+          ? state.drops.filter(d => d.host_id === selectedHostId)
+          : [];
+        const hostDropCount = hostDrops.length;
+        const hostAvgOrders = hostDropCount > 0
+          ? Math.round(
+              hostDrops.filter(d => d.order_count != null)
+                       .reduce((sum, d) => sum + Number(d.order_count || 0), 0) /
+              Math.max(1, hostDrops.filter(d => d.order_count != null).length)
+            )
+          : 0;
+        const selectedHost = selectedHostId
+          ? state.hosts.find(h => h.id === selectedHostId) || null
+          : null;
+
         /* Host suggestion — first match not already selected */
         const currentHostId = byId("hostSelect")?.value || "";
         const hostMatch = (state.hosts || []).find((host) => {
@@ -1982,7 +2014,10 @@
           customerCount,
           historicalDrops: historicalDropCount,
           avgOrders,
-          hostMatch
+          hostMatch,
+          hostDropCount,
+          hostAvgOrders,
+          selectedHost
         });
       } catch (err) {
         console.error("Demand preview failed:", err);
