@@ -329,6 +329,84 @@
       border-color:rgba(220,38,38,0.3);
       color:#7f1d1d;
     }
+
+    /* ── Modal terms step ── */
+    #modalStep2{ display:none; }
+
+    .termsCheckWrap{
+      display:flex;
+      align-items:flex-start;
+      gap:12px;
+      padding:14px 16px;
+      border:1px solid var(--h-border);
+      border-radius:14px;
+      background:rgba(15,23,42,0.02);
+      cursor:pointer;
+      user-select:none;
+    }
+
+    .termsCheckWrap:hover{
+      border-color:color-mix(in srgb, var(--h-accent) 30%, transparent);
+    }
+
+    .termsCheckWrap input[type="checkbox"]{
+      width:20px;
+      height:20px;
+      margin-top:1px;
+      flex:0 0 auto;
+      accent-color:var(--h-accent);
+      cursor:pointer;
+    }
+
+    .termsCheckLabel{
+      font-size:14px;
+      font-weight:700;
+      color:var(--h-text);
+      line-height:1.4;
+    }
+
+    .termsCheckLabel a{
+      color:#8B6B3F;
+      text-decoration:underline;
+    }
+
+    .termsCheckLabel a:hover{
+      color:var(--h-text);
+    }
+
+    .modalBackLink{
+      font-size:13px;
+      font-weight:700;
+      color:var(--h-accent);
+      background:none;
+      border:none;
+      cursor:pointer;
+      padding:0;
+      font-family:inherit;
+    }
+
+    .modalBackLink:hover{
+      text-decoration:underline;
+    }
+
+    .termsStepIntro{
+      display:grid;
+      gap:6px;
+    }
+
+    .termsStepIntro h4{
+      margin:0;
+      font-size:16px;
+      font-weight:800;
+      color:var(--h-text);
+    }
+
+    .termsStepIntro p{
+      margin:0;
+      font-size:13px;
+      color:var(--h-muted);
+      line-height:1.5;
+    }
   </style>
 </head>
 
@@ -384,36 +462,59 @@
         <button class="btnGhost" id="closeHostModalBtn" type="button">Close</button>
       </div>
 
-      <div class="studioGrid2">
-        <div class="field">
-          <label for="newHostName">Host Name</label>
-          <input id="newHostName" type="text" placeholder="Community Venue" />
+      <!-- Step 1: Host details -->
+      <div id="modalStep1">
+        <div class="studioGrid2">
+          <div class="field">
+            <label for="newHostName">Host Name</label>
+            <input id="newHostName" type="text" placeholder="Community Venue" />
+          </div>
+
+          <div class="field">
+            <label for="newHostType">Host Type</label>
+            <select id="newHostType">
+              <option value="club">Club</option>
+              <option value="pub">Pub</option>
+              <option value="school">School</option>
+              <option value="venue">Venue</option>
+              <option value="neighbourhood">Neighbourhood</option>
+              <option value="event">Event</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div class="field" style="grid-column:1 / -1;">
+            <label for="newHostPostcode">Postcode (optional)</label>
+            <input id="newHostPostcode" type="text" placeholder="RG10 0JP" />
+          </div>
         </div>
 
-        <div class="field">
-          <label for="newHostType">Host Type</label>
-          <select id="newHostType">
-            <option value="club">Club</option>
-            <option value="pub">Pub</option>
-            <option value="school">School</option>
-            <option value="venue">Venue</option>
-            <option value="neighbourhood">Neighbourhood</option>
-            <option value="event">Event</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
+        <div class="modalMessage" id="hostModalMessage"></div>
 
-        <div class="field" style="grid-column:1 / -1;">
-          <label for="newHostPostcode">Postcode (optional)</label>
-          <input id="newHostPostcode" type="text" placeholder="RG10 0JP" />
+        <div class="modalActions">
+          <button class="btnGhost" id="cancelHostBtn" type="button">Cancel</button>
+          <button class="btnAccent" id="continueToTermsBtn" type="button">Continue</button>
         </div>
       </div>
 
-      <div class="modalMessage" id="hostModalMessage"></div>
+      <!-- Step 2: Terms acceptance -->
+      <div id="modalStep2">
+        <div class="termsStepIntro">
+          <h4>One last step</h4>
+          <p>Before adding this host to Hearth, please confirm they understand their role. You can share the full host terms with them at any time.</p>
+        </div>
 
-      <div class="modalActions">
-        <button class="btnGhost" id="cancelHostBtn" type="button">Cancel</button>
-        <button class="btnAccent" id="saveHostBtn" type="button">Create Host</button>
+        <label class="termsCheckWrap" for="hostTermsCheckbox" style="margin-top:14px;">
+          <input type="checkbox" id="hostTermsCheckbox" />
+          <span class="termsCheckLabel">I confirm this host has agreed to Hearth's <a href="host-terms.html" target="_blank" rel="noopener noreferrer">host terms of participation</a></span>
+        </label>
+
+        <div class="modalMessage" id="hostTermsMessage"></div>
+
+        <div class="modalActions">
+          <button class="modalBackLink" id="backToStep1Btn" type="button">Back</button>
+          <button class="btnAccent" id="saveHostBtn" type="button" disabled>Add host</button>
+        </div>
       </div>
     </div>
   </div>
@@ -612,11 +713,38 @@
         msg.textContent = '';
         msg.classList.remove('error');
         msg.style.display = 'none';
+        // Reset to step 1
+        byId('modalStep1').style.display = '';
+        byId('modalStep2').style.display = 'none';
+        byId('hostTermsCheckbox').checked = false;
+        byId('saveHostBtn').disabled = true;
+        const termsMsg = byId('hostTermsMessage');
+        termsMsg.textContent = '';
+        termsMsg.classList.remove('error');
+        termsMsg.style.display = 'none';
         setTimeout(() => byId('newHostName').focus(), 50);
       }
 
       function closeModal(){
         byId('hostModal').classList.remove('open');
+      }
+
+      function showStep2(){
+        const name = byId('newHostName').value.trim();
+        if (!name){
+          const msg = byId('hostModalMessage');
+          msg.textContent = 'Host Name is required.';
+          msg.classList.add('error');
+          msg.style.display = 'block';
+          return;
+        }
+        byId('modalStep1').style.display = 'none';
+        byId('modalStep2').style.display = '';
+      }
+
+      function showStep1(){
+        byId('modalStep2').style.display = 'none';
+        byId('modalStep1').style.display = '';
       }
 
       function slugify(name){
@@ -635,20 +763,18 @@
         const hostType = byId('newHostType').value;
         const postcode = byId('newHostPostcode').value.trim() || null;
 
-        if (!name){
-          const msg = byId('hostModalMessage');
-          msg.textContent = 'Host Name is required.';
-          msg.classList.add('error');
-          msg.style.display = 'block';
-          return;
-        }
+        const btn = byId('saveHostBtn');
+        btn.disabled = true;
+        btn.textContent = 'Adding\u2026';
 
         const payload = {
           name,
           slug: slugify(name),
           host_type: hostType,
           postcode,
-          status: 'active'
+          status: 'active',
+          terms_accepted: true,
+          terms_accepted_at: new Date().toISOString()
         };
 
         const { error } = await sb
@@ -658,10 +784,12 @@
           .single();
 
         if (error){
-          const msg = byId('hostModalMessage');
+          const msg = byId('hostTermsMessage');
           msg.textContent = error.message || 'Unable to create host.';
           msg.classList.add('error');
           msg.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Add host';
           return;
         }
 
@@ -677,12 +805,20 @@
         byId('emptyAddHostBtn').addEventListener('click', openModal);
         byId('closeHostModalBtn').addEventListener('click', closeModal);
         byId('cancelHostBtn').addEventListener('click', closeModal);
+        byId('continueToTermsBtn').addEventListener('click', showStep2);
+        byId('backToStep1Btn').addEventListener('click', showStep1);
+
+        // Terms checkbox enables/disables the Add host button
+        byId('hostTermsCheckbox').addEventListener('change', () => {
+          byId('saveHostBtn').disabled = !byId('hostTermsCheckbox').checked;
+        });
+
         byId('saveHostBtn').addEventListener('click', async () => {
           try {
             await createHost();
           } catch (err){
             console.error(err);
-            const msg = byId('hostModalMessage');
+            const msg = byId('hostTermsMessage');
             msg.textContent = err.message || 'Unable to create host.';
             msg.classList.add('error');
             msg.style.display = 'block';
