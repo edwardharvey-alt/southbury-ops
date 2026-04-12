@@ -3789,7 +3789,8 @@
         slug: slugify(name),
         host_type: byId("newHostType").value,
         postcode: byId("newHostPostcode").value.trim() || null,
-        status: "active"
+        status: "active",
+        created_by_vendor_id: state.vendorId
       };
 
       const { data, error } = await supabase
