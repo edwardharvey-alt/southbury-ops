@@ -3820,15 +3820,78 @@
           return;
         }
 
-        content.innerHTML = data.map((d) => {
+        content.innerHTML = "";
+
+        data.forEach((d) => {
           const timing = d.delivery_start && d.delivery_end
             ? `${formatDateShort(d.delivery_start)} ${formatTimeOnly(d.delivery_start)}\u2013${formatTimeOnly(d.delivery_end)}`
             : "Timing not set";
-          return `<div data-ew-sibling-id="${escapeHtml(d.id)}" style="padding:6px 0;font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid rgba(15,23,42,0.06);">
-            <span><strong>${escapeHtml(d.name || "\u2014")}</strong> \u00b7 ${escapeHtml(timing)}</span>
-            <button class="btnGhost js-remove-window" type="button" data-drop-id="${escapeHtml(d.id)}" style="flex:0 0 auto;">Remove</button>
-          </div>`;
-        }).join("");
+
+          const row = document.createElement("div");
+          row.style.cssText = "padding:6px 0;font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid rgba(15,23,42,0.06);";
+
+          const infoSpan = document.createElement("span");
+          const strong = document.createElement("strong");
+          strong.textContent = d.name || "\u2014";
+          infoSpan.appendChild(strong);
+          infoSpan.appendChild(document.createTextNode(" \u00b7 " + timing));
+
+          const removeBtn = document.createElement("button");
+          removeBtn.className = "btnGhost";
+          removeBtn.type = "button";
+          removeBtn.style.cssText = "flex:0 0 auto;";
+          removeBtn.textContent = "Remove";
+
+          removeBtn.addEventListener("click", () => {
+            removeBtn.style.display = "none";
+
+            const confirmSpan = document.createElement("span");
+            confirmSpan.style.cssText = "font-size:11px;font-weight:700;white-space:nowrap;display:inline-flex;gap:8px;align-items:center;";
+            confirmSpan.appendChild(document.createTextNode("Remove this window? "));
+
+            const confirmLink = document.createElement("a");
+            confirmLink.href = "#";
+            confirmLink.textContent = "Confirm";
+            confirmLink.style.cssText = "color:var(--h-bad);text-decoration:underline;";
+
+            const cancelLink = document.createElement("a");
+            cancelLink.href = "#";
+            cancelLink.textContent = "Cancel";
+            cancelLink.style.cssText = "color:var(--h-muted);text-decoration:underline;";
+
+            cancelLink.addEventListener("click", (ce) => {
+              ce.preventDefault();
+              confirmSpan.remove();
+              removeBtn.style.display = "";
+            });
+
+            confirmLink.addEventListener("click", async (ce) => {
+              ce.preventDefault();
+              try {
+                const { error: delErr } = await supabase
+                  .from("drops")
+                  .delete()
+                  .eq("id", d.id);
+                if (delErr) throw delErr;
+
+                existingWindowsLoaded = false;
+                await renderExistingWindows();
+              } catch (err) {
+                console.error("Delete window error:", err);
+                showError(err.message || "Unable to remove window.");
+              }
+            });
+
+            confirmSpan.appendChild(confirmLink);
+            confirmSpan.appendChild(document.createTextNode(" "));
+            confirmSpan.appendChild(cancelLink);
+            row.appendChild(confirmSpan);
+          });
+
+          row.appendChild(infoSpan);
+          row.appendChild(removeBtn);
+          content.appendChild(row);
+        });
 
         existingWindowsLoaded = true;
       } catch (err) {
@@ -4614,60 +4677,9 @@
         }
       });
 
-      /* T4-15 — Document-level delegation for event window Remove / Confirm / Cancel.
-         Delegated from document so it works regardless of DOM rebuilds inside
-         #existingWindowsContent or #existingWindowsList. */
-      document.addEventListener("click", async (e) => {
-        /* Remove button — show inline confirm prompt */
-        const removeBtn = e.target.closest(".js-remove-window");
-        if (removeBtn) {
-          const dropId = removeBtn.dataset.dropId;
-          if (!dropId) return;
-          const row = removeBtn.closest("[data-ew-sibling-id]");
-          if (!row) return;
-          removeBtn.style.display = "none";
-          const confirmWrap = document.createElement("span");
-          confirmWrap.style.cssText = "font-size:11px;font-weight:700;white-space:nowrap;display:inline-flex;gap:8px;align-items:center;";
-          confirmWrap.innerHTML = `Remove this window? <a href="#" class="js-confirm-remove-window" data-drop-id="${escapeHtml(dropId)}" style="color:var(--h-bad);text-decoration:underline;">Confirm</a> <a href="#" class="js-cancel-remove-window" style="color:var(--h-muted);text-decoration:underline;">Cancel</a>`;
-          row.appendChild(confirmWrap);
-          return;
-        }
-
-        /* Cancel — restore Remove button */
-        const cancelLink = e.target.closest(".js-cancel-remove-window");
-        if (cancelLink) {
-          e.preventDefault();
-          const row = cancelLink.closest("[data-ew-sibling-id]");
-          if (!row) return;
-          const wrap = cancelLink.closest("span");
-          if (wrap) wrap.remove();
-          const btn = row.querySelector(".js-remove-window");
-          if (btn) btn.style.display = "";
-          return;
-        }
-
-        /* Confirm — delete the sibling drop and re-render */
-        const confirmLink = e.target.closest(".js-confirm-remove-window");
-        if (confirmLink) {
-          e.preventDefault();
-          const dropId = confirmLink.dataset.dropId;
-          if (!dropId) return;
-          try {
-            const { error: delErr } = await supabase
-              .from("drops")
-              .delete()
-              .eq("id", dropId);
-            if (delErr) throw delErr;
-
-            /* Re-render — renderExistingWindows handles zero-sibling cleanup */
-            existingWindowsLoaded = false;
-            await renderExistingWindows();
-          } catch (err) {
-            console.error("Delete window error:", err);
-            showError(err.message || "Unable to remove window.");
-          }
-        }
-      });
+      /* T4-15 — Remove/Confirm/Cancel handlers for existing event windows
+         are now attached directly to each button via addEventListener inside
+         renderExistingWindows(). No document-level delegation needed. */
     }
 
     async function init() {
