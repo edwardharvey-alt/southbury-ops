@@ -662,9 +662,463 @@
 
   <!-- ── Page JS (to be added in next session) ── -->
   <script>
-    // JS will be added here: resolveVendor, loadHost, populateForm,
-    // save logic, tab switching, history tab, service window / comms
-    // channel dynamic rows, audience tag toggle, toast.
+    (function () {
+      "use strict";
+
+      var _sb = supabase.createClient(
+        window.HEARTH_CONFIG.SUPABASE_URL,
+        window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+      );
+
+      var state = { vendorId: null, hostId: null, host: null };
+      var historyLoaded = false;
+
+      /* ── Helpers ── */
+      function byId(id) { return document.getElementById(id); }
+
+      function escapeHtml(str) {
+        return String(str != null ? str : "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function getUrlParam(name) {
+        return new URLSearchParams(window.location.search).get(name);
+      }
+
+      var toastTimer = null;
+      function showToast(message, isError) {
+        var el = byId("toast");
+        el.textContent = message;
+        el.style.background = isError ? "#dc2626" : "#0f172a";
+        el.classList.add("visible");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () {
+          el.classList.remove("visible");
+        }, 3000);
+      }
+
+      function fmtDate(v) {
+        if (!v) return "\u2014";
+        var d = new Date(v);
+        if (Number.isNaN(d.getTime())) return "\u2014";
+        return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      }
+
+      function fmtCurrency(pence) {
+        return "\u00a3" + (Number(pence || 0) / 100).toFixed(2);
+      }
+
+      /* ── Vendor resolution (CLAUDE.md pattern) ── */
+      async function resolveVendor() {
+        var explicitVendorId = getUrlParam("vendor_id") || window.HEARTH_VENDOR_ID || null;
+        var explicitSlug = getUrlParam("vendor") || getUrlParam("vendor_slug") || null;
+
+        if (explicitVendorId) {
+          var r1 = await _sb.from("vendors").select("*").eq("id", explicitVendorId).maybeSingle();
+          if (r1.data) return r1.data;
+        }
+
+        if (explicitSlug) {
+          var fields = ["slug", "vendor_slug"];
+          for (var i = 0; i < fields.length; i++) {
+            try {
+              var r2 = await _sb.from("vendors").select("*").eq(fields[i], explicitSlug).maybeSingle();
+              if (r2.data) return r2.data;
+            } catch (e) { /* try next field */ }
+          }
+          return null;
+        }
+
+        var r3 = await _sb.from("vendors").select("*").limit(1);
+        if (r3.error) throw r3.error;
+        return (r3.data && r3.data[0]) || null;
+      }
+
+      /* ── Populate form from host record ── */
+      function populateForm(host) {
+        byId("host-name").textContent = host.name || "Unnamed host";
+        byId("host-type-badge").textContent = (host.host_type || "other").replace(/_/g, " ");
+        document.title = (host.name || "Host Profile") + " \u2014 Hearth";
+
+        byId("host-name-field").value = host.name || "";
+        byId("host-type-field").value = host.host_type || "other";
+        byId("host-status-field").value = host.status || "active";
+        byId("relationship-status-field").value = host.relationship_status || "prospect";
+        byId("onboarding-complete-field").checked = Boolean(host.onboarding_completed);
+
+        byId("host-postcode-field").value = host.postcode || "";
+        byId("host-address-field").value = host.address_summary || "";
+
+        byId("contact-name-field").value = host.contact_name || "";
+        byId("contact-email-field").value = host.contact_email || "";
+        byId("contact-phone-field").value = host.contact_phone || "";
+        byId("website-url-field").value = host.website_url || "";
+
+        var socials = host.social_handles;
+        if (typeof socials === "string") {
+          try { socials = JSON.parse(socials); } catch (e) { socials = null; }
+        }
+        socials = socials || {};
+        byId("instagram-handle-field").value = socials.instagram || "";
+        byId("facebook-handle-field").value = socials.facebook || "";
+
+        byId("audience-description-field").value = host.audience_description || "";
+        byId("audience-size-field").value = host.estimated_audience_size != null ? host.estimated_audience_size : "";
+
+        var tags = host.audience_tags;
+        if (typeof tags === "string") {
+          try { tags = JSON.parse(tags); } catch (e) { tags = null; }
+        }
+        tags = Array.isArray(tags) ? tags : [];
+        var pills = byId("audience-tags-container").querySelectorAll(".tagPill");
+        for (var p = 0; p < pills.length; p++) {
+          if (tags.indexOf(pills[p].getAttribute("data-tag")) !== -1) {
+            pills[p].classList.add("selected");
+          }
+        }
+
+        var windows = host.service_windows;
+        if (typeof windows === "string") {
+          try { windows = JSON.parse(windows); } catch (e) { windows = null; }
+        }
+        if (Array.isArray(windows)) {
+          for (var w = 0; w < windows.length; w++) {
+            addServiceWindowRow(windows[w]);
+          }
+        }
+
+        var channels = host.comms_channels;
+        if (typeof channels === "string") {
+          try { channels = JSON.parse(channels); } catch (e) { channels = null; }
+        }
+        if (Array.isArray(channels)) {
+          for (var c = 0; c < channels.length; c++) {
+            addCommsChannelRow(channels[c]);
+          }
+        }
+
+        byId("internal-notes-field").value = host.notes_internal || "";
+      }
+
+      /* ── Audience tag pill toggle ── */
+      byId("audience-tags-container").addEventListener("click", function (e) {
+        var pill = e.target.closest(".tagPill");
+        if (pill) pill.classList.toggle("selected");
+      });
+
+      /* ── Service window rows ── */
+      var DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+      function addServiceWindowRow(data) {
+        data = data || {};
+        var container = byId("service-windows-container");
+        var row = document.createElement("div");
+        row.className = "dynamicRow";
+
+        var dayOpts = DAYS.map(function (d) {
+          var sel = (data.day_of_week === d) ? " selected" : "";
+          return '<option value="' + escapeHtml(d) + '"' + sel + '>' + escapeHtml(d) + '</option>';
+        }).join("");
+
+        row.innerHTML =
+          '<select>' + '<option value="">Day…</option>' + dayOpts + '</select>' +
+          '<input type="time" value="' + escapeHtml(data.time_start || "") + '" />' +
+          '<input type="time" value="' + escapeHtml(data.time_end || "") + '" />' +
+          '<input type="text" placeholder="e.g. Friday bar night" value="' + escapeHtml(data.occasion_label || "") + '" />' +
+          '<input type="text" placeholder="e.g. Busier on match nights" value="' + escapeHtml(data.notes || "") + '" />' +
+          '<button type="button" class="removeRowBtn">\u00d7</button>';
+
+        row.querySelector(".removeRowBtn").addEventListener("click", function () {
+          row.remove();
+        });
+
+        container.appendChild(row);
+      }
+
+      byId("add-window-btn").addEventListener("click", function () {
+        addServiceWindowRow(null);
+      });
+
+      /* ── Comms channel rows ── */
+      var COMMS_TYPES = ["whatsapp", "email", "newsletter", "poster", "social", "other"];
+
+      function addCommsChannelRow(data) {
+        data = data || {};
+        var container = byId("comms-channels-container");
+        var row = document.createElement("div");
+        row.className = "dynamicRow commsRow";
+
+        var typeOpts = COMMS_TYPES.map(function (t) {
+          var label = t.charAt(0).toUpperCase() + t.slice(1);
+          var sel = (data.type === t) ? " selected" : "";
+          return '<option value="' + escapeHtml(t) + '"' + sel + '>' + escapeHtml(label) + '</option>';
+        }).join("");
+
+        row.innerHTML =
+          '<select>' + '<option value="">Type…</option>' + typeOpts + '</select>' +
+          '<input type="text" placeholder="e.g. Members WhatsApp group" value="' + escapeHtml(data.detail || "") + '" />' +
+          '<input type="number" min="0" placeholder="200" value="' + escapeHtml(data.estimated_reach != null ? data.estimated_reach : "") + '" />' +
+          '<button type="button" class="removeRowBtn">\u00d7</button>';
+
+        row.querySelector(".removeRowBtn").addEventListener("click", function () {
+          row.remove();
+        });
+
+        container.appendChild(row);
+      }
+
+      byId("add-channel-btn").addEventListener("click", function () {
+        addCommsChannelRow(null);
+      });
+
+      /* ── Save handler ── */
+      byId("save-profile-btn").addEventListener("click", async function () {
+        var name = byId("host-name-field").value.trim();
+        if (!name) {
+          showToast("Host name is required.", true);
+          return;
+        }
+
+        var igVal = byId("instagram-handle-field").value.trim();
+        var fbVal = byId("facebook-handle-field").value.trim();
+        var socialHandles = (igVal || fbVal) ? { instagram: igVal, facebook: fbVal } : null;
+
+        var activePills = byId("audience-tags-container").querySelectorAll(".tagPill.selected");
+        var audienceTags = [];
+        for (var i = 0; i < activePills.length; i++) {
+          audienceTags.push(activePills[i].getAttribute("data-tag"));
+        }
+        if (!audienceTags.length) audienceTags = null;
+
+        var sizeVal = byId("audience-size-field").value;
+        var estimatedAudienceSize = sizeVal !== "" ? parseInt(sizeVal, 10) : null;
+        if (estimatedAudienceSize !== null && Number.isNaN(estimatedAudienceSize)) estimatedAudienceSize = null;
+
+        /* Collect service windows */
+        var windowRows = byId("service-windows-container").querySelectorAll(".dynamicRow");
+        var serviceWindows = [];
+        for (var w = 0; w < windowRows.length; w++) {
+          var wInputs = windowRows[w].querySelectorAll("select, input");
+          var day = wInputs[0] ? wInputs[0].value : "";
+          if (!day) continue;
+          serviceWindows.push({
+            day_of_week: day,
+            time_start: wInputs[1] ? wInputs[1].value : "",
+            time_end: wInputs[2] ? wInputs[2].value : "",
+            occasion_label: wInputs[3] ? wInputs[3].value.trim() : "",
+            notes: wInputs[4] ? wInputs[4].value.trim() : ""
+          });
+        }
+        if (!serviceWindows.length) serviceWindows = null;
+
+        /* Collect comms channels */
+        var channelRows = byId("comms-channels-container").querySelectorAll(".dynamicRow");
+        var commsChannels = [];
+        for (var c = 0; c < channelRows.length; c++) {
+          var cInputs = channelRows[c].querySelectorAll("select, input");
+          var detail = cInputs[1] ? cInputs[1].value.trim() : "";
+          if (!detail) continue;
+          var reach = cInputs[2] ? parseInt(cInputs[2].value, 10) : null;
+          if (reach !== null && Number.isNaN(reach)) reach = null;
+          commsChannels.push({
+            type: cInputs[0] ? cInputs[0].value : "",
+            detail: detail,
+            estimated_reach: reach
+          });
+        }
+        if (!commsChannels.length) commsChannels = null;
+
+        var payload = {
+          name: name,
+          host_type: byId("host-type-field").value,
+          status: byId("host-status-field").value,
+          relationship_status: byId("relationship-status-field").value,
+          onboarding_completed: byId("onboarding-complete-field").checked,
+          postcode: byId("host-postcode-field").value.trim() || null,
+          address_summary: byId("host-address-field").value.trim() || null,
+          contact_name: byId("contact-name-field").value.trim() || null,
+          contact_email: byId("contact-email-field").value.trim() || null,
+          contact_phone: byId("contact-phone-field").value.trim() || null,
+          website_url: byId("website-url-field").value.trim() || null,
+          social_handles: socialHandles,
+          audience_description: byId("audience-description-field").value.trim() || null,
+          estimated_audience_size: estimatedAudienceSize,
+          audience_tags: audienceTags,
+          service_windows: serviceWindows,
+          comms_channels: commsChannels,
+          notes_internal: byId("internal-notes-field").value.trim() || null
+        };
+
+        try {
+          var result = await _sb.from("hosts").update(payload).eq("id", state.hostId);
+          if (result.error) throw result.error;
+
+          /* Update page header to reflect saved name/type */
+          byId("host-name").textContent = name;
+          byId("host-type-badge").textContent = (payload.host_type || "other").replace(/_/g, " ");
+          document.title = name + " \u2014 Hearth";
+
+          showToast("Host profile saved.");
+        } catch (err) {
+          console.error("Save error:", err);
+          showToast("Error saving profile. Please try again.", true);
+        }
+      });
+
+      /* ── Tab switching ── */
+      var tabBtns = document.querySelectorAll("#tabBar .tabBtn");
+      for (var t = 0; t < tabBtns.length; t++) {
+        tabBtns[t].addEventListener("click", function () {
+          var target = this.getAttribute("data-tab");
+          for (var j = 0; j < tabBtns.length; j++) {
+            tabBtns[j].classList.toggle("active", tabBtns[j] === this);
+          }
+          byId("tab-profile").style.display = (target === "profile") ? "block" : "none";
+          byId("tab-history").style.display = (target === "history") ? "block" : "none";
+
+          if (target === "history" && !historyLoaded) {
+            renderHistory();
+          }
+        });
+      }
+
+      /* ── History tab ── */
+      async function renderHistory() {
+        historyLoaded = true;
+        var content = byId("history-content");
+        content.innerHTML = '<p class="historyEmpty">Loading drop history\u2026</p>';
+
+        try {
+          var result = await _sb
+            .from("v_drop_summary")
+            .select("*")
+            .eq("vendor_id", state.vendorId)
+            .eq("host_id", state.hostId);
+
+          if (result.error) {
+            /* NOTE: v_drop_summary may not include host_id column yet.
+               If the error mentions an unknown column, surface a clear message. */
+            if (result.error.message && result.error.message.indexOf("host_id") !== -1) {
+              content.innerHTML = '<p class="historyEmpty">Drop history by host is not yet available.</p>';
+              return;
+            }
+            throw result.error;
+          }
+
+          var drops = result.data || [];
+
+          if (!drops.length) {
+            content.innerHTML = '<p class="historyEmpty">No drops yet at this host. Once you\'ve run a drop here, results will appear.</p>';
+            return;
+          }
+
+          /* Sort by date descending */
+          drops.sort(function (a, b) {
+            var da = new Date(a.delivery_start || a.drop_date || 0).getTime();
+            var db = new Date(b.delivery_start || b.drop_date || 0).getTime();
+            return db - da;
+          });
+
+          var totalOrders = 0;
+          var totalRevenue = 0;
+
+          var rowsHtml = drops.map(function (d) {
+            var orders = Number(d.order_count || 0);
+            /* total_revenue_pence is the field name in v_drop_summary */
+            var revPence = Number(d.total_revenue_pence || d.revenue_pence || 0);
+            var capTotal = Number(d.capacity_units_total || 0);
+            var capUsed = Number(d.capacity_units_used || 0);
+            var fill = capTotal > 0 ? Math.round((capUsed / capTotal) * 100) : 0;
+
+            totalOrders += orders;
+            totalRevenue += revPence;
+
+            return "<tr>" +
+              "<td>" + escapeHtml(d.name || d.drop_name || "\u2014") + "</td>" +
+              "<td>" + fmtDate(d.delivery_start || d.drop_date) + "</td>" +
+              "<td>" + orders + "</td>" +
+              "<td>" + fmtCurrency(revPence) + "</td>" +
+              "<td>" + fill + "%</td>" +
+              "</tr>";
+          }).join("");
+
+          var totalsRow = '<tr class="totalsRow">' +
+            "<td>Total</td><td></td>" +
+            "<td>" + totalOrders + "</td>" +
+            "<td>" + fmtCurrency(totalRevenue) + "</td>" +
+            "<td></td></tr>";
+
+          content.innerHTML =
+            '<table class="historyTable">' +
+            "<thead><tr>" +
+            "<th>Drop Name</th><th>Date</th><th>Orders</th><th>Revenue (\u00a3)</th><th>Capacity Fill %</th>" +
+            "</tr></thead>" +
+            "<tbody>" + rowsHtml + totalsRow + "</tbody>" +
+            "</table>";
+        } catch (err) {
+          console.error("History error:", err);
+          content.innerHTML = '<p class="historyEmpty">Unable to load drop history.</p>';
+        }
+      }
+
+      /* ── Boot ── */
+      async function boot() {
+        try {
+          /* Resolve vendor */
+          var vendor = await resolveVendor();
+          if (!vendor) {
+            var slug = getUrlParam("vendor") || getUrlParam("vendor_slug");
+            byId("loadingState").style.display = "none";
+            byId("errorState").style.display = "block";
+            byId("errorState").querySelector("h2").textContent = slug
+              ? 'Vendor "' + slug + '" not found'
+              : "No vendor found";
+            return;
+          }
+          state.vendorId = vendor.id;
+          byId("headerVendorSub").textContent = vendor.display_name || vendor.name || "Host profile";
+
+          /* Set back links with vendor context */
+          byId("back-link").href = HearthNav.withVendor("hosts.html");
+          byId("error-back-link").href = HearthNav.withVendor("hosts.html");
+
+          /* Read host id from URL */
+          state.hostId = getUrlParam("host");
+          if (!state.hostId) {
+            byId("loadingState").style.display = "none";
+            byId("errorState").style.display = "block";
+            return;
+          }
+
+          /* Load host record */
+          var hostResult = await _sb.from("hosts").select("*").eq("id", state.hostId).single();
+          if (hostResult.error || !hostResult.data) {
+            byId("loadingState").style.display = "none";
+            byId("errorState").style.display = "block";
+            return;
+          }
+
+          state.host = hostResult.data;
+
+          /* Show content, hide loading */
+          byId("loadingState").style.display = "none";
+          byId("profileShell").style.display = "grid";
+
+          populateForm(state.host);
+        } catch (err) {
+          console.error("Boot error:", err);
+          byId("loadingState").style.display = "none";
+          byId("errorState").style.display = "block";
+          byId("errorState").querySelector("p").textContent = err.message || "Something went wrong loading this host.";
+        }
+      }
+
+      boot();
+    })();
   </script>
   <script>HearthNav.decorateLinks && HearthNav.decorateLinks();</script>
 </body>
