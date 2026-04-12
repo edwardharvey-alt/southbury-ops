@@ -868,6 +868,7 @@
                             <tr>
                               <th>From</th>
                               <th>To</th>
+                              <th>Close</th>
                               <th></th>
                             </tr>
                           </thead>
@@ -949,7 +950,7 @@
                     <div class="previewList" id="seriesPreviewList"></div>
                   </div>
 
-                  <div style="margin-top:12px;">
+                  <div id="orderOpeningSection" style="margin-top:12px;">
                     <div class="helperText" style="margin-bottom:6px;">Order Opening</div>
                     <div class="openChoice">
                       <label><input type="radio" name="openPattern" value="immediate" checked /> Open immediately</label>
@@ -967,7 +968,7 @@
                     </div>
                   </div>
 
-                  <div class="studioGrid2" style="margin-top:10px;">
+                  <div id="closeOrdersSection" class="studioGrid2" style="margin-top:10px;">
                     <div class="field">
                       <label for="closesAtDate">Close Orders</label>
                       <div class="studioGrid2" style="gap:8px;">
@@ -2847,12 +2848,17 @@
           byId("eventWindowsChoice").classList.add("hidden");
           byId("eventWindowsBlock").classList.add("hidden");
           byId("existingWindowsList").classList.remove("hidden");
+          byId("orderOpeningSection").classList.add("hidden");
+          byId("scheduledOpenFields").classList.add("hidden");
+          byId("closeOrdersSection").classList.add("hidden");
           renderExistingWindows();
         } else {
           byId("existingWindowsList").classList.add("hidden");
           byId("eventWindowsChoice").classList.remove("hidden");
           const isMultiple = document.querySelector('input[name="eventWindowPattern"]:checked')?.value === "multiple";
           byId("eventWindowsBlock").classList.toggle("hidden", !isMultiple);
+          byId("orderOpeningSection").classList.remove("hidden");
+          byId("closeOrdersSection").classList.remove("hidden");
         }
       }
     }
@@ -3692,8 +3698,15 @@
       tr.innerHTML = `
         <td><input class="js-ew-start" type="time" /></td>
         <td><input class="js-ew-end" type="time" /></td>
+        <td><input class="js-ew-close" type="time" /></td>
         <td><button class="btnGhost js-remove-ew-row" type="button">Remove</button></td>
       `;
+      /* Pre-populate Close with From value — orders close when service begins by default */
+      const startInput = tr.querySelector(".js-ew-start");
+      const closeInput = tr.querySelector(".js-ew-close");
+      startInput.addEventListener("change", () => {
+        if (!closeInput.value) closeInput.value = startInput.value;
+      });
       body.appendChild(tr);
     }
 
@@ -3717,8 +3730,9 @@
       for (const row of rows) {
         const startVal = row.querySelector(".js-ew-start")?.value;
         const endVal = row.querySelector(".js-ew-end")?.value;
+        const closeVal = row.querySelector(".js-ew-close")?.value;
         if (!startVal || !endVal) continue;
-        windowEntries.push({ start: startVal, end: endVal });
+        windowEntries.push({ start: startVal, end: endVal, close: closeVal });
       }
       if (!windowEntries.length) throw new Error("Each window needs a start and end time.");
 
@@ -3763,11 +3777,12 @@
       for (const entry of windowEntries) {
         const deliveryStart = `${parentDate}T${entry.start}:00`;
         const deliveryEnd = `${parentDate}T${entry.end}:00`;
+        const closesAt = entry.close ? `${parentDate}T${entry.close}:00` : deliveryStart;
         const timingOverride = {
           delivery_start: deliveryStart,
           delivery_end: deliveryEnd,
           opens_at: new Date().toISOString(),
-          closes_at: deliveryStart
+          closes_at: closesAt
         };
         await createEventWindow(state.selectedDropId, timingOverride, windowGroupId);
       }
