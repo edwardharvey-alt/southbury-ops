@@ -3422,6 +3422,7 @@
       state.selectedDropId = data.id;
       state.currentStage = "basics";
       await refreshAll();
+      isDirty = false;
       showInlineSuccess("New draft drop created");
     }
 
@@ -3501,6 +3502,7 @@
       state.selectedDropId = insertedDrop.id;
       state.currentStage = "timing";
       await refreshAll();
+      isDirty = false;
       showDuplicateBanner();
     }
 
@@ -3649,6 +3651,7 @@
     }
 
     function markDirty() {
+      isDirty = true;
       ensureRecurringStartDateFromDropDate();
       setSaveState("default", "Unsaved changes");
       state.drop = { ...state.drop, ...readDropFromForm() };
@@ -4166,6 +4169,7 @@
           try {
             await loadSelectedDrop();
             state.currentStage = "basics";
+            isDirty = false;
             renderEverything();
           } catch (err) {
             console.error(err);
