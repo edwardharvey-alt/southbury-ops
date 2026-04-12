@@ -3618,7 +3618,8 @@
         }
       }
 
-      const baseName = (sourceDrop.name || "").replace(/ \u2014 Window \d+$/, "");
+      const baseName = (sourceDrop.name || "").replace(/\s*\u2014\s*Window\s+\d+$/i, "");
+      console.log("[createEventWindow] raw name:", sourceDrop.name, "| cleaned base:", baseName);
       const windowName = `${baseName} \u2014 Window ${windowCount + 1}`;
       const windowSlugBase = slugify(windowName);
 
@@ -3825,7 +3826,7 @@
             : "Timing not set";
           return `<div data-ew-sibling-id="${escapeHtml(d.id)}" style="padding:6px 0;font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid rgba(15,23,42,0.06);">
             <span><strong>${escapeHtml(d.name || "\u2014")}</strong> \u00b7 ${escapeHtml(timing)}</span>
-            <button class="btnGhost js-remove-ew-sibling" type="button" style="flex:0 0 auto;">Remove</button>
+            <button class="btnGhost js-remove-ew-sibling" type="button" data-drop-id="${escapeHtml(d.id)}" style="flex:0 0 auto;">Remove</button>
           </div>`;
         }).join("");
 
@@ -3836,18 +3837,22 @@
       }
     }
 
-    /* Delegated click handler for existing window Remove / Confirm / Cancel */
-    byId("existingWindowsContent")?.addEventListener("click", async (e) => {
+    /* Delegated click handler on stable parent #existingWindowsList
+       for Remove / Confirm / Cancel on dynamically rendered sibling rows */
+    byId("existingWindowsList")?.addEventListener("click", async (e) => {
+      /* Identify the row via the sibling-id data attribute */
       const row = e.target.closest("[data-ew-sibling-id]");
       if (!row) return;
-      const siblingId = row.dataset.ewSiblingId;
 
-      /* Remove button — show inline confirm */
-      if (e.target.closest(".js-remove-ew-sibling")) {
-        const removeBtn = row.querySelector(".js-remove-ew-sibling");
-        if (removeBtn) removeBtn.style.display = "none";
+      /* Remove button — read drop id from data-drop-id on the button */
+      const removeBtn = e.target.closest(".js-remove-ew-sibling");
+      if (removeBtn) {
+        const dropId = removeBtn.dataset.dropId;
+        if (!dropId) return;
+        removeBtn.style.display = "none";
         const confirmWrap = document.createElement("span");
         confirmWrap.className = "js-ew-confirm-wrap";
+        confirmWrap.dataset.dropId = dropId;
         confirmWrap.style.cssText = "font-size:11px;font-weight:700;white-space:nowrap;display:inline-flex;gap:8px;align-items:center;";
         confirmWrap.innerHTML = `Remove this window? <a href="#" class="js-ew-confirm" style="color:var(--h-bad);text-decoration:underline;">Confirm</a> <a href="#" class="js-ew-cancel" style="color:var(--h-muted);text-decoration:underline;">Cancel</a>`;
         row.appendChild(confirmWrap);
@@ -3859,19 +3864,23 @@
         e.preventDefault();
         const wrap = row.querySelector(".js-ew-confirm-wrap");
         if (wrap) wrap.remove();
-        const removeBtn = row.querySelector(".js-remove-ew-sibling");
-        if (removeBtn) removeBtn.style.display = "";
+        const btn = row.querySelector(".js-remove-ew-sibling");
+        if (btn) btn.style.display = "";
         return;
       }
 
       /* Confirm — delete the sibling drop and re-render */
-      if (e.target.closest(".js-ew-confirm")) {
+      const confirmLink = e.target.closest(".js-ew-confirm");
+      if (confirmLink) {
         e.preventDefault();
+        const wrap = confirmLink.closest(".js-ew-confirm-wrap");
+        const dropId = wrap?.dataset.dropId;
+        if (!dropId) return;
         try {
           const { error: delErr } = await supabase
             .from("drops")
             .delete()
-            .eq("id", siblingId);
+            .eq("id", dropId);
           if (delErr) throw delErr;
 
           /* Re-render — renderExistingWindows handles zero-sibling cleanup */
