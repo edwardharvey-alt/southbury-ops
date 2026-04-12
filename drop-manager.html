@@ -877,6 +877,46 @@
                     </div>
                   </div>
 
+                  <!-- Event Windows section (T4-15) — only shown when host_id is set -->
+                  <div id="eventWindowsSection" class="hidden" style="margin-top:14px;">
+                    <div class="helperText" style="margin-bottom:6px;">Event windows</div>
+                    <p class="stageSectionSub" style="margin:0 0 8px;">Run multiple sittings for the same event.</p>
+
+                    <!-- Radio choice — hidden when window_group_id already set -->
+                    <div id="eventWindowsChoice" class="repeatChoice">
+                      <label><input type="radio" name="eventWindowPattern" value="single" checked /> Single window</label>
+                      <label><input type="radio" name="eventWindowPattern" value="multiple" /> Multiple windows</label>
+                    </div>
+
+                    <!-- Dynamic rows for additional windows -->
+                    <div id="eventWindowsBlock" class="hidden">
+                      <div class="scheduleTableWrap">
+                        <table class="scheduleTable">
+                          <thead>
+                            <tr>
+                              <th>Date</th>
+                              <th>From</th>
+                              <th>To</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody id="eventWindowRowsBody"></tbody>
+                        </table>
+                      </div>
+                      <button class="btnGhost" id="addEventWindowRowBtn" type="button" style="margin-top:6px;">+ Add another window</button>
+                      <div style="margin-top:10px;">
+                        <button class="btnAccent" id="createEventWindowsBtn" type="button">Create windows</button>
+                      </div>
+                      <div class="helperText" id="eventWindowsMessage" style="margin-top:8px;"></div>
+                    </div>
+
+                    <!-- Read-only list when window_group_id already exists -->
+                    <div id="existingWindowsList" class="hidden">
+                      <div class="helperText" style="margin-bottom:6px;">Existing windows for this event.</div>
+                      <div id="existingWindowsContent"></div>
+                    </div>
+                  </div>
+
                   <div class="repeatChoice" style="margin-top:12px;">
                     <label><input type="radio" name="repeatPattern" value="one_off" checked /> One-off drop</label>
                     <label><input type="radio" name="repeatPattern" value="recurring" /> Recurring</label>
@@ -1092,7 +1132,6 @@
                     </div>
                     <div class="qrWrap" id="qrWrap"></div>
                     <hr style="border:none; border-top:1px solid var(--h-border); margin:14px 0 10px;" />
-                    <button class="btnGhost" id="createEventWindowBtn" type="button" style="display:none;">Create another window for this event</button>
                   </div>
 
                   <div class="stageSection">
@@ -2131,6 +2170,7 @@
     }
 
     async function loadSelectedDrop() {
+      existingWindowsLoaded = false; // reset so existing windows are re-fetched for new drop
       if (!state.selectedDropId) {
         state.drop = null;
         state.selectedDropSummary = null;
@@ -2796,6 +2836,26 @@
 
       const openPattern = getOpenPattern();
       byId("scheduledOpenFields").classList.toggle("hidden", openPattern !== "scheduled");
+
+      /* Event windows (T4-15) — show section only when a host is selected */
+      const liveDrop = getLiveDropFromForm() || state.drop;
+      const hasHost = Boolean(liveDrop?.host_id || byId("hostSelect")?.value);
+      byId("eventWindowsSection").classList.toggle("hidden", !hasHost);
+
+      if (hasHost && liveDrop) {
+        const hasGroupId = Boolean(liveDrop.window_group_id || state.drop?.window_group_id);
+        if (hasGroupId) {
+          byId("eventWindowsChoice").classList.add("hidden");
+          byId("eventWindowsBlock").classList.add("hidden");
+          byId("existingWindowsList").classList.remove("hidden");
+          renderExistingWindows();
+        } else {
+          byId("existingWindowsList").classList.add("hidden");
+          byId("eventWindowsChoice").classList.remove("hidden");
+          const isMultiple = document.querySelector('input[name="eventWindowPattern"]:checked')?.value === "multiple";
+          byId("eventWindowsBlock").classList.toggle("hidden", !isMultiple);
+        }
+      }
     }
 
     function ensureScheduleRows() {
@@ -2917,8 +2977,7 @@
         readinessEl.innerHTML = `<div class="emptyState">No drop selected.</div>`;
         share.textContent = "No drop link yet.";
         renderQrCode("");
-        const ewBtnEarly = byId("createEventWindowBtn");
-        if (ewBtnEarly) ewBtnEarly.style.display = "none";
+        /* createEventWindowBtn removed — event windows now in timing pane */
         return;
       }
 
@@ -2978,8 +3037,7 @@
         publishBtn.disabled = true;
       }
 
-      const ewBtn = byId("createEventWindowBtn");
-      if (ewBtn) ewBtn.style.display = liveDrop.host_id ? "" : "none";
+      /* Event windows visibility now managed in renderConditionalFields */
     }
 
     function renderQrCode(text) {
@@ -3513,7 +3571,7 @@
       showDuplicateBanner();
     }
 
-    async function createEventWindow(dropId) {
+    async function createEventWindow(dropId, timingOverride, windowGroupId) {
       const targetId = dropId || state.selectedDropId;
       if (!targetId) return;
 
@@ -3571,10 +3629,11 @@
         status: "draft",
         series_id: null,
         series_position: null,
-        opens_at: null,
-        closes_at: null,
-        delivery_start: null,
-        delivery_end: null
+        opens_at: timingOverride ? timingOverride.opens_at : null,
+        closes_at: timingOverride ? timingOverride.closes_at : null,
+        delivery_start: timingOverride ? timingOverride.delivery_start : null,
+        delivery_end: timingOverride ? timingOverride.delivery_end : null,
+        ...(windowGroupId ? { window_group_id: windowGroupId } : {})
       };
 
       const { data: insertedDrop, error: insertDropError } = await supabase
@@ -3622,6 +3681,121 @@
       await refreshAll();
       isDirty = false;
       showDuplicateBanner();
+    }
+
+    /* ── Event Windows (T4-15) ── */
+
+    function addEventWindowRow() {
+      const body = byId("eventWindowRowsBody");
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input class="js-ew-date" type="date" /></td>
+        <td><input class="js-ew-start" type="time" /></td>
+        <td><input class="js-ew-end" type="time" /></td>
+        <td><button class="btnGhost js-remove-ew-row" type="button">Remove</button></td>
+      `;
+      body.appendChild(tr);
+    }
+
+    byId("eventWindowRowsBody")?.addEventListener("click", (e) => {
+      const removeBtn = e.target.closest(".js-remove-ew-row");
+      if (removeBtn) {
+        removeBtn.closest("tr").remove();
+      }
+    });
+
+    async function handleCreateEventWindows() {
+      const rows = byId("eventWindowRowsBody").querySelectorAll("tr");
+      if (!rows.length) throw new Error("Add at least one additional window.");
+
+      /* Collect and validate rows */
+      const windowEntries = [];
+      for (const row of rows) {
+        const dateVal = row.querySelector(".js-ew-date")?.value;
+        const startVal = row.querySelector(".js-ew-start")?.value;
+        const endVal = row.querySelector(".js-ew-end")?.value;
+        if (!dateVal || !startVal || !endVal) continue;
+        windowEntries.push({ date: dateVal, start: startVal, end: endVal });
+      }
+      if (!windowEntries.length) throw new Error("Each window needs a date, start time and end time.");
+
+      const msgEl = byId("eventWindowsMessage");
+      msgEl.textContent = "Creating windows\u2026";
+
+      /* Generate a shared window_group_id */
+      const windowGroupId = crypto.randomUUID();
+
+      /* Update the current drop with window_group_id */
+      const { error: updateErr } = await supabase
+        .from("drops")
+        .update({ window_group_id: windowGroupId })
+        .eq("id", state.selectedDropId);
+      if (updateErr) throw updateErr;
+
+      /* Create each sibling window */
+      for (const entry of windowEntries) {
+        const deliveryStart = `${entry.date}T${entry.start}:00`;
+        const deliveryEnd = `${entry.date}T${entry.end}:00`;
+        const timingOverride = {
+          delivery_start: deliveryStart,
+          delivery_end: deliveryEnd,
+          opens_at: new Date().toISOString(),
+          closes_at: deliveryStart
+        };
+        await createEventWindow(state.selectedDropId, timingOverride, windowGroupId);
+      }
+
+      /* Reload current drop and re-render */
+      state.selectedDropId = state.selectedDropId; // keep selection
+      await refreshAll();
+      isDirty = false;
+      msgEl.textContent = "";
+      showInlineSuccess(`${windowEntries.length} window${windowEntries.length > 1 ? "s" : ""} created.`);
+    }
+
+    let existingWindowsLoaded = false;
+
+    async function renderExistingWindows() {
+      if (existingWindowsLoaded) return;
+      const content = byId("existingWindowsContent");
+      if (!content) return;
+
+      const groupId = state.drop?.window_group_id;
+      if (!groupId) {
+        content.innerHTML = "";
+        return;
+      }
+
+      content.innerHTML = '<div class="helperText">Loading\u2026</div>';
+
+      try {
+        const { data, error } = await supabase
+          .from("drops")
+          .select("id, name, delivery_start, delivery_end")
+          .eq("window_group_id", groupId)
+          .neq("id", state.selectedDropId)
+          .order("delivery_start", { ascending: true });
+
+        if (error) throw error;
+
+        if (!data || !data.length) {
+          content.innerHTML = '<div class="helperText">No other windows found in this group.</div>';
+          existingWindowsLoaded = true;
+          return;
+        }
+
+        content.innerHTML = data.map((d) => {
+          const timing = d.delivery_start && d.delivery_end
+            ? `${formatDateShort(d.delivery_start)} ${formatTimeOnly(d.delivery_start)}\u2013${formatTimeOnly(d.delivery_end)}`
+            : "Timing not set";
+          return `<div style="padding:4px 0;font-size:12px;"><strong>${escapeHtml(d.name || "\u2014")}</strong> \u00b7 ${escapeHtml(timing)}</div>`;
+        }).join("");
+
+        existingWindowsLoaded = true;
+      } catch (err) {
+        console.error("renderExistingWindows error:", err);
+        content.innerHTML = '<div class="helperText">Unable to load existing windows.</div>';
+      }
     }
 
     async function updateDropStatus(status) {
@@ -4244,12 +4418,27 @@
         }
       });
 
-      byId("createEventWindowBtn").addEventListener("click", async () => {
+      /* Event windows (T4-15) — radio toggle and button handlers */
+      document.querySelectorAll('input[name="eventWindowPattern"]').forEach((radio) => {
+        radio.addEventListener("change", () => {
+          const isMultiple = document.querySelector('input[name="eventWindowPattern"]:checked')?.value === "multiple";
+          byId("eventWindowsBlock").classList.toggle("hidden", !isMultiple);
+          if (isMultiple && !byId("eventWindowRowsBody").children.length) {
+            addEventWindowRow();
+          }
+        });
+      });
+
+      byId("addEventWindowRowBtn").addEventListener("click", () => {
+        addEventWindowRow();
+      });
+
+      byId("createEventWindowsBtn").addEventListener("click", async () => {
         try {
-          await createEventWindow();
+          await handleCreateEventWindows();
         } catch (err) {
           console.error(err);
-          showError(err.message || "Unable to create event window.");
+          byId("eventWindowsMessage").textContent = err.message || "Unable to create event windows.";
         }
       });
 
