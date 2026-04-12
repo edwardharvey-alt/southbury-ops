@@ -3130,12 +3130,16 @@ async function handoffToPayment() {
           return true; /* proceed normally on error */
         }
 
-        if (!siblings || siblings.length <= 1) {
+        /* Exclude the entry drop — it's the parent, not a selectable sitting */
+        const entryDropId = state.drop.id;
+        const sittings = (siblings || []).filter((s) => s.id !== entryDropId);
+
+        if (!sittings || sittings.length <= 1) {
           return true; /* single window — skip selection */
         }
 
         /* Fetch capacity data for each sibling from v_drop_summary */
-        const siblingIds = siblings.map((s) => s.id);
+        const siblingIds = sittings.map((s) => s.id);
         const { data: summaries, error: sumErr } = await supabase
           .from("v_drop_summary")
           .select("drop_id, capacity_units_remaining")
@@ -3165,7 +3169,7 @@ async function handoffToPayment() {
           return `${fmt(s)} \u2013 ${fmt(e)}`;
         }
 
-        const cardsHtml = siblings.map((sib) => {
+        const cardsHtml = sittings.map((sib) => {
           const remaining = capacityMap[sib.id] ?? null;
           const isFull = remaining !== null && remaining <= 0;
           const timeLabel = fmtTimeRange(sib.delivery_start, sib.delivery_end);
