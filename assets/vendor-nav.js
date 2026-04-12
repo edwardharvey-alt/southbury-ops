@@ -57,6 +57,7 @@
     { file: "brand-hearth.html", label: "Brand Hearth" },
     { file: "drop-menu.html", label: "Menu Library" },
     { file: "drop-manager.html", label: "Drop Studio" },
+    { file: "hosts.html", label: "Hosts" },
     { file: "index.html", label: "Service Board" },
     { file: "insights.html", label: "Insights" },
     { file: "onboarding.html", label: "Setup" }
@@ -79,7 +80,9 @@
     "customers.html": true,
     "customer-import.html": true,
     "scorecard.html": true,
-    "order-entry.html": true
+    "order-entry.html": true,
+    "hosts.html": true,
+    "host-profile.html": true
   };
 
   function isOperatorHref(trimmed) {

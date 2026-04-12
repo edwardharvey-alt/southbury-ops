@@ -1126,7 +1126,7 @@
           <div class="modalHead">
             <div>
               <h3 class="sectionTitle">Create Host</h3>
-              <p class="sectionSub">Add a new club, school, pub, venue or private host</p>
+              <p class="sectionSub">Add a new host. You can complete their full profile afterwards.</p>
             </div>
             <button class="btnGhost" id="closeHostModalBtn" type="button">Close</button>
           </div>
@@ -1152,16 +1152,6 @@
             <div class="field">
               <label for="newHostPostcode">Postcode</label>
               <input id="newHostPostcode" type="text" placeholder="RG10 0JP" />
-            </div>
-
-            <div class="field">
-              <label for="newHostAddress">Address Summary</label>
-              <input id="newHostAddress" type="text" placeholder="Berkshire" />
-            </div>
-
-            <div class="field" style="grid-column:1 / -1;">
-              <label for="newHostNotes">Internal Notes</label>
-              <textarea id="newHostNotes" placeholder="Regular hosting opportunity"></textarea>
             </div>
           </div>
 
@@ -2424,11 +2414,74 @@
         return;
       }
 
+      /* Show basic info immediately, then enrich from full host record */
       preview.innerHTML = `
         <strong>${escapeHtml(host.name)}</strong>
         ${escapeHtml(host.host_type)}${host.postcode ? ` • ${escapeHtml(host.postcode)}` : ""}
-        ${host.address_summary ? `<div style="margin-top:4px;">${escapeHtml(host.address_summary)}</div>` : ""}
       `;
+
+      enrichHostPreview(host.id);
+    }
+
+    async function enrichHostPreview(hostId) {
+      const preview = byId("hostPreview");
+      if (!hostId || !preview) return;
+
+      try {
+        const { data: fullHost, error } = await supabase
+          .from("hosts")
+          .select("*")
+          .eq("id", hostId)
+          .single();
+
+        if (error || !fullHost) return;
+
+        /* Build enrichment lines */
+        let enrichHtml = "";
+        let hasDetail = false;
+
+        if (fullHost.audience_description) {
+          enrichHtml += `<p style="margin:6px 0 0;font-size:11px;font-style:italic;color:var(--h-muted);">${escapeHtml(fullHost.audience_description)}</p>`;
+          hasDetail = true;
+        }
+
+        if (fullHost.estimated_audience_size) {
+          enrichHtml += `<p style="margin:4px 0 0;font-size:11px;color:var(--h-muted);">~${Number(fullHost.estimated_audience_size).toLocaleString()} audience</p>`;
+          hasDetail = true;
+        }
+
+        /* Service windows — compact summary */
+        let windows = fullHost.service_windows;
+        if (typeof windows === "string") {
+          try { windows = JSON.parse(windows); } catch (e) { windows = null; }
+        }
+        if (Array.isArray(windows) && windows.length > 0) {
+          const windowSummary = windows.map((w) => {
+            let label = w.day_of_week || "";
+            if (w.time_start && w.time_end) label += ` ${w.time_start}\u2013${w.time_end}`;
+            if (w.occasion_label) label += ` \u00b7 ${w.occasion_label}`;
+            return label.trim();
+          }).filter(Boolean).join("  |  ");
+
+          if (windowSummary) {
+            enrichHtml += `<p style="margin:4px 0 0;font-size:11px;color:var(--h-muted);">${escapeHtml(windowSummary)}</p>`;
+            hasDetail = true;
+          }
+        }
+
+        /* Show "Complete host profile" link if incomplete */
+        if (!fullHost.onboarding_completed || !hasDetail) {
+          const profileHref = HearthNav.withVendor("host-profile.html?host=" + encodeURIComponent(hostId));
+          enrichHtml += `<a href="${escapeHtml(profileHref)}" style="display:inline-block;margin-top:8px;font-size:11px;font-weight:700;color:var(--h-accent);text-decoration:none;">Complete host profile \u2192</a>`;
+        }
+
+        if (enrichHtml) {
+          preview.innerHTML += enrichHtml;
+        }
+      } catch (err) {
+        /* Silently fail — basic preview already rendered */
+        console.error("enrichHostPreview error:", err);
+      }
     }
 
     function renderHostHelper() {
@@ -3736,8 +3789,7 @@
         slug: slugify(name),
         host_type: byId("newHostType").value,
         postcode: byId("newHostPostcode").value.trim() || null,
-        address_summary: byId("newHostAddress").value.trim() || null,
-        notes_internal: byId("newHostNotes").value.trim() || null
+        status: "active"
       };
 
       const { data, error } = await supabase
