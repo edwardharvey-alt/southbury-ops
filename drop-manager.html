@@ -3735,6 +3735,16 @@
         }
       }
 
+      /* Validate no overlapping windows */
+      for (let i = 0; i < windowEntries.length; i++) {
+        for (let j = i + 1; j < windowEntries.length; j++) {
+          if (windowEntries[i].start < windowEntries[j].end && windowEntries[i].end > windowEntries[j].start) {
+            msgEl.textContent = "Window times must not overlap. Please check your sittings.";
+            return;
+          }
+        }
+      }
+
       msgEl.textContent = "Creating windows\u2026";
 
       /* Generate a shared window_group_id */
@@ -3771,7 +3781,7 @@
     let existingWindowsLoaded = false;
 
     async function renderExistingWindows() {
-      if (existingWindowsLoaded) return;
+      existingWindowsLoaded = false;
       const content = byId("existingWindowsContent");
       if (!content) return;
 
@@ -3794,7 +3804,16 @@
         if (error) throw error;
 
         if (!data || !data.length) {
-          content.innerHTML = '<div class="helperText">No other windows found in this group.</div>';
+          /* No siblings left — clear window_group_id on current drop and revert to creation UI */
+          await supabase
+            .from("drops")
+            .update({ window_group_id: null })
+            .eq("id", state.selectedDropId);
+          if (state.drop) state.drop.window_group_id = null;
+          byId("existingWindowsList").classList.add("hidden");
+          byId("eventWindowsChoice").classList.remove("hidden");
+          document.querySelector('input[name="eventWindowPattern"][value="single"]').checked = true;
+          byId("eventWindowsBlock").classList.add("hidden");
           existingWindowsLoaded = true;
           return;
         }
@@ -3803,7 +3822,10 @@
           const timing = d.delivery_start && d.delivery_end
             ? `${formatDateShort(d.delivery_start)} ${formatTimeOnly(d.delivery_start)}\u2013${formatTimeOnly(d.delivery_end)}`
             : "Timing not set";
-          return `<div style="padding:4px 0;font-size:12px;"><strong>${escapeHtml(d.name || "\u2014")}</strong> \u00b7 ${escapeHtml(timing)}</div>`;
+          return `<div data-ew-sibling-id="${escapeHtml(d.id)}" style="padding:6px 0;font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid rgba(15,23,42,0.06);">
+            <span><strong>${escapeHtml(d.name || "\u2014")}</strong> \u00b7 ${escapeHtml(timing)}</span>
+            <button class="btnGhost js-remove-ew-sibling" type="button" style="flex:0 0 auto;">Remove</button>
+          </div>`;
         }).join("");
 
         existingWindowsLoaded = true;
@@ -3812,6 +3834,54 @@
         content.innerHTML = '<div class="helperText">Unable to load existing windows.</div>';
       }
     }
+
+    /* Delegated click handler for existing window Remove / Confirm / Cancel */
+    byId("existingWindowsContent")?.addEventListener("click", async (e) => {
+      const row = e.target.closest("[data-ew-sibling-id]");
+      if (!row) return;
+      const siblingId = row.dataset.ewSiblingId;
+
+      /* Remove button — show inline confirm */
+      if (e.target.closest(".js-remove-ew-sibling")) {
+        const removeBtn = row.querySelector(".js-remove-ew-sibling");
+        if (removeBtn) removeBtn.style.display = "none";
+        const confirmWrap = document.createElement("span");
+        confirmWrap.className = "js-ew-confirm-wrap";
+        confirmWrap.style.cssText = "font-size:11px;font-weight:700;white-space:nowrap;display:inline-flex;gap:8px;align-items:center;";
+        confirmWrap.innerHTML = `Remove this window? <a href="#" class="js-ew-confirm" style="color:var(--h-bad);text-decoration:underline;">Confirm</a> <a href="#" class="js-ew-cancel" style="color:var(--h-muted);text-decoration:underline;">Cancel</a>`;
+        row.appendChild(confirmWrap);
+        return;
+      }
+
+      /* Cancel — restore Remove button */
+      if (e.target.closest(".js-ew-cancel")) {
+        e.preventDefault();
+        const wrap = row.querySelector(".js-ew-confirm-wrap");
+        if (wrap) wrap.remove();
+        const removeBtn = row.querySelector(".js-remove-ew-sibling");
+        if (removeBtn) removeBtn.style.display = "";
+        return;
+      }
+
+      /* Confirm — delete the sibling drop and re-render */
+      if (e.target.closest(".js-ew-confirm")) {
+        e.preventDefault();
+        try {
+          const { error: delErr } = await supabase
+            .from("drops")
+            .delete()
+            .eq("id", siblingId);
+          if (delErr) throw delErr;
+
+          /* Re-render — renderExistingWindows handles zero-sibling cleanup */
+          existingWindowsLoaded = false;
+          await renderExistingWindows();
+        } catch (err) {
+          console.error("Delete window error:", err);
+          showError(err.message || "Unable to remove window.");
+        }
+      }
+    });
 
     async function updateDropStatus(status) {
       if (!state.selectedDropId) return;
