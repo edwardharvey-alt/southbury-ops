@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Host Profile — Hearth</title>
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=30" />
+  <script src="./assets/config.js"></script>
+  <script src="./assets/vendor-nav.js?v=2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      background: #f7f5f1;
+      color: var(--h-text);
+    }
+
+    #profileShell {
+      display: grid;
+      gap: 18px;
+      padding-bottom: 40px;
+    }
+
+    /* ── Page header ── */
+    #pageHeader {
+      background:
+        radial-gradient(circle at top right, rgba(203,184,157,0.18), transparent 28%),
+        linear-gradient(180deg, #fff, #fcfbf8);
+      border: 1px solid #e9e3d8;
+      border-radius: 18px;
+      box-shadow: 0 8px 24px rgba(15,23,42,0.05);
+      padding: 22px 24px;
+    }
+
+    #back-link {
+      display: inline-block;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--h-muted);
+      margin-bottom: 10px;
+    }
+
+    #back-link:hover {
+      color: var(--h-text);
+      text-decoration: underline;
+    }
+
+    #host-name {
+      margin: 0 0 6px;
+      font-size: 28px;
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+    }
+
+    #host-type-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: capitalize;
+      background: rgba(139,107,63,0.08);
+      color: #8b6b3f;
+      border: 1px solid rgba(139,107,63,0.22);
+    }
+
+    /* ── Tabs ── */
+    #tabBar {
+      display: flex;
+      gap: 6px;
+    }
+
+    .tabBtn {
+      padding: 9px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--h-border);
+      background: var(--h-surface);
+      color: var(--h-muted);
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .tabBtn.active {
+      color: var(--h-text);
+      border-color: var(--h-border);
+      background: var(--h-surface-2);
+    }
+
+    .tabBtn:hover {
+      box-shadow: 0 4px 12px rgba(15,23,42,0.04);
+    }
+
+    /* ── Form sections ── */
+    .formSection {
+      background: #fff;
+      border: 1px solid #e9e3d8;
+      border-radius: 16px;
+      padding: 20px 22px;
+      box-shadow: 0 6px 16px rgba(15,23,42,0.04);
+    }
+
+    .formSection h3 {
+      margin: 0 0 4px;
+      font-size: 16px;
+      font-weight: 850;
+      letter-spacing: -0.02em;
+    }
+
+    .formSection .sectionDesc {
+      margin: 0 0 16px;
+      color: var(--h-muted);
+      font-size: 12px;
+    }
+
+    .fieldGrid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .fieldGrid .fullSpan {
+      grid-column: 1 / -1;
+    }
+
+    .fieldLabel {
+      display: block;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--h-muted);
+      margin-bottom: 6px;
+    }
+
+    .formSection input[type="text"],
+    .formSection input[type="email"],
+    .formSection input[type="tel"],
+    .formSection input[type="number"],
+    .formSection input[type="time"],
+    .formSection textarea,
+    .formSection select {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+
+    .formSection textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .checkRow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .checkRow input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .checkRow label {
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ── Audience tag pills ── */
+    #audience-tags-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .tagPill {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: capitalize;
+      border: 1px solid var(--h-border);
+      background: #fff;
+      color: var(--h-muted);
+      cursor: pointer;
+      user-select: none;
+      transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+    }
+
+    .tagPill.selected {
+      background: rgba(139,107,63,0.12);
+      color: #8b6b3f;
+      border-color: rgba(139,107,63,0.35);
+    }
+
+    .tagPill:hover {
+      border-color: rgba(139,107,63,0.3);
+    }
+
+    /* ── Dynamic row lists (service windows, comms channels) ── */
+    .dynamicRow {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1.4fr 1.4fr auto;
+      gap: 8px;
+      align-items: end;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(15,23,42,0.06);
+    }
+
+    .dynamicRow:last-of-type {
+      border-bottom: none;
+    }
+
+    .dynamicRow select,
+    .dynamicRow input {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+
+    .commsRow {
+      grid-template-columns: 1fr 2fr 1fr auto;
+    }
+
+    .removeRowBtn {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid var(--h-border);
+      background: var(--h-surface);
+      color: var(--h-muted);
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .removeRowBtn:hover {
+      background: rgba(220,38,38,0.06);
+      border-color: rgba(220,38,38,0.25);
+      color: #dc2626;
+    }
+
+    .addRowBtn {
+      margin-top: 10px;
+      border-radius: 10px;
+      border: 1px dashed var(--h-border);
+      background: transparent;
+      color: var(--h-muted);
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+
+    .addRowBtn:hover {
+      border-color: var(--h-accent);
+      color: var(--h-accent);
+    }
+
+    /* ── Save button ── */
+    #save-profile-btn {
+      min-height: 44px;
+      font-size: 14px;
+      padding: 0 24px;
+      border-radius: 14px;
+    }
+
+    /* ── History tab ── */
+    #tab-history {
+      display: none;
+    }
+
+    #history-content {
+      background: #fff;
+      border: 1px solid #e9e3d8;
+      border-radius: 16px;
+      padding: 20px 22px;
+      box-shadow: 0 6px 16px rgba(15,23,42,0.04);
+    }
+
+    .historyTable {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .historyTable th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--h-muted);
+      padding: 8px 10px;
+      border-bottom: 2px solid rgba(15,23,42,0.08);
+    }
+
+    .historyTable td {
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(15,23,42,0.06);
+    }
+
+    .historyTable tr.totalsRow td {
+      font-weight: 800;
+      border-top: 2px solid rgba(15,23,42,0.12);
+      border-bottom: none;
+    }
+
+    .historyEmpty {
+      color: var(--h-muted);
+      font-size: 14px;
+      text-align: center;
+      padding: 28px 18px;
+    }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      left: 50%;
+      bottom: 32px;
+      transform: translateX(-50%) translateY(18px);
+      background: var(--h-text);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 12px 18px;
+      border-radius: 12px;
+      box-shadow: 0 12px 28px rgba(15,23,42,0.25);
+      max-width: 92vw;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 180ms ease;
+      z-index: 200;
+    }
+
+    #toast.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Error state ── */
+    #errorState {
+      display: none;
+      background: #fff;
+      border: 1px dashed #d9d2c3;
+      border-radius: 18px;
+      padding: 40px 24px;
+      text-align: center;
+      color: var(--h-muted);
+    }
+
+    #errorState h2 {
+      margin: 0 0 8px;
+      font-size: 19px;
+      color: var(--h-text);
+    }
+
+    #errorState p {
+      margin: 0 auto 18px;
+      max-width: 52ch;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Loading ── */
+    #loadingState {
+      padding: 32px 18px;
+      text-align: center;
+      color: var(--h-muted);
+      font-size: 14px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      #pageHeader {
+        padding: 18px 16px;
+      }
+
+      #host-name {
+        font-size: 22px;
+      }
+
+      .fieldGrid {
+        grid-template-columns: 1fr;
+      }
+
+      .dynamicRow {
+        grid-template-columns: 1fr 1fr auto;
+        gap: 6px;
+      }
+
+      .dynamicRow select,
+      .dynamicRow input[type="time"] {
+        font-size: 12px;
+      }
+
+      .commsRow {
+        grid-template-columns: 1fr 1fr auto;
+      }
+
+      #save-profile-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- ── Nav bar ── -->
+    <div class="card headerBar">
+      <div class="brand">
+        <div class="brandMark">H</div>
+        <div>
+          <div class="brandTitle">Hearth — Host Profile</div>
+          <div class="brandSubtitle" id="headerVendorSub">Host profile</div>
+        </div>
+      </div>
+
+      <div class="nav" id="operatorNav"></div>
+      <script>HearthNav.renderNav('operatorNav', 'host-profile.html');</script>
+    </div>
+
+    <!-- ── Loading state ── -->
+    <div id="loadingState">Loading host profile…</div>
+
+    <!-- ── Error state ── -->
+    <div id="errorState">
+      <h2>Host not found</h2>
+      <p>The host you're looking for doesn't exist or has been removed.</p>
+      <a id="error-back-link" href="hosts.html" class="btnAccent" style="min-height:40px;padding:0 16px;border-radius:12px;font-size:13px;display:inline-flex;align-items:center;text-decoration:none;">← Back to Hosts</a>
+    </div>
+
+    <!-- ── Main content shell ── -->
+    <div id="profileShell" style="display:none;">
+
+      <!-- ── Page header ── -->
+      <section id="pageHeader">
+        <a id="back-link" href="hosts.html">← All Hosts</a>
+        <h1 id="host-name">Loading…</h1>
+        <span id="host-type-badge"></span>
+      </section>
+
+      <!-- ── Tab bar ── -->
+      <div id="tabBar">
+        <button class="tabBtn active" type="button" data-tab="profile">Profile</button>
+        <button class="tabBtn" type="button" data-tab="history">History</button>
+      </div>
+
+      <!-- ════════════════════════════════════════════
+           PROFILE TAB
+           ════════════════════════════════════════════ -->
+      <div id="tab-profile">
+
+        <!-- Section: Identity -->
+        <div class="formSection" style="margin-bottom:14px;">
+          <h3>Identity</h3>
+          <p class="sectionDesc">Basic details about this host.</p>
+
+          <div class="fieldGrid">
+            <div>
+              <label class="fieldLabel" for="host-name-field">Name</label>
+              <input id="host-name-field" type="text" placeholder="e.g. Twyford Cricket Club" />
+            </div>
+
+            <div>
+              <label class="fieldLabel" for="host-type-field">Host Type</label>
+              <select id="host-type-field">
+                <option value="club">Club</option>
+                <option value="pub">Pub</option>
+                <option value="school">School</option>
+                <option value="venue">Venue</option>
+                <option value="neighbourhood">Neighbourhood</option>
+                <option value="event">Event</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="fieldLabel" for="host-status-field">Status</label>
+              <select id="host-status-field">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="fieldLabel" for="relationship-status-field">Relationship Status</label>
+              <select id="relationship-status-field">
+                <option value="prospect">Prospect</option>
+                <option value="active">Active</option>
+                <option value="paused">Paused</option>
+              </select>
+            </div>
+
+            <div class="fullSpan">
+              <div class="checkRow">
+                <input id="onboarding-complete-field" type="checkbox" />
+                <label for="onboarding-complete-field">Onboarding complete</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Location -->
+        <div class="formSection" style="margin-bottom:14px;">
+          <h3>Location</h3>
+          <p class="sectionDesc">Where is this host based?</p>
+
+          <div class="fieldGrid">
+            <div>
+              <label class="fieldLabel" for="host-postcode-field">Postcode</label>
+              <input id="host-postcode-field" type="text" placeholder="e.g. RG10 0JP" />
+            </div>
+
+            <div>
+              <label class="fieldLabel" for="host-address-field">Address Summary</label>
+              <input id="host-address-field" type="text" placeholder="e.g. High Street, Twyford" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Contact -->
+        <div class="formSection" style="margin-bottom:14px;">
+          <h3>Contact</h3>
+          <p class="sectionDesc">Who is the main contact at this host?</p>
+
+          <div class="fieldGrid">
+            <div>
+              <label class="fieldLabel" for="contact-name-field">Contact Name</label>
+              <input id="contact-name-field" type="text" placeholder="e.g. Jane Smith" />
+            </div>
+
+            <div>
+              <label class="fieldLabel" for="contact-email-field">Contact Email</label>
+              <input id="contact-email-field" type="email" placeholder="e.g. jane@club.org" />
+            </div>
+
+            <div>
+              <label class="fieldLabel" for="contact-phone-field">Contact Phone</label>
+              <input id="contact-phone-field" type="tel" placeholder="e.g. 07700 900000" />
+            </div>
+
+            <div>
+              <label class="fieldLabel" for="website-url-field">Website URL</label>
+              <input id="website-url-field" type="text" placeholder="e.g. https://club.org" />
+            </div>
+
+            <div>
+              <label class="fieldLabel" for="instagram-handle-field">Instagram Handle</label>
+              <input id="instagram-handle-field" type="text" placeholder="e.g. @twyfordcc" />
+            </div>
+
+            <div>
+              <label class="fieldLabel" for="facebook-handle-field">Facebook Handle</label>
+              <input id="facebook-handle-field" type="text" placeholder="e.g. TwyfordCricketClub" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Audience -->
+        <div class="formSection" style="margin-bottom:14px;">
+          <h3>Audience</h3>
+          <p class="sectionDesc">Who does this host reach?</p>
+
+          <div class="fieldGrid">
+            <div class="fullSpan">
+              <label class="fieldLabel" for="audience-description-field">Audience Description</label>
+              <textarea id="audience-description-field" placeholder="e.g. 400 members, mostly families with children under 14"></textarea>
+            </div>
+
+            <div>
+              <label class="fieldLabel" for="audience-size-field">Estimated Audience Size</label>
+              <input id="audience-size-field" type="number" min="0" placeholder="e.g. 400" />
+            </div>
+          </div>
+
+          <label class="fieldLabel" style="margin-top:16px;">Audience Tags</label>
+          <div id="audience-tags-container">
+            <button type="button" class="tagPill" data-tag="families">families</button>
+            <button type="button" class="tagPill" data-tag="sport">sport</button>
+            <button type="button" class="tagPill" data-tag="school">school</button>
+            <button type="button" class="tagPill" data-tag="corporate">corporate</button>
+            <button type="button" class="tagPill" data-tag="community">community</button>
+            <button type="button" class="tagPill" data-tag="fitness">fitness</button>
+            <button type="button" class="tagPill" data-tag="music">music</button>
+            <button type="button" class="tagPill" data-tag="arts">arts</button>
+            <button type="button" class="tagPill" data-tag="faith">faith</button>
+          </div>
+        </div>
+
+        <!-- Section: Service Windows -->
+        <div class="formSection" style="margin-bottom:14px;">
+          <h3>Service Windows</h3>
+          <p class="sectionDesc">When does this host want food service?</p>
+
+          <div id="service-windows-container">
+            <!-- JS will populate dynamic rows here -->
+          </div>
+
+          <button id="add-window-btn" type="button" class="addRowBtn">+ Add Window</button>
+        </div>
+
+        <!-- Section: Comms Channels -->
+        <div class="formSection" style="margin-bottom:14px;">
+          <h3>Comms Channels</h3>
+          <p class="sectionDesc">How does this host communicate with their audience?</p>
+
+          <div id="comms-channels-container">
+            <!-- JS will populate dynamic rows here -->
+          </div>
+
+          <button id="add-channel-btn" type="button" class="addRowBtn">+ Add Channel</button>
+        </div>
+
+        <!-- Section: Internal Notes -->
+        <div class="formSection" style="margin-bottom:14px;">
+          <h3>Internal Notes</h3>
+          <p class="sectionDesc">Private notes about this host relationship.</p>
+
+          <div>
+            <label class="fieldLabel" for="internal-notes-field">Notes</label>
+            <textarea id="internal-notes-field" placeholder="e.g. Regular hosting opportunity, committee contact is chair"></textarea>
+          </div>
+        </div>
+
+        <!-- Save button -->
+        <div style="display:flex;justify-content:flex-end;">
+          <button id="save-profile-btn" type="button" class="btnAccent">Save Changes</button>
+        </div>
+
+      </div>
+
+      <!-- ════════════════════════════════════════════
+           HISTORY TAB
+           ════════════════════════════════════════════ -->
+      <div id="tab-history">
+        <div id="history-content">
+          <p class="historyEmpty">Loading history…</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Toast ── -->
+  <div id="toast"></div>
+
+  <!-- ── Page JS (to be added in next session) ── -->
+  <script>
+    // JS will be added here: resolveVendor, loadHost, populateForm,
+    // save logic, tab switching, history tab, service window / comms
+    // channel dynamic rows, audience tag toggle, toast.
+  </script>
+  <script>HearthNav.decorateLinks && HearthNav.decorateLinks();</script>
+</body>
+</html>
