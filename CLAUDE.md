@@ -218,6 +218,11 @@ on top of the coding rules above.
    development and demos but will not cover sustained real-drop
    traffic.
 
+5. **Legal pages (privacy, terms) are platform-level** — suppress
+   vendor subheading in nav, replace with neutral platform language.
+   All three documents carry amber draft banners and version 0.1
+   notes pending legal review.
+
 ## Brand and tone
 
 - Calm, assured, warm, considered, local
@@ -558,61 +563,27 @@ nudge links, pre-filling the host context when the vendor lands in
 Drop Studio from the brand setup flow. The card disappears completely
 once the vendor has any drop (including drafts).
 
-T4-24: Customer privacy policy — order page
+T4-24: Customer privacy policy — order page ✓ COMPLETE
 
-A privacy policy must be accessible from the order page before any real
-customer data is collected. This is a legal requirement under UK GDPR:
-customers providing name, phone, email, and postcode must be able to
-access a clear privacy notice at the point of data collection.
-
-Two parts:
-
-Part 1 — Privacy policy page
-Create a new static page privacy.html. Content should cover: what data
-is collected at order time (name, phone, email, postcode), why it is
-collected (order fulfilment, drop notifications if opted in), who holds
-it (Hearth as data controller, vendor as data processor for their own
-drops), how long it is retained, and how a customer can request
-deletion. Language must be plain English — not legal boilerplate.
-Consistent with Hearth's calm, considered voice.
-
-Part 2 — Link from order page
-Add a quiet link to privacy.html in the footer of order.html, alongside
-the existing "Powered by Hearth" treatment. Also add a link adjacent to
-the marketing opt-in checkbox so customers can read the policy before
-consenting. Link text: "Privacy policy".
+privacy.html created (platform-level page, 8 sections, plain English,
+Hearth tone, amber draft banner, version 0.1 note). Links added to
+order.html: adjacent to marketing opt-in checkbox and in the "Powered
+by Hearth" footer.
 
 Note: Anthropic cannot provide legal advice. The privacy policy content
 should be reviewed by a qualified legal professional before Hearth
 processes real customer data at scale. This ticket covers the platform
 implementation; legal review is a separate obligation.
 
-T4-25: Vendor terms of participation
+T4-25: Vendor terms of participation ✓ COMPLETE
 
-Before a vendor can go live with a real drop, they must have accepted
-Hearth's terms of participation. This covers: Hearth's commission model,
-the drop discipline non-negotiables (fixed windows, declared capacity,
-no parallel ordering during a drop), data handling obligations toward
-customers, and community commitments.
-
-Two parts:
-
-Part 1 — Terms page
-Create a new static page vendor-terms.html. Content should cover: what
-Hearth provides, what the vendor commits to, the commercial model (10%
-of drop GMV), data responsibilities, and the right to participate in
-community moments. Language must reflect Hearth's philosophy — these are
-not punitive terms, they are a mutual commitment between Hearth and
-vendors who share its values. Calm, direct, and honest.
-
-Part 2 — Acceptance mechanism
-Add a terms acceptance step to the onboarding flow (onboarding.html), as
-a final confirmation before the completion screen. A checkbox: "I've
-read and agree to Hearth's terms of participation" with a link to
-vendor-terms.html. Write acceptance status to a new
-`vendors.terms_accepted` boolean column and
-`vendors.terms_accepted_at` timestamp column. Do not allow the "Save my
-preferences" button to complete onboarding without this being checked.
+vendor-terms.html created (platform-level page, 8 sections, staged
+pricing model documented: 3-month free period, per-drop fee TBD, future
+subscription, amber draft banner, version 0.1 note). Terms acceptance
+step added as final onboarding step in onboarding.html — writes
+terms_accepted and terms_accepted_at to vendors table. Returning vendors
+who completed onboarding before terms existed are routed to the terms
+step on next login.
 
 Schema addition required before building:
 ```sql
@@ -625,19 +596,15 @@ Note: as with the privacy policy, the terms content should be reviewed
 by a qualified legal professional before Hearth onboards real vendors.
 This ticket covers the platform implementation.
 
-T4-26: Host participation terms
+T4-26: Host participation terms ✓ COMPLETE
 
-When hosts are first-class entities (T4-16), they will need to accept a
-simple set of participation terms covering: their role in promoting the
-drop, the revenue share or fundraising arrangement, data handling for
-their audience, and their community obligations.
+host-terms.html created (platform-level page, 8 sections, amber draft
+banner, version 0.1 note). Host quick-create modal in hosts.html
+converted to two-step flow — step 1 collects name/type/postcode, step 2
+requires terms acceptance. terms_accepted and terms_accepted_at written
+to hosts table in the same insert as host creation.
 
-Implementation: a terms acceptance step within the host onboarding flow,
-mirroring the vendor terms pattern. Writes to a `terms_accepted` boolean
-and `terms_accepted_at` timestamp on the hosts table.
-
-Dependency: T4-16 (hosts as first-class entities). Do not build before
-T4-16 is complete.
+Dependency: T4-16 (hosts as first-class entities — complete).
 
 Note: host terms content requires legal review before use with real
 hosts.
@@ -961,9 +928,9 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 36. T4-16 ✓ — Host as first-class entity
     hosts.html (Host Directory), host-profile.html (Host Profile),
     drop-manager.html (enriched host picker), vendor-nav.js (Hosts in nav).
-37. T4-24 — Customer privacy policy
-38. T4-25 — Vendor terms of participation
-39. T4-26 — Host participation terms
+37. T4-24 ✓ — Customer privacy policy
+38. T4-25 ✓ — Vendor terms of participation
+39. T4-26 ✓ — Host participation terms
 
 Parallel workstream — schedule before any real vendor goes live:
 T5-A1 → T5-A7 (Auth) must be done before Healthy Habits Cafe (or
