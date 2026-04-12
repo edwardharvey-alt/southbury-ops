@@ -3838,60 +3838,11 @@
           infoSpan.appendChild(document.createTextNode(" \u00b7 " + timing));
 
           const removeBtn = document.createElement("button");
-          removeBtn.className = "btnGhost";
+          removeBtn.className = "btnGhost js-remove-window";
           removeBtn.type = "button";
           removeBtn.style.cssText = "flex:0 0 auto;";
           removeBtn.textContent = "Remove";
-
-          removeBtn.onclick = function(e) {
-            e.stopPropagation();
-            e.preventDefault();
-            removeBtn.style.display = "none";
-
-            const confirmSpan = document.createElement("span");
-            confirmSpan.style.cssText = "font-size:11px;font-weight:700;white-space:nowrap;display:inline-flex;gap:8px;align-items:center;";
-            confirmSpan.appendChild(document.createTextNode("Remove this window? "));
-
-            const confirmLink = document.createElement("a");
-            confirmLink.href = "#";
-            confirmLink.textContent = "Confirm";
-            confirmLink.style.cssText = "color:var(--h-bad);text-decoration:underline;";
-
-            const cancelLink = document.createElement("a");
-            cancelLink.href = "#";
-            cancelLink.textContent = "Cancel";
-            cancelLink.style.cssText = "color:var(--h-muted);text-decoration:underline;";
-
-            cancelLink.onclick = function(ce) {
-              ce.stopPropagation();
-              ce.preventDefault();
-              confirmSpan.remove();
-              removeBtn.style.display = "";
-            };
-
-            confirmLink.onclick = async function(ce) {
-              ce.stopPropagation();
-              ce.preventDefault();
-              try {
-                const { error: delErr } = await supabase
-                  .from("drops")
-                  .delete()
-                  .eq("id", d.id);
-                if (delErr) throw delErr;
-
-                existingWindowsLoaded = false;
-                await renderExistingWindows();
-              } catch (err) {
-                console.error("Delete window error:", err);
-                showError(err.message || "Unable to remove window.");
-              }
-            };
-
-            confirmSpan.appendChild(confirmLink);
-            confirmSpan.appendChild(document.createTextNode(" "));
-            confirmSpan.appendChild(cancelLink);
-            row.appendChild(confirmSpan);
-          };
+          removeBtn.setAttribute("data-drop-id", d.id);
 
           row.appendChild(infoSpan);
           row.appendChild(removeBtn);
@@ -3905,8 +3856,8 @@
       }
     }
 
-    /* Old listener on #existingWindowsList removed — now delegated from
-       document inside attachEvents() for reliable event handling */
+    /* T4-15 — Remove/Confirm/Cancel handling is in the document.body
+       click handler inside attachEvents(). */
 
     async function updateDropStatus(status) {
       if (!state.selectedDropId) return;
@@ -4589,6 +4540,75 @@
       });
 
       document.body.addEventListener("click", async (e) => {
+        /* T4-15 — Remove / Confirm / Cancel for existing event windows */
+        const ewRemoveBtn = e.target.closest(".js-remove-window");
+        if (ewRemoveBtn) {
+          e.stopPropagation();
+          const dropId = ewRemoveBtn.getAttribute("data-drop-id");
+          if (!dropId) return;
+          const ewRow = ewRemoveBtn.closest("[data-ew-sibling-id]");
+          if (!ewRow) return;
+          ewRemoveBtn.style.display = "none";
+
+          const confirmSpan = document.createElement("span");
+          confirmSpan.style.cssText = "font-size:11px;font-weight:700;white-space:nowrap;display:inline-flex;gap:8px;align-items:center;";
+          confirmSpan.appendChild(document.createTextNode("Remove this window? "));
+
+          const confirmLink = document.createElement("a");
+          confirmLink.href = "#";
+          confirmLink.className = "js-confirm-remove-window";
+          confirmLink.setAttribute("data-drop-id", dropId);
+          confirmLink.textContent = "Confirm";
+          confirmLink.style.cssText = "color:var(--h-bad);text-decoration:underline;";
+
+          const cancelLink = document.createElement("a");
+          cancelLink.href = "#";
+          cancelLink.className = "js-cancel-remove-window";
+          cancelLink.textContent = "Cancel";
+          cancelLink.style.cssText = "color:var(--h-muted);text-decoration:underline;";
+
+          confirmSpan.appendChild(confirmLink);
+          confirmSpan.appendChild(document.createTextNode(" "));
+          confirmSpan.appendChild(cancelLink);
+          ewRow.appendChild(confirmSpan);
+          return;
+        }
+
+        const ewCancelLink = e.target.closest(".js-cancel-remove-window");
+        if (ewCancelLink) {
+          e.stopPropagation();
+          e.preventDefault();
+          const ewRow = ewCancelLink.closest("[data-ew-sibling-id]");
+          if (!ewRow) return;
+          const wrap = ewCancelLink.closest("span");
+          if (wrap) wrap.remove();
+          const btn = ewRow.querySelector(".js-remove-window");
+          if (btn) btn.style.display = "";
+          return;
+        }
+
+        const ewConfirmLink = e.target.closest(".js-confirm-remove-window");
+        if (ewConfirmLink) {
+          e.stopPropagation();
+          e.preventDefault();
+          const dropId = ewConfirmLink.getAttribute("data-drop-id");
+          if (!dropId) return;
+          try {
+            const { error: delErr } = await supabase
+              .from("drops")
+              .delete()
+              .eq("id", dropId);
+            if (delErr) throw delErr;
+
+            existingWindowsLoaded = false;
+            await renderExistingWindows();
+          } catch (err) {
+            console.error("Delete window error:", err);
+            showError(err.message || "Unable to remove window.");
+          }
+          return;
+        }
+
         const card = e.target.closest(".dropCard");
         if (card && !e.target.closest(".js-duplicate-drop") && !e.target.closest(".js-copy-host-link")) {
           state.selectedDropId = card.dataset.dropId;
@@ -4683,8 +4703,7 @@
       });
 
       /* T4-15 — Remove/Confirm/Cancel handlers for existing event windows
-         are now attached directly to each button via addEventListener inside
-         renderExistingWindows(). No document-level delegation needed. */
+         are handled in the document.body click handler above. */
     }
 
     async function init() {
