@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hearth — Hosts</title>
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=30" />
+  <script src="./assets/config.js"></script>
+  <script src="./assets/vendor-nav.js?v=2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body{
+      background:#f7f5f1;
+      color:var(--h-text);
+    }
+
+    #hostsShell{
+      display:grid;
+      gap:18px;
+      padding-bottom:40px;
+    }
+
+    /* ── Page header section ── */
+    #hostsHeader{
+      background:
+        radial-gradient(circle at top right, rgba(203,184,157,0.18), transparent 28%),
+        linear-gradient(180deg, #fff, #fcfbf8);
+      border:1px solid #e9e3d8;
+      border-radius:18px;
+      box-shadow:0 8px 24px rgba(15,23,42,0.05);
+      padding:22px 24px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      flex-wrap:wrap;
+    }
+
+    #hostsHeader .headerEyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(139,107,63,0.08);
+      color:var(--h-accent);
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:0.02em;
+      text-transform:uppercase;
+    }
+
+    #hostsHeader h1{
+      margin:14px 0 6px;
+      font-size:28px;
+      line-height:1.08;
+      letter-spacing:-0.03em;
+    }
+
+    #hostsHeader p{
+      margin:0;
+      color:var(--h-muted);
+      font-size:15px;
+      line-height:1.5;
+      max-width:62ch;
+    }
+
+    #hostsHeader .headerActions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    #addHostBtn{
+      min-height:40px;
+      font-size:13px;
+      padding:0 16px;
+      border-radius:12px;
+    }
+
+    /* ── Cards grid ── */
+    #hostsGrid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:14px;
+    }
+
+    @media (max-width: 768px){
+      #hostsGrid{
+        grid-template-columns:1fr;
+      }
+      #hostsHeader{
+        padding:18px 16px;
+      }
+      #hostsHeader h1{
+        font-size:23px;
+      }
+      #addHostBtn{
+        min-height:44px;
+        width:100%;
+      }
+    }
+
+    .hostCard{
+      background:#fff;
+      border:1px solid #e9e3d8;
+      border-radius:16px;
+      padding:18px 18px 16px;
+      box-shadow:0 6px 16px rgba(15,23,42,0.04);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .hostCard .hostCardTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .hostCard .hostCardName{
+      font-weight:800;
+      font-size:17px;
+      color:var(--h-text);
+      line-height:1.25;
+      letter-spacing:-0.01em;
+    }
+
+    .hostCard .pillRow{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-top:4px;
+    }
+
+    .pillSmall{
+      display:inline-flex;
+      align-items:center;
+      padding:4px 9px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:0.01em;
+      text-transform:capitalize;
+      border:1px solid var(--h-border);
+      background:#fff;
+      color:var(--h-muted);
+    }
+
+    .pillSmall.typePill{
+      background:rgba(139,107,63,0.08);
+      color:#8b6b3f;
+      border-color:rgba(139,107,63,0.22);
+    }
+
+    .pillSmall.relActive{
+      background:rgba(22,163,74,0.1);
+      color:#166534;
+      border-color:rgba(22,163,74,0.3);
+    }
+
+    .pillSmall.relProspect{
+      background:rgba(15,23,42,0.05);
+      color:var(--h-muted);
+      border-color:var(--h-border);
+    }
+
+    .pillSmall.relPaused{
+      background:rgba(245,158,11,0.12);
+      color:#92400e;
+      border-color:rgba(245,158,11,0.3);
+    }
+
+    .hostCard .audienceLine{
+      color:var(--h-muted);
+      font-size:12px;
+    }
+
+    .hostCard .statsRow{
+      display:flex;
+      gap:18px;
+      padding:10px 0 2px;
+      border-top:1px solid rgba(15,23,42,0.06);
+      margin-top:6px;
+    }
+
+    .hostCard .stat{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+
+    .hostCard .statLabel{
+      font-size:10px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:0.03em;
+      color:var(--h-muted);
+    }
+
+    .hostCard .statValue{
+      font-size:16px;
+      font-weight:800;
+      color:var(--h-text);
+    }
+
+    .hostCard .cardFooter{
+      display:flex;
+      justify-content:flex-end;
+      align-items:center;
+      margin-top:8px;
+    }
+
+    .hostCard .viewLink{
+      font-size:13px;
+      font-weight:700;
+      color:var(--h-accent);
+    }
+
+    .hostCard .viewLink:hover{
+      text-decoration:underline;
+    }
+
+    /* ── Empty state ── */
+    #emptyState{
+      background:#fff;
+      border:1px dashed #d9d2c3;
+      border-radius:18px;
+      padding:40px 24px;
+      text-align:center;
+      color:var(--h-muted);
+    }
+
+    #emptyState h2{
+      margin:0 0 8px;
+      font-size:19px;
+      color:var(--h-text);
+      letter-spacing:-0.01em;
+    }
+
+    #emptyState p{
+      margin:0 auto 18px;
+      max-width:52ch;
+      font-size:14px;
+      line-height:1.5;
+    }
+
+    /* ── Toast ── */
+    #toast{
+      position:fixed;
+      left:50%;
+      bottom:32px;
+      transform:translateX(-50%) translateY(18px);
+      background:var(--h-text);
+      color:#fff;
+      font-size:13px;
+      font-weight:600;
+      padding:12px 18px;
+      border-radius:12px;
+      box-shadow:0 12px 28px rgba(15,23,42,0.25);
+      max-width:92vw;
+      text-align:center;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity 180ms ease, transform 180ms ease;
+      z-index:200;
+    }
+
+    #toast.visible{
+      opacity:1;
+      transform:translateX(-50%) translateY(0);
+    }
+
+    /* ── Loading ── */
+    #loadingState{
+      padding:32px 18px;
+      text-align:center;
+      color:var(--h-muted);
+      font-size:14px;
+    }
+
+    /* ── Error box ── */
+    #errorBox{
+      display:none;
+      padding:14px 18px;
+      background:rgba(220,38,38,0.05);
+      border:1px solid rgba(220,38,38,0.25);
+      color:#7f1d1d;
+      border-radius:14px;
+      font-size:13px;
+    }
+
+    /* ── Create Host modal fields ── */
+    #hostModal .studioGrid2{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:12px;
+    }
+
+    @media (max-width: 560px){
+      #hostModal .studioGrid2{
+        grid-template-columns:1fr;
+      }
+    }
+
+    #hostModal .field label{
+      display:block;
+      font-size:11px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:0.03em;
+      color:var(--h-muted);
+      margin-bottom:6px;
+    }
+
+    #hostModal .field input,
+    #hostModal .field select{
+      width:100%;
+      min-width:0;
+    }
+
+    #hostModal .modalMessage.error{
+      display:block;
+      background:rgba(220,38,38,0.06);
+      border-color:rgba(220,38,38,0.3);
+      color:#7f1d1d;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="card headerBar">
+      <div class="brand">
+        <div class="brandMark">H</div>
+        <div>
+          <div class="brandTitle">Hearth — Hosts</div>
+          <div class="brandSubtitle" id="headerVendorSub">Host directory</div>
+        </div>
+      </div>
+
+      <div class="nav" id="operatorNav"></div>
+      <script>HearthNav.renderNav('operatorNav', 'hosts.html');</script>
+    </div>
+
+    <div id="hostsShell">
+      <section id="hostsHeader">
+        <div>
+          <div class="headerEyebrow">Hosts</div>
+          <h1>Hosts</h1>
+          <p>The clubs, schools and venues where your drops happen.</p>
+        </div>
+        <div class="headerActions">
+          <button class="btnAccent" id="addHostBtn" type="button">+ Add Host</button>
+        </div>
+      </section>
+
+      <div id="errorBox"></div>
+
+      <section id="loadingState">Loading hosts…</section>
+
+      <section id="emptyState" style="display:none;">
+        <h2>No hosts yet</h2>
+        <p>Hosts are the clubs, schools and venues where your drops happen. Add your first host to get started.</p>
+        <button class="btnAccent" id="emptyAddHostBtn" type="button" style="min-height:40px;padding:0 16px;border-radius:12px;font-size:13px;">+ Add Host</button>
+      </section>
+
+      <section id="hostsGrid" style="display:none;"></section>
+    </div>
+  </div>
+
+  <!-- ── Create Host modal ── -->
+  <div class="modalBackdrop" id="hostModal">
+    <div class="modalCard">
+      <div class="modalHead">
+        <div>
+          <h3 class="sectionTitle">Add Host</h3>
+          <p class="sectionSub">Add a new host. You can complete their full profile afterwards.</p>
+        </div>
+        <button class="btnGhost" id="closeHostModalBtn" type="button">Close</button>
+      </div>
+
+      <div class="studioGrid2">
+        <div class="field">
+          <label for="newHostName">Host Name</label>
+          <input id="newHostName" type="text" placeholder="Community Venue" />
+        </div>
+
+        <div class="field">
+          <label for="newHostType">Host Type</label>
+          <select id="newHostType">
+            <option value="club">Club</option>
+            <option value="pub">Pub</option>
+            <option value="school">School</option>
+            <option value="venue">Venue</option>
+            <option value="neighbourhood">Neighbourhood</option>
+            <option value="event">Event</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div class="field" style="grid-column:1 / -1;">
+          <label for="newHostPostcode">Postcode (optional)</label>
+          <input id="newHostPostcode" type="text" placeholder="RG10 0JP" />
+        </div>
+      </div>
+
+      <div class="modalMessage" id="hostModalMessage"></div>
+
+      <div class="modalActions">
+        <button class="btnGhost" id="cancelHostBtn" type="button">Cancel</button>
+        <button class="btnAccent" id="saveHostBtn" type="button">Create Host</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    (function(){
+      "use strict";
+
+      const CONFIG = window.HEARTH_CONFIG || {};
+      const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+
+      const state = {
+        vendor: null,
+        vendorId: null,
+        hosts: [],
+        statsByHost: {}
+      };
+
+      /* ── Helpers ── */
+      function byId(id){ return document.getElementById(id); }
+
+      function escapeHtml(str){
+        return String(str ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function fmtNum(n){
+        return new Intl.NumberFormat('en-GB').format(Number(n || 0));
+      }
+
+      function getUrlParam(name){
+        return new URLSearchParams(window.location.search).get(name);
+      }
+
+      function showError(message){
+        const el = byId('errorBox');
+        if (!message){
+          el.style.display = 'none';
+          el.textContent = '';
+          return;
+        }
+        el.style.display = 'block';
+        el.textContent = message;
+      }
+
+      let toastTimer = null;
+      function showToast(message){
+        const el = byId('toast');
+        el.textContent = message;
+        el.classList.add('visible');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          el.classList.remove('visible');
+        }, 4200);
+      }
+
+      /* ── Vendor resolution ── */
+      async function resolveVendor(){
+        const explicitVendorId = getUrlParam('vendor_id') || window.HEARTH_VENDOR_ID || null;
+        const explicitSlug = getUrlParam('vendor') || getUrlParam('vendor_slug') || null;
+
+        if (explicitVendorId){
+          const { data } = await sb.from('vendors').select('*').eq('id', explicitVendorId).maybeSingle();
+          if (data) return data;
+        }
+
+        if (explicitSlug){
+          for (const field of ['slug', 'vendor_slug']){
+            try {
+              const { data } = await sb.from('vendors').select('*').eq(field, explicitSlug).maybeSingle();
+              if (data) return data;
+            } catch (e) {}
+          }
+          // Slug was provided but no match found — do not fall back to
+          // another vendor. Returning null lets the caller show a clear
+          // "Vendor not found" error instead of silently loading the wrong
+          // vendor's data.
+          return null;
+        }
+
+        // Only reached when no slug was provided at all — dev convenience
+        // fallback so the page loads against the first vendor in the DB.
+        const { data, error } = await sb.from('vendors').select('*').limit(1);
+        if (error) throw error;
+        return data?.[0] || null;
+      }
+
+      /* ── Data loading ── */
+      async function loadHosts(){
+        const { data, error } = await sb
+          .from('hosts')
+          .select('id, name, host_type, status, relationship_status, estimated_audience_size, onboarding_completed, postcode')
+          .neq('status', 'archived')
+          .order('name', { ascending: true });
+        if (error) throw error;
+        state.hosts = data || [];
+      }
+
+      async function loadDropStats(){
+        // v_drop_summary has no RLS — MUST filter by vendor_id to avoid
+        // leaking cross-vendor drops into host stats.
+        const { data, error } = await sb
+          .from('v_drop_summary')
+          .select('drop_id, host_id, order_count')
+          .eq('vendor_id', state.vendorId);
+        if (error) throw error;
+
+        const stats = {};
+        for (const row of data || []){
+          const hostId = row.host_id;
+          if (!hostId) continue;
+          if (!stats[hostId]) stats[hostId] = { dropCount: 0, totalOrders: 0 };
+          stats[hostId].dropCount += 1;
+          stats[hostId].totalOrders += Number(row.order_count || 0);
+        }
+        state.statsByHost = stats;
+      }
+
+      /* ── Rendering ── */
+      function renderCard(host){
+        const stats = state.statsByHost[host.id] || { dropCount: 0, totalOrders: 0 };
+
+        const typeLabel = (host.host_type || 'other').replace(/_/g, ' ');
+        const relationship = host.relationship_status || null;
+        const relClass = relationship === 'active' ? 'relActive'
+          : relationship === 'paused' ? 'relPaused'
+          : relationship === 'prospect' ? 'relProspect'
+          : '';
+
+        const audienceLine = host.estimated_audience_size
+          ? `~${fmtNum(host.estimated_audience_size)} members`
+          : '';
+
+        const profileHref = HearthNav.withVendor('host-profile.html?host=' + encodeURIComponent(host.id));
+
+        return `
+          <article class="hostCard">
+            <div class="hostCardTop">
+              <div>
+                <div class="hostCardName">${escapeHtml(host.name || 'Unnamed host')}</div>
+                <div class="pillRow">
+                  <span class="pillSmall typePill">${escapeHtml(typeLabel)}</span>
+                  ${relationship ? `<span class="pillSmall ${relClass}">${escapeHtml(relationship)}</span>` : ''}
+                </div>
+              </div>
+            </div>
+            ${audienceLine ? `<div class="audienceLine">${escapeHtml(audienceLine)}</div>` : ''}
+            <div class="statsRow">
+              <div class="stat">
+                <div class="statLabel">Drops with you</div>
+                <div class="statValue">${fmtNum(stats.dropCount)}</div>
+              </div>
+              <div class="stat">
+                <div class="statLabel">Total orders</div>
+                <div class="statValue">${fmtNum(stats.totalOrders)}</div>
+              </div>
+            </div>
+            <div class="cardFooter">
+              <a class="viewLink" href="${escapeHtml(profileHref)}">View Profile →</a>
+            </div>
+          </article>
+        `;
+      }
+
+      function render(){
+        const loading = byId('loadingState');
+        const empty = byId('emptyState');
+        const grid = byId('hostsGrid');
+
+        loading.style.display = 'none';
+
+        if (!state.hosts.length){
+          empty.style.display = 'block';
+          grid.style.display = 'none';
+          return;
+        }
+
+        empty.style.display = 'none';
+        grid.style.display = 'grid';
+        grid.innerHTML = state.hosts.map(renderCard).join('');
+      }
+
+      /* ── Modal ── */
+      function openModal(){
+        byId('hostModal').classList.add('open');
+        byId('newHostName').value = '';
+        byId('newHostType').value = 'club';
+        byId('newHostPostcode').value = '';
+        const msg = byId('hostModalMessage');
+        msg.textContent = '';
+        msg.classList.remove('error');
+        msg.style.display = 'none';
+        setTimeout(() => byId('newHostName').focus(), 50);
+      }
+
+      function closeModal(){
+        byId('hostModal').classList.remove('open');
+      }
+
+      function slugify(name){
+        return String(name || '')
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+          .slice(0, 80) || 'host';
+      }
+
+      async function createHost(){
+        const name = byId('newHostName').value.trim();
+        const hostType = byId('newHostType').value;
+        const postcode = byId('newHostPostcode').value.trim() || null;
+
+        if (!name){
+          const msg = byId('hostModalMessage');
+          msg.textContent = 'Host Name is required.';
+          msg.classList.add('error');
+          msg.style.display = 'block';
+          return;
+        }
+
+        const payload = {
+          name,
+          slug: slugify(name),
+          host_type: hostType,
+          postcode,
+          status: 'active'
+        };
+
+        const { error } = await sb
+          .from('hosts')
+          .insert(payload)
+          .select('id')
+          .single();
+
+        if (error){
+          const msg = byId('hostModalMessage');
+          msg.textContent = error.message || 'Unable to create host.';
+          msg.classList.add('error');
+          msg.style.display = 'block';
+          return;
+        }
+
+        closeModal();
+        showToast('Host created. Complete their profile to add audience and service window details.');
+        await loadHosts();
+        render();
+      }
+
+      /* ── Events ── */
+      function attachEvents(){
+        byId('addHostBtn').addEventListener('click', openModal);
+        byId('emptyAddHostBtn').addEventListener('click', openModal);
+        byId('closeHostModalBtn').addEventListener('click', closeModal);
+        byId('cancelHostBtn').addEventListener('click', closeModal);
+        byId('saveHostBtn').addEventListener('click', async () => {
+          try {
+            await createHost();
+          } catch (err){
+            console.error(err);
+            const msg = byId('hostModalMessage');
+            msg.textContent = err.message || 'Unable to create host.';
+            msg.classList.add('error');
+            msg.style.display = 'block';
+          }
+        });
+        byId('hostModal').addEventListener('click', (e) => {
+          if (e.target === byId('hostModal')) closeModal();
+        });
+
+        // Click a host card anywhere to navigate
+        byId('hostsGrid').addEventListener('click', (e) => {
+          const link = e.target.closest('a.viewLink');
+          if (link) return; // anchor handles it
+          const card = e.target.closest('.hostCard');
+          if (!card) return;
+          const anchor = card.querySelector('a.viewLink');
+          if (anchor) window.location.href = anchor.getAttribute('href');
+        });
+      }
+
+      /* ── Boot ── */
+      async function boot(){
+        try {
+          state.vendor = await resolveVendor();
+          if (!state.vendor){
+            const requestedSlug = getUrlParam('vendor') || getUrlParam('vendor_slug');
+            byId('loadingState').style.display = 'none';
+            showError(
+              requestedSlug
+                ? `Vendor "${requestedSlug}" not found. Check the ?vendor= URL parameter.`
+                : 'No vendor found. Add at least one vendor to the database.'
+            );
+            return;
+          }
+          state.vendorId = state.vendor.id;
+          byId('headerVendorSub').textContent = state.vendor.display_name || state.vendor.name || 'Host directory';
+
+          await Promise.all([loadHosts(), loadDropStats()]);
+          render();
+          attachEvents();
+        } catch (err){
+          console.error(err);
+          byId('loadingState').style.display = 'none';
+          showError(err.message || 'Unable to load hosts.');
+        }
+      }
+
+      boot();
+    })();
+  </script>
+  <script>HearthNav.decorateLinks && HearthNav.decorateLinks();</script>
+</body>
+</html>
