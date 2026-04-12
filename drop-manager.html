@@ -849,34 +849,6 @@
                     </div>
                   </div>
 
-                  <div style="margin-top:12px;">
-                    <div class="helperText" style="margin-bottom:6px;">Order Opening</div>
-                    <div class="openChoice">
-                      <label><input type="radio" name="openPattern" value="immediate" checked /> Open immediately</label>
-                      <label><input type="radio" name="openPattern" value="scheduled" /> Schedule opening</label>
-                    </div>
-                  </div>
-
-                  <div class="studioGrid2 hidden" id="scheduledOpenFields" style="margin-top:10px;">
-                    <div class="field">
-                      <label for="opensAtDate">Open for Orders</label>
-                      <div class="studioGrid2" style="gap:8px;">
-                        <input id="opensAtDate" type="date" />
-                        <input id="opensAtTime" type="time" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="studioGrid2" style="margin-top:10px;">
-                    <div class="field">
-                      <label for="closesAtDate">Close Orders</label>
-                      <div class="studioGrid2" style="gap:8px;">
-                        <input id="closesAtDate" type="date" />
-                        <input id="closesAtTime" type="time" />
-                      </div>
-                    </div>
-                  </div>
-
                   <!-- Event Windows section (T4-15) — only shown when host_id is set -->
                   <div id="eventWindowsSection" class="hidden" style="margin-top:14px;">
                     <div class="helperText" style="margin-bottom:6px;">Event windows</div>
@@ -894,7 +866,6 @@
                         <table class="scheduleTable">
                           <thead>
                             <tr>
-                              <th>Date</th>
                               <th>From</th>
                               <th>To</th>
                               <th></th>
@@ -976,6 +947,34 @@
                     </div>
 
                     <div class="previewList" id="seriesPreviewList"></div>
+                  </div>
+
+                  <div style="margin-top:12px;">
+                    <div class="helperText" style="margin-bottom:6px;">Order Opening</div>
+                    <div class="openChoice">
+                      <label><input type="radio" name="openPattern" value="immediate" checked /> Open immediately</label>
+                      <label><input type="radio" name="openPattern" value="scheduled" /> Schedule opening</label>
+                    </div>
+                  </div>
+
+                  <div class="studioGrid2 hidden" id="scheduledOpenFields" style="margin-top:10px;">
+                    <div class="field">
+                      <label for="opensAtDate">Open for Orders</label>
+                      <div class="studioGrid2" style="gap:8px;">
+                        <input id="opensAtDate" type="date" />
+                        <input id="opensAtTime" type="time" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="studioGrid2" style="margin-top:10px;">
+                    <div class="field">
+                      <label for="closesAtDate">Close Orders</label>
+                      <div class="studioGrid2" style="gap:8px;">
+                        <input id="closesAtDate" type="date" />
+                        <input id="closesAtTime" type="time" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3689,7 +3688,6 @@
       const body = byId("eventWindowRowsBody");
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td><input class="js-ew-date" type="date" /></td>
         <td><input class="js-ew-start" type="time" /></td>
         <td><input class="js-ew-end" type="time" /></td>
         <td><button class="btnGhost js-remove-ew-row" type="button">Remove</button></td>
@@ -3708,18 +3706,35 @@
       const rows = byId("eventWindowRowsBody").querySelectorAll("tr");
       if (!rows.length) throw new Error("Add at least one additional window.");
 
+      /* Read the parent drop's date from the Drop Date field */
+      const parentDate = byId("deliveryDate")?.value;
+      if (!parentDate) throw new Error("Set a Drop Date before creating windows.");
+
       /* Collect and validate rows */
       const windowEntries = [];
       for (const row of rows) {
-        const dateVal = row.querySelector(".js-ew-date")?.value;
         const startVal = row.querySelector(".js-ew-start")?.value;
         const endVal = row.querySelector(".js-ew-end")?.value;
-        if (!dateVal || !startVal || !endVal) continue;
-        windowEntries.push({ date: dateVal, start: startVal, end: endVal });
+        if (!startVal || !endVal) continue;
+        windowEntries.push({ start: startVal, end: endVal });
       }
-      if (!windowEntries.length) throw new Error("Each window needs a date, start time and end time.");
+      if (!windowEntries.length) throw new Error("Each window needs a start and end time.");
 
+      /* Validate window times against overall service window */
+      const parentFrom = byId("deliveryStartTime")?.value;
+      const parentTo = byId("deliveryEndTime")?.value;
       const msgEl = byId("eventWindowsMessage");
+
+      if (parentFrom && parentTo) {
+        const earliestStart = windowEntries.reduce((min, e) => e.start < min ? e.start : min, windowEntries[0].start);
+        const latestEnd = windowEntries.reduce((max, e) => e.end > max ? e.end : max, windowEntries[0].end);
+
+        if (earliestStart < parentFrom || latestEnd > parentTo) {
+          msgEl.textContent = `Window times must fall within the overall service window (${parentFrom} \u2013 ${parentTo}).`;
+          return;
+        }
+      }
+
       msgEl.textContent = "Creating windows\u2026";
 
       /* Generate a shared window_group_id */
@@ -3732,10 +3747,10 @@
         .eq("id", state.selectedDropId);
       if (updateErr) throw updateErr;
 
-      /* Create each sibling window */
+      /* Create each sibling window using parent drop's date */
       for (const entry of windowEntries) {
-        const deliveryStart = `${entry.date}T${entry.start}:00`;
-        const deliveryEnd = `${entry.date}T${entry.end}:00`;
+        const deliveryStart = `${parentDate}T${entry.start}:00`;
+        const deliveryEnd = `${parentDate}T${entry.end}:00`;
         const timingOverride = {
           delivery_start: deliveryStart,
           delivery_end: deliveryEnd,
