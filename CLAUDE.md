@@ -334,12 +334,18 @@ Replace sequential per-row updates with single upsert array call.
 T3-4: Insights — fix Supabase chaining pattern ✓ COMPLETE
 Audit and fix all Supabase query chains to use proper async/await try/catch.
 
-T3-5: Drop Studio — unsaved changes warning
-Add beforeunload guard when operator navigates away with unsaved changes.
+T3-5: Drop Studio — unsaved changes warning ✓ COMPLETE
+isDirty flag added with markDirty() function. Four surgical additions:
+markDirty() now sets isDirty = true, createNewDrop() resets it to false,
+duplicateDrop() resets it to false, and drop card selection resets it to
+false. Native beforeunload dialog covers all exit routes.
 
-T3-6: Service Board — confirmation on status changes
-Add brief confirmation or undo window for status transitions to prevent
-misclicks during busy service.
+T3-6: Service Board — confirmation on status changes ✓ COMPLETE
+Undo toast system: pendingChange object, showUndoToast() with 5-second
+countdown and progress bar, undoPending() for reversal, commitPending()
+for DB write. Applies to all forward and backward status transitions.
+Notify modal (collection orders marking Ready) routes through the same
+updateOrderStatus path.
 
 T3-7: Order page — real-time capacity update
 Add periodic re-fetch or Realtime subscription so capacity shown to
@@ -884,8 +890,8 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 1.  T3-2  — Drop Studio saveAssignments defensive pattern ✓ COMPLETE
 3.  T3-3  — Menu Library saveSortOrderBatch performance ✓ COMPLETE
 4.  T3-4  — Insights Supabase chaining pattern ✓ COMPLETE
-5.  T3-5  — Drop Studio unsaved changes warning
-6.  T3-6  — Service Board confirmation on status changes
+5.  T3-5  — Drop Studio unsaved changes warning ✓ COMPLETE
+6.  T3-6  — Service Board confirmation on status changes ✓ COMPLETE
 7.  T3-7  — Order page real-time capacity update
 8.  T3-8  — Stripe integration
 9.  T3-9  — Order page customer data capture and consent ✓ COMPLETE
