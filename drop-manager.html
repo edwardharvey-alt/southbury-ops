@@ -3701,12 +3701,8 @@
         <td><input class="js-ew-close" type="time" /></td>
         <td><button class="btnGhost js-remove-ew-row" type="button">Remove</button></td>
       `;
-      /* Pre-populate Close with From value — orders close when service begins by default */
-      const startInput = tr.querySelector(".js-ew-start");
-      const closeInput = tr.querySelector(".js-ew-close");
-      startInput.addEventListener("change", () => {
-        if (!closeInput.value) closeInput.value = startInput.value;
-      });
+      /* Pre-populate Close with From value at creation — orders close when service begins by default */
+      tr.querySelector(".js-ew-close").value = tr.querySelector(".js-ew-start").value;
       body.appendChild(tr);
     }
 
