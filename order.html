@@ -767,6 +767,19 @@
       line-height:1.15;
     }
 
+    .privacyFootnote{
+      display:inline-block;
+      margin-top:4px;
+      font-size:11px;
+      font-weight:500;
+      color:#8B6B3F;
+      text-decoration:none;
+    }
+
+    .privacyFootnote:hover{
+      text-decoration:underline;
+    }
+
     .choiceCardSub{
       font-size:11px;
       color:var(--h-muted);
@@ -1259,6 +1272,7 @@
             <input type="checkbox" id="contactOptIn" />
             <div>
               <div class="choiceCardTitle" id="marketingOptInLabel">Yes — keep me informed about future drops. No spam, ever.</div>
+              <a href="privacy.html" class="privacyFootnote" target="_blank" rel="noopener noreferrer">Privacy policy</a>
             </div>
           </label>
         </div>
@@ -1702,8 +1716,9 @@
         if (vendor.powered_by_hearth_visible !== false) {
           footerParts.push("Powered by Hearth");
         }
+        footerParts.push('<a href="privacy.html" target="_blank" rel="noopener noreferrer">Privacy policy</a>');
 
-        byId("footerBrand").innerHTML = footerParts.join(" • ");
+        byId("footerBrand").innerHTML = footerParts.join(" \u00b7 ");
       }
 
       async function loadDropContext() {
