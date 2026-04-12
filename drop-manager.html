@@ -3843,7 +3843,9 @@
           removeBtn.style.cssText = "flex:0 0 auto;";
           removeBtn.textContent = "Remove";
 
-          removeBtn.addEventListener("click", () => {
+          removeBtn.onclick = function(e) {
+            e.stopPropagation();
+            e.preventDefault();
             removeBtn.style.display = "none";
 
             const confirmSpan = document.createElement("span");
@@ -3860,13 +3862,15 @@
             cancelLink.textContent = "Cancel";
             cancelLink.style.cssText = "color:var(--h-muted);text-decoration:underline;";
 
-            cancelLink.addEventListener("click", (ce) => {
+            cancelLink.onclick = function(ce) {
+              ce.stopPropagation();
               ce.preventDefault();
               confirmSpan.remove();
               removeBtn.style.display = "";
-            });
+            };
 
-            confirmLink.addEventListener("click", async (ce) => {
+            confirmLink.onclick = async function(ce) {
+              ce.stopPropagation();
               ce.preventDefault();
               try {
                 const { error: delErr } = await supabase
@@ -3881,13 +3885,13 @@
                 console.error("Delete window error:", err);
                 showError(err.message || "Unable to remove window.");
               }
-            });
+            };
 
             confirmSpan.appendChild(confirmLink);
             confirmSpan.appendChild(document.createTextNode(" "));
             confirmSpan.appendChild(cancelLink);
             row.appendChild(confirmSpan);
-          });
+          };
 
           row.appendChild(infoSpan);
           row.appendChild(removeBtn);
