@@ -3083,6 +3083,13 @@ async function handoffToPayment() {
 
           bindDynamicEvents();
           await loadDropContext();
+
+          /* T4-15 — Multi-window selection step */
+          if (state.drop && state.drop.window_group_id) {
+            const shouldProceed = await handleWindowSelection();
+            if (!shouldProceed) return; /* selection screen shown, waiting for user */
+          }
+
           renderAll();
 
           clearInterval(countdownTimer);
@@ -3101,6 +3108,160 @@ async function handoffToPayment() {
           showNotice(err.message || "We couldn’t load this service.", "error");
           byId("menuSections").innerHTML = `<div class="emptyState">We couldn’t load this service.</div>`;
         }
+      }
+
+      /**
+       * T4-15 — Window selection for multi-window drops.
+       * Returns true if we should proceed to render the menu (single window
+       * or no siblings), false if the selection screen is shown and we wait.
+       */
+      async function handleWindowSelection() {
+        const groupId = state.drop.window_group_id;
+
+        /* Fetch all siblings sharing the same window_group_id */
+        const { data: siblings, error: sibErr } = await supabase
+          .from("drops")
+          .select("id, slug, name, delivery_start, delivery_end, status")
+          .eq("window_group_id", groupId)
+          .order("delivery_start", { ascending: true });
+
+        if (sibErr) {
+          console.error("Window group query error:", sibErr);
+          return true; /* proceed normally on error */
+        }
+
+        if (!siblings || siblings.length <= 1) {
+          return true; /* single window — skip selection */
+        }
+
+        /* Fetch capacity data for each sibling from v_drop_summary */
+        const siblingIds = siblings.map((s) => s.id);
+        const { data: summaries, error: sumErr } = await supabase
+          .from("v_drop_summary")
+          .select("drop_id, capacity_units_remaining")
+          .in("drop_id", siblingIds);
+
+        const capacityMap = {};
+        if (!sumErr && summaries) {
+          for (const s of summaries) {
+            capacityMap[s.drop_id] = Number(s.capacity_units_remaining ?? 0);
+          }
+        }
+
+        /* Render hero first so the page doesn’t look blank */
+        renderHero();
+
+        /* Build the selection UI in the menu card area */
+        const menuCard = byId("menuSections")?.closest(".sectionCard");
+        if (!menuCard) return true;
+
+        /* Format a time-only range from delivery_start / delivery_end */
+        function fmtTimeRange(start, end) {
+          if (!start || !end) return "Time to be confirmed";
+          const s = new Date(start);
+          const e = new Date(end);
+          if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return "Time to be confirmed";
+          const fmt = (d) => d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+          return `${fmt(s)} \u2013 ${fmt(e)}`;
+        }
+
+        const cardsHtml = siblings.map((sib) => {
+          const remaining = capacityMap[sib.id] ?? null;
+          const isFull = remaining !== null && remaining <= 0;
+          const timeLabel = fmtTimeRange(sib.delivery_start, sib.delivery_end);
+
+          if (isFull) {
+            return `
+              <div style="
+                border:1px solid var(--h-border-2);
+                border-radius:20px;
+                padding:22px 20px;
+                background:rgba(15,23,42,0.03);
+                opacity:0.55;
+                cursor:default;
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                gap:12px;
+              ">
+                <span style="font-size:18px;font-weight:800;letter-spacing:-0.02em;color:var(--h-muted);">${escapeHtml(timeLabel)}</span>
+                <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:var(--h-muted);">Full</span>
+              </div>
+            `;
+          }
+
+          return `
+            <div class="js-window-card" data-drop-slug="${escapeHtml(sib.slug || "")}" data-drop-id="${escapeHtml(sib.id)}" style="
+              border:1px solid var(--h-border-2);
+              border-radius:20px;
+              padding:22px 20px;
+              background:#fff;
+              cursor:pointer;
+              box-shadow:0 2px 10px rgba(15,23,42,0.03);
+              transition:border-color 150ms ease, box-shadow 150ms ease;
+            " onmouseover="this.style.borderColor=’var(--h-accent)’;this.style.boxShadow=’0 6px 20px rgba(249,115,22,0.10)’;" onmouseout="this.style.borderColor=’’;this.style.boxShadow=’0 2px 10px rgba(15,23,42,0.03)’;">
+              <span style="font-size:18px;font-weight:800;letter-spacing:-0.02em;color:var(--h-text);">${escapeHtml(timeLabel)}</span>
+            </div>
+          `;
+        }).join("");
+
+        menuCard.innerHTML = `
+          <div class="sectionCardHead">
+            <div>
+              <h3 class="sectionTitle">Choose your sitting</h3>
+            </div>
+          </div>
+          <div style="display:grid;gap:10px;">
+            ${cardsHtml}
+          </div>
+        `;
+
+        /* Attach click handler for selectable cards */
+        menuCard.addEventListener("click", async (e) => {
+          const card = e.target.closest(".js-window-card");
+          if (!card) return;
+
+          const slug = card.dataset.dropSlug;
+          const id = card.dataset.dropId;
+          if (!slug && !id) return;
+
+          /* Update URL to reflect selected window */
+          const newUrl = new URL(window.location);
+          if (slug) {
+            newUrl.searchParams.set("drop", slug);
+          }
+          window.history.replaceState({}, "", newUrl.toString());
+
+          /* Re-run full load for the selected drop */
+          state.dropSlug = slug || state.dropSlug;
+
+          /* Reset menu card to loading state */
+          menuCard.innerHTML = `
+            <div class="sectionCardHead">
+              <div>
+                <h3 class="sectionTitle">Menu</h3>
+                <p class="sectionSub">Today’s available items</p>
+              </div>
+            </div>
+            <div class="menuLeadNote" id="menuLeadNote"></div>
+            <div id="menuSections"><div class="emptyState">Loading menu…</div></div>
+          `;
+
+          try {
+            await loadDropContext();
+            renderAll();
+
+            clearInterval(countdownTimer);
+            countdownTimer = setInterval(tickCountdown, 60000);
+
+            subscribeToCapacityUpdates();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to load this sitting.");
+          }
+        });
+
+        return false; /* selection screen shown, don’t renderAll yet */
       }
 
       init();
