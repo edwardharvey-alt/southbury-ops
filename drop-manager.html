@@ -1101,6 +1101,7 @@
                       <button class="btnAccent" id="publishBtn" type="button">Publish Drop</button>
                       <button class="btnGhost" id="cancelDropBtn" type="button">Cancel Drop</button>
                       <button class="btnGhost" id="archiveDropBtn" type="button">Archive Drop</button>
+                      <button class="btnGhost" id="createEventWindowBtn" type="button" style="display:none;">Create another window for this event</button>
                     </div>
                   </div>
                 </div>
@@ -2915,6 +2916,8 @@
         readinessEl.innerHTML = `<div class="emptyState">No drop selected.</div>`;
         share.textContent = "No drop link yet.";
         renderQrCode("");
+        const ewBtnEarly = byId("createEventWindowBtn");
+        if (ewBtnEarly) ewBtnEarly.style.display = "none";
         return;
       }
 
@@ -2973,6 +2976,9 @@
         publishHelp.textContent = "Resolve the highlighted issues before publishing.";
         publishBtn.disabled = true;
       }
+
+      const ewBtn = byId("createEventWindowBtn");
+      if (ewBtn) ewBtn.style.display = liveDrop.host_id ? "" : "none";
     }
 
     function renderQrCode(text) {
@@ -3462,6 +3468,117 @@
       const { data: insertedDrop, error: insertDropError } = await supabase
         .from("drops")
         .insert(duplicatePayload)
+        .select("id")
+        .single();
+
+      if (insertDropError) throw insertDropError;
+
+      if ((sourceAssignments || []).length) {
+        const rows = sourceAssignments
+          .map((row) => {
+            const itemType = row.menu_item_type || row.item_type;
+            return {
+              drop_id: insertedDrop.id,
+              item_type: itemType,
+              menu_item_type: itemType,
+              product_id: row.product_id,
+              bundle_id: row.bundle_id,
+              is_available: row.is_available,
+              price_override_pence: row.price_override_pence,
+              stock_limit: row.stock_limit,
+              sort_order: row.sort_order
+            };
+          })
+          .filter((row) =>
+            row.item_type &&
+            (
+              (row.item_type === "product" && row.product_id) ||
+              (row.item_type === "bundle" && row.bundle_id)
+            )
+          );
+
+        if (rows.length) {
+          const { error: insertAssignmentsError } = await supabase
+            .from("drop_menu_items")
+            .insert(rows);
+          if (insertAssignmentsError) throw insertAssignmentsError;
+        }
+      }
+
+      state.selectedDropId = insertedDrop.id;
+      state.currentStage = "timing";
+      await refreshAll();
+      isDirty = false;
+      showDuplicateBanner();
+    }
+
+    async function createEventWindow(dropId) {
+      const targetId = dropId || state.selectedDropId;
+      if (!targetId) return;
+
+      const { data: sourceDrop, error: sourceError } = await supabase
+        .from("drops")
+        .select("*")
+        .eq("id", targetId)
+        .single();
+
+      if (sourceError) throw sourceError;
+
+      const { data: sourceAssignments, error: assignmentsError } = await supabase
+        .from("drop_menu_items")
+        .select("*")
+        .eq("drop_id", targetId);
+
+      if (assignmentsError) throw assignmentsError;
+
+      let windowCount = 1;
+      if (sourceDrop.host_id && sourceDrop.delivery_start) {
+        const sourceDate = new Date(sourceDrop.delivery_start);
+        const sourceDateStr = `${sourceDate.getFullYear()}-${String(sourceDate.getMonth() + 1).padStart(2, "0")}-${String(sourceDate.getDate()).padStart(2, "0")}`;
+
+        const { data: hostDrops, error: countError } = await supabase
+          .from("drops")
+          .select("id, delivery_start")
+          .eq("host_id", sourceDrop.host_id);
+
+        if (!countError && hostDrops) {
+          windowCount = hostDrops.filter((d) => {
+            if (!d.delivery_start) return false;
+            const dDate = new Date(d.delivery_start);
+            const dDateStr = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, "0")}-${String(dDate.getDate()).padStart(2, "0")}`;
+            return dDateStr === sourceDateStr;
+          }).length;
+        }
+      } else if (sourceDrop.host_id) {
+        const { data: hostDrops, error: countError } = await supabase
+          .from("drops")
+          .select("id")
+          .eq("host_id", sourceDrop.host_id);
+
+        if (!countError && hostDrops) {
+          windowCount = hostDrops.length;
+        }
+      }
+
+      const windowName = `${sourceDrop.name} \u2014 Window ${windowCount + 1}`;
+      const windowSlugBase = slugify(windowName);
+
+      const windowPayload = {
+        ...getDropPayload(sourceDrop),
+        slug: buildUniqueSlug(windowSlugBase),
+        name: windowName,
+        status: "draft",
+        series_id: null,
+        series_position: null,
+        opens_at: null,
+        closes_at: null,
+        delivery_start: null,
+        delivery_end: null
+      };
+
+      const { data: insertedDrop, error: insertDropError } = await supabase
+        .from("drops")
+        .insert(windowPayload)
         .select("id")
         .single();
 
@@ -4123,6 +4240,15 @@
         } catch (err) {
           console.error(err);
           showError(err.message || "Unable to archive drop.");
+        }
+      });
+
+      byId("createEventWindowBtn").addEventListener("click", async () => {
+        try {
+          await createEventWindow();
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Unable to create event window.");
         }
       });
 
