@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Terms of Participation — Hearth</title>
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=30" />
+  <script src="./assets/config.js"></script>
+  <script src="./assets/vendor-nav.js?v=2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      background: #FAF8F4;
+      color: #1F2937;
+    }
+
+    .termsWrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 16px 60px;
+    }
+
+    .draftBanner {
+      background: #FEF3C7;
+      border: 1px solid #F59E0B;
+      color: #92400E;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .termsTitle {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin: 0 0 6px;
+    }
+
+    .termsSubtitle {
+      font-size: 15px;
+      color: #6B7280;
+      margin: 0 0 28px;
+    }
+
+    .termsCard {
+      background: #fff;
+      border: 1px solid #E5E0D8;
+      border-radius: 14px;
+      padding: 24px 28px;
+      margin-bottom: 16px;
+    }
+
+    .termsCard h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #8B6B3F;
+      margin: 0 0 10px;
+    }
+
+    .termsCard p,
+    .termsCard li {
+      font-size: 14px;
+      line-height: 1.65;
+      margin: 0 0 10px;
+      color: #1F2937;
+    }
+
+    .termsCard p:last-child,
+    .termsCard li:last-child {
+      margin-bottom: 0;
+    }
+
+    .termsCard ul {
+      margin: 0 0 10px;
+      padding-left: 20px;
+    }
+
+    .termsCard a {
+      color: #8B6B3F;
+      text-decoration: underline;
+    }
+
+    .versionNote {
+      text-align: center;
+      font-size: 12px;
+      color: #9CA3AF;
+      margin-top: 28px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- ── Nav bar ── -->
+    <div class="card headerBar">
+      <div class="brand">
+        <div class="brandMark">H</div>
+        <div>
+          <div class="brandTitle">Hearth — Vendor Terms</div>
+          <div class="brandSubtitle" id="headerVendorSub">Platform — Vendor Terms</div>
+        </div>
+      </div>
+
+      <div class="nav" id="operatorNav"></div>
+      <script>HearthNav.renderNav('operatorNav', 'vendor-terms.html');</script>
+    </div>
+
+    <div class="termsWrap">
+
+      <div class="draftBanner">
+        Draft — this document requires legal review before live use.
+      </div>
+
+      <h1 class="termsTitle">Terms of Participation</h1>
+      <p class="termsSubtitle">What Hearth offers, and what we ask in return</p>
+
+      <div class="termsCard">
+        <h2>What Hearth is</h2>
+        <p>Hearth is a community food ordering platform built around planned drops — time-bound, capacity-limited food service moments. These terms cover your participation as a vendor on the Hearth platform.</p>
+      </div>
+
+      <div class="termsCard">
+        <h2>What Hearth provides</h2>
+        <p>As a Hearth vendor, you get access to:</p>
+        <ul>
+          <li>Drop creation and management tools (Drop Studio)</li>
+          <li>Menu building and management (Menu Library)</li>
+          <li>A customer-facing order page, branded to your business</li>
+          <li>Operational tools for running your service (Service Board)</li>
+          <li>Insights into your drop performance over time</li>
+          <li>Shareable links and QR codes for promoting your drops</li>
+          <li>A platform designed to help you build repeatable, predictable local demand</li>
+        </ul>
+      </div>
+
+      <div class="termsCard">
+        <h2>Pricing and fees</h2>
+        <p>Hearth is free to use for your first three months, excluding any payment processing costs passed through from Stripe.</p>
+        <p>After the free period, Hearth will charge a per-drop fee. The amount of that fee will be communicated to you with reasonable notice before your free period ends, giving you time to decide whether to continue.</p>
+        <p>Payment processing costs (charged by Stripe for handling customer payments) are passed through at cost. Hearth does not mark these up.</p>
+        <p>Longer term, Hearth intends to evolve toward a subscription model that better reflects the ongoing value of the platform. Any such change will be introduced with appropriate notice and will not be applied retroactively without your agreement.</p>
+        <p>Hearth will never introduce fees without telling you in advance.</p>
+      </div>
+
+      <div class="termsCard">
+        <h2>Your commitments</h2>
+        <p>When you create a drop on Hearth, you are making a commitment — to your customers, to the community, and to Hearth. We ask that you:</p>
+        <ul>
+          <li>Honour the capacity you declare. Do not accept more orders than you can fulfil well.</li>
+          <li>Honour the time window you set. Customers plan around it.</li>
+          <li>Deliver the menu you published. Substitutions should be communicated promptly.</li>
+          <li>Take direct responsibility for fulfilment. Hearth coordinates the moment; you run the service.</li>
+          <li>Participate in community moments with care. Hosts and communities are trusting you as well as us.</li>
+          <li>Operate with drop-level exclusivity during active Hearth windows — meaning orders for that drop should not be taken through parallel channels during the declared window.</li>
+        </ul>
+        <p>We are not asking for perfection. We are asking for honesty and follow-through.</p>
+      </div>
+
+      <div class="termsCard">
+        <h2>Data and customer relationships</h2>
+        <p>Orders placed through Hearth generate customer data — names, contact details, postcodes, and order history. This data is held by Hearth and accessible to you for the purpose of fulfilling orders and, where customers have opted in, contacting them about future drops from your business.</p>
+        <p>You may not use customer data collected through Hearth for unrelated marketing, third-party sharing, or any purpose outside the scope of your Hearth drops. Hearth's privacy policy governs how this data is handled.</p>
+      </div>
+
+      <div class="termsCard">
+        <h2>Community obligations</h2>
+        <p>Hearth is built on the belief that great local food should strengthen communities, not bypass them. As a vendor, you are part of that. We ask that you engage with hosts and communities in good faith, share value where agreed, and represent your business with the same care on Hearth that you bring to your food.</p>
+      </div>
+
+      <div class="termsCard">
+        <h2>Ending participation</h2>
+        <p>You are free to stop using Hearth at any time. We ask only that you honour any drops already published and any commitments already made to hosts or customers before stepping back.</p>
+        <p>Hearth reserves the right to remove a vendor from the platform if commitments are consistently not honoured or if participation causes harm to customers, hosts, or the platform's integrity. We would always seek to resolve issues through conversation first.</p>
+      </div>
+
+      <div class="termsCard">
+        <h2>Changes to these terms</h2>
+        <p>We may update these terms as the platform evolves. We will always notify you of significant changes with reasonable notice. Continued use of the platform after that notice constitutes acceptance.</p>
+      </div>
+
+      <p class="versionNote">Version 0.1 — draft for review. Not yet in legal effect.</p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const _sb = supabase.createClient(
+        window.HEARTH_CONFIG.SUPABASE_URL,
+        window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+      );
+    })();
+  </script>
+</body>
+</html>

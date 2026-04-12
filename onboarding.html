@@ -469,6 +469,59 @@
       grid-column:1 / -1;
     }
 
+    /* ── Terms acceptance step ── */
+    .termsCheckWrap{
+      display:flex;
+      align-items:flex-start;
+      gap:12px;
+      padding:14px 16px;
+      border:1px solid var(--h-border);
+      border-radius:14px;
+      background:rgba(15,23,42,0.02);
+      cursor:pointer;
+      user-select:none;
+    }
+
+    .termsCheckWrap:hover{
+      border-color:color-mix(in srgb, var(--h-accent) 30%, transparent);
+    }
+
+    .termsCheckWrap input[type="checkbox"]{
+      width:20px;
+      height:20px;
+      margin-top:1px;
+      flex:0 0 auto;
+      accent-color:var(--h-accent);
+      cursor:pointer;
+    }
+
+    .termsCheckLabel{
+      font-size:14px;
+      font-weight:700;
+      color:var(--h-text);
+      line-height:1.4;
+    }
+
+    .termsCheckLabel a{
+      color:#8B6B3F;
+      text-decoration:underline;
+    }
+
+    .termsCheckLabel a:hover{
+      color:var(--h-text);
+    }
+
+    .termsError{
+      font-size:13px;
+      font-weight:600;
+      color:#991b1b;
+      background:#fef2f2;
+      border:1px solid #fecaca;
+      border-radius:10px;
+      padding:10px 14px;
+      display:none;
+    }
+
     @media (max-width:500px){
       .onboardingOption, #q9Grid .onboardingOption{ width:100% !important; flex:0 0 100% !important; }
       .identityGrid{ grid-template-columns:1fr; }
@@ -526,6 +579,11 @@
           <div class="progressStep">
             <div class="progressDot" id="dot3">3</div>
             <span class="progressLabel" id="label3">How you operate</span>
+          </div>
+          <div class="progressConnector"></div>
+          <div class="progressStep">
+            <div class="progressDot" id="dot4">4</div>
+            <span class="progressLabel" id="label4">Terms</span>
           </div>
         </div>
 
@@ -928,6 +986,31 @@
           </div>
         </div>
 
+        <!-- ══════════════════════════════════════ -->
+        <!-- STAGE 4 — Terms of participation      -->
+        <!-- ══════════════════════════════════════ -->
+        <div class="stageWrapper" id="stage4Wrapper">
+          <div class="obStageCard" id="stage4">
+            <div class="obStageEyebrow">Terms of participation</div>
+
+            <div class="questionBlock">
+              <p class="questionLabel">Almost done</p>
+              <p class="questionSub" style="margin-top:0;">Before you start using Hearth, please read and accept our terms of participation. These cover what Hearth provides, what we ask of you, and how pricing works.</p>
+            </div>
+
+            <label class="termsCheckWrap" for="termsAcceptCheckbox">
+              <input type="checkbox" id="termsAcceptCheckbox" />
+              <span class="termsCheckLabel">I've read and agree to Hearth's <a href="vendor-terms.html" target="_blank" rel="noopener noreferrer">terms of participation</a></span>
+            </label>
+
+            <div class="termsError" id="termsError"></div>
+
+            <div class="brandActions" style="margin-top: 6px;">
+              <button class="btnAccent" id="completeSetupBtn" type="button" disabled>Complete setup</button>
+            </div>
+          </div>
+        </div>
+
         </div><!-- /stageCards -->
 
       </div><!-- /flowWrapper -->
@@ -1225,12 +1308,12 @@
       const dot1 = byId('dot1');
       const label1 = byId('label1');
       // Reset all dots first
-      ['dot1','dot2','dot3'].forEach(id => {
+      ['dot1','dot2','dot3','dot4'].forEach(id => {
         const d = byId(id);
         d.classList.remove('active','done');
         d.textContent = d.id.replace('dot','');
       });
-      ['label1','label2','label3'].forEach(id => {
+      ['label1','label2','label3','label4'].forEach(id => {
         const l = byId(id);
         l.classList.remove('active','done');
       });
@@ -1387,11 +1470,75 @@
         if (error) throw error;
 
         state.vendor = { ...state.vendor, ...payload };
-        showCompletion();
+        showTermsOrCompletion();
       } catch (err) {
         showNotice('Save failed: ' + (err.message || 'Unknown error. Please try again.'), 'error');
         btn.disabled = false;
         btn.textContent = 'Save my preferences';
+      }
+    }
+
+    // ── Terms acceptance ──────────────────────────────────────────────────
+    function showTermsStep(){
+      // Hide question stages, show terms stage
+      byId('stage1').style.display = 'none';
+      const s2 = byId('stage2Wrapper'); if (s2) s2.style.display = 'none';
+      const s3 = byId('stage3Wrapper'); if (s3) s3.style.display = 'none';
+      byId('stage4Wrapper').classList.add('visible');
+
+      // Progress: dots 1-3 done, dot 4 active
+      ['dot1','dot2','dot3'].forEach(id => {
+        const d = byId(id);
+        d.classList.remove('active');
+        d.classList.add('done');
+        d.textContent = '\u2713';
+      });
+      ['label1','label2','label3'].forEach(id => {
+        const l = byId(id);
+        l.classList.remove('active');
+        l.classList.add('done');
+      });
+      byId('dot4').classList.add('active');
+      byId('label4').classList.add('active');
+
+      byId('flowWrapper').style.display = '';
+    }
+
+    function showTermsOrCompletion(){
+      if (state.vendor.terms_accepted){
+        showCompletion();
+      } else {
+        showTermsStep();
+      }
+    }
+
+    async function acceptTerms(){
+      const btn = byId('completeSetupBtn');
+      const errorEl = byId('termsError');
+      errorEl.style.display = 'none';
+
+      btn.disabled = true;
+      btn.textContent = 'Completing\u2026';
+
+      try {
+        const { error } = await sb
+          .from('vendors')
+          .update({
+            terms_accepted: true,
+            terms_accepted_at: new Date().toISOString()
+          })
+          .eq('id', state.vendor.id);
+
+        if (error) throw error;
+
+        state.vendor.terms_accepted = true;
+        state.vendor.terms_accepted_at = new Date().toISOString();
+        showCompletion();
+      } catch (err) {
+        errorEl.textContent = 'Could not save terms acceptance: ' + (err.message || 'Unknown error. Please try again.');
+        errorEl.style.display = '';
+        btn.disabled = false;
+        btn.textContent = 'Complete setup';
       }
     }
 
@@ -1425,8 +1572,22 @@
         wireGrid('q8Grid');
 
         byId('saveBtn').addEventListener('click', savePreferences);
+
+        // Terms acceptance wiring
+        const termsCheckbox = byId('termsAcceptCheckbox');
+        const completeBtn = byId('completeSetupBtn');
+        termsCheckbox.addEventListener('change', () => {
+          completeBtn.disabled = !termsCheckbox.checked;
+        });
+        completeBtn.addEventListener('click', acceptTerms);
+
         byId('updatePreferencesBtn').addEventListener('click', () => {
           hideCompletion();
+          // Reset terms step and restore question stages
+          byId('stage4Wrapper').classList.remove('visible');
+          byId('stage1').style.display = '';
+          byId('stage2Wrapper').style.display = '';
+          byId('stage3Wrapper').style.display = '';
           // Re-evaluate to restore correct stage/progress state
           stage2Revealed = false;
           stage3Revealed = false;
@@ -1471,9 +1632,9 @@
         }
         updateSaveButton();
 
-        // If already completed, show completion state
+        // If already completed, show completion or terms step
         if (state.vendor.onboarding_completed){
-          showCompletion();
+          showTermsOrCompletion();
         }
 
       } catch (err) {
