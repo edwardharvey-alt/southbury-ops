@@ -43,6 +43,8 @@ Core belief: great local food should strengthen communities, not bypass them.
 - order-confirmation.html — Post-order confirmation destination
 - order-entry.html — Dev tool for test order entry (legacy, needs rebuild)
 - scorecard.html — Post-drop scorecard (per-drop performance view)
+- hosts.html — Host Directory (vendor-facing host management page)
+- host-profile.html — Host Profile (editable profile and drop history per host)
 - host-view.html — Read-only host-facing drop view (no login)
 - assets/hearth.css — shared platform stylesheet
 - assets/config.js — Supabase config
@@ -97,7 +99,21 @@ and HearthNav.withVendor).
   capacity_units_snapshot)
 - order_item_selections — bundle choice selections per order item
 - order_status_events — audit trail of status transitions
-- hosts — community hosts (clubs, schools, venues)
+- hosts — community hosts (clubs, schools, venues). Key columns include
+  `name`, `slug`, `host_type` (club, pub, school, venue, neighbourhood,
+  event, other), `status` (active, inactive, archived), `relationship_status`
+  (prospect, active, paused), `onboarding_completed` (boolean),
+  `postcode`, `address_summary`, `contact_name`, `contact_email`,
+  `contact_phone`, `website_url`, `social_handles` (jsonb, shape
+  `{"instagram": "handle", "facebook": "handle"}`),
+  `audience_description` (text), `estimated_audience_size` (integer),
+  `audience_tags` (jsonb array, e.g. `["families","sport"]`),
+  `service_windows` (jsonb array of objects with day_of_week,
+  time_start, time_end, occasion_label, notes),
+  `comms_channels` (jsonb array of objects with type, detail,
+  estimated_reach), `notes_internal` (text). Hosts are platform-wide
+  entities (not vendor-scoped) — drop history shown per vendor is
+  filtered via v_drop_summary
 - drop_series / drop_series_schedule — recurring drop infrastructure
 
 ## Database — key views
@@ -451,15 +467,23 @@ event. Drop Studio to offer "Create another window" option when drop is
 host-linked, pre-populating vendor, host, and menu. Capacity and ordering
 windows remain separate per drop.
 
-T4-16: Host onboarding — host as first-class entity
-Expand hosts beyond contextual drop attachment. Hosts need: full profile
-with type, location, audience size, communication channels, service windows
-they want to fill, revenue share willingness, performance history. Simple
-host management page accessible from Drop Studio. Foundation for T5-4
-and T5-9. hosts table must include a host_type field (pub, school,
-sports_club, gym, office, neighbourhood, event_space, other) and a
-has_community boolean flag indicating whether this host also has a
-targetable audience beyond the physical event.
+T4-16: Host onboarding — host as first-class entity ✓ COMPLETE
+hosts.html created as a vendor-facing Host Directory with card grid,
+quick-create modal, and per-host drop stats. host-profile.html created
+with editable profile form (identity, location, contact, social handles,
+audience with tag pills, service windows, comms channels, internal notes)
+and read-only History tab querying v_drop_summary by vendor_id and
+host_id. drop-manager.html modified: Create Host modal slimmed to
+name/type/postcode only; Selected Host panel enriched to fetch and
+display audience description, audience size, service windows summary,
+and "Complete host profile" link when onboarding_completed is false.
+"Hosts" added to platform nav in vendor-nav.js between Drop Studio and
+Service Board. hosts.html and host-profile.html added to operator pages
+whitelist. hosts table extended with schema columns: contact_name,
+contact_email, contact_phone, website_url, social_handles (jsonb),
+audience_description, estimated_audience_size, audience_tags (jsonb),
+service_windows (jsonb), comms_channels (jsonb), relationship_status,
+onboarding_completed.
 
 T4-17: Drop Studio — audience targeting and demand preview
 When creating a drop, surface: known customers in target area, estimated
@@ -918,7 +942,7 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 27. T4-12 — Post-drop scorecard ✓ COMPLETE
 28. T4-13 — Minimal host-facing view ✓ COMPLETE
 29. T4-15 — Multiple drops within a single event
-30. T4-16 — Host onboarding as first-class entity
+30. T4-16 ✓ — Host onboarding as first-class entity
 31. T4-17 ✓ — Drop Studio audience targeting and demand preview
     Audience Preview panel added to Basics stage of Drop Studio.
     Triggers on centre postcode blur or host selection change. Shows
@@ -934,12 +958,9 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
     entity.
 34. T4-21 ✓ — Customer import post-import demand view
 35. T4-23 ✓ — Drop Studio first drop guidance for new vendors
-36. T4-16 — Host as first-class entity ← SUGGESTED NEXT
-    Hosts currently exist as simple records. This task promotes them
-    to a properly managed entity with their own onboarding, service
-    windows, and audience context. Higher effort than most backlog
-    items but gates T4-26 (host-vendor matching) and enriches T4-17
-    (audience targeting). Deserves a dedicated session.
+36. T4-16 ✓ — Host as first-class entity
+    hosts.html (Host Directory), host-profile.html (Host Profile),
+    drop-manager.html (enriched host picker), vendor-nav.js (Hosts in nav).
 37. T4-24 — Customer privacy policy
 38. T4-25 — Vendor terms of participation
 39. T4-26 — Host participation terms
