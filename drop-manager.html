@@ -3618,7 +3618,8 @@
         }
       }
 
-      const windowName = `${sourceDrop.name} \u2014 Window ${windowCount + 1}`;
+      const baseName = (sourceDrop.name || "").replace(/ \u2014 Window \d+$/, "");
+      const windowName = `${baseName} \u2014 Window ${windowCount + 1}`;
       const windowSlugBase = slugify(windowName);
 
       const windowPayload = {
@@ -3781,7 +3782,7 @@
     let existingWindowsLoaded = false;
 
     async function renderExistingWindows() {
-      existingWindowsLoaded = false;
+      if (existingWindowsLoaded) return;
       const content = byId("existingWindowsContent");
       if (!content) return;
 
