@@ -510,37 +510,28 @@
         accent-color:var(--h-accent);
       }
 
-      /* --- Date and time inputs: full containment chain on iOS --- */
-      .workspaceCard,
-      .stagePaneInner,
-      .stageSection{
-        overflow:hidden;
-        max-width:100%;
-        box-sizing:border-box;
-      }
+      /* --- Date and time inputs: strip iOS native appearance --- */
       .stagePane input[type="date"],
       .stagePane input[type="time"]{
+        -webkit-appearance:none;
+        appearance:none;
         width:100% !important;
         max-width:100% !important;
         min-width:0 !important;
         box-sizing:border-box !important;
         display:block !important;
       }
-      .studioGrid2,
-      .studioGrid3{
-        max-width:100%;
-        overflow:hidden;
-      }
       .studioGrid2 > *,
       .studioGrid3 > *{
         min-width:0;
         max-width:100%;
         box-sizing:border-box;
-        overflow:hidden;
       }
       .field{
         min-width:0;
         max-width:100%;
+      }
+      .stageSection{
         overflow:hidden;
       }
     }
