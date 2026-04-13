@@ -441,19 +441,49 @@
       #save-profile-btn {
         width: 100%;
       }
-      #profileShell {
-        max-width: 100%;
-        overflow-x: hidden;
-      }
       #history-content {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        max-width: 100%;
+        overflow-x: visible;
       }
       .historyTable {
-        min-width: 480px;
-        width: max-content;
+        display: block;
+        width: 100%;
       }
+      .historyTable thead {
+        display: none;
+      }
+      .historyTable tbody,
+      .historyTable tr {
+        display: block;
+      }
+      .historyTable tr {
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(15,23,42,0.08);
+      }
+      .historyTable tr.totalsRow {
+        border-top: 2px solid rgba(15,23,42,0.12);
+        border-bottom: none;
+      }
+      .historyTable td {
+        display: flex;
+        justify-content: space-between;
+        padding: 3px 10px;
+        border-bottom: none;
+        font-size: 13px;
+      }
+      .historyTable td::before {
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--h-muted);
+        align-self: center;
+        margin-right: 8px;
+      }
+      .historyTable td:nth-child(1)::before { content: "Drop"; }
+      .historyTable td:nth-child(2)::before { content: "Date"; }
+      .historyTable td:nth-child(3)::before { content: "Orders"; }
+      .historyTable td:nth-child(4)::before { content: "Revenue"; }
+      .historyTable td:nth-child(5)::before { content: "Fill %"; }
     }
   </style>
 </head>
