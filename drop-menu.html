@@ -131,11 +131,14 @@
         width:100% !important;
       }
 
-      /* ── Toolbar: 2-column grid — search and sort span full width ── */
+      /* ── Toolbar: 2-column grid — search, sort, and lone filters span full width ── */
       .menuToolbar{
         grid-template-columns:1fr 1fr;
       }
       .menuToolbar > input#librarySearch{
+        grid-column:1 / -1;
+      }
+      .menuToolbar > .filterPopoverWrap:nth-child(4){
         grid-column:1 / -1;
       }
       .menuToolbar > .field{
@@ -168,7 +171,7 @@
       .menuTableWrap tbody{
         display:flex;
         flex-direction:column;
-        gap:8px;
+        gap:6px;
       }
 
       /* Each row becomes a self-contained card */
@@ -176,9 +179,9 @@
         display:flex;
         flex-direction:column;
         position:relative;
-        padding:12px;
+        padding:8px 10px;
         border:1px solid var(--h-border-2);
-        border-radius:12px;
+        border-radius:10px;
         background:var(--h-surface);
         cursor:pointer;
         width:100%;
@@ -195,10 +198,10 @@
         align-items:center;
         justify-content:center;
         position:absolute;
-        top:8px;
-        right:8px;
-        width:44px;
-        height:44px;
+        top:4px;
+        right:4px;
+        width:36px;
+        height:36px;
         min-width:0;
         max-width:none;
         padding:0;
@@ -208,20 +211,20 @@
       /* Name cell: prominent, with right clearance for the drag handle */
       .menuTableWrap td.menuRowName{
         display:block;
-        padding:0 52px 10px 0;
-        margin-bottom:8px;
+        padding:0 36px 6px 0;
+        margin-bottom:4px;
         border:none;
         border-bottom:1px solid var(--h-border-2);
         white-space:normal;
       }
       .menuTableWrap td.menuRowName .productName{
-        font-size:14px;
+        font-size:13px;
         font-weight:700;
         line-height:1.3;
-        margin-bottom:3px;
+        margin-bottom:2px;
       }
       .menuTableWrap td.menuRowName .subMeta{
-        font-size:11px;
+        font-size:10px;
         white-space:normal;
       }
 
@@ -229,18 +232,18 @@
       .menuTableWrap td[data-label]{
         display:flex;
         align-items:center;
-        gap:8px;
-        padding:3px 0;
+        gap:6px;
+        padding:2px 0;
         border:none;
         white-space:normal;
-        font-size:12px;
+        font-size:11px;
       }
       .menuTableWrap td[data-label]::before{
         content:attr(data-label);
-        font-size:10px;
+        font-size:9px;
         font-weight:700;
         color:var(--h-muted);
-        min-width:68px;
+        min-width:56px;
         flex-shrink:0;
         text-transform:uppercase;
         letter-spacing:0.3px;
