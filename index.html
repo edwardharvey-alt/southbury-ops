@@ -972,6 +972,10 @@
       el.textContent = message;
     }
 
+    function stripWindowSuffix(name) {
+      return String(name || "").replace(/\s*[\u2014-]\s*Window\s*\d+\s*$/i, "").trim();
+    }
+
     function formatMoneyPence(pence) {
       return new Intl.NumberFormat("en-GB", {
         style: "currency",
@@ -1261,7 +1265,7 @@
       const revenuePence = state.ordersSummary.reduce((sum, row) => sum + Number(row.total_price_pence || 0), 0);
       const capacityLabel = getCapacityCategoryLabel();
 
-      byId("dropName").textContent = summary.drop_name || drop.name || "Unnamed drop";
+      byId("dropName").textContent = stripWindowSuffix(summary.drop_name || drop.name || "Unnamed drop");
       byId("dropMeta").textContent = formatDropMeta(summary);
       byId("dropStatusText").textContent = normaliseStatus(summary.status || drop.status || "draft");
       byId("dropStatusDot").className = statusDotClass(normaliseStatus(summary.status || drop.status));
