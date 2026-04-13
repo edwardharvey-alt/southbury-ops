@@ -513,9 +513,21 @@
       /* --- Date and time inputs: contain within card --- */
       .stagePane input[type="date"],
       .stagePane input[type="time"]{
-        max-width:100%;
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        box-sizing:border-box !important;
+      }
+      /* Grid children must not expand beyond their cell */
+      .studioGrid2 > *,
+      .studioGrid3 > *{
         min-width:0;
+        max-width:100%;
         box-sizing:border-box;
+      }
+      .field{
+        min-width:0;
+        max-width:100%;
       }
       .stageSection{
         overflow:hidden;
@@ -671,6 +683,7 @@
       height:16px;
       margin:0;
       flex-shrink:0;
+      accent-color:var(--h-accent);
     }
   </style>
 </head>
@@ -2528,7 +2541,7 @@
             <div>
               <div class="dropCardTop">
                 <div>
-                  <h4 class="dropCardTitle">${escapeHtml(drop.drop_name || "Untitled drop")}</h4>
+                  <h4 class="dropCardTitle">${escapeHtml((drop.drop_name || "Untitled drop").replace(/\s*[\u2014-]\s*Window\s*\d+\s*$/i, "").trim() || "Untitled drop")}</h4>
                   <p class="dropCardSub">${hostLine}</p>
                 </div>
                 <span class="miniChip ${escapeHtml(drop.status || "")}">${escapeHtml(drop.status || "—")}</span>
