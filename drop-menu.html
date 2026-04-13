@@ -131,9 +131,18 @@
         width:100% !important;
       }
 
-      /* ── Toolbar: single column ── */
+      /* ── Toolbar: 2-column grid — search and sort span full width ── */
       .menuToolbar{
-        grid-template-columns:1fr;
+        grid-template-columns:1fr 1fr;
+      }
+      .menuToolbar > input#librarySearch{
+        grid-column:1 / -1;
+      }
+      .menuToolbar > .field{
+        grid-column:1 / -1;
+      }
+      #reloadLibraryBtn{
+        width:auto;
       }
 
       /* ── Workspace grid: single column (safety net) ── */
