@@ -386,34 +386,43 @@
 
     /* ── Responsive ── */
     @media (max-width: 768px) {
+      .headerBar .nav {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+      }
+      .headerBar .nav::-webkit-scrollbar {
+        display: none;
+      }
       #pageHeader {
         padding: 18px 16px;
       }
-
       #host-name {
         font-size: 22px;
       }
-
       .fieldGrid {
         grid-template-columns: 1fr;
       }
-
-      .dynamicRow {
-        grid-template-columns: 1fr 1fr auto;
+      .dynamicRow:not(.commsRow) {
+        grid-template-columns: 1fr 1fr 1fr;
         gap: 6px;
       }
-
+      .commsRow {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
       .dynamicRow select,
       .dynamicRow input[type="time"] {
         font-size: 12px;
       }
-
-      .commsRow {
-        grid-template-columns: 1fr 1fr auto;
-      }
-
       #save-profile-btn {
         width: 100%;
+      }
+      #history-content {
+        overflow-x: auto;
+      }
+      .historyTable {
+        min-width: 480px;
       }
     }
   </style>
