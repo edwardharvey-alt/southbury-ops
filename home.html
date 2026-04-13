@@ -1290,7 +1290,7 @@
           label:'Live now',
           meta:`${live.name || 'Active drop'} is currently running.`,
           ctaLabel:'Open Service Board',
-          ctaHref:'./index.html'
+          ctaHref:HearthNav.withVendor('./index.html')
         };
       }
 
@@ -1300,7 +1300,7 @@
           label:'Next drop scheduled',
           meta:`${scheduled.name || 'Next drop'} is set for ${fmtDate(scheduled.delivery_start)}.`,
           ctaLabel:'Manage drops',
-          ctaHref:'./drop-manager.html'
+          ctaHref:HearthNav.withVendor('./drop-manager.html')
         };
       }
 
@@ -1310,7 +1310,7 @@
           label:'Draft in progress',
           meta:`${draft.name || 'A draft drop'} is waiting to be completed.`,
           ctaLabel:'Continue draft',
-          ctaHref:'./drop-manager.html'
+          ctaHref:HearthNav.withVendor('./drop-manager.html')
         };
       }
 
@@ -1319,7 +1319,7 @@
         label:'Ready to create',
         meta:'No live or scheduled drop yet.',
         ctaLabel:'Create next drop',
-        ctaHref:'./drop-manager.html'
+        ctaHref:HearthNav.withVendor('./drop-manager.html')
       };
     }
 
@@ -1620,7 +1620,7 @@
             ? 'A live drop is active — this is the place to manage it.'
             : 'Use this workspace when a drop is live or approaching service.',
           primaryLabel: liveDrop ? 'Open live board' : 'View board',
-          primaryHref:'./index.html'
+          primaryHref:HearthNav.withVendor('./index.html')
         }),
         workspaceCard({
           icon:'DS',
@@ -1633,7 +1633,7 @@
               ? `${draftCount} draft drop${draftCount === 1 ? '' : 's'} waiting to be completed.`
               : 'No future drop yet — create the next moment here.',
           primaryLabel: draftCount ? 'Continue planning' : 'Create drop',
-          primaryHref:'./drop-manager.html'
+          primaryHref:HearthNav.withVendor('./drop-manager.html')
         }),
         workspaceCard({
           icon:'ML',
@@ -1644,7 +1644,7 @@
             ? `${fmtNum(activeProducts)} active product${activeProducts === 1 ? '' : 's'} and ${fmtNum(activeBundles)} active bundle${activeBundles === 1 ? '' : 's'}.`
             : 'Build the catalogue before publishing drops.',
           primaryLabel: activeProducts || activeBundles ? 'Manage catalogue' : 'Build menu',
-          primaryHref:'./drop-menu.html'
+          primaryHref:HearthNav.withVendor('./drop-menu.html')
         }),
         workspaceCard({
           icon:'BH',
@@ -1655,7 +1655,7 @@
             ? 'Core identity assets are in place.'
             : 'Complete key identity fields so the platform and order pages feel polished.',
           primaryLabel: brandComplete ? 'Edit brand' : 'Complete brand',
-          primaryHref:'./brand-hearth.html'
+          primaryHref:HearthNav.withVendor('./brand-hearth.html')
         }),
         workspaceCard({
           icon:'CU',
@@ -1666,7 +1666,7 @@
             ? `${fmtNum(state.customers.length)} customer${state.customers.length === 1 ? '' : 's'} in your owned asset — independent of any platform.`
             : 'Your audience builds with every drop and every import.',
           primaryLabel: state.customers.length ? 'View customers' : 'Learn more',
-          primaryHref:'./customers.html'
+          primaryHref:HearthNav.withVendor('./customers.html')
         }),
         workspaceCard({
           icon:'IN',
@@ -1677,7 +1677,7 @@
             ? 'Enough data exists to start spotting meaningful patterns.'
             : 'This becomes more valuable as more drops run.',
           primaryLabel:'Open insights',
-          primaryHref:'./insights.html'
+          primaryHref:HearthNav.withVendor('./insights.html')
         })
       ].join('');
     }
@@ -1726,16 +1726,16 @@
 
         if (topRecs.length) {
           const ctaTargetMap = {
-            'drop-manager': './drop-manager.html',
-            'drop-menu': './drop-menu.html',
-            'insights': './insights.html',
-            'customers': './customers.html',
-            'onboarding': './onboarding.html',
-            'brand-hearth': './brand-hearth.html'
+            'drop-manager': HearthNav.withVendor('./drop-manager.html'),
+            'drop-menu': HearthNav.withVendor('./drop-menu.html'),
+            'insights': HearthNav.withVendor('./insights.html'),
+            'customers': HearthNav.withVendor('./customers.html'),
+            'onboarding': HearthNav.withVendor('./onboarding.html'),
+            'brand-hearth': HearthNav.withVendor('./brand-hearth.html')
           };
 
           el.innerHTML = topRecs.map(r => {
-            const href = ctaTargetMap[r.ctaTarget] || './insights.html';
+            const href = ctaTargetMap[r.ctaTarget] || HearthNav.withVendor('./insights.html');
             return `
               <div class="home-recAction">
                 ${pill(r.tone || 'neutral', r.label)}
