@@ -1099,7 +1099,9 @@
       vendor: null,
       previewDrop: null,
       previewHost: null,
-      saveState: "saved"
+      saveState: "saved",
+      logoDisplayUrl: null,
+      heroDisplayUrl: null
     };
 
     function byId(id) {
@@ -1322,6 +1324,9 @@
         // Save the clean URL to the DB and to state — no cache-buster suffix
         byId(hiddenId).value = cleanUrl;
 
+        if (assetType === "logo") state.logoDisplayUrl = displayUrl;
+        if (assetType === "hero") state.heroDisplayUrl = displayUrl;
+
         // Use the cache-busted URL only for the local preview so the new
         // image is shown immediately without the browser serving the old one
         updateAssetPreview(previewId, displayUrl);
@@ -1383,9 +1388,10 @@
       byId("summaryTagline").textContent = tagline;
       byId("summaryVendorSlug").textContent = state.vendor?.slug || "";
 
+      const logoRenderUrl = state.logoDisplayUrl || logoUrl;
       const summaryLogo = byId("summaryLogo");
       if (logoUrl) {
-        summaryLogo.innerHTML = `<img src="${escapeHtml(logoUrl)}" alt="Logo preview" />`;
+        summaryLogo.innerHTML = `<img src="${escapeHtml(logoRenderUrl)}" alt="Logo preview" />`;
       } else {
         summaryLogo.innerHTML = `<span id="summaryLogoFallback">${escapeHtml(titleInitial(displayName))}</span>`;
       }
@@ -1419,7 +1425,7 @@
 
       const previewLogo = byId("previewLogo");
       if (logoUrl) {
-        previewLogo.innerHTML = `<img src="${escapeHtml(logoUrl)}" alt="Logo preview" />`;
+        previewLogo.innerHTML = `<img src="${escapeHtml(logoRenderUrl)}" alt="Logo preview" />`;
       } else {
         previewLogo.innerHTML = `<span id="previewLogoFallback">${escapeHtml(titleInitial(displayName))}</span>`;
       }
@@ -1428,10 +1434,11 @@
       previewWebsiteBtn.classList.add("hidden");
       previewWebsiteBtn.removeAttribute("href");
 
+      const heroRenderUrl = state.heroDisplayUrl || heroUrl;
       const hero = byId("previewHero");
-      if (heroUrl) {
+      if (heroRenderUrl) {
         hero.classList.add("hasImage");
-        hero.style.backgroundImage = `linear-gradient(135deg, rgba(32,26,18,0.18), rgba(32,26,18,0.34)), url("${heroUrl}")`;
+        hero.style.backgroundImage = `linear-gradient(135deg, rgba(32,26,18,0.18), rgba(32,26,18,0.34)), url("${heroRenderUrl}")`;
       } else {
         hero.classList.remove("hasImage");
         hero.style.backgroundImage = "";
@@ -1578,6 +1585,8 @@
     }
 
     async function refreshAll() {
+      state.logoDisplayUrl = null;
+      state.heroDisplayUrl = null;
       showError("");
       await loadVendor();
       await loadPreviewDrop();
