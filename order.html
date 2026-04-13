@@ -1418,6 +1418,10 @@
         return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
       }
 
+      function stripWindowSuffix(name) {
+        return String(name || "").replace(/\s*[\u2014-]\s*Window\s*\d+\s*$/i, "").trim();
+      }
+
       function formatDateTimeRange(startValue, endValue) {
         if (!startValue || !endValue) return "Timing to be confirmed";
         const start = new Date(startValue);
@@ -1705,9 +1709,7 @@
         }
 
         const heroVisitWrap = byId("heroVisitWrap");
-        heroVisitWrap.innerHTML = vendor.website_url
-          ? `<a href="${escapeHtml(vendor.website_url)}" class="heroVisitBtn" target="_blank" rel="noopener noreferrer">Visit site</a>`
-          : "";
+        heroVisitWrap.innerHTML = "";
 
         const footerParts = [];
         if (vendor.website_url) {
@@ -1741,10 +1743,10 @@
           .from("v_drop_summary")
           .select("*")
           .eq("drop_id", state.drop.id)
-          .single();
+          .maybeSingle();
 
         if (summaryRes.error) throw summaryRes.error;
-        state.dropSummary = summaryRes.data;
+        state.dropSummary = summaryRes.data || null;
 
         const vendorRes = await supabase
           .from("vendors")
@@ -1940,7 +1942,7 @@
       function renderHero() {
         applyVendorBranding();
 
-        const dropTitle = state.drop?.name || state.dropSummary?.drop_name || "Available now";
+        const dropTitle = stripWindowSuffix(state.drop?.name || state.dropSummary?.drop_name || "Available now");
         const hostName = state.host?.name || state.dropSummary?.host_name || "";
         const timingLabel = formatDateTimeRange(state.drop?.delivery_start, state.drop?.delivery_end);
         const fulfilmentLabel = getFulfilmentLabel(state.drop?.fulfilment_mode);
@@ -2910,7 +2912,7 @@ async function handoffToPayment() {
             .from("v_drop_summary")
             .select("*")
             .eq("drop_id", state.drop.id)
-            .single();
+            .maybeSingle();
 
           if (summaryRes.error) return;
 
@@ -3155,6 +3157,20 @@ async function handoffToPayment() {
         /* Render hero first so the page doesn’t look blank */
         renderHero();
 
+        /* Show full service range across all sittings in the subheading */
+        const allStarts = sittings.map(s => s.delivery_start).filter(Boolean).map(v => new Date(v)).filter(d => !isNaN(d.getTime()));
+        const allEnds   = sittings.map(s => s.delivery_end).filter(Boolean).map(v => new Date(v)).filter(d => !isNaN(d.getTime()));
+        if (allStarts.length && allEnds.length) {
+          const earliest = new Date(Math.min(...allStarts.map(d => d.getTime())));
+          const latest   = new Date(Math.max(...allEnds.map(d => d.getTime())));
+          const startTime = earliest.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+          const endTime   = latest.toLocaleTimeString("en-GB",   { hour: "2-digit", minute: "2-digit" });
+          const fulfilmentLabel = getFulfilmentLabel(state.drop?.fulfilment_mode);
+          const hostName = state.host?.name || state.dropSummary?.host_name || "";
+          const datePart = earliest.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+          byId("heroDropSub").textContent = [fulfilmentLabel, hostName, `${datePart} • ${startTime}–${endTime}`].filter(Boolean).join(" • ");
+        }
+
         /* Build the selection UI in the menu card area */
         const menuCard = byId("menuSections")?.closest(".sectionCard");
         if (!menuCard) return true;
@@ -3259,6 +3275,28 @@ async function handoffToPayment() {
             countdownTimer = setInterval(tickCountdown, 60000);
 
             subscribeToCapacityUpdates();
+
+            /* Inject "Change sitting" link below the drop subheading */
+            const existingChangeLink = byId("changeSittingLink");
+            if (!existingChangeLink) {
+              const sub = byId("heroDropSub");
+              if (sub) {
+                const changeLink = document.createElement("a");
+                changeLink.id = "changeSittingLink";
+                changeLink.href = "#";
+                changeLink.textContent = "← Change sitting";
+                changeLink.style.cssText = "display:inline-block;margin-top:8px;font-size:13px;font-weight:700;color:rgba(255,255,255,0.75);text-decoration:none;letter-spacing:0.01em;";
+                changeLink.addEventListener("click", async (e) => {
+                  e.preventDefault();
+                  changeLink.remove();
+                  state.basket = [];
+                  await loadDropContext();
+                  const shouldProceed = await handleWindowSelection();
+                  if (shouldProceed) renderAll();
+                });
+                sub.insertAdjacentElement("afterend", changeLink);
+              }
+            }
           } catch (err) {
             console.error(err);
             showError(err.message || "Unable to load this sitting.");
