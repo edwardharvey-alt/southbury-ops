@@ -386,14 +386,35 @@
 
     /* ── Responsive ── */
     @media (max-width: 768px) {
-      .headerBar .nav {
-        overflow-x: auto;
-        flex-wrap: nowrap;
-        scrollbar-width: none;
+      /* --- Shared headerBar / nav (hearth.css classes) --- */
+      .headerBar{
+        flex-direction:column;
+        align-items:stretch;
+        gap:10px;
+        padding:14px;
       }
-      .headerBar .nav::-webkit-scrollbar {
-        display: none;
+      .brand{ min-width:0; }
+      .nav{
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+        white-space:nowrap;
+        flex-wrap:nowrap;
+        gap:2px;
+        padding-bottom:2px;
+        scrollbar-width:none;
+        justify-content:flex-start;
+        min-width:0;
+        max-width:100%;
       }
+      .nav::-webkit-scrollbar{ display:none; }
+      .nav a{
+        flex-shrink:0;
+        white-space:nowrap;
+        min-height:44px;
+        display:inline-flex;
+        align-items:center;
+      }
+
       #pageHeader {
         padding: 18px 16px;
       }
@@ -404,7 +425,7 @@
         grid-template-columns: 1fr;
       }
       .dynamicRow:not(.commsRow) {
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: 2fr 1fr 1fr;
         gap: 6px;
       }
       .commsRow {
@@ -414,15 +435,14 @@
       .dynamicRow select,
       .dynamicRow input[type="time"] {
         font-size: 12px;
+        -webkit-appearance: none;
+        appearance: none;
       }
       #save-profile-btn {
         width: 100%;
       }
       #history-content {
         overflow-x: auto;
-      }
-      .historyTable {
-        min-width: 480px;
       }
     }
   </style>
