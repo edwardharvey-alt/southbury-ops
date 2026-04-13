@@ -1299,7 +1299,12 @@
         .from("vendor-assets")
         .getPublicUrl(path);
 
-      return data.publicUrl;
+      // Return both a clean URL for DB storage and a cache-busted URL for display.
+      // The timestamp prevents the browser serving a cached version of the old image.
+      return {
+        cleanUrl: data.publicUrl,
+        displayUrl: `${data.publicUrl}?t=${Date.now()}`
+      };
     }
 
     async function handleAssetUpload(file, assetType) {
@@ -1312,20 +1317,24 @@
       statusEl.className = "assetUploadStatus uploading";
 
       try {
-        const publicUrl = await uploadAsset(file, assetType);
+        const { cleanUrl, displayUrl } = await uploadAsset(file, assetType);
 
-        byId(hiddenId).value = publicUrl;
-        updateAssetPreview(previewId, publicUrl);
+        // Save the clean URL to the DB and to state — no cache-buster suffix
+        byId(hiddenId).value = cleanUrl;
+
+        // Use the cache-busted URL only for the local preview so the new
+        // image is shown immediately without the browser serving the old one
+        updateAssetPreview(previewId, displayUrl);
 
         const dbField = assetType === "logo" ? "logo_url" : "hero_image_url";
         const { error: dbError } = await supabase
           .from("vendors")
-          .update({ [dbField]: publicUrl })
+          .update({ [dbField]: cleanUrl })
           .eq("id", state.vendor.id);
 
         if (dbError) throw dbError;
 
-        state.vendor = { ...state.vendor, [dbField]: publicUrl };
+        state.vendor = { ...state.vendor, [dbField]: cleanUrl };
 
         statusEl.textContent = "Uploaded";
         statusEl.className = "assetUploadStatus done";
