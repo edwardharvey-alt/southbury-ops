@@ -483,6 +483,43 @@
       .assignmentTable tr.isDraggable td:nth-child(8) input{
         width:100%; min-height:38px;
       }
+
+      /* --- Radio choice pairs: side by side on mobile --- */
+      .repeatChoice,
+      .openChoice{
+        display:grid !important;
+        grid-template-columns:1fr 1fr;
+        gap:8px;
+      }
+      .repeatChoice label,
+      .openChoice label{
+        display:flex;
+        align-items:center;
+        gap:6px;
+        font-size:13px;
+        min-width:0;
+        white-space:normal;
+      }
+
+      /* --- toggleRow checkbox: consistent size and accent colour --- */
+      .toggleRow input[type="checkbox"]{
+        width:20px;
+        height:20px;
+        min-height:0;
+        flex-shrink:0;
+        accent-color:var(--h-accent);
+      }
+
+      /* --- Date and time inputs: contain within card --- */
+      .stagePane input[type="date"],
+      .stagePane input[type="time"]{
+        max-width:100%;
+        min-width:0;
+        box-sizing:border-box;
+      }
+      .stageSection{
+        overflow:hidden;
+      }
     }
 
     /* ── Demand preview panel (T4-17) ── */
@@ -1791,7 +1828,7 @@
     }
 
     function renderStageBar() {
-      const name = state.drop?.name || "No drop selected";
+      const name = (state.drop?.name || "No drop selected").replace(/\s*[\u2014-]\s*Window\s*\d+\s*$/i, "").trim() || "No drop selected";
       const status = state.drop?.status || "draft";
       const completeCount = ["basics", "timing", "menu", "commercials"].filter((stage) => getStageStatus(stage) === "complete").length;
 
