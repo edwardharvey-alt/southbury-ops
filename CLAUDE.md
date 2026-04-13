@@ -322,6 +322,23 @@ T3-1: Mobile responsiveness — operator pages ✓ COMPLETE
 All six operator pages have max-width: 768px treatment:
 Service Board, Brand Hearth, Drop Studio, Menu Library, Home, Insights.
 
+T3-1b: Mobile optimisation pass — all operator pages ✓ COMPLETE
+Full mobile pass at 768px breakpoint across all platform pages.
+Established mobile principles: 44px touch targets, no horizontal scroll
+(except intentional carousels), single-column forms with full-width inputs,
+nav scrolls horizontally with no visible scrollbar, radio/checkbox inputs
+excluded from width:100% rule, date/time inputs use -webkit-appearance:none
+for iOS Safari, overflow:hidden on parents checked before applying to
+children. Root cause fix: hearth.css .container overridden to width:100%
+at 768px to fix iOS Safari 100vw feedback loop. Grid display grids use
+minmax(0,1fr) to prevent max-content overflow. Pages completed: order.html,
+home.html, brand-hearth.html, drop-menu.html, drop-manager.html, hosts.html,
+host-profile.html, index.html (Service Board), onboarding.html (Setup),
+insights.html. Remaining pages (scorecard.html, customer-import.html,
+privacy.html, vendor-terms.html, host-terms.html) are lower priority —
+legal pages are rarely accessed on mobile and scorecard/import are
+occasional-use flows.
+
 T3-2: Drop Studio — saveAssignments defensive pattern ✓ COMPLETE
 Replace destructive delete-then-insert with safer upsert pattern.
 Upsert split into two calls — products use onConflict:'drop_id,product_id',
