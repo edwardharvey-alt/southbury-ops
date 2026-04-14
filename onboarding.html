@@ -984,6 +984,65 @@
           </div>
         </div>
 
+        <!-- ══════════════════════════════════════ -->
+        <!-- STAGE 4 — Where you're based          -->
+        <!-- ══════════════════════════════════════ -->
+        <div class="stageWrapper" id="stage4Wrapper">
+          <div class="obStageCard" id="stage4">
+            <div class="obStageEyebrow">Where you're based</div>
+
+            <div class="questionBlock">
+              <p class="questionLabel">Where are you based?</p>
+              <p class="questionSub">Your primary address — we use this to anchor your local area.</p>
+              <div class="field fullWidth">
+                <input id="obAddress" type="text" placeholder="e.g. 14 High Street, Henley-on-Thames, RG9 2LU" />
+              </div>
+            </div>
+
+            <div class="brandActions" style="margin-top: 6px;">
+              <button class="btnAccent" id="saveAddressBtn" type="button">Save and continue</button>
+              <button class="brandMiniLink" id="skipAddressBtn" type="button" style="background:none;border:none;cursor:pointer;font:inherit;">Skip for now</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════ -->
+        <!-- STAGE 5 — Where to find you online    -->
+        <!-- ══════════════════════════════════════ -->
+        <div class="stageWrapper" id="stage5Wrapper">
+          <div class="obStageCard" id="stage5">
+            <div class="obStageEyebrow">Where to find you online</div>
+
+            <div class="questionBlock">
+              <p class="questionLabel">Where can people find you online?</p>
+              <p class="questionSub">Optional — add the handles you actively use.</p>
+              <div class="identityGrid">
+                <div class="field fullWidth">
+                  <label for="obInstagram">Instagram</label>
+                  <input id="obInstagram" type="text" placeholder="@yourhandle" />
+                </div>
+                <div class="field fullWidth">
+                  <label for="obFacebook">Facebook</label>
+                  <input id="obFacebook" type="text" placeholder="facebook.com/yourpage" />
+                </div>
+                <div class="field fullWidth">
+                  <label for="obTiktok">TikTok</label>
+                  <input id="obTiktok" type="text" placeholder="@yourhandle" />
+                </div>
+                <div class="field fullWidth">
+                  <label for="obWhatsapp">WhatsApp Business</label>
+                  <input id="obWhatsapp" type="text" placeholder="+44..." />
+                </div>
+              </div>
+            </div>
+
+            <div class="brandActions" style="margin-top: 6px;">
+              <button class="btnAccent" id="saveSocialsBtn" type="button">Save and continue</button>
+              <button class="brandMiniLink" id="skipSocialsBtn" type="button" style="background:none;border:none;cursor:pointer;font:inherit;">Skip for now</button>
+            </div>
+          </div>
+        </div>
+
         </div><!-- /stageCards -->
 
       </div><!-- /flowWrapper -->
@@ -1374,20 +1433,143 @@
       byId('flowWrapper').style.display = 'none';
       byId('completionState').style.display = '';
 
-      // Pathway-aware completion CTAs
-      const posture = state.vendor?.data_posture || (state.customer_data_posture === 'light' ? 'light' : 'rich');
       const sub = byId('completionSub');
       const actions = byId('completionActions');
-      if (posture === 'rich') {
-        sub.textContent = 'You have customer data — bring it into Hearth to unlock demand targeting.';
-        actions.innerHTML =
-          '<a class="btnAccent" href="' + HearthNav.withVendor('customer-import.html') + '">Import your customers →</a>' +
-          '<a class="brandMiniLink" href="' + HearthNav.withVendor('brand-hearth.html') + '">Set up your brand</a>';
-      } else {
-        sub.textContent = 'Start with a host you know — it\'s the fastest way to fill capacity and build your audience.';
-        actions.innerHTML =
-          '<a class="btnAccent" href="' + HearthNav.withVendor('drop-manager.html') + '">Create your first drop →</a>' +
-          '<a class="brandMiniLink" href="' + HearthNav.withVendor('brand-hearth.html') + '">Set up your brand</a>';
+      sub.textContent = "You're ready to run your first drop.";
+
+      // T4-20: universal first drop CTA. We check existing_host_contexts
+      // so the destination can differentiate in future, but for now the
+      // button always links to Drop Studio and always appears.
+      const hostContexts = state.vendor?.existing_host_contexts;
+      const hasHostContexts = Array.isArray(hostContexts)
+        ? hostContexts.length > 0
+        : !!(hostContexts && String(hostContexts).trim());
+      const firstDropHref = hasHostContexts
+        ? HearthNav.withVendor('drop-manager.html')
+        : HearthNav.withVendor('drop-manager.html');
+
+      actions.innerHTML =
+        '<a class="btnAccent" href="' + firstDropHref + '">Create your first drop →</a>' +
+        '<a class="brandMiniLink" href="' + HearthNav.withVendor('home.html') + '">Go to your dashboard →</a>';
+    }
+
+    // ── Reveal optional post-save steps (address, socials) ────────────────
+    function revealStage4(){
+      // Hide the main flow stages; show stage 4 inside the flow wrapper.
+      byId('stage1').style.display = 'none';
+      byId('stage2Wrapper').style.display = 'none';
+      byId('stage3Wrapper').style.display = 'none';
+      const wrap = byId('stage4Wrapper');
+      wrap.style.display = '';
+      wrap.classList.add('visible');
+      // Pre-populate from saved value if present
+      const addrInput = byId('obAddress');
+      if (addrInput && state.vendor?.address) addrInput.value = state.vendor.address;
+      setTimeout(() => { wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+    }
+
+    function revealStage5(){
+      byId('stage4Wrapper').style.display = 'none';
+      const wrap = byId('stage5Wrapper');
+      wrap.style.display = '';
+      wrap.classList.add('visible');
+      // Pre-populate from saved value if present
+      const sh = state.vendor?.social_handles || {};
+      if (sh.instagram) byId('obInstagram').value = sh.instagram;
+      if (sh.facebook)  byId('obFacebook').value  = sh.facebook;
+      if (sh.tiktok)    byId('obTiktok').value    = sh.tiktok;
+      if (sh.whatsapp)  byId('obWhatsapp').value  = sh.whatsapp;
+      setTimeout(() => { wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+    }
+
+    // ── Save/skip handlers for address (T5-B3) ────────────────────────────
+    async function writeAddress(value){
+      if (!state.vendor?.id) return;
+      const { error } = await sb
+        .from('vendors')
+        .update({ address: value })
+        .eq('id', state.vendor.id);
+      if (error) throw error;
+      state.vendor.address = value;
+    }
+
+    async function saveAddress(){
+      const btn = byId('saveAddressBtn');
+      const skip = byId('skipAddressBtn');
+      btn.disabled = true; skip.disabled = true;
+      btn.textContent = 'Saving…';
+      try {
+        const raw = byId('obAddress').value.trim();
+        await writeAddress(raw || null);
+        revealStage5();
+      } catch (err) {
+        showNotice('Save failed: ' + (err.message || 'Unknown error. Please try again.'), 'error');
+        btn.disabled = false; skip.disabled = false;
+        btn.textContent = 'Save and continue';
+      }
+    }
+
+    async function skipAddress(){
+      const btn = byId('saveAddressBtn');
+      const skip = byId('skipAddressBtn');
+      btn.disabled = true; skip.disabled = true;
+      try {
+        await writeAddress(null);
+        revealStage5();
+      } catch (err) {
+        showNotice('Skip failed: ' + (err.message || 'Unknown error. Please try again.'), 'error');
+        btn.disabled = false; skip.disabled = false;
+      }
+    }
+
+    // ── Save/skip handlers for social handles (T5-B2) ─────────────────────
+    async function writeSocialHandles(obj){
+      if (!state.vendor?.id) return;
+      const { error } = await sb
+        .from('vendors')
+        .update({ social_handles: obj })
+        .eq('id', state.vendor.id);
+      if (error) throw error;
+      state.vendor.social_handles = obj;
+    }
+
+    function collectSocialHandles(){
+      const raw = {
+        instagram: byId('obInstagram').value.trim(),
+        facebook:  byId('obFacebook').value.trim(),
+        tiktok:    byId('obTiktok').value.trim(),
+        whatsapp:  byId('obWhatsapp').value.trim(),
+      };
+      const out = {};
+      Object.keys(raw).forEach(k => { if (raw[k]) out[k] = raw[k]; });
+      return out;
+    }
+
+    async function saveSocials(){
+      const btn = byId('saveSocialsBtn');
+      const skip = byId('skipSocialsBtn');
+      btn.disabled = true; skip.disabled = true;
+      btn.textContent = 'Saving…';
+      try {
+        await writeSocialHandles(collectSocialHandles());
+        showCompletion();
+      } catch (err) {
+        showNotice('Save failed: ' + (err.message || 'Unknown error. Please try again.'), 'error');
+        btn.disabled = false; skip.disabled = false;
+        btn.textContent = 'Save and continue';
+      }
+    }
+
+    async function skipSocials(){
+      const btn = byId('saveSocialsBtn');
+      const skip = byId('skipSocialsBtn');
+      btn.disabled = true; skip.disabled = true;
+      try {
+        await writeSocialHandles({});
+        showCompletion();
+      } catch (err) {
+        showNotice('Skip failed: ' + (err.message || 'Unknown error. Please try again.'), 'error');
+        btn.disabled = false; skip.disabled = false;
       }
     }
 
@@ -1443,7 +1625,7 @@
         if (error) throw error;
 
         state.vendor = { ...state.vendor, ...payload };
-        showCompletion();
+        revealStage4();
       } catch (err) {
         showNotice('Save failed: ' + (err.message || 'Unknown error. Please try again.'), 'error');
         btn.disabled = false;
@@ -1481,6 +1663,10 @@
         wireGrid('q8Grid');
 
         byId('saveBtn').addEventListener('click', savePreferences);
+        byId('saveAddressBtn').addEventListener('click', saveAddress);
+        byId('skipAddressBtn').addEventListener('click', skipAddress);
+        byId('saveSocialsBtn').addEventListener('click', saveSocials);
+        byId('skipSocialsBtn').addEventListener('click', skipSocials);
         byId('updatePreferencesBtn').addEventListener('click', () => {
           hideCompletion();
           // Re-evaluate to restore correct stage/progress state
@@ -1488,6 +1674,14 @@
           stage3Revealed = false;
           byId('stage2Wrapper').classList.remove('visible');
           byId('stage3Wrapper').classList.remove('visible');
+          // Reset optional post-save stages so the main flow is visible again
+          byId('stage1').style.display = '';
+          byId('stage2Wrapper').style.display = '';
+          byId('stage3Wrapper').style.display = '';
+          byId('stage4Wrapper').style.display = 'none';
+          byId('stage4Wrapper').classList.remove('visible');
+          byId('stage5Wrapper').style.display = 'none';
+          byId('stage5Wrapper').classList.remove('visible');
           initProgress();
           // Re-evaluate from current selections
           if (stage1Complete()){
