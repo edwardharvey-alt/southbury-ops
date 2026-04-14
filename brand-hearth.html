@@ -911,6 +911,46 @@
                 <input id="vendorWebsiteUrl" type="url" placeholder="https://example.com" />
                 <div class="helperText">Used for the "Visit site" button on the ordering page.</div>
               </div>
+
+              <!-- T5-B4: Primary address -->
+              <div class="field" style="grid-column:1 / -1;">
+                <label for="vendorAddress">Primary address</label>
+                <input id="vendorAddress" type="text" placeholder="e.g. 14 High Street, Henley-on-Thames, RG9 2LU" />
+                <div class="helperText">Your main operating address.</div>
+              </div>
+            </div>
+
+            <!-- T5-B4: Social channels -->
+            <div class="brandSectionHead" style="margin-top:20px;">
+              <div>
+                <p class="brandSectionSub" style="font-weight:950;color:var(--h-text);font-size:13px;">Social channels</p>
+              </div>
+            </div>
+
+            <div class="studioGrid2">
+              <div class="field">
+                <label for="vendorSocialInstagram">Instagram</label>
+                <input id="vendorSocialInstagram" type="text" placeholder="yourhandle" />
+                <div class="helperText">Instagram handle (without the @).</div>
+              </div>
+
+              <div class="field">
+                <label for="vendorSocialFacebook">Facebook</label>
+                <input id="vendorSocialFacebook" type="text" placeholder="yourpage" />
+                <div class="helperText">Facebook page name or URL slug.</div>
+              </div>
+
+              <div class="field">
+                <label for="vendorSocialTiktok">TikTok</label>
+                <input id="vendorSocialTiktok" type="text" placeholder="yourhandle" />
+                <div class="helperText">TikTok handle (without the @).</div>
+              </div>
+
+              <div class="field">
+                <label for="vendorSocialWhatsapp">WhatsApp Business</label>
+                <input id="vendorSocialWhatsapp" type="text" placeholder="+44 7700 900123" />
+                <div class="helperText">WhatsApp Business contact number.</div>
+              </div>
             </div>
           </div>
 
@@ -1223,6 +1263,16 @@
     }
 
     function getFormData() {
+      const socialInputs = {
+        instagram: byId("vendorSocialInstagram").value.trim(),
+        facebook: byId("vendorSocialFacebook").value.trim(),
+        tiktok: byId("vendorSocialTiktok").value.trim(),
+        whatsapp: byId("vendorSocialWhatsapp").value.trim()
+      };
+      const social_handles = {};
+      Object.keys(socialInputs).forEach(function(k) {
+        if (socialInputs[k]) social_handles[k] = socialInputs[k];
+      });
       return {
         name: byId("vendorName").value.trim(),
         display_name: byId("vendorDisplayName").value.trim(),
@@ -1230,6 +1280,8 @@
         order_label: byId("vendorOrderLabel").value.trim(),
         contact_phone: byId("vendorContactPhone").value.trim(),
         website_url: byId("vendorWebsiteUrl").value.trim(),
+        address: byId("vendorAddress").value.trim(),
+        social_handles: social_handles,
         logo_url: byId("vendorLogoUrl").value.trim(),
         hero_image_url: byId("vendorHeroImageUrl").value.trim(),
         brand_primary_color: byId("brandPrimaryColor").value || "#8B6B3F",
@@ -1256,6 +1308,12 @@
       byId("vendorOrderLabel").value = vendor.order_label || "Order direct";
       byId("vendorContactPhone").value = vendor.contact_phone || "";
       byId("vendorWebsiteUrl").value = vendor.website_url || "";
+      byId("vendorAddress").value = vendor.address || "";
+      const socials = (vendor.social_handles && typeof vendor.social_handles === "object") ? vendor.social_handles : {};
+      byId("vendorSocialInstagram").value = socials.instagram || "";
+      byId("vendorSocialFacebook").value = socials.facebook || "";
+      byId("vendorSocialTiktok").value = socials.tiktok || "";
+      byId("vendorSocialWhatsapp").value = socials.whatsapp || "";
       byId("vendorLogoUrl").value = vendor.logo_url || "";
       byId("vendorHeroImageUrl").value = vendor.hero_image_url || "";
       byId("brandPrimaryColor").value = vendor.brand_primary_color || "#8B6B3F";
@@ -1608,6 +1666,8 @@
         order_label: form.order_label || null,
         contact_phone: form.contact_phone || null,
         website_url: form.website_url || null,
+        address: form.address || null,
+        social_handles: form.social_handles || {},
         logo_url: form.logo_url || null,
         hero_image_url: form.hero_image_url || null,
         brand_primary_color: form.brand_primary_color || "#8B6B3F",
@@ -1715,6 +1775,11 @@
         "vendorOrderLabel",
         "vendorContactPhone",
         "vendorWebsiteUrl",
+        "vendorAddress",
+        "vendorSocialInstagram",
+        "vendorSocialFacebook",
+        "vendorSocialTiktok",
+        "vendorSocialWhatsapp",
         "brandPrimaryColor",
         "brandSecondaryColor",
         "brandTextOnPrimary"
