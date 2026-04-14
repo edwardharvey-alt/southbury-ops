@@ -226,15 +226,14 @@ on top of the coding rules above.
 6. **`customer_relationships` uses a polymorphic `owner_id` /
    `owner_type` pattern — there is no `vendor_id` column on this
    table.** Correct query pattern:
-   `.eq('owner_id', state.vendorId).eq('owner_type', 'vendor')`.
-   The `customers` table uses `name` (not `full_name`). The `orders`
-   table has no `vendor_id` — filter orders by vendor by first
-   fetching drop IDs from `drops` where `vendor_id = state.vendorId`,
-   then using `.in('drop_id', vendorDropIds)`. RLS:
-   `customer_relationships` and `customers` both have temporary anon
-   SELECT policies (`USING (true)`) added as pre-auth measures. Both
-   must be replaced with `auth.uid()`-based policies when T5-A
-   lands.
+   `.eq('owner_id', state.vendorId).eq('owner_type', 'vendor')`. The
+   `customers` table uses `name` (not `full_name`). The `orders` table
+   has no `vendor_id` — filter orders by vendor by first fetching drop
+   IDs from `drops` where `vendor_id = state.vendorId`, then using
+   `.in('drop_id', vendorDropIds)`. RLS: `customer_relationships` and
+   `customers` both have temporary anon SELECT policies (`USING (true)`)
+   added as pre-auth measures. Both must be replaced with
+   `auth.uid()`-based policies when T5-A lands.
 
 ## Brand and tone
 
