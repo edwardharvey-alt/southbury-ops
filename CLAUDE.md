@@ -223,6 +223,18 @@ on top of the coding rules above.
    All three documents carry amber draft banners and version 0.1
    notes pending legal review.
 
+6. **`customer_relationships` uses a polymorphic `owner_id` /
+   `owner_type` pattern — there is no `vendor_id` column on this
+   table.** Correct query pattern:
+   `.eq('owner_id', state.vendorId).eq('owner_type', 'vendor')`. The
+   `customers` table uses `name` (not `full_name`). The `orders` table
+   has no `vendor_id` — filter orders by vendor by first fetching drop
+   IDs from `drops` where `vendor_id = state.vendorId`, then using
+   `.in('drop_id', vendorDropIds)`. RLS: `customer_relationships` and
+   `customers` both have temporary anon SELECT policies (`USING (true)`)
+   added as pre-auth measures. Both must be replaced with
+   `auth.uid()`-based policies when T5-A lands.
+
 ## Brand and tone
 
 - Calm, assured, warm, considered, local
@@ -640,6 +652,12 @@ recommendations strip (filtered from HearthIntelligence.generateRecommendations(
 and full customer list with client-side segment filtering (200-row cap).
 Mobile-responsive layout with stacked cards, hidden low-priority table
 columns, and 44px touch targets at 768px and below.
+
+Session notes: Customers nav item added between Insights and Hosts.
+Hosts and Setup carry `utility: true` flag, rendered with
+`class="utility"`, styled at 55% opacity / 12px in hearth.css. Vendor
+`display_name` now dynamically updates `.brandSubtitle` on Service
+Board, Insights and Customers after vendor resolves.
 
 Dependency: T4-14 (customer import — complete)
 
