@@ -1221,7 +1221,7 @@
         (async () => { try { return await sb.from('v_hearth_drop_stats').select('*').eq('vendor_id', vendorId).order('delivery_start', { ascending: false }); } catch(e) { return { data: [] }; } })(),
         (async () => { try { return await sb.from('hosts').select('*').order('name'); } catch(e) { return { data: [] }; } })(),
         (async () => { try { return await sb.from('customer_relationships').select('*, customers(full_name, email, postcode, phone)').eq('owner_id', vendorId).eq('owner_type', 'vendor'); } catch(e) { return { data: [] }; } })(),
-        (async () => { try { return await sb.from('orders').select('customer_email, created_at').eq('vendor_id', vendorId); } catch(e) { return { data: [] }; } })(),
+        (async () => { try { const { data: vendorDrops } = await sb.from('drops').select('id').eq('vendor_id', vendorId); const vendorDropIds = (vendorDrops || []).map(d => d.id); if (vendorDropIds.length === 0) return { data: [] }; return await sb.from('orders').select('customer_email, created_at').in('drop_id', vendorDropIds); } catch(e) { return { data: [] }; } })(),
         (async () => { try { return await sb.from('v_item_sales').select('*').eq('vendor_id', vendorId); } catch(e) { return { data: [] }; } })(),
         (async () => { try { return await sb.from('v_host_performance').select('*').eq('vendor_id', vendorId); } catch(e) { return { data: [] }; } })()
       ]);
