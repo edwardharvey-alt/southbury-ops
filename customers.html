@@ -742,13 +742,14 @@
         return;
       }
       state.vendorId = state.vendor.id;
+      const _cuSubtitle = document.querySelector('.brandSubtitle');
+      if (_cuSubtitle && state.vendor.display_name) _cuSubtitle.textContent = state.vendor.display_name;
 
       /* 1. Customer relationships joined to customers */
       const { data: rels, error: relsErr } = await sb
         .from('customer_relationships')
         .select('*, customers(full_name, email, postcode, phone)')
-        .eq('owner_id', state.vendorId)
-        .eq('owner_type', 'vendor');
+        .eq('vendor_id', state.vendorId);
 
       if (relsErr) {
         console.error('Failed to load customer relationships:', relsErr);

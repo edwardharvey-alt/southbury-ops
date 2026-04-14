@@ -1105,6 +1105,8 @@
         );
       }
       state.vendorId = state.vendor.id;
+      const _insSubtitle = document.querySelector('.brandSubtitle');
+      if (_insSubtitle && state.vendor.display_name) _insSubtitle.textContent = state.vendor.display_name;
 
       document.getElementById('heroVendor').textContent =
         state.vendor.display_name || state.vendor.name || 'Vendor';

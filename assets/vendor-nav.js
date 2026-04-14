@@ -57,10 +57,11 @@
     { file: "brand-hearth.html", label: "Brand Hearth" },
     { file: "drop-menu.html", label: "Menu Library" },
     { file: "drop-manager.html", label: "Drop Studio" },
-    { file: "hosts.html", label: "Hosts" },
+    { file: "hosts.html", label: "Hosts", utility: true },
     { file: "index.html", label: "Service Board" },
     { file: "insights.html", label: "Insights" },
-    { file: "onboarding.html", label: "Setup" }
+    { file: "customers.html", label: "Customers" },
+    { file: "onboarding.html", label: "Setup", utility: true }
   ];
 
   // Full whitelist of operator pages — nav bar items plus operator
@@ -124,9 +125,13 @@
       var rawHref = prefix + item.file;
       var href = withVendor(rawHref);
       var isActive = item.file === activeFile;
+      var classes = [];
+      if (item.utility) classes.push("utility");
+      if (isActive) classes.push("active");
+      var classAttr = classes.length ? ' class="' + classes.join(" ") + '"' : "";
       return (
         '<a href="' + escapeAttr(href) + '"' +
-        (isActive ? ' class="active"' : "") +
+        classAttr +
         ">" + item.label + "</a>"
       );
     }).join("");
