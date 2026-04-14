@@ -758,10 +758,14 @@
       }
 
       /* 2. Per-customer order count and last order date */
-      const { data: orderAgg, error: orderErr } = await sb
-        .from('orders')
-        .select('customer_email, created_at')
+      const { data: vendorDrops } = await sb
+        .from('drops')
+        .select('id')
         .eq('vendor_id', state.vendorId);
+      const vendorDropIds = (vendorDrops || []).map(d => d.id);
+      const { data: orderAgg, error: orderErr } = vendorDropIds.length
+        ? await sb.from('orders').select('customer_email, created_at').in('drop_id', vendorDropIds)
+        : { data: [], error: null };
 
       if (orderErr) {
         console.error('Failed to load order data:', orderErr);
