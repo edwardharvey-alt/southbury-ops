@@ -985,3 +985,45 @@ T5-B1 — extract resolveVendor() into shared module (pay down the
 T5-B2 / T5-B3 — onboarding capture for social handles and address
 (schema columns already exist; just need the UI)
 T5-B4 — surface social handles and address in Brand Hearth
+
+Tier 6 — Agentic AI workstream
+The boundary between Tier 5 and Tier 6 is intent. Tier 5 intelligence surfaces signals and recommendations as text. Tier 6 agentic features propose, draft, and prepare — then wait for vendor approval before anything is committed. The vendor is always the decision-maker. The platform does the thinking.
+
+All Tier 6 features use the Anthropic API via Claude Sonnet. Prompts are constructed from structured vendor data — never from raw user input. Output is always presented as a draft for vendor review, never applied automatically.
+
+T6-1: Auto-draft drops from demand signals
+When the intelligence engine identifies a strong demand cluster — enough known customers in an area, a gap in the drop cadence, or a returning host window — Hearth drafts a drop automatically and surfaces it to the vendor as a suggestion. Draft includes: date and window (based on cadence patterns), host context if a match exists, suggested capacity (based on area customer count and historical fill rates), and a menu pre-selected from the vendor's catalogue. Vendor sees "We've drafted a drop for you" on the Home dashboard, reviews, edits if needed, and publishes with one click. Nothing is created without explicit vendor action.
+Dependency: T4-28, T5-9, meaningful drop history.
+
+T6-2: Brand configuration AI
+On Brand Hearth, a vendor can trigger an AI brand analysis. They provide their uploaded logo, hero image, a short free-text description of their food and ethos, and their vendor category. Claude analyses the inputs and returns: a suggested tagline (3 options), a brand positioning statement (2–3 sentences), a target audience description, and an accent colour suggestion with rationale. All outputs are presented as editable drafts — vendor accepts, edits, or discards each independently. Nothing saves until the vendor explicitly confirms. Particularly high value for new vendors who arrive at Brand Hearth unsure how to describe themselves.
+Dependency: T2-7 (file upload for logo and hero image).
+
+T6-3: Proactive host identification
+Rather than vendors browsing the host directory manually, Hearth suggests hosts they haven't worked with yet based on fit signals. Matching logic: vendor category and audience tags cross-referenced with host host_type and audience_tags, weighted by proximity (vendor address vs host postcode), host estimated_audience_size, and whether the host has an active service window that aligns with the vendor's typical drop timing. Output: a ranked shortlist of 3–5 suggested hosts surfaced on the Home dashboard and in the Hosts directory under "Suggested for you." Each suggestion shows the match rationale in plain English: "Local gym, 200+ members, Friday evening service window — strong fit for your health-focused menu." Vendor clicks to view the full host profile or express interest.
+Dependency: T4-16 (complete), T5-B3 (vendor address captured).
+
+T6-4: Drop optimisation strategy
+A single surface — accessible from Drop Studio when creating or editing a drop — that consolidates all available intelligence into a plain-English strategy brief for that specific drop. Covers: recommended timing based on cadence patterns, optimal capacity given demand signals and historical fill rates, menu recommendations based on what has performed in similar contexts, predicted fill rate with confidence level, and estimated customer reach in the target area. Presented as a collapsible "Strategy" panel alongside the drop form. Vendor can accept individual recommendations (which pre-populate the relevant fields) or ignore them entirely.
+Dependency: T4-28, T5-9, meaningful drop and customer history.
+
+T6-5: Promotion copy generation
+When a drop is published or moved to scheduled status, Hearth offers to generate promotion copy in one click. Output: a WhatsApp message (under 160 characters, conversational), a social caption (Instagram/Facebook tone, 2–3 sentences with relevant emoji), and a short descriptive paragraph suitable for email or a community newsletter. All copy is generated in the vendor's brand voice — informed by their tagline, category, and the specific drop context (host name, date, menu highlights, capacity). Presented as editable drafts in a modal. Vendor copies to clipboard or edits before sharing.
+Dependency: T2-7 (brand assets), T4-28 (intelligence engine for context).
+
+T6-6: At-risk customer flagging
+Before customers reach lapsed status (60+ days no order), flag them as at risk at 40 days. Surface a quiet alert on the Customers page and Home dashboard: "14 customers haven't ordered in 40 days. A drop in their area could re-engage them." Clicking through shows the at-risk segment on the Customers page with postcode clustering. The intelligence engine generates a plain-English recommended action: "Your strongest at-risk cluster is RG10 with 9 customers. A Friday evening drop there could re-engage them before they lapse entirely."
+Dependency: T4-27 (complete), T4-28 (complete).
+
+T6-7: Capacity intelligence
+Upgrade the capacity signal from descriptive to predictive. Based on historical fill rate patterns — day of week, drop type, host context, time since opening — generate a prediction: "Based on your last 6 Friday drops at The Bell, you typically reach 80% capacity by Wednesday evening. At current trajectory this drop will sell out by Tuesday." Surface on the Service Board for live drops and in Drop Studio when setting capacity for a new drop. For new vendors without history, fall back to platform-wide benchmarks for similar drop types.
+Dependency: T4-28, minimum 5 drops of the same type.
+
+T6-8: Menu suggestion by context
+When a vendor assigns a menu to a drop, surface AI-powered menu suggestions based on context matching. Analyse item sales performance grouped by host type, drop type, day of week, and fulfilment mode. Present a ranked suggestion: "For a sports club Friday evening, your Margherita, Garlic Bread and Brownie Box have historically driven the strongest basket value. Consider featuring these." Vendor can add suggested items to the drop menu with one click.
+Dependency: T4-28, meaningful item sales history across varied contexts.
+
+Recommended build sequence for Tier 6:
+First: T6-6 (at-risk flagging) and T6-5 (promotion copy) — immediate vendor value, fewest dependencies.
+Second: T6-2 (brand AI) and T6-3 (host identification) — demo-compelling, no deep drop history needed.
+Third: T6-1, T6-4, T6-7, T6-8 — need real data to be credible, build once Southbury Farm has meaningful drop history and Healthy Habits is live.
