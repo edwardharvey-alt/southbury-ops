@@ -57,10 +57,10 @@
     { file: "brand-hearth.html", label: "Brand Hearth" },
     { file: "drop-menu.html", label: "Menu Library" },
     { file: "drop-manager.html", label: "Drop Studio" },
-    { file: "hosts.html", label: "Hosts", utility: true },
     { file: "index.html", label: "Service Board" },
     { file: "insights.html", label: "Insights" },
     { file: "customers.html", label: "Customers" },
+    { file: "hosts.html", label: "Hosts", utility: true },
     { file: "onboarding.html", label: "Setup", utility: true }
   ];
 

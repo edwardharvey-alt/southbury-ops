@@ -748,7 +748,7 @@
       /* 1. Customer relationships joined to customers */
       const { data: rels, error: relsErr } = await sb
         .from('customer_relationships')
-        .select('*, customers(full_name, email, postcode, phone)')
+        .select('*, customers(name, email, postcode, phone)')
         .eq('vendor_id', state.vendorId);
 
       if (relsErr) {
@@ -789,7 +789,7 @@
         const orderInfo = orderMap[email] || { order_count: 0, last_order_at: null };
 
         return {
-          full_name: c.full_name || '—',
+          full_name: c.name || '—',
           email: c.email || '',
           postcode: c.postcode || '—',
           phone: c.phone || '',
