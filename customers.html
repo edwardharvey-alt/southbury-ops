@@ -749,7 +749,8 @@
       const { data: rels, error: relsErr } = await sb
         .from('customer_relationships')
         .select('*, customers(name, email, postcode, phone)')
-        .eq('vendor_id', state.vendorId);
+        .eq('owner_id', state.vendorId)
+        .eq('owner_type', 'vendor');
 
       if (relsErr) {
         console.error('Failed to load customer relationships:', relsErr);
