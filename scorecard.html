@@ -6,6 +6,7 @@
   <title>Hearth — Scorecard</title>
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
   <script src="./assets/config.js"></script>
+  <script src="./assets/hearth-vendor.js?v=1"></script>
   <script src="./assets/vendor-nav.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./assets/hearth-intelligence.js"></script>
@@ -599,37 +600,6 @@
       return new URLSearchParams(window.location.search).get(name);
     }
 
-    /* ── Vendor resolution ── */
-    async function resolveVendor() {
-      const explicitVendorId = getUrlParam('vendor_id') || window.HEARTH_VENDOR_ID || null;
-      const explicitSlug = getUrlParam('vendor') || getUrlParam('vendor_slug') || null;
-
-      if (explicitVendorId) {
-        const { data, error } = await sb.from('vendors').select('*').eq('id', explicitVendorId).maybeSingle();
-        if (!error && data) return data;
-      }
-
-      if (explicitSlug) {
-        for (const field of ['slug', 'vendor_slug']) {
-          try {
-            const { data, error } = await sb.from('vendors').select('*').eq(field, explicitSlug).maybeSingle();
-            if (!error && data) return data;
-          } catch (e) {}
-        }
-        // Slug was provided but no match found — do not fall back to
-        // another vendor. Returning null lets the caller show a clear
-        // "Vendor not found" error instead of silently loading the wrong
-        // vendor's data.
-        return null;
-      }
-
-      // Only reached when no slug was provided at all — dev convenience
-      // fallback so the page loads against the first vendor in the DB.
-      const { data, error } = await sb.from('vendors').select('*').limit(1);
-      if (error) throw error;
-      return data?.[0] || null;
-    }
-
     /* ── State ── */
     let state = {
       vendor: null,
@@ -670,7 +640,7 @@
         return false;
       }
 
-      state.vendor = await resolveVendor();
+      state.vendor = await window.HearthVendor.resolveVendor(sb);
       if (!state.vendor) {
         const requestedSlug = getUrlParam('vendor') || getUrlParam('vendor_slug');
         showError(
