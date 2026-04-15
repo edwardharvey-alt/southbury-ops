@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sign in — Hearth</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=31" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --lg-brand-primary: var(--h-accent, #8B6B3F);
+      --lg-brand-secondary: var(--h-accent-2, #CBB89D);
+      --lg-brand-soft: rgba(139,107,63,0.10);
+      --lg-brand-soft-2: rgba(203,184,157,0.08);
+    }
+
+    body.lgBody{
+      background:
+        radial-gradient(1200px 600px at 15% -10%, var(--lg-brand-soft), rgba(249,115,22,0) 60%),
+        radial-gradient(900px 450px at 90% 0%, var(--lg-brand-soft-2), rgba(251,146,60,0) 55%),
+        #f7f5f1;
+      min-height:100vh;
+    }
+
+    .lgPage{
+      max-width:440px;
+      margin:0 auto;
+      padding:56px 20px 72px;
+      display:grid;
+      gap:28px;
+    }
+
+    /* Wordmark */
+    .lgWordmark{
+      text-align:center;
+      padding:4px 0 4px;
+    }
+
+    .lgWordmarkText{
+      display:inline-block;
+      font-size:22px;
+      font-weight:950;
+      letter-spacing:-0.035em;
+      color:#1f2937;
+      margin:0;
+    }
+
+    .lgWordmarkDot{
+      display:inline-block;
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:linear-gradient(135deg, var(--lg-brand-primary), var(--lg-brand-secondary));
+      margin-left:6px;
+      vertical-align:middle;
+      transform:translateY(-2px);
+    }
+
+    /* Card */
+    .lgCard{
+      background:#fff;
+      border:1px solid #e9e3d8;
+      border-radius:22px;
+      box-shadow:0 2px 12px rgba(15,23,42,0.04);
+      padding:32px 28px;
+      display:grid;
+      gap:20px;
+    }
+
+    .lgHeader{
+      display:grid;
+      gap:8px;
+    }
+
+    .lgEyebrow{
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:#8b6b3f;
+      margin:0;
+    }
+
+    .lgTitle{
+      font-size:28px;
+      font-weight:950;
+      letter-spacing:-0.035em;
+      line-height:1.1;
+      color:#1f2937;
+      margin:0;
+    }
+
+    .lgSub{
+      font-size:14px;
+      font-weight:600;
+      color:#4b5563;
+      line-height:1.55;
+      margin:0;
+    }
+
+    /* Form */
+    .lgForm{
+      display:grid;
+      gap:14px;
+    }
+
+    .lgField{
+      display:grid;
+      gap:6px;
+    }
+
+    .lgLabel{
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#6b7280;
+      margin:0;
+    }
+
+    .lgInput{
+      appearance:none;
+      width:100%;
+      box-sizing:border-box;
+      min-height:46px;
+      padding:0 14px;
+      border:1px solid #d9d2c3;
+      border-radius:12px;
+      background:#fbf8f3;
+      font-size:15px;
+      font-weight:600;
+      color:#1f2937;
+      font-family:inherit;
+      transition:border-color .15s ease, background .15s ease, box-shadow .15s ease;
+    }
+
+    .lgInput:focus{
+      outline:none;
+      border-color:var(--lg-brand-primary);
+      background:#fff;
+      box-shadow:0 0 0 3px rgba(139,107,63,0.15);
+    }
+
+    .lgInput:disabled{
+      opacity:.6;
+      cursor:not-allowed;
+    }
+
+    .lgButton{
+      appearance:none;
+      border:none;
+      cursor:pointer;
+      min-height:48px;
+      padding:0 18px;
+      border-radius:12px;
+      background:linear-gradient(135deg, var(--lg-brand-primary), var(--lg-brand-secondary));
+      color:#fff;
+      font-size:15px;
+      font-weight:900;
+      letter-spacing:-0.01em;
+      font-family:inherit;
+      transition:transform .08s ease, box-shadow .15s ease, opacity .15s ease;
+    }
+
+    .lgButton:hover:not(:disabled){
+      box-shadow:0 4px 14px rgba(139,107,63,0.25);
+    }
+
+    .lgButton:active:not(:disabled){
+      transform:translateY(1px);
+    }
+
+    .lgButton:disabled{
+      opacity:.6;
+      cursor:not-allowed;
+    }
+
+    .lgError{
+      font-size:13px;
+      font-weight:700;
+      color:#b45309;
+      background:rgba(180,83,9,0.08);
+      border:1px solid rgba(180,83,9,0.18);
+      border-radius:10px;
+      padding:10px 12px;
+      margin:0;
+      line-height:1.45;
+    }
+
+    .lgError[hidden]{
+      display:none !important;
+    }
+
+    /* Sent state */
+    .lgSent{
+      display:grid;
+      gap:14px;
+      padding:4px 0 2px;
+    }
+
+    .lgSentIcon{
+      font-size:32px;
+      line-height:1;
+    }
+
+    .lgSentTitle{
+      font-size:20px;
+      font-weight:950;
+      letter-spacing:-0.03em;
+      color:#1f2937;
+      margin:0;
+    }
+
+    .lgSentBody{
+      font-size:14px;
+      font-weight:600;
+      color:#4b5563;
+      line-height:1.55;
+      margin:0;
+    }
+
+    .lgSentBody strong{
+      color:#1f2937;
+      font-weight:900;
+    }
+
+    /* Secondary link */
+    .lgFoot{
+      text-align:center;
+      font-size:13px;
+      font-weight:700;
+      color:#6b7280;
+    }
+
+    .lgFoot a{
+      color:var(--lg-brand-primary);
+      text-decoration:none;
+      font-weight:900;
+    }
+
+    .lgFoot a:hover{
+      text-decoration:underline;
+    }
+
+    @media (max-width:600px){
+      .lgPage{
+        padding:36px 14px 56px;
+        gap:22px;
+      }
+      .lgCard{
+        padding:26px 20px;
+      }
+      .lgTitle{
+        font-size:24px;
+      }
+    }
+  </style>
+</head>
+<body class="lgBody">
+
+  <div class="lgPage">
+    <div class="lgWordmark">
+      <p class="lgWordmarkText">Hearth<span class="lgWordmarkDot" aria-hidden="true"></span></p>
+    </div>
+
+    <div class="lgCard">
+      <div class="lgHeader">
+        <p class="lgEyebrow">Returning vendor</p>
+        <h1 class="lgTitle">Welcome back</h1>
+        <p class="lgSub">Enter your email and we'll send you a sign-in link.</p>
+      </div>
+
+      <form class="lgForm" id="lgForm" novalidate>
+        <div class="lgField">
+          <label class="lgLabel" for="lgEmail">Email address</label>
+          <input
+            class="lgInput"
+            type="email"
+            id="lgEmail"
+            name="email"
+            autocomplete="email"
+            inputmode="email"
+            placeholder="you@yourvendor.co.uk"
+            required
+          />
+        </div>
+        <p class="lgError" id="lgError" hidden></p>
+        <button class="lgButton" type="submit" id="lgSubmit">Send sign-in link</button>
+      </form>
+
+      <div class="lgSent" id="lgSent" hidden>
+        <div class="lgSentIcon" aria-hidden="true">✉️</div>
+        <h2 class="lgSentTitle">Check your inbox</h2>
+        <p class="lgSentBody">We've sent a sign-in link to <strong id="lgSentEmail"></strong>.</p>
+        <p class="lgSentBody">The link will open Hearth in this browser. If you don't see it in a minute, check your spam folder.</p>
+      </div>
+    </div>
+
+    <p class="lgFoot">New to Hearth? <a href="./signup.html">Get started →</a></p>
+  </div>
+
+  <script>
+    const _sb = supabase.createClient(
+      window.HEARTH_CONFIG.SUPABASE_URL,
+      window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+    );
+
+    const formEl = document.getElementById("lgForm");
+    const emailEl = document.getElementById("lgEmail");
+    const submitEl = document.getElementById("lgSubmit");
+    const errorEl = document.getElementById("lgError");
+    const sentEl = document.getElementById("lgSent");
+    const sentEmailEl = document.getElementById("lgSentEmail");
+
+    function showError(message){
+      errorEl.textContent = message;
+      errorEl.hidden = false;
+    }
+
+    function clearError(){
+      errorEl.textContent = "";
+      errorEl.hidden = true;
+    }
+
+    function showSent(email){
+      formEl.hidden = true;
+      sentEmailEl.textContent = email;
+      sentEl.hidden = false;
+    }
+
+    formEl.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearError();
+
+      const email = (emailEl.value || "").trim();
+      if (!email){
+        showError("Please enter your email address.");
+        return;
+      }
+
+      const looksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      if (!looksValid){
+        showError("That doesn't look like a valid email address.");
+        return;
+      }
+
+      submitEl.disabled = true;
+      emailEl.disabled = true;
+      submitEl.textContent = "Sending…";
+
+      try {
+        const { error } = await _sb.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: window.location.origin + "/auth-callback.html",
+          },
+        });
+
+        if (error) throw error;
+
+        showSent(email);
+      } catch (err){
+        console.error(err);
+        showError(
+          (err && err.message)
+            ? err.message
+            : "Something went wrong sending the link. Please try again."
+        );
+        submitEl.disabled = false;
+        emailEl.disabled = false;
+        submitEl.textContent = "Send sign-in link";
+      }
+    });
+  </script>
+</body>
+</html>
