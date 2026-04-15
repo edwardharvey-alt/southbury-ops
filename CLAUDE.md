@@ -235,6 +235,19 @@ on top of the coding rules above.
    added as pre-auth measures. Both must be replaced with
    `auth.uid()`-based policies when T5-A lands.
 
+7. **Auth flow routing patterns**
+   - `?redirect=` pattern: before redirecting an unauthenticated user to
+     login.html, store the intended URL in sessionStorage as
+     `hearth:redirect`. After successful auth, auth-callback.html reads
+     and clears this value and routes accordingly.
+   - New vs returning vendor: auth-callback.html distinguishes by querying
+     vendors where auth_user_id = session.user.id. No row = new vendor.
+     Row with onboarding_completed false = incomplete onboarding. Row with
+     onboarding_completed true = returning vendor.
+   - `?vendor=` param: retained as a localhost-only dev override after auth
+     ships. resolveVendor() checks window.location.hostname === 'localhost'
+     before honouring it. On production, session is the only identity source.
+
 ## Brand and tone
 
 - Calm, assured, warm, considered, local
@@ -828,6 +841,13 @@ communications go to consented community members through available
 channels. Community context shown on drop card. Capacity optionally
 reserved exclusively for community members. Dependency: T5-19, T5-11.
 
+T5-21: Multi-vendor accounts
+One auth account owning multiple vendor workspaces. When resolveVendor()
+finds more than one vendor row linked to a session, show a vendor picker
+before entering the platform. Schema already supports this — auth_user_id
+on vendors means one user can own multiple rows. Deferred: one account =
+one vendor for now.
+
 ### Tier 5-A — Auth workstream
 
 Must complete before any real vendor enters live data. The current
@@ -857,9 +877,10 @@ Frontend filters stay for clarity but become belt-and-braces rather
 than the only defence.
 
 T5-A4: Login page
-New static page `login.html` with email input, magic-link request,
-and a clear "check your inbox" state. Magic link lands back on
-`home.html`.
+New static page `login.html` for returning vendors only — not signup.
+Email input, magic-link request, and a clear "check your inbox" state.
+Magic link lands back on `home.html`. New vendors arrive via
+`signup.html` (T5-A10), not this page.
 
 T5-A5: Session-aware `resolveVendor()`
 Replace the URL-param fallback in the shared resolveVendor pattern
@@ -874,10 +895,42 @@ Admin-only flow (Ed, initially) to create a vendor row, send a
 magic-link invite to the owner's email, and link the auth user on
 first sign-in. Lightweight — one form and one email.
 
+Note: vendor provisioning is manual for now. Ed creates the vendor row
+in SQL, invites the user via Supabase Auth → Users → Invite, then links
+with an UPDATE statement setting `auth_user_id`. No code required at
+this stage.
+
 T5-A7: Logout
 Session clear via `supabase.auth.signOut()` and redirect to
 `login.html`. Surfaced in the operator nav or the Brand Hearth
 workspace card.
+
+T5-A8: Upgrade auth to email OTP + optional 2FA
+Before the platform scales to multiple vendors, upgrade from magic link
+to email OTP (6-digit code entered on login page rather than a
+clickable link) and make 2FA available as an optional vendor setting.
+Primarily a Supabase configuration change with minor login.html updates.
+Build when vendor count warrants it.
+
+T5-A9: landing.html — public marketing page
+Unauthenticated. No vendor-nav.js. Two CTAs: "Get started" (routes to
+signup.html) and "Sign in" (routes to login.html). Explains what Hearth
+is, who it's for, and why it's different. Root URL destination for anyone
+arriving at the platform cold.
+
+T5-A10: signup.html — new vendor email capture
+Standalone page. No vendor-nav.js. Email input triggers Supabase magic
+link. On click, routes to auth-callback.html which detects no existing
+vendor row and redirects to onboarding.html. Separate from login.html —
+different copy, different intent.
+
+T5-A11: auth-callback.html — post-magic-link routing
+Supabase lands here after magic link click. Reads session, queries
+vendors table for a row matching auth_user_id. If no row found: new
+vendor — redirect to onboarding.html. If row found and
+onboarding_completed is false: redirect to onboarding.html. If row
+found and onboarding_completed is true: redirect to intended URL
+(from ?redirect= param if present) or home.html.
 
 ### Tier 5-B — Platform improvements
 
