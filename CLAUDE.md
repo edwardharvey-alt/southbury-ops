@@ -170,6 +170,12 @@ and HearthNav.withVendor).
    - Never add new page-specific rules to hearth.css — all page-specific
      styles belong in the page's own <style> block
 
+10. Always start every session with `git fetch origin && git reset --hard
+    origin/main` before making any changes. Do not use `git checkout main &&
+    git pull` — this fails silently when local and remote histories have
+    diverged, which is a known persistent issue with this repo. The hard
+    reset always wins regardless of local state.
+
 ## Operational learnings
 
 Gotchas and patterns captured from real bugs. Treat these as hard rules
@@ -263,6 +269,11 @@ on top of the coding rules above.
    origin/main. Backup branch main-backup-pre-divergence-fix preserves
    the old local history. Future sessions should behave normally —
    git pull on main will fast-forward cleanly.
+   The git pull on main will fast-forward cleanly expectation has since
+   proved false — the divergence recurs every session because Claude Code
+   does not persist local repo state between sessions. The correct fix is
+   to always start with git fetch origin && git reset --hard origin/main,
+   documented above as Critical rule #10.
 
 ## Brand and tone
 
