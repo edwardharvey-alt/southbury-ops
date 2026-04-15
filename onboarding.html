@@ -1043,6 +1043,40 @@
           </div>
         </div>
 
+        <!-- ══════════════════════════════════════ -->
+        <!-- STAGE 6 — Terms of participation (T4-25) -->
+        <!-- ══════════════════════════════════════ -->
+        <div class="stageWrapper" id="stage6Wrapper">
+          <div class="obStageCard" id="stage6">
+            <div class="obStageEyebrow">Terms of participation</div>
+
+            <div class="questionBlock">
+              <p class="questionLabel">A few things before you go live</p>
+              <p class="questionSub">
+                Hearth is a vendor-first platform. Please take a moment to read
+                our <a href="vendor-terms.html" target="_blank" rel="noopener noreferrer">vendor terms of participation</a>
+                — they cover how Hearth works for you, what we ask of you, and
+                what you can expect from us.
+              </p>
+
+              <label class="onboardingOption" id="termsAcceptOption" style="margin-top:14px;">
+                <input type="checkbox" id="obTermsAccept" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">I have read and agree to the Hearth vendor terms of participation</div>
+                  <div class="optionSub">
+                    You can revisit the terms at any time from your workspace.
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            <div class="brandActions" style="margin-top: 6px;">
+              <button class="btnAccent" id="acceptTermsBtn" type="button" disabled>Accept terms and continue</button>
+            </div>
+          </div>
+        </div>
+
         </div><!-- /stageCards -->
 
       </div><!-- /flowWrapper -->
@@ -1552,7 +1586,7 @@
       btn.textContent = 'Saving…';
       try {
         await writeSocialHandles(collectSocialHandles());
-        showCompletion();
+        revealStage6();
       } catch (err) {
         showNotice('Save failed: ' + (err.message || 'Unknown error. Please try again.'), 'error');
         btn.disabled = false; skip.disabled = false;
@@ -1566,10 +1600,58 @@
       btn.disabled = true; skip.disabled = true;
       try {
         await writeSocialHandles({});
-        showCompletion();
+        revealStage6();
       } catch (err) {
         showNotice('Skip failed: ' + (err.message || 'Unknown error. Please try again.'), 'error');
         btn.disabled = false; skip.disabled = false;
+      }
+    }
+
+    // ── Terms acceptance (T4-25) ──────────────────────────────────────────
+    function revealStage6(){
+      // Hide all earlier stages and reveal terms.
+      ['stage1','stage2Wrapper','stage3Wrapper','stage4Wrapper','stage5Wrapper'].forEach(id => {
+        const el = byId(id);
+        if (el) el.style.display = 'none';
+      });
+      const wrap = byId('stage6Wrapper');
+      wrap.style.display = '';
+      wrap.classList.add('visible');
+      // Pre-tick if vendor already accepted (defensive — usually only reached when not accepted).
+      const cb = byId('obTermsAccept');
+      const btn = byId('acceptTermsBtn');
+      if (state.vendor?.terms_accepted){
+        cb.checked = true;
+        btn.disabled = false;
+      } else {
+        cb.checked = false;
+        btn.disabled = true;
+      }
+      setTimeout(() => { wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+    }
+
+    async function acceptTerms(){
+      if (!state.vendor?.id){
+        showNotice('Vendor not found — cannot save.', 'error');
+        return;
+      }
+      const btn = byId('acceptTermsBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      try {
+        const acceptedAt = new Date().toISOString();
+        const { error } = await sb
+          .from('vendors')
+          .update({ terms_accepted: true, terms_accepted_at: acceptedAt })
+          .eq('id', state.vendor.id);
+        if (error) throw error;
+        state.vendor.terms_accepted = true;
+        state.vendor.terms_accepted_at = acceptedAt;
+        showCompletion();
+      } catch (err) {
+        showNotice('Could not record terms acceptance: ' + (err.message || 'Unknown error. Please try again.'), 'error');
+        btn.disabled = false;
+        btn.textContent = 'Accept terms and continue';
       }
     }
 
@@ -1667,6 +1749,11 @@
         byId('skipAddressBtn').addEventListener('click', skipAddress);
         byId('saveSocialsBtn').addEventListener('click', saveSocials);
         byId('skipSocialsBtn').addEventListener('click', skipSocials);
+        // T4-25 terms acceptance
+        byId('obTermsAccept').addEventListener('change', (e) => {
+          byId('acceptTermsBtn').disabled = !e.target.checked;
+        });
+        byId('acceptTermsBtn').addEventListener('click', acceptTerms);
         byId('updatePreferencesBtn').addEventListener('click', () => {
           hideCompletion();
           // Re-evaluate to restore correct stage/progress state
@@ -1682,6 +1769,8 @@
           byId('stage4Wrapper').classList.remove('visible');
           byId('stage5Wrapper').style.display = 'none';
           byId('stage5Wrapper').classList.remove('visible');
+          byId('stage6Wrapper').style.display = 'none';
+          byId('stage6Wrapper').classList.remove('visible');
           initProgress();
           // Re-evaluate from current selections
           if (stage1Complete()){
@@ -1721,9 +1810,16 @@
         }
         updateSaveButton();
 
-        // If already completed, show completion state
+        // If already completed, branch on whether terms have been accepted (T4-25).
+        // Vendors who completed onboarding before terms existed are routed
+        // through the terms step on next login; everyone else lands on the
+        // completion view.
         if (state.vendor.onboarding_completed){
-          showCompletion();
+          if (state.vendor.terms_accepted){
+            showCompletion();
+          } else {
+            revealStage6();
+          }
         }
 
       } catch (err) {
