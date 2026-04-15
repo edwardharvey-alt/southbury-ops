@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Signing in — Hearth</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=31" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --cb-brand-primary: var(--h-accent, #8B6B3F);
+      --cb-brand-secondary: var(--h-accent-2, #CBB89D);
+      --cb-brand-soft: rgba(139,107,63,0.10);
+      --cb-brand-soft-2: rgba(203,184,157,0.08);
+    }
+
+    body.cbBody{
+      background:
+        radial-gradient(1200px 600px at 15% -10%, var(--cb-brand-soft), rgba(249,115,22,0) 60%),
+        radial-gradient(900px 450px at 90% 0%, var(--cb-brand-soft-2), rgba(251,146,60,0) 55%),
+        #f7f5f1;
+      min-height:100vh;
+    }
+
+    .cbPage{
+      max-width:440px;
+      margin:0 auto;
+      padding:56px 20px 72px;
+      display:grid;
+      gap:28px;
+      min-height:100vh;
+      align-content:center;
+      justify-items:center;
+      text-align:center;
+    }
+
+    /* Wordmark */
+    .cbWordmark{
+      padding:4px 0 4px;
+    }
+
+    .cbWordmarkText{
+      display:inline-block;
+      font-size:22px;
+      font-weight:950;
+      letter-spacing:-0.035em;
+      color:#1f2937;
+      margin:0;
+    }
+
+    .cbWordmarkDot{
+      display:inline-block;
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:linear-gradient(135deg, var(--cb-brand-primary), var(--cb-brand-secondary));
+      margin-left:6px;
+      vertical-align:middle;
+      transform:translateY(-2px);
+    }
+
+    /* Loading state */
+    .cbStatus{
+      display:grid;
+      gap:14px;
+      justify-items:center;
+    }
+
+    .cbSpinner{
+      width:28px;
+      height:28px;
+      border-radius:50%;
+      border:3px solid rgba(139,107,63,0.18);
+      border-top-color:var(--cb-brand-primary);
+      animation: cbSpin .8s linear infinite;
+    }
+
+    @keyframes cbSpin{
+      to { transform: rotate(360deg); }
+    }
+
+    .cbMessage{
+      font-size:15px;
+      font-weight:700;
+      color:#4b5563;
+      line-height:1.55;
+      margin:0;
+    }
+
+    /* Error state */
+    .cbError{
+      background:#fff;
+      border:1px solid #e9e3d8;
+      border-radius:22px;
+      box-shadow:0 2px 12px rgba(15,23,42,0.04);
+      padding:28px 24px;
+      display:grid;
+      gap:14px;
+      max-width:400px;
+    }
+
+    .cbErrorTitle{
+      font-size:18px;
+      font-weight:950;
+      letter-spacing:-0.03em;
+      color:#1f2937;
+      margin:0;
+    }
+
+    .cbErrorBody{
+      font-size:14px;
+      font-weight:600;
+      color:#4b5563;
+      line-height:1.55;
+      margin:0;
+    }
+
+    .cbErrorLink{
+      color:var(--cb-brand-primary);
+      text-decoration:none;
+      font-size:14px;
+      font-weight:900;
+    }
+
+    .cbErrorLink:hover{
+      text-decoration:underline;
+    }
+
+    [hidden]{ display:none !important; }
+
+    @media (max-width:600px){
+      .cbPage{
+        padding:36px 14px 56px;
+        gap:22px;
+      }
+      .cbError{
+        padding:24px 20px;
+      }
+    }
+  </style>
+</head>
+<body class="cbBody">
+
+  <div class="cbPage">
+    <div class="cbWordmark">
+      <p class="cbWordmarkText">Hearth<span class="cbWordmarkDot" aria-hidden="true"></span></p>
+    </div>
+
+    <div class="cbStatus" id="cbStatus">
+      <div class="cbSpinner" aria-hidden="true"></div>
+      <p class="cbMessage">Signing you in…</p>
+    </div>
+
+    <div class="cbError" id="cbError" hidden>
+      <h1 class="cbErrorTitle">Something went wrong</h1>
+      <p class="cbErrorBody">Something went wrong. Please try signing in again.</p>
+      <a class="cbErrorLink" href="./login.html">Back to sign in →</a>
+    </div>
+  </div>
+
+  <script>
+    const _sb = supabase.createClient(
+      window.HEARTH_CONFIG.SUPABASE_URL,
+      window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+    );
+
+    const statusEl = document.getElementById("cbStatus");
+    const errorEl = document.getElementById("cbError");
+
+    function showError(){
+      statusEl.hidden = true;
+      errorEl.hidden = false;
+    }
+
+    function redirectTo(url){
+      window.location.replace(url);
+    }
+
+    async function route(){
+      try {
+        const { data: sessionData, error: sessionError } = await _sb.auth.getSession();
+        if (sessionError) throw sessionError;
+
+        const session = sessionData && sessionData.session;
+        if (!session || !session.user){
+          redirectTo("./login.html");
+          return;
+        }
+
+        // Read and clear any stored redirect target before we route.
+        const storedRedirect = sessionStorage.getItem("hearth:redirect");
+        sessionStorage.removeItem("hearth:redirect");
+
+        const { data: vendor, error: vendorError } = await _sb
+          .from("vendors")
+          .select("id, onboarding_completed")
+          .eq("auth_user_id", session.user.id)
+          .maybeSingle();
+
+        if (vendorError) throw vendorError;
+
+        if (!vendor){
+          redirectTo("./onboarding.html");
+          return;
+        }
+
+        if (!vendor.onboarding_completed){
+          redirectTo("./onboarding.html");
+          return;
+        }
+
+        redirectTo(storedRedirect || "./home.html");
+      } catch (err) {
+        console.error("auth-callback routing failed:", err);
+        showError();
+      }
+    }
+
+    route();
+  </script>
+</body>
+</html>
