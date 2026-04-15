@@ -7,6 +7,7 @@
 
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
   <script src="./assets/config.js"></script>
+  <script src="./assets/hearth-vendor.js?v=1"></script>
   <script src="./assets/vendor-nav.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -781,32 +782,6 @@
         return "\u00a3" + (Number(pence || 0) / 100).toFixed(2);
       }
 
-      /* ── Vendor resolution (CLAUDE.md pattern) ── */
-      async function resolveVendor() {
-        var explicitVendorId = getUrlParam("vendor_id") || window.HEARTH_VENDOR_ID || null;
-        var explicitSlug = getUrlParam("vendor") || getUrlParam("vendor_slug") || null;
-
-        if (explicitVendorId) {
-          var r1 = await _sb.from("vendors").select("*").eq("id", explicitVendorId).maybeSingle();
-          if (r1.data) return r1.data;
-        }
-
-        if (explicitSlug) {
-          var fields = ["slug", "vendor_slug"];
-          for (var i = 0; i < fields.length; i++) {
-            try {
-              var r2 = await _sb.from("vendors").select("*").eq(fields[i], explicitSlug).maybeSingle();
-              if (r2.data) return r2.data;
-            } catch (e) { /* try next field */ }
-          }
-          return null;
-        }
-
-        var r3 = await _sb.from("vendors").select("*").limit(1);
-        if (r3.error) throw r3.error;
-        return (r3.data && r3.data[0]) || null;
-      }
-
       /* ── Populate form from host record ── */
       function populateForm(host) {
         byId("host-name").textContent = host.name || "Unnamed host";
@@ -1138,7 +1113,7 @@
       async function boot() {
         try {
           /* Resolve vendor */
-          var vendor = await resolveVendor();
+          var vendor = await window.HearthVendor.resolveVendor(_sb);
           if (!vendor) {
             var slug = getUrlParam("vendor") || getUrlParam("vendor_slug");
             byId("loadingState").style.display = "none";

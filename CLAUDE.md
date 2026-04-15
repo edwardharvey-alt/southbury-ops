@@ -970,15 +970,20 @@ found and onboarding_completed is true: redirect to intended URL
 Smaller cleanups and onboarding enrichments that don't gate anything
 but pay down friction and tech debt.
 
-T5-B1: Extract `resolveVendor()` into a shared module
-`resolveVendor()` is currently duplicated verbatim across 10 operator
-pages. Pull it into `assets/hearth-vendor.js` alongside
-`hearth-intelligence.js` and `vendor-nav.js`, then delete the per-page
-copies. Note: this was deliberately deferred from the vendor
-isolation fix this session to keep the fix surgical — every page
-still has its own copy today. When T5-A5 lands, this module can
-absorb the session-aware rewrite so the change happens in one place
-instead of ten.
+T5-B1: Extract `resolveVendor()` into a shared module ✓ COMPLETE
+`assets/hearth-vendor.js` created as a shared module exposing
+`window.HearthVendor.resolveVendor(_sb)`. All 12 operator pages
+(index.html, drop-manager.html, drop-menu.html, brand-hearth.html,
+insights.html, customers.html, customer-import.html, onboarding.html,
+home.html, hosts.html, host-profile.html, scorecard.html) updated to
+load the module after config.js and before vendor-nav.js, with their
+inline `resolveVendor()` bodies deleted and call sites rewritten to
+`await window.HearthVendor.resolveVendor(sb)` (or `supabase` / `_sb`
+depending on the page's local variable). Behaviour preserved exactly:
+URL param → `window.HEARTH_VENDOR_ID` → first vendor fallback (dev
+only); returns null if a slug was provided but no row matches. When
+T5-A5 lands, the session-aware rewrite happens in one place instead of
+twelve.
 
 T5-B2: Onboarding — capture social handles
 Add a socials question to the onboarding flow (Q10 or similar)
@@ -1066,8 +1071,8 @@ enforced by frontend filtering today; auth moves that enforcement
 server-side and closes the URL-param impersonation path.
 
 Also on deck (low effort, high value):
-T5-B1 — extract resolveVendor() into shared module (pay down the
-10-page duplication before Auth rewrites it)
+T5-B1 ✓ — extract resolveVendor() into shared module (complete —
+`assets/hearth-vendor.js`, 12 operator pages consuming it)
 T5-B2 / T5-B3 — onboarding capture for social handles and address
 (schema columns already exist; just need the UI)
 T5-B4 — surface social handles and address in Brand Hearth
