@@ -248,6 +248,22 @@ on top of the coding rules above.
      ships. resolveVendor() checks window.location.hostname === 'localhost'
      before honouring it. On production, session is the only identity source.
 
+8. **PRs from claude/ branches must be verified — not all files always merge**
+   PR #133 from branch claude/add-privacy-policy-V4lvq merged only
+   privacy.html, silently dropping vendor-terms.html and host-terms.html
+   which were on the same branch. Both files had to be manually restored
+   from the source branch after the fact. Always check that all intended
+   files from a claude/ branch PR have landed on origin/main before
+   marking a task complete in CLAUDE.md.
+
+9. **Repo root cause — orphan history now resolved**
+   Local main and origin/main had completely disjoint histories across
+   multiple sessions (104 local vs 67 remote commits) due to multiple
+   root commits in the repo. Fix applied: local main reset hard to
+   origin/main. Backup branch main-backup-pre-divergence-fix preserves
+   the old local history. Future sessions should behave normally —
+   git pull on main will fast-forward cleanly.
+
 ## Brand and tone
 
 - Calm, assured, warm, considered, local
@@ -644,6 +660,9 @@ Note: as with the privacy policy, the terms content should be reviewed
 by a qualified legal professional before Hearth onboards real vendors.
 This ticket covers the platform implementation.
 
+Restored: vendor-terms.html was missing from origin/main after PR #133
+only partially merged the source branch. Restored at commit 2e04e66.
+
 T4-26: Host participation terms ✓ COMPLETE
 
 host-terms.html created (platform-level page, 8 sections, amber draft
@@ -656,6 +675,9 @@ Dependency: T4-16 (hosts as first-class entities — complete).
 
 Note: host terms content requires legal review before use with real
 hosts.
+
+Restored: host-terms.html was missing from origin/main for the same
+reason. Restored at commit 1cdc982.
 
 T4-27: Customers page — first-class customer asset view ✓ COMPLETE
 customers.html built as a first-class operator page. Four sections:
