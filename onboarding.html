@@ -1620,13 +1620,11 @@
       // Pre-tick if vendor already accepted (defensive — usually only reached when not accepted).
       const cb = byId('obTermsAccept');
       const btn = byId('acceptTermsBtn');
-      if (state.vendor?.terms_accepted){
-        cb.checked = true;
-        btn.disabled = false;
-      } else {
-        cb.checked = false;
-        btn.disabled = true;
-      }
+      const opt = byId('termsAcceptOption');
+      const accepted = !!state.vendor?.terms_accepted;
+      cb.checked = accepted;
+      btn.disabled = !accepted;
+      opt.classList.toggle('active', accepted);
       setTimeout(() => { wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
     }
 
@@ -1751,7 +1749,9 @@
         byId('skipSocialsBtn').addEventListener('click', skipSocials);
         // T4-25 terms acceptance
         byId('obTermsAccept').addEventListener('change', (e) => {
-          byId('acceptTermsBtn').disabled = !e.target.checked;
+          const checked = e.target.checked;
+          byId('acceptTermsBtn').disabled = !checked;
+          byId('termsAcceptOption').classList.toggle('active', checked);
         });
         byId('acceptTermsBtn').addEventListener('click', acceptTerms);
         byId('updatePreferencesBtn').addEventListener('click', () => {
