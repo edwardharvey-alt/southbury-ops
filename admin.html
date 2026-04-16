@@ -365,6 +365,13 @@
       submitEl.textContent = "Creating…";
 
       try {
+        var sessionRef = await _sb.auth.getSession();
+        var session = sessionRef.data && sessionRef.data.session;
+        if (!session || !session.user) {
+          window.location.replace("./login.html");
+          return;
+        }
+
         var row = {
           name: name,
           slug: slug,
