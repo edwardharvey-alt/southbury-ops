@@ -344,6 +344,10 @@
       return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
     }
 
+    function stripWindowSuffix(name) {
+      return String(name || "").replace(/\s*[\u2014-]\s*Window\s*\d+\s*$/i, "").trim();
+    }
+
     function formatFulfilmentMode(mode) {
       if (!mode) return null;
       return mode.charAt(0).toUpperCase() + mode.slice(1).toLowerCase();
@@ -439,7 +443,7 @@
       const page = document.getElementById("confPage");
 
       const vendorName = vendor.display_name || vendor.name || "the vendor";
-      const dropName = drop.name || "this drop";
+      const dropName = stripWindowSuffix(drop.name) || "this drop";
       const fulfilmentMode = order.fulfilment_mode || drop.fulfilment_mode;
       const refDisplay = shortId(order.id);
       const totalPence = Number(order.total_pence || 0);
