@@ -365,20 +365,39 @@
       submitEl.textContent = "Creating…";
 
       try {
-        var row = {
-          name: name,
-          slug: slug,
-          display_name: displayName || name,
-          email: email,
-          onboarding_completed: false
-        };
+        var sessionRef = await _sb.auth.getSession();
+        var session = sessionRef.data && sessionRef.data.session;
+        if (!session) {
+          window.location.href = '/login.html';
+          return;
+        }
 
-        var ref = await _sb.from("vendors").insert(row).select("id").single();
-        if (ref.error) {
-          if (ref.error.code === "23505" || (ref.error.message && ref.error.message.includes("duplicate"))) {
+        var response = await fetch(
+          window.HEARTH_CONFIG.SUPABASE_URL + '/rest/v1/vendors',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': window.HEARTH_CONFIG.SUPABASE_ANON_KEY,
+              'Authorization': 'Bearer ' + session.access_token,
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
+              name: name,
+              slug: slug,
+              display_name: displayName || name,
+              email: email,
+              onboarding_completed: false
+            })
+          }
+        );
+
+        if (!response.ok) {
+          var err = await response.json();
+          if (response.status === 409 || (err.code === "23505") || (err.message && err.message.includes("duplicate"))) {
             showError("A vendor with this slug already exists.");
           } else {
-            throw ref.error;
+            throw new Error(err.message || "Insert failed");
           }
           submitEl.disabled = false;
           submitEl.textContent = "Create vendor";
