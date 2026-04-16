@@ -215,38 +215,6 @@
       text-decoration:underline;
     }
 
-    /* Sent state */
-    .sgSent{
-      display:grid;
-      gap:14px;
-      padding:4px 0 2px;
-    }
-
-    .sgSentIcon{
-      font-size:32px;
-      line-height:1;
-    }
-
-    .sgSentTitle{
-      font-size:20px;
-      font-weight:950;
-      letter-spacing:-0.03em;
-      color:#1f2937;
-      margin:0;
-    }
-
-    .sgSentBody{
-      font-size:14px;
-      font-weight:600;
-      color:#4b5563;
-      line-height:1.55;
-      margin:0;
-    }
-
-    .sgSentBody strong{
-      color:#1f2937;
-      font-weight:900;
-    }
 
     /* Secondary link */
     .sgFoot{
@@ -291,7 +259,7 @@
       <div class="sgHeader">
         <p class="sgEyebrow">New vendor</p>
         <h1 class="sgTitle">Start your Hearth</h1>
-        <p class="sgSub">Enter your email to create your vendor account. No password needed.</p>
+        <p class="sgSub">Create your vendor account with an email and password.</p>
       </div>
 
       <form class="sgForm" id="sgForm" novalidate>
@@ -308,17 +276,35 @@
             required
           />
         </div>
+        <div class="sgField">
+          <label class="sgLabel" for="sgPassword">Password</label>
+          <input
+            class="sgInput"
+            type="password"
+            id="sgPassword"
+            name="password"
+            autocomplete="new-password"
+            placeholder="Create a password"
+            required
+          />
+        </div>
+        <div class="sgField">
+          <label class="sgLabel" for="sgPasswordConfirm">Confirm password</label>
+          <input
+            class="sgInput"
+            type="password"
+            id="sgPasswordConfirm"
+            name="password_confirm"
+            autocomplete="new-password"
+            placeholder="Confirm your password"
+            required
+          />
+        </div>
         <p class="sgError" id="sgError" hidden></p>
         <button class="sgButton" type="submit" id="sgSubmit">Get started</button>
         <p class="sgTerms">By continuing you agree to Hearth's <a href="./vendor-terms.html">vendor terms</a>.</p>
       </form>
 
-      <div class="sgSent" id="sgSent" hidden>
-        <div class="sgSentIcon" aria-hidden="true">✉️</div>
-        <h2 class="sgSentTitle">Check your inbox</h2>
-        <p class="sgSentBody">We've sent a link to <strong id="sgSentEmail"></strong> to get you started.</p>
-        <p class="sgSentBody">The link will open Hearth in this browser. If you don't see it in a minute, check your spam folder.</p>
-      </div>
     </div>
 
     <p class="sgFoot">Already have an account? <a href="./login.html">Sign in →</a></p>
@@ -332,10 +318,10 @@
 
     const formEl = document.getElementById("sgForm");
     const emailEl = document.getElementById("sgEmail");
+    const passwordEl = document.getElementById("sgPassword");
+    const confirmEl = document.getElementById("sgPasswordConfirm");
     const submitEl = document.getElementById("sgSubmit");
     const errorEl = document.getElementById("sgError");
-    const sentEl = document.getElementById("sgSent");
-    const sentEmailEl = document.getElementById("sgSentEmail");
 
     function showError(message){
       errorEl.textContent = message;
@@ -345,12 +331,6 @@
     function clearError(){
       errorEl.textContent = "";
       errorEl.hidden = true;
-    }
-
-    function showSent(email){
-      formEl.hidden = true;
-      sentEmailEl.textContent = email;
-      sentEl.hidden = false;
     }
 
     formEl.addEventListener("submit", async (event) => {
@@ -369,30 +349,41 @@
         return;
       }
 
+      const password = passwordEl.value || "";
+      if (password.length < 8){
+        showError("Password must be at least 8 characters.");
+        return;
+      }
+
+      const confirm = confirmEl.value || "";
+      if (password !== confirm){
+        showError("Passwords do not match.");
+        return;
+      }
+
       submitEl.disabled = true;
       emailEl.disabled = true;
-      submitEl.textContent = "Sending…";
+      passwordEl.disabled = true;
+      confirmEl.disabled = true;
+      submitEl.textContent = "Creating account…";
 
       try {
-        const { error } = await _sb.auth.signInWithOtp({
-          email,
-          options: {
-            emailRedirectTo: window.location.origin + "/auth-callback.html",
-          },
-        });
+        const { error } = await _sb.auth.signUp({ email, password });
 
         if (error) throw error;
 
-        showSent(email);
+        window.location.replace("./auth-callback.html");
       } catch (err){
         console.error(err);
         showError(
           (err && err.message)
             ? err.message
-            : "Something went wrong sending the link. Please try again."
+            : "Something went wrong. Please try again."
         );
         submitEl.disabled = false;
         emailEl.disabled = false;
+        passwordEl.disabled = false;
+        confirmEl.disabled = false;
         submitEl.textContent = "Get started";
       }
     });

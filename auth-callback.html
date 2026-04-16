@@ -130,6 +130,119 @@
       text-decoration:underline;
     }
 
+    /* Password reset form */
+    .cbReset{
+      background:#fff;
+      border:1px solid #e9e3d8;
+      border-radius:22px;
+      box-shadow:0 2px 12px rgba(15,23,42,0.04);
+      padding:28px 24px;
+      display:grid;
+      gap:18px;
+      max-width:400px;
+      text-align:left;
+    }
+
+    .cbResetTitle{
+      font-size:20px;
+      font-weight:950;
+      letter-spacing:-0.03em;
+      color:#1f2937;
+      margin:0;
+    }
+
+    .cbResetForm{
+      display:grid;
+      gap:14px;
+    }
+
+    .cbResetField{
+      display:grid;
+      gap:6px;
+    }
+
+    .cbResetLabel{
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#6b7280;
+      margin:0;
+    }
+
+    .cbResetInput{
+      appearance:none;
+      width:100%;
+      box-sizing:border-box;
+      min-height:46px;
+      padding:0 14px;
+      border:1px solid #d9d2c3;
+      border-radius:12px;
+      background:#fbf8f3;
+      font-size:15px;
+      font-weight:600;
+      color:#1f2937;
+      font-family:inherit;
+      transition:border-color .15s ease, background .15s ease, box-shadow .15s ease;
+    }
+
+    .cbResetInput:focus{
+      outline:none;
+      border-color:var(--cb-brand-primary);
+      background:#fff;
+      box-shadow:0 0 0 3px rgba(139,107,63,0.15);
+    }
+
+    .cbResetInput:disabled{
+      opacity:.6;
+      cursor:not-allowed;
+    }
+
+    .cbResetButton{
+      appearance:none;
+      border:none;
+      cursor:pointer;
+      min-height:48px;
+      padding:0 18px;
+      border-radius:12px;
+      background:linear-gradient(135deg, var(--cb-brand-primary), var(--cb-brand-secondary));
+      color:#fff;
+      font-size:15px;
+      font-weight:900;
+      letter-spacing:-0.01em;
+      font-family:inherit;
+      transition:transform .08s ease, box-shadow .15s ease, opacity .15s ease;
+    }
+
+    .cbResetButton:hover:not(:disabled){
+      box-shadow:0 4px 14px rgba(139,107,63,0.25);
+    }
+
+    .cbResetButton:active:not(:disabled){
+      transform:translateY(1px);
+    }
+
+    .cbResetButton:disabled{
+      opacity:.6;
+      cursor:not-allowed;
+    }
+
+    .cbResetError{
+      font-size:13px;
+      font-weight:700;
+      color:#b45309;
+      background:rgba(180,83,9,0.08);
+      border:1px solid rgba(180,83,9,0.18);
+      border-radius:10px;
+      padding:10px 12px;
+      margin:0;
+      line-height:1.45;
+    }
+
+    .cbResetError[hidden]{
+      display:none !important;
+    }
+
     [hidden]{ display:none !important; }
 
     @media (max-width:600px){
@@ -160,6 +273,22 @@
       <p class="cbErrorBody">Something went wrong. Please try signing in again.</p>
       <a class="cbErrorLink" href="./login.html">Back to sign in →</a>
     </div>
+
+    <div class="cbReset" id="cbReset" hidden>
+      <h1 class="cbResetTitle">Set a new password</h1>
+      <form class="cbResetForm" id="cbResetForm" novalidate>
+        <div class="cbResetField">
+          <label class="cbResetLabel" for="cbNewPassword">New password</label>
+          <input class="cbResetInput" type="password" id="cbNewPassword" autocomplete="new-password" placeholder="New password" required />
+        </div>
+        <div class="cbResetField">
+          <label class="cbResetLabel" for="cbConfirmPassword">Confirm password</label>
+          <input class="cbResetInput" type="password" id="cbConfirmPassword" autocomplete="new-password" placeholder="Confirm password" required />
+        </div>
+        <p class="cbResetError" id="cbResetError" hidden></p>
+        <button class="cbResetButton" type="submit" id="cbResetSubmit">Update password</button>
+      </form>
+    </div>
   </div>
 
   <script>
@@ -170,15 +299,75 @@
 
     const statusEl = document.getElementById("cbStatus");
     const errorEl = document.getElementById("cbError");
+    const resetEl = document.getElementById("cbReset");
+    const resetFormEl = document.getElementById("cbResetForm");
+    const newPwEl = document.getElementById("cbNewPassword");
+    const confirmPwEl = document.getElementById("cbConfirmPassword");
+    const resetErrorEl = document.getElementById("cbResetError");
+    const resetSubmitEl = document.getElementById("cbResetSubmit");
 
     function showError(){
       statusEl.hidden = true;
       errorEl.hidden = false;
     }
 
+    function showResetForm(){
+      statusEl.hidden = true;
+      resetEl.hidden = false;
+    }
+
     function redirectTo(url){
       window.location.replace(url);
     }
+
+    // Handle password reset form submission
+    resetFormEl.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      resetErrorEl.hidden = true;
+
+      const pw = newPwEl.value || "";
+      if (pw.length < 8){
+        resetErrorEl.textContent = "Password must be at least 8 characters.";
+        resetErrorEl.hidden = false;
+        return;
+      }
+
+      if (pw !== (confirmPwEl.value || "")){
+        resetErrorEl.textContent = "Passwords do not match.";
+        resetErrorEl.hidden = false;
+        return;
+      }
+
+      resetSubmitEl.disabled = true;
+      newPwEl.disabled = true;
+      confirmPwEl.disabled = true;
+      resetSubmitEl.textContent = "Updating…";
+
+      try {
+        const { error } = await _sb.auth.updateUser({ password: pw });
+        if (error) throw error;
+
+        redirectTo("./login.html");
+      } catch (err) {
+        console.error("Password update failed:", err);
+        resetErrorEl.textContent = (err && err.message) || "Something went wrong. Please try again.";
+        resetErrorEl.hidden = false;
+        resetSubmitEl.disabled = false;
+        newPwEl.disabled = false;
+        confirmPwEl.disabled = false;
+        resetSubmitEl.textContent = "Update password";
+      }
+    });
+
+    // Listen for password recovery event from Supabase
+    let recoveryMode = false;
+
+    _sb.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY"){
+        recoveryMode = true;
+        showResetForm();
+      }
+    });
 
     async function route(){
       try {
@@ -220,7 +409,11 @@
       }
     }
 
-    route();
+    // Give onAuthStateChange a moment to fire for recovery tokens,
+    // then route normally if not a password recovery
+    setTimeout(() => {
+      if (!recoveryMode) route();
+    }, 150);
   </script>
 </body>
 </html>
