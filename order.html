@@ -814,6 +814,18 @@
       cursor:not-allowed;
       box-shadow:none;
     }
+    .payButton .spinner{
+      display:inline-block;
+      width:16px;
+      height:16px;
+      border:2px solid rgba(255,255,255,0.3);
+      border-top-color:#fff;
+      border-radius:50%;
+      animation:spin 0.6s linear infinite;
+      vertical-align:middle;
+      margin-right:8px;
+    }
+    @keyframes spin{ to{ transform:rotate(360deg); } }
 
     .payHelper{
       margin-top:8px;
@@ -1325,6 +1337,7 @@
       let supabase = null;
       let countdownTimer = null;
       let realtimeChannel = null;
+      let isSubmitting = false;
 
       const state = {
         dropSlug: null,
@@ -2853,45 +2866,45 @@ async function persistOrder() {
 }
 
 async function handoffToPayment() {
+  if (isSubmitting) return;
+
   const validationError = validateCheckout();
   if (validationError) {
     showCheckoutNotice(validationError, "error");
     return;
   }
 
+  isSubmitting = true;
   showCheckoutNotice("");
   const payBtn = byId("payBtn");
   payBtn.disabled = true;
+  payBtn.innerHTML = '<span class="spinner"></span>Placing order\u2026';
 
   let orderId = null;
   let orderPersisted = false;
 
   try {
-    payBtn.textContent = "Preparing payment…";
     orderId = await persistOrder();
 
-    // Order is in the database — permanently disable the button to prevent double-submit.
-    // This must happen before any Stripe handoff attempt.
     orderPersisted = true;
-    payBtn.disabled = true;
-    payBtn.textContent = "Order placed";
+    payBtn.innerHTML = "Order placed \u2714";
 
     console.log("Order persisted successfully. ID:", orderId);
 
     // TODO: Stripe handoff — insert call here once Stripe is connected.
 
-    // Redirect to confirmation page
     window.location.href = `order-confirmation.html?order_id=${encodeURIComponent(orderId)}`;
 
   } catch (err) {
     console.error(err);
     const context = orderId
       ? `Order was saved (ID: ${orderId}) but something went wrong after.`
-      : "Order could not be saved.";
-    showCheckoutNotice(`${context} ${err.message || "Please try again."}`, "error");
+      : "Order could not be saved. Please try again.";
+    showCheckoutNotice(`${context} ${err.message || ""}`.trim(), "error");
 
   } finally {
     if (!orderPersisted) {
+      isSubmitting = false;
       payBtn.disabled = false;
       payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
     }
