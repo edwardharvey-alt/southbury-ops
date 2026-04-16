@@ -271,8 +271,7 @@
 
     const _sb = supabase.createClient(
       window.HEARTH_CONFIG.SUPABASE_URL,
-      window.HEARTH_CONFIG.SUPABASE_ANON_KEY,
-      { auth: { persistSession: true, autoRefreshToken: true } }
+      window.HEARTH_CONFIG.SUPABASE_ANON_KEY
     );
 
     const cardEl = document.getElementById("adCard");
@@ -366,17 +365,6 @@
       submitEl.textContent = "Creating…";
 
       try {
-        const { data: { session }, error: sessionError } = await _sb.auth.getSession();
-        if (!session) {
-          window.location.href = '/login.html';
-          return;
-        }
-
-        await _sb.auth.setSession({
-          access_token: session.access_token,
-          refresh_token: session.refresh_token
-        });
-
         var row = {
           name: name,
           slug: slug,
