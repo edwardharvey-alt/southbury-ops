@@ -380,6 +380,21 @@
           return;
         }
 
+        // Auto-link: if a vendor row exists with this email but no auth_user_id, claim it
+        const { data: unlinked } = await _sb
+          .from("vendors")
+          .select("id")
+          .eq("email", session.user.email)
+          .is("auth_user_id", null)
+          .maybeSingle();
+
+        if (unlinked) {
+          await _sb
+            .from("vendors")
+            .update({ auth_user_id: session.user.id })
+            .eq("id", unlinked.id);
+        }
+
         // Read and clear any stored redirect target before we route.
         const storedRedirect = sessionStorage.getItem("hearth:redirect");
         sessionStorage.removeItem("hearth:redirect");
