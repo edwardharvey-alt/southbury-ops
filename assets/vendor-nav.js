@@ -61,7 +61,8 @@
     { file: "insights.html", label: "Insights" },
     { file: "customers.html", label: "Customers" },
     { file: "hosts.html", label: "Hosts", utility: true },
-    { file: "onboarding.html", label: "Setup", utility: true }
+    { file: "onboarding.html", label: "Setup", utility: true },
+    { label: "Sign out", utility: true, action: "signout" }
   ];
 
   // Full whitelist of operator pages — nav bar items plus operator
@@ -122,11 +123,23 @@
 
     var prefix = opts.dotSlash ? "./" : "";
     var html = NAV_ITEMS.map(function (item) {
+      var classes = [];
+      if (item.utility) classes.push("utility");
+
+      // Action items (e.g. Sign out) render with data-action instead of href
+      if (item.action) {
+        classes.push("nav-action");
+        var classAttr = classes.length ? ' class="' + classes.join(" ") + '"' : "";
+        return (
+          '<a href="#" data-action="' + escapeAttr(item.action) + '"' +
+          classAttr +
+          ">" + item.label + "</a>"
+        );
+      }
+
       var rawHref = prefix + item.file;
       var href = withVendor(rawHref);
       var isActive = item.file === activeFile;
-      var classes = [];
-      if (item.utility) classes.push("utility");
       if (isActive) classes.push("active");
       var classAttr = classes.length ? ' class="' + classes.join(" ") + '"' : "";
       return (
@@ -137,6 +150,17 @@
     }).join("");
 
     container.innerHTML = html;
+
+    // Delegated click handler for action items
+    container.addEventListener("click", function (e) {
+      var link = e.target.closest("a[data-action]");
+      if (!link) return;
+      e.preventDefault();
+      var action = link.getAttribute("data-action");
+      if (action === "signout") {
+        handleSignOut();
+      }
+    });
   }
 
   // Decorate every anchor in `root` (default: document) that points at an
@@ -167,6 +191,22 @@
         a.setAttribute("href", next);
       }
     }
+  }
+
+  function handleSignOut() {
+    var cfg = window.HEARTH_CONFIG || {};
+    var url = cfg.SUPABASE_URL;
+    var key = cfg.SUPABASE_ANON_KEY;
+    if (!url || !key) {
+      window.location.href = "/login.html";
+      return;
+    }
+    var sb = window.supabase.createClient(url, key);
+    sb.auth.signOut().then(function () {
+      window.location.href = "/login.html";
+    }).catch(function () {
+      window.location.href = "/login.html";
+    });
   }
 
   window.HearthNav = {

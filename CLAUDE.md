@@ -936,10 +936,14 @@ in SQL, invites the user via Supabase Auth → Users → Invite, then links
 with an UPDATE statement setting `auth_user_id`. No code required at
 this stage.
 
-T5-A7: Logout
-Session clear via `supabase.auth.signOut()` and redirect to
-`login.html`. Surfaced in the operator nav or the Brand Hearth
-workspace card.
+T5-A7: Logout ✓ COMPLETE
+"Sign out" link added to operator nav in `assets/vendor-nav.js` as the
+last utility item (after Setup). Renders at 55% opacity / 12px matching
+Hosts and Setup. On click: initialises a Supabase client from
+`window.HEARTH_CONFIG`, calls `_sb.auth.signOut()`, then redirects to
+`/login.html`. Click handler attached via event delegation on the nav
+container — no inline onclick attributes. Falls back to redirect if
+config is missing or signOut fails.
 
 T5-A8: Upgrade auth to email OTP + optional 2FA
 Before the platform scales to multiple vendors, upgrade from magic link
