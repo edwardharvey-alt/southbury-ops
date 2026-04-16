@@ -312,6 +312,10 @@
       return new URLSearchParams(window.location.search).get(name);
     }
 
+    function stripWindowSuffix(name) {
+      return String(name || "").replace(/\s*[\u2014-]\s*Window\s*\d+\s*$/i, "").trim();
+    }
+
     function escapeHtml(str){
       if (str == null) return "";
       return String(str)
@@ -458,7 +462,7 @@
     function renderDrop(drop){
       const page = document.getElementById("hvPage");
 
-      const dropName = drop.drop_name || drop.name || "This drop";
+      const dropName = stripWindowSuffix(drop.drop_name || drop.name) || "This drop";
       const hostName = drop.host_name || null;
       const windowText = formatDropWindow(drop.delivery_start, drop.delivery_end);
 
