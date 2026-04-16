@@ -46,6 +46,7 @@ Core belief: great local food should strengthen communities, not bypass them.
 - hosts.html — Host Directory (vendor-facing host management page)
 - host-profile.html — Host Profile (editable profile and drop history per host)
 - host-view.html — Read-only host-facing drop view (no login)
+- admin.html — Admin vendor provisioning page (auth-gated to Ed's UID)
 - assets/hearth.css — shared platform stylesheet
 - assets/config.js — Supabase config
 - assets/hearth-intelligence.js — shared intelligence engine module
@@ -926,15 +927,19 @@ The first-vendor dev fallback and URL-param-based vendor identity are
 retired — vendor identity now comes from the session, closing the
 URL-param impersonation path.
 
-T5-A6: Vendor provisioning
-Admin-only flow (Ed, initially) to create a vendor row, send a
-magic-link invite to the owner's email, and link the auth user on
-first sign-in. Lightweight — one form and one email.
+T5-A6: Vendor provisioning ✓ COMPLETE
+admin.html created as a standalone admin page (no vendor-nav.js). Auth-gated
+to Ed's UID only. Form captures business name, slug (auto-generated, editable),
+contact email, and optional display name. Inserts a new vendor row with
+onboarding_completed: false — never sets auth_user_id (that happens on
+first sign-in). Shows confirmation with instructions to send a Supabase
+invite. Slug conflict detection with clear error message.
 
-Note: vendor provisioning is manual for now. Ed creates the vendor row
-in SQL, invites the user via Supabase Auth → Users → Invite, then links
-with an UPDATE statement setting `auth_user_id`. No code required at
-this stage.
+auth-callback.html modified with auto-linking step: after session is
+confirmed, queries vendors where email matches session.user.email and
+auth_user_id is null. If found, updates that row with the session user's
+ID. Routing then continues as normal — the vendor row is now linked and
+the existing new-vs-returning logic handles the rest.
 
 T5-A7: Logout ✓ COMPLETE
 "Sign out" link added to operator nav in `assets/vendor-nav.js` as the

@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin — Hearth</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=31" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --ad-brand-primary: var(--h-accent, #8B6B3F);
+      --ad-brand-secondary: var(--h-accent-2, #CBB89D);
+      --ad-brand-soft: rgba(139,107,63,0.10);
+      --ad-brand-soft-2: rgba(203,184,157,0.08);
+    }
+
+    body.adBody{
+      background:
+        radial-gradient(1200px 600px at 15% -10%, var(--ad-brand-soft), rgba(249,115,22,0) 60%),
+        radial-gradient(900px 450px at 90% 0%, var(--ad-brand-soft-2), rgba(251,146,60,0) 55%),
+        #f7f5f1;
+      min-height:100vh;
+    }
+
+    .adPage{
+      max-width:440px;
+      margin:0 auto;
+      padding:56px 20px 72px;
+      display:grid;
+      gap:28px;
+    }
+
+    .adWordmark{
+      text-align:center;
+      padding:4px 0 4px;
+    }
+
+    .adWordmarkText{
+      display:inline-block;
+      font-size:22px;
+      font-weight:950;
+      letter-spacing:-0.035em;
+      color:#1f2937;
+      margin:0;
+    }
+
+    .adWordmarkDot{
+      display:inline-block;
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:linear-gradient(135deg, var(--ad-brand-primary), var(--ad-brand-secondary));
+      margin-left:6px;
+      vertical-align:middle;
+      transform:translateY(-2px);
+    }
+
+    .adCard{
+      background:#fff;
+      border:1px solid #e9e3d8;
+      border-radius:22px;
+      box-shadow:0 2px 12px rgba(15,23,42,0.04);
+      padding:32px 28px;
+      display:grid;
+      gap:20px;
+    }
+
+    .adHeader{
+      display:grid;
+      gap:8px;
+    }
+
+    .adEyebrow{
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:#8b6b3f;
+      margin:0;
+    }
+
+    .adTitle{
+      font-size:28px;
+      font-weight:950;
+      letter-spacing:-0.035em;
+      line-height:1.1;
+      color:#1f2937;
+      margin:0;
+    }
+
+    .adSub{
+      font-size:14px;
+      font-weight:600;
+      color:#4b5563;
+      line-height:1.55;
+      margin:0;
+    }
+
+    .adForm{
+      display:grid;
+      gap:14px;
+    }
+
+    .adField{
+      display:grid;
+      gap:6px;
+    }
+
+    .adLabel{
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#6b7280;
+      margin:0;
+    }
+
+    .adInput{
+      appearance:none;
+      width:100%;
+      box-sizing:border-box;
+      min-height:46px;
+      padding:0 14px;
+      border:1px solid #d9d2c3;
+      border-radius:12px;
+      background:#fbf8f3;
+      font-size:15px;
+      font-weight:600;
+      color:#1f2937;
+      font-family:inherit;
+      transition:border-color .15s ease, background .15s ease, box-shadow .15s ease;
+    }
+
+    .adInput:focus{
+      outline:none;
+      border-color:var(--ad-brand-primary);
+      background:#fff;
+      box-shadow:0 0 0 3px rgba(139,107,63,0.15);
+    }
+
+    .adInput:disabled{
+      opacity:.6;
+      cursor:not-allowed;
+    }
+
+    .adButton{
+      appearance:none;
+      border:none;
+      cursor:pointer;
+      min-height:48px;
+      padding:0 18px;
+      border-radius:12px;
+      background:#c84b2f;
+      color:#fff;
+      font-size:15px;
+      font-weight:900;
+      letter-spacing:-0.01em;
+      font-family:inherit;
+      transition:transform .08s ease, box-shadow .15s ease, opacity .15s ease;
+    }
+
+    .adButton:hover:not(:disabled){
+      box-shadow:0 4px 14px rgba(200,75,47,0.3);
+    }
+
+    .adButton:active:not(:disabled){
+      transform:translateY(1px);
+    }
+
+    .adButton:disabled{
+      opacity:.6;
+      cursor:not-allowed;
+    }
+
+    .adError{
+      font-size:13px;
+      font-weight:700;
+      color:#b45309;
+      background:rgba(180,83,9,0.08);
+      border:1px solid rgba(180,83,9,0.18);
+      border-radius:10px;
+      padding:10px 12px;
+      margin:0;
+      line-height:1.45;
+    }
+
+    .adSuccess{
+      font-size:13px;
+      font-weight:700;
+      color:#047857;
+      background:rgba(4,120,87,0.08);
+      border:1px solid rgba(4,120,87,0.18);
+      border-radius:10px;
+      padding:14px 12px;
+      margin:0;
+      line-height:1.55;
+    }
+
+    .adUnauthorised{
+      text-align:center;
+      font-size:15px;
+      font-weight:700;
+      color:#4b5563;
+      padding:48px 20px;
+    }
+
+    [hidden]{ display:none !important; }
+
+    @media (max-width:600px){
+      .adPage{
+        padding:36px 14px 56px;
+        gap:22px;
+      }
+      .adCard{
+        padding:26px 20px;
+      }
+      .adTitle{
+        font-size:24px;
+      }
+    }
+  </style>
+</head>
+<body class="adBody">
+
+  <div class="adPage">
+    <div class="adWordmark">
+      <p class="adWordmarkText">Hearth<span class="adWordmarkDot" aria-hidden="true"></span></p>
+    </div>
+
+    <div id="adUnauthorised" class="adUnauthorised" hidden>
+      Not authorised.
+    </div>
+
+    <div class="adCard" id="adCard" hidden>
+      <div class="adHeader">
+        <p class="adEyebrow">Admin</p>
+        <h1 class="adTitle">Provision a vendor</h1>
+        <p class="adSub">Create a vendor workspace. The owner will receive a Supabase invite separately.</p>
+      </div>
+
+      <form class="adForm" id="adForm" novalidate>
+        <div class="adField">
+          <label class="adLabel" for="adName">Business name</label>
+          <input class="adInput" type="text" id="adName" placeholder="e.g. Southbury Farm Pizza Company" required />
+        </div>
+        <div class="adField">
+          <label class="adLabel" for="adSlug">Slug</label>
+          <input class="adInput" type="text" id="adSlug" placeholder="auto-generated from name" required />
+        </div>
+        <div class="adField">
+          <label class="adLabel" for="adEmail">Contact email</label>
+          <input class="adInput" type="email" id="adEmail" placeholder="owner@vendor.co.uk" required />
+        </div>
+        <div class="adField">
+          <label class="adLabel" for="adDisplayName">Display name <span style="font-weight:600;text-transform:none;letter-spacing:0;color:#9ca3af">(optional)</span></label>
+          <input class="adInput" type="text" id="adDisplayName" placeholder="Shorter trading name" />
+        </div>
+        <p class="adError" id="adError" hidden></p>
+        <p class="adSuccess" id="adSuccess" hidden></p>
+        <button class="adButton" type="submit" id="adSubmit">Create vendor</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const ADMIN_UID = "ea983928-2fc5-4de1-8d96-642a98c4c156";
+
+    const _sb = supabase.createClient(
+      window.HEARTH_CONFIG.SUPABASE_URL,
+      window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+    );
+
+    const cardEl = document.getElementById("adCard");
+    const unauthorisedEl = document.getElementById("adUnauthorised");
+    const formEl = document.getElementById("adForm");
+    const nameEl = document.getElementById("adName");
+    const slugEl = document.getElementById("adSlug");
+    const emailEl = document.getElementById("adEmail");
+    const displayNameEl = document.getElementById("adDisplayName");
+    const submitEl = document.getElementById("adSubmit");
+    const errorEl = document.getElementById("adError");
+    const successEl = document.getElementById("adSuccess");
+
+    function generateSlug(name) {
+      return name
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+    }
+
+    nameEl.addEventListener("blur", function () {
+      if (!slugEl.dataset.edited) {
+        slugEl.value = generateSlug(nameEl.value);
+      }
+    });
+
+    slugEl.addEventListener("input", function () {
+      slugEl.dataset.edited = "1";
+    });
+
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.hidden = false;
+      successEl.hidden = true;
+    }
+
+    function showSuccess(msg) {
+      successEl.textContent = msg;
+      successEl.hidden = false;
+      errorEl.hidden = true;
+    }
+
+    function clearMessages() {
+      errorEl.hidden = true;
+      successEl.hidden = true;
+    }
+
+    async function init() {
+      try {
+        var ref = await _sb.auth.getSession();
+        var session = ref.data && ref.data.session;
+
+        if (!session || !session.user) {
+          window.location.replace("./login.html");
+          return;
+        }
+
+        if (session.user.id !== ADMIN_UID) {
+          unauthorisedEl.hidden = false;
+          return;
+        }
+
+        cardEl.hidden = false;
+      } catch (err) {
+        console.error("Admin init failed:", err);
+        unauthorisedEl.textContent = "Something went wrong.";
+        unauthorisedEl.hidden = false;
+      }
+    }
+
+    formEl.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      clearMessages();
+
+      var name = (nameEl.value || "").trim();
+      var slug = (slugEl.value || "").trim();
+      var email = (emailEl.value || "").trim();
+      var displayName = (displayNameEl.value || "").trim();
+
+      if (!name) { showError("Business name is required."); return; }
+      if (!slug) { showError("Slug is required."); return; }
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showError("A valid contact email is required.");
+        return;
+      }
+
+      submitEl.disabled = true;
+      submitEl.textContent = "Creating…";
+
+      try {
+        var row = {
+          name: name,
+          slug: slug,
+          display_name: displayName || name,
+          email: email,
+          onboarding_completed: false
+        };
+
+        var ref = await _sb.from("vendors").insert(row).select("id").single();
+        if (ref.error) {
+          if (ref.error.code === "23505" || (ref.error.message && ref.error.message.includes("duplicate"))) {
+            showError("A vendor with this slug already exists.");
+          } else {
+            throw ref.error;
+          }
+          submitEl.disabled = false;
+          submitEl.textContent = "Create vendor";
+          return;
+        }
+
+        showSuccess(
+          "Vendor created. Now go to Supabase Auth \u2192 Users \u2192 Invite user and send an invite to " + email + "."
+        );
+
+        nameEl.value = "";
+        slugEl.value = "";
+        emailEl.value = "";
+        displayNameEl.value = "";
+        delete slugEl.dataset.edited;
+
+        submitEl.disabled = false;
+        submitEl.textContent = "Create vendor";
+      } catch (err) {
+        console.error("Vendor creation failed:", err);
+        showError((err && err.message) || "Something went wrong. Please try again.");
+        submitEl.disabled = false;
+        submitEl.textContent = "Create vendor";
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
