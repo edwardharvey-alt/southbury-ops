@@ -915,13 +915,16 @@ Email input, magic-link request, and a clear "check your inbox" state.
 Magic link lands back on `home.html`. New vendors arrive via
 `signup.html` (T5-A10), not this page.
 
-T5-A5: Session-aware `resolveVendor()`
-Replace the URL-param fallback in the shared resolveVendor pattern
-with a session lookup: read `auth.uid()` and return the vendor row
-linked to that user. If the user is not signed in, redirect to
-`login.html`. This retires the silent-fallback bug class entirely —
-there is no way to impersonate another vendor because the URL param
-stops being the vendor identity.
+T5-A5: Session-aware `resolveVendor()` ✓ COMPLETE
+`assets/hearth-vendor.js` rewritten with session-aware resolution.
+Localhost retains `?vendor=<slug>` dev override; without the param it
+falls through to the session path. Production reads
+`_sb.auth.getSession()` — unauthenticated users are redirected to
+`login.html` (with `hearth:redirect` stored in sessionStorage);
+authenticated users resolve via `vendors.auth_user_id = session.user.id`.
+The first-vendor dev fallback and URL-param-based vendor identity are
+retired — vendor identity now comes from the session, closing the
+URL-param impersonation path.
 
 T5-A6: Vendor provisioning
 Admin-only flow (Ed, initially) to create a vendor row, send a
@@ -979,11 +982,9 @@ home.html, hosts.html, host-profile.html, scorecard.html) updated to
 load the module after config.js and before vendor-nav.js, with their
 inline `resolveVendor()` bodies deleted and call sites rewritten to
 `await window.HearthVendor.resolveVendor(sb)` (or `supabase` / `_sb`
-depending on the page's local variable). Behaviour preserved exactly:
-URL param → `window.HEARTH_VENDOR_ID` → first vendor fallback (dev
-only); returns null if a slug was provided but no row matches. When
-T5-A5 lands, the session-aware rewrite happens in one place instead of
-twelve.
+depending on the page's local variable). T5-A5 has since landed —
+the module now uses session-aware resolution on production and
+`?vendor=<slug>` dev override on localhost only.
 
 T5-B2: Onboarding — capture social handles
 Add a socials question to the onboarding flow (Q10 or similar)
