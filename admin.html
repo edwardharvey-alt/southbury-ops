@@ -345,8 +345,12 @@
       }
     }
 
+    var isSubmitting = false;
+
     formEl.addEventListener("submit", async function (event) {
       event.preventDefault();
+      if (isSubmitting) return;
+      isSubmitting = true;
       clearMessages();
 
       var name = (nameEl.value || "").trim();
@@ -354,10 +358,11 @@
       var email = (emailEl.value || "").trim();
       var displayName = (displayNameEl.value || "").trim();
 
-      if (!name) { showError("Business name is required."); return; }
-      if (!slug) { showError("Slug is required."); return; }
+      if (!name) { showError("Business name is required."); isSubmitting = false; return; }
+      if (!slug) { showError("Slug is required."); isSubmitting = false; return; }
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         showError("A valid contact email is required.");
+        isSubmitting = false;
         return;
       }
 
@@ -399,6 +404,7 @@
           } else {
             throw new Error(err.message || "Insert failed");
           }
+          isSubmitting = false;
           submitEl.disabled = false;
           submitEl.textContent = "Create vendor";
           return;
@@ -413,7 +419,7 @@
             {
               method: "POST",
               headers: {
-                "Content-Type": "application/json",
+                "Content-Type": "application/json"
               },
               body: JSON.stringify({ email: email })
             }
@@ -440,11 +446,13 @@
         displayNameEl.value = "";
         delete slugEl.dataset.edited;
 
+        isSubmitting = false;
         submitEl.disabled = false;
         submitEl.textContent = "Create vendor";
       } catch (err) {
         console.error("Vendor creation failed:", err);
         showError((err && err.message) || "Something went wrong. Please try again.");
+        isSubmitting = false;
         submitEl.disabled = false;
         submitEl.textContent = "Create vendor";
       }
