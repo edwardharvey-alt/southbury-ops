@@ -1682,6 +1682,20 @@
 
         evaluate();
       });
+
+      // iOS Safari: change events on radio inputs inside labels do not always bubble
+      grid.querySelectorAll('.onboardingOption').forEach(label => {
+        label.addEventListener('click', () => {
+          const input = label.querySelector('input');
+          if (!input || input.disabled) return;
+          if (isMulti) {
+            input.checked = !input.checked;
+          } else {
+            input.checked = true;
+          }
+          grid.dispatchEvent(new Event('change'));
+        });
+      });
     }
 
     // ── Host context grid — mutual exclusion for "none" ───────────────────
@@ -1716,6 +1730,16 @@
 
         renderHostDetails();
         evaluate();
+      });
+
+      // iOS Safari: change events on checkbox inputs inside labels do not always bubble
+      grid.querySelectorAll('.onboardingOption').forEach(label => {
+        label.addEventListener('click', () => {
+          const input = label.querySelector('input');
+          if (!input || input.disabled) return;
+          input.checked = !input.checked;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        });
       });
     }
 
