@@ -181,8 +181,22 @@
       flex:0 0 220px !important;
     }
 
+    /* Visually hide the radio/checkbox but keep it in the layout tree.
+       `display:none` on an input inside a <label> stops iOS Safari (and
+       a few other mobile browsers) from toggling the input when the
+       label is tapped — the native label→input association only fires
+       reliably when the input is rendered. */
     .onboardingOption input{
-      display:none;
+      position:absolute;
+      opacity:0;
+      width:1px;
+      height:1px;
+      margin:-1px;
+      padding:0;
+      border:0;
+      overflow:hidden;
+      clip:rect(0,0,0,0);
+      white-space:nowrap;
     }
 
     .onboardingOption:hover{
