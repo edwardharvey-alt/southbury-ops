@@ -544,6 +544,345 @@
       .onboardingOption, #q9Grid .onboardingOption{ width:100% !important; flex:0 0 100% !important; }
       .identityGrid{ grid-template-columns:1fr; }
     }
+
+    /* ── Payment Setup stage (Stage 7) ── */
+    .paymentIntro{
+      font-size:15px;
+      font-weight:600;
+      color:var(--h-text);
+      line-height:1.5;
+      margin:0;
+    }
+
+    .paymentIntroSub{
+      font-size:13px;
+      font-weight:600;
+      color:var(--h-muted);
+      line-height:1.5;
+      margin:0;
+    }
+
+    .paymentPaths{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+    }
+
+    .paymentPath{
+      border:2px solid var(--h-border);
+      border-radius:18px;
+      padding:24px 20px;
+      background:#fff;
+      cursor:pointer;
+      transition:border-color .2s, background .2s, box-shadow .2s;
+      display:grid;
+      gap:10px;
+      text-align:center;
+      align-content:start;
+    }
+
+    .paymentPath:hover{
+      border-color:color-mix(in srgb, var(--h-accent) 40%, transparent);
+      background:color-mix(in srgb, var(--h-accent) 3%, white);
+    }
+
+    .paymentPath:active,
+    .paymentPath.active{
+      border-color:var(--h-accent);
+      background:color-mix(in srgb, var(--h-accent) 6%, white);
+      box-shadow:0 4px 16px color-mix(in srgb, var(--h-accent) 12%, transparent);
+    }
+
+    .paymentPathIcon{
+      width:48px;
+      height:48px;
+      border-radius:999px;
+      background:color-mix(in srgb, var(--h-accent) 10%, white);
+      border:2px solid color-mix(in srgb, var(--h-accent) 20%, white);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:20px;
+      margin:0 auto 4px;
+    }
+
+    .paymentPathTitle{
+      font-size:15px;
+      font-weight:900;
+      color:var(--h-text);
+      letter-spacing:-0.01em;
+    }
+
+    .paymentPathTime{
+      font-size:12px;
+      font-weight:800;
+      color:var(--h-accent);
+      background:color-mix(in srgb, var(--h-accent) 8%, white);
+      border-radius:999px;
+      padding:4px 12px;
+      width:fit-content;
+      margin:0 auto;
+    }
+
+    .paymentPathDesc{
+      font-size:12px;
+      font-weight:600;
+      color:var(--h-muted);
+      line-height:1.4;
+    }
+
+    .paymentChecklist{
+      border:1px solid var(--h-border);
+      border-radius:14px;
+      padding:16px 18px;
+      background:rgba(15,23,42,0.02);
+      display:grid;
+      gap:10px;
+    }
+
+    .paymentChecklistTitle{
+      font-size:13px;
+      font-weight:800;
+      color:var(--h-text);
+      margin:0;
+    }
+
+    .paymentChecklistItems{
+      display:grid;
+      gap:6px;
+      list-style:none;
+      padding:0;
+      margin:0;
+    }
+
+    .paymentChecklistItems li{
+      font-size:13px;
+      font-weight:600;
+      color:var(--h-muted);
+      line-height:1.4;
+      display:flex;
+      gap:8px;
+      align-items:flex-start;
+    }
+
+    .paymentChecklistItems li::before{
+      content:'○';
+      color:var(--h-accent);
+      font-weight:900;
+      flex:0 0 auto;
+      font-size:11px;
+      margin-top:2px;
+    }
+
+    .paymentComfort{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:10px;
+    }
+
+    .paymentComfortItem{
+      border:1px solid var(--h-border);
+      border-radius:14px;
+      padding:14px 12px;
+      background:#fff;
+      text-align:center;
+      display:grid;
+      gap:6px;
+    }
+
+    .paymentComfortIcon{
+      font-size:20px;
+      line-height:1;
+    }
+
+    .paymentComfortLabel{
+      font-size:11px;
+      font-weight:700;
+      color:var(--h-text);
+      line-height:1.3;
+    }
+
+    .paymentComfortSub{
+      font-size:10px;
+      font-weight:600;
+      color:var(--h-muted);
+      line-height:1.3;
+    }
+
+    .paymentFaq{
+      display:grid;
+      gap:0;
+      border:1px solid var(--h-border);
+      border-radius:14px;
+      overflow:hidden;
+    }
+
+    .paymentFaqItem{
+      border-bottom:1px solid var(--h-border);
+    }
+
+    .paymentFaqItem:last-child{
+      border-bottom:none;
+    }
+
+    .paymentFaqToggle{
+      width:100%;
+      padding:14px 16px;
+      background:none;
+      border:none;
+      font:inherit;
+      font-size:13px;
+      font-weight:700;
+      color:var(--h-text);
+      cursor:pointer;
+      text-align:left;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .paymentFaqToggle:hover{
+      background:rgba(15,23,42,0.02);
+    }
+
+    .paymentFaqChevron{
+      font-size:11px;
+      color:var(--h-muted);
+      transition:transform .2s ease;
+      flex:0 0 auto;
+    }
+
+    .paymentFaqItem.open .paymentFaqChevron{
+      transform:rotate(180deg);
+    }
+
+    .paymentFaqAnswer{
+      display:none;
+      padding:0 16px 14px;
+      font-size:12px;
+      font-weight:600;
+      color:var(--h-muted);
+      line-height:1.5;
+    }
+
+    .paymentFaqItem.open .paymentFaqAnswer{
+      display:block;
+    }
+
+    .paymentSupport{
+      border:1px solid color-mix(in srgb, var(--h-accent) 20%, transparent);
+      border-radius:14px;
+      padding:16px 18px;
+      background:color-mix(in srgb, var(--h-accent) 4%, white);
+      display:flex;
+      align-items:center;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+
+    .paymentSupportText{
+      flex:1;
+      min-width:200px;
+    }
+
+    .paymentSupportTitle{
+      font-size:13px;
+      font-weight:800;
+      color:var(--h-text);
+      margin:0;
+    }
+
+    .paymentSupportSub{
+      font-size:12px;
+      font-weight:600;
+      color:var(--h-muted);
+      margin:2px 0 0;
+    }
+
+    .paymentStepBadge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 12px;
+      border-radius:999px;
+      background:rgba(15,23,42,0.05);
+      border:1px solid rgba(15,23,42,0.08);
+      font-size:11px;
+      font-weight:700;
+      color:var(--h-muted);
+    }
+
+    .paymentStatus{
+      display:none;
+      border:1px solid var(--h-border);
+      border-radius:14px;
+      padding:20px;
+      text-align:center;
+    }
+
+    .paymentStatus.waiting{
+      display:grid;
+      gap:10px;
+      justify-items:center;
+      border-color:color-mix(in srgb, var(--h-accent) 25%, transparent);
+      background:color-mix(in srgb, var(--h-accent) 3%, white);
+    }
+
+    .paymentStatus.success{
+      display:grid;
+      gap:10px;
+      justify-items:center;
+      border-color:color-mix(in srgb, var(--h-good) 25%, transparent);
+      background:color-mix(in srgb, var(--h-good) 3%, white);
+    }
+
+    .paymentStatusIcon{
+      width:40px;
+      height:40px;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:18px;
+    }
+
+    .paymentStatus.waiting .paymentStatusIcon{
+      background:color-mix(in srgb, var(--h-accent) 10%, white);
+      color:var(--h-accent);
+    }
+
+    .paymentStatus.success .paymentStatusIcon{
+      background:color-mix(in srgb, var(--h-good) 10%, white);
+      color:var(--h-good);
+    }
+
+    .paymentStatusTitle{
+      font-size:15px;
+      font-weight:800;
+      color:var(--h-text);
+      margin:0;
+    }
+
+    .paymentStatusSub{
+      font-size:12px;
+      font-weight:600;
+      color:var(--h-muted);
+      margin:0;
+      line-height:1.5;
+    }
+
+    @media (max-width:768px){
+      .paymentPaths{ grid-template-columns:1fr; }
+      .paymentComfort{ grid-template-columns:1fr; }
+      .paymentSupport{ flex-direction:column; align-items:stretch; text-align:center; }
+    }
+
+    @media (max-width:500px){
+      .paymentPaths{ grid-template-columns:1fr; }
+      .paymentComfort{ grid-template-columns:1fr; }
+      .paymentPath{ padding:20px 16px; }
+    }
   </style>
 </head>
 <body>
@@ -1092,6 +1431,171 @@
           </div>
         </div>
 
+        <!-- ══════════════════════════════════════ -->
+        <!-- STAGE 7 — Payment Setup              -->
+        <!-- ══════════════════════════════════════ -->
+        <div class="stageWrapper" id="stage7Wrapper">
+          <div class="obStageCard" id="stage7">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+              <div class="obStageEyebrow">Payment setup</div>
+              <div class="paymentStepBadge">Step 6 of 7</div>
+            </div>
+
+            <div style="display:grid;gap:6px;">
+              <p class="paymentIntro">Let's get you ready to accept card payments</p>
+              <p class="paymentIntroSub">
+                Every order placed through your drops is paid by card. Setting up payments
+                means money from orders goes straight to your bank account — usually within
+                2 business days. Thousands of UK food businesses use Stripe to do this securely.
+              </p>
+            </div>
+
+            <!-- Two paths -->
+            <div class="paymentPaths" id="paymentPaths">
+              <div class="paymentPath" id="pathExisting" tabindex="0" role="button" aria-label="Connect existing Stripe account">
+                <div class="paymentPathIcon">↗</div>
+                <div class="paymentPathTitle">I already accept card payments</div>
+                <div class="paymentPathTime">About 30 seconds</div>
+                <div class="paymentPathDesc">
+                  Connect your existing Stripe account to Hearth. We'll just link the two together.
+                </div>
+              </div>
+              <div class="paymentPath" id="pathNew" tabindex="0" role="button" aria-label="Set up new Stripe account">
+                <div class="paymentPathIcon">+</div>
+                <div class="paymentPathTitle">I need to start accepting card payments</div>
+                <div class="paymentPathTime">About 10 minutes</div>
+                <div class="paymentPathDesc">
+                  We'll walk you through creating a Stripe account. You'll need a few details about your business and your bank account.
+                </div>
+              </div>
+            </div>
+
+            <!-- What you'll need checklist -->
+            <div class="paymentChecklist" id="paymentChecklist">
+              <p class="paymentChecklistTitle">What you'll need</p>
+              <ul class="paymentChecklistItems" id="checklistItems">
+                <li>Your business name and address</li>
+                <li>Your bank account sort code and account number</li>
+                <li>A form of ID (driving licence or passport)</li>
+                <li>Your business registration number (if you have one)</li>
+              </ul>
+            </div>
+
+            <!-- Psychological comfort row -->
+            <div class="paymentComfort">
+              <div class="paymentComfortItem">
+                <div class="paymentComfortIcon">🔒</div>
+                <div class="paymentComfortLabel">Your details are secure</div>
+                <div class="paymentComfortSub">Payment info never touches Hearth's servers. Stripe handles everything.</div>
+              </div>
+              <div class="paymentComfortItem">
+                <div class="paymentComfortIcon">💷</div>
+                <div class="paymentComfortLabel">Money goes to you directly</div>
+                <div class="paymentComfortSub">Payouts land in your bank account, usually within 2 business days.</div>
+              </div>
+              <div class="paymentComfortItem">
+                <div class="paymentComfortIcon">📊</div>
+                <div class="paymentComfortLabel">Industry-standard pricing</div>
+                <div class="paymentComfortSub">1.5% + 20p per UK card transaction. No hidden fees, no monthly charge.</div>
+              </div>
+            </div>
+
+            <!-- Stripe status (shown after redirect) -->
+            <div class="paymentStatus" id="paymentStatusWaiting">
+              <div class="paymentStatusIcon">⏳</div>
+              <p class="paymentStatusTitle">Finishing up…</p>
+              <p class="paymentStatusSub">We're confirming your payment setup with Stripe. This usually takes a few seconds.</p>
+            </div>
+
+            <div class="paymentStatus" id="paymentStatusSuccess">
+              <div class="paymentStatusIcon">✓</div>
+              <p class="paymentStatusTitle">Payments connected</p>
+              <p class="paymentStatusSub">Your Stripe account is linked. You're ready to accept card payments through your drops.</p>
+            </div>
+
+            <!-- FAQ section -->
+            <div class="paymentFaq" id="paymentFaq">
+              <div class="paymentFaqItem">
+                <button class="paymentFaqToggle" type="button">
+                  Why do I need a Stripe account?
+                  <span class="paymentFaqChevron">▼</span>
+                </button>
+                <div class="paymentFaqAnswer">
+                  Stripe processes card payments for your orders. When a customer places an order through one of your drops, the payment goes through Stripe directly into your bank account. Hearth never holds your money.
+                </div>
+              </div>
+              <div class="paymentFaqItem">
+                <button class="paymentFaqToggle" type="button">
+                  What does it cost?
+                  <span class="paymentFaqChevron">▼</span>
+                </button>
+                <div class="paymentFaqAnswer">
+                  Stripe charges 1.5% + 20p per successful UK card transaction. There are no monthly fees, no setup fees, and no minimum commitment. You only pay when you get paid.
+                </div>
+              </div>
+              <div class="paymentFaqItem">
+                <button class="paymentFaqToggle" type="button">
+                  How long until I receive my money?
+                  <span class="paymentFaqChevron">▼</span>
+                </button>
+                <div class="paymentFaqAnswer">
+                  Stripe pays out to your bank account on a rolling basis — typically within 2 business days of each transaction. You can see all your payouts in your Stripe dashboard.
+                </div>
+              </div>
+              <div class="paymentFaqItem">
+                <button class="paymentFaqToggle" type="button">
+                  Is my information safe?
+                  <span class="paymentFaqChevron">▼</span>
+                </button>
+                <div class="paymentFaqAnswer">
+                  Yes. Stripe is PCI Level 1 certified — the highest level of security in the payments industry. Your bank details and your customers' card details are handled entirely by Stripe. Hearth never sees or stores payment information.
+                </div>
+              </div>
+              <div class="paymentFaqItem">
+                <button class="paymentFaqToggle" type="button">
+                  Can I change my bank details later?
+                  <span class="paymentFaqChevron">▼</span>
+                </button>
+                <div class="paymentFaqAnswer">
+                  Yes. You can update your bank account, business details, and payout schedule at any time through your Stripe dashboard. Hearth doesn't control those settings — they're yours.
+                </div>
+              </div>
+              <div class="paymentFaqItem">
+                <button class="paymentFaqToggle" type="button">
+                  I don't have a business bank account — can I still use this?
+                  <span class="paymentFaqChevron">▼</span>
+                </button>
+                <div class="paymentFaqAnswer">
+                  Yes. Stripe accepts personal bank accounts for sole traders. During setup, Stripe will ask for your business type — select "Individual / sole trader" and use your personal bank details.
+                </div>
+              </div>
+            </div>
+
+            <!-- Support callout -->
+            <div class="paymentSupport">
+              <div class="paymentSupportText">
+                <p class="paymentSupportTitle">Having trouble? We can do this together.</p>
+                <p class="paymentSupportSub">Call us and we'll walk you through it step by step.</p>
+              </div>
+              <a class="btnAccent" href="tel:+441onal" style="white-space:nowrap;font-size:13px;min-height:40px;padding:0 20px;display:inline-flex;align-items:center;" id="paymentSupportPhone">
+                Call support
+              </a>
+            </div>
+
+            <!-- Actions -->
+            <div class="brandActions" style="margin-top:6px;" id="paymentActions">
+              <button class="btnAccent" id="connectStripeBtn" type="button">Connect your Stripe account</button>
+              <button class="btnAccent" id="setupStripeBtn" type="button">Set up card payments</button>
+              <button class="brandMiniLink" id="skipPaymentBtn" type="button" style="background:none;border:none;cursor:pointer;font:inherit;">Set up payments later</button>
+            </div>
+
+            <!-- Post-success continue (hidden until Stripe completes) -->
+            <div class="brandActions" style="margin-top:6px;display:none;" id="paymentContinueActions">
+              <button class="btnAccent" id="paymentContinueBtn" type="button">Continue to your workspace →</button>
+            </div>
+          </div>
+        </div>
+
         </div><!-- /stageCards -->
 
       </div><!-- /flowWrapper -->
@@ -1629,12 +2133,186 @@
         if (error) throw error;
         state.vendor.terms_accepted = true;
         state.vendor.terms_accepted_at = acceptedAt;
-        showCompletion();
+        revealStage7();
       } catch (err) {
         showNotice('Could not record terms acceptance: ' + (err.message || 'Unknown error. Please try again.'), 'error');
         btn.disabled = false;
         btn.textContent = 'Accept terms and continue';
       }
+    }
+
+    // ── Payment Setup (Stage 7) ─────────────────────────────────────────
+    let selectedPaymentPath = null;
+
+    function revealStage7(){
+      ['stage1','stage2Wrapper','stage3Wrapper','stage4Wrapper','stage5Wrapper','stage6Wrapper'].forEach(id => {
+        const el = byId(id);
+        if (el) el.style.display = 'none';
+      });
+
+      if (state.vendor?.stripe_onboarding_complete){
+        showCompletion();
+        return;
+      }
+
+      const wrap = byId('stage7Wrapper');
+      wrap.style.display = '';
+      wrap.classList.add('visible');
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('stripe_setup') === 'complete'){
+        handleStripeReturn();
+        return;
+      }
+
+      byId('paymentStatusWaiting').className = 'paymentStatus';
+      byId('paymentStatusSuccess').className = 'paymentStatus';
+      byId('paymentActions').style.display = '';
+      byId('paymentContinueActions').style.display = 'none';
+      byId('connectStripeBtn').style.display = 'none';
+      byId('setupStripeBtn').style.display = 'none';
+      selectedPaymentPath = null;
+      byId('pathExisting').classList.remove('active');
+      byId('pathNew').classList.remove('active');
+
+      updatePaymentChecklist(null);
+
+      setTimeout(() => { wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+    }
+
+    function selectPaymentPath(path){
+      selectedPaymentPath = path;
+      byId('pathExisting').classList.toggle('active', path === 'existing');
+      byId('pathNew').classList.toggle('active', path === 'new');
+
+      if (path === 'existing'){
+        byId('connectStripeBtn').style.display = '';
+        byId('setupStripeBtn').style.display = 'none';
+      } else {
+        byId('connectStripeBtn').style.display = 'none';
+        byId('setupStripeBtn').style.display = '';
+      }
+
+      updatePaymentChecklist(path);
+    }
+
+    function updatePaymentChecklist(path){
+      const container = byId('paymentChecklist');
+      if (path === 'existing'){
+        container.style.display = 'none';
+      } else {
+        container.style.display = '';
+      }
+    }
+
+    function wirePaymentFaq(){
+      byId('paymentFaq').addEventListener('click', (e) => {
+        const toggle = e.target.closest('.paymentFaqToggle');
+        if (!toggle) return;
+        toggle.closest('.paymentFaqItem').classList.toggle('open');
+      });
+    }
+
+    async function initiateStripeConnect(){
+      if (!state.vendor?.id) return;
+      const btn = selectedPaymentPath === 'existing' ? byId('connectStripeBtn') : byId('setupStripeBtn');
+      btn.disabled = true;
+      btn.textContent = 'Redirecting to Stripe…';
+
+      try {
+        const returnUrl = window.location.origin + window.location.pathname +
+          '?vendor=' + encodeURIComponent(state.vendor.slug || '') +
+          '&stripe_setup=complete';
+
+        const refreshUrl = window.location.origin + window.location.pathname +
+          '?vendor=' + encodeURIComponent(state.vendor.slug || '') +
+          '&stripe_setup=refresh';
+
+        const { data, error } = await sb.functions.invoke('create-stripe-connect-link', {
+          body: {
+            vendor_id: state.vendor.id,
+            return_url: returnUrl,
+            refresh_url: refreshUrl,
+            account_type: selectedPaymentPath === 'existing' ? 'standard' : 'express'
+          }
+        });
+
+        if (error) throw error;
+        if (data?.url){
+          window.location.href = data.url;
+        } else {
+          throw new Error('No redirect URL received from Stripe setup.');
+        }
+      } catch (err) {
+        showNotice('Could not start Stripe setup: ' + (err.message || 'Please try again or contact support.'), 'error');
+        btn.disabled = false;
+        btn.textContent = selectedPaymentPath === 'existing' ? 'Connect your Stripe account' : 'Set up card payments';
+      }
+    }
+
+    async function handleStripeReturn(){
+      byId('paymentPaths').style.display = 'none';
+      byId('paymentChecklist').style.display = 'none';
+      byId('paymentActions').style.display = 'none';
+      byId('paymentFaq').style.display = 'none';
+      byId('paymentStatusWaiting').className = 'paymentStatus waiting';
+
+      try {
+        const { data: vendor, error } = await sb
+          .from('vendors')
+          .select('stripe_account_id, stripe_onboarding_complete')
+          .eq('id', state.vendor.id)
+          .single();
+
+        if (error) throw error;
+
+        if (vendor?.stripe_onboarding_complete){
+          state.vendor.stripe_account_id = vendor.stripe_account_id;
+          state.vendor.stripe_onboarding_complete = true;
+          byId('paymentStatusWaiting').className = 'paymentStatus';
+          byId('paymentStatusSuccess').className = 'paymentStatus success';
+          byId('paymentContinueActions').style.display = '';
+        } else if (vendor?.stripe_account_id){
+          state.vendor.stripe_account_id = vendor.stripe_account_id;
+          byId('paymentStatusWaiting').className = 'paymentStatus';
+          showNotice('Your Stripe account is linked but setup is not complete yet. Stripe may take a moment to verify your details. You can continue and come back later.', '');
+          byId('paymentPaths').style.display = '';
+          byId('paymentActions').style.display = '';
+          byId('paymentFaq').style.display = '';
+        } else {
+          byId('paymentStatusWaiting').className = 'paymentStatus';
+          showNotice('Stripe setup was not completed. You can try again or set up payments later.', '');
+          byId('paymentPaths').style.display = '';
+          byId('paymentActions').style.display = '';
+          byId('paymentFaq').style.display = '';
+        }
+      } catch (err) {
+        byId('paymentStatusWaiting').className = 'paymentStatus';
+        showNotice('Could not verify payment setup: ' + (err.message || 'Please try again.'), 'error');
+        byId('paymentPaths').style.display = '';
+        byId('paymentActions').style.display = '';
+        byId('paymentFaq').style.display = '';
+      }
+
+      const url = new URL(window.location);
+      url.searchParams.delete('stripe_setup');
+      window.history.replaceState({}, '', url);
+    }
+
+    async function skipPaymentSetup(){
+      showCompletion();
+    }
+
+    function wirePaymentStage(){
+      byId('pathExisting').addEventListener('click', () => selectPaymentPath('existing'));
+      byId('pathNew').addEventListener('click', () => selectPaymentPath('new'));
+      byId('pathExisting').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); selectPaymentPath('existing'); } });
+      byId('pathNew').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); selectPaymentPath('new'); } });
+      byId('connectStripeBtn').addEventListener('click', initiateStripeConnect);
+      byId('setupStripeBtn').addEventListener('click', initiateStripeConnect);
+      byId('skipPaymentBtn').addEventListener('click', skipPaymentSetup);
+      byId('paymentContinueBtn').addEventListener('click', showCompletion);
+      wirePaymentFaq();
     }
 
     function hideCompletion(){
@@ -1738,6 +2416,7 @@
           byId('termsAcceptOption').classList.toggle('active', checked);
         });
         byId('acceptTermsBtn').addEventListener('click', acceptTerms);
+        wirePaymentStage();
         byId('updatePreferencesBtn').addEventListener('click', () => {
           hideCompletion();
           // Re-evaluate to restore correct stage/progress state
@@ -1755,6 +2434,8 @@
           byId('stage5Wrapper').classList.remove('visible');
           byId('stage6Wrapper').style.display = 'none';
           byId('stage6Wrapper').classList.remove('visible');
+          byId('stage7Wrapper').style.display = 'none';
+          byId('stage7Wrapper').classList.remove('visible');
           initProgress();
           // Re-evaluate from current selections
           if (stage1Complete()){
@@ -1794,15 +2475,17 @@
         }
         updateSaveButton();
 
-        // If already completed, branch on whether terms have been accepted (T4-25).
-        // Vendors who completed onboarding before terms existed are routed
-        // through the terms step on next login; everyone else lands on the
-        // completion view.
+        // If already completed, branch on outstanding steps.
+        // Vendors missing terms → terms step. Vendors missing payment → payment step.
+        // Everyone else → completion view.
         if (state.vendor.onboarding_completed){
-          if (state.vendor.terms_accepted){
-            showCompletion();
-          } else {
+          const params = new URLSearchParams(window.location.search);
+          if (!state.vendor.terms_accepted){
             revealStage6();
+          } else if (!state.vendor.stripe_onboarding_complete || params.get('stripe_setup')){
+            revealStage7();
+          } else {
+            showCompletion();
           }
         }
 
