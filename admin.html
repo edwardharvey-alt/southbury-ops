@@ -239,7 +239,7 @@
       <div class="adHeader">
         <p class="adEyebrow">Admin</p>
         <h1 class="adTitle">Provision a vendor</h1>
-        <p class="adSub">Create a vendor workspace. The owner will receive a Supabase invite separately.</p>
+        <p class="adSub">Create a vendor workspace and send an invite email.</p>
       </div>
 
       <form class="adForm" id="adForm" novalidate>
@@ -404,9 +404,36 @@
           return;
         }
 
-        showSuccess(
-          "Vendor created. Now go to Supabase Auth \u2192 Users \u2192 Invite user and send an invite to " + email + "."
-        );
+        submitEl.textContent = "Sending invite…";
+
+        var inviteOk = false;
+        try {
+          var inviteRes = await fetch(
+            "https://tvqhhjvumgumyetvpgid.supabase.co/functions/v1/invite-vendor",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + session.access_token
+              },
+              body: JSON.stringify({ email: email })
+            }
+          );
+          if (inviteRes.ok) {
+            inviteOk = true;
+          } else {
+            var inviteErr = await inviteRes.json();
+            console.error("Invite failed:", inviteErr);
+          }
+        } catch (inviteEx) {
+          console.error("Invite request failed:", inviteEx);
+        }
+
+        if (inviteOk) {
+          showSuccess("Vendor created and invite sent to " + email + ".");
+        } else {
+          showError("Vendor created but invite failed \u2014 send manually from Supabase.");
+        }
 
         nameEl.value = "";
         slugEl.value = "";
