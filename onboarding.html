@@ -1660,39 +1660,37 @@
       const question = grid.dataset.question;
 
       grid.querySelectorAll('.onboardingOption').forEach(label => {
-        label.addEventListener('click', (e) => {
-          e.preventDefault();
+        label.addEventListener('click', () => {
           const input = label.querySelector('input');
           if (!input || input.disabled) return;
 
-          if (isMulti) {
-            input.checked = !input.checked;
-            label.classList.toggle('active', input.checked);
+          setTimeout(() => {
+            if (isMulti) {
+              label.classList.toggle('active', input.checked);
 
-            const checked = [...grid.querySelectorAll('input:checked')].map(i => i.value);
-            state[question] = checked;
+              const checked = [...grid.querySelectorAll('input:checked')].map(i => i.value);
+              state[question] = checked;
 
-            grid.querySelectorAll('.onboardingOption').forEach(card => {
-              const inp = card.querySelector('input');
-              if (!inp.checked && checked.length >= max) {
-                inp.disabled = true;
-                card.style.opacity = '0.45';
-                card.style.pointerEvents = 'none';
-              } else {
-                inp.disabled = false;
-                card.style.opacity = '';
-                card.style.pointerEvents = '';
-              }
-            });
-          } else {
-            grid.querySelectorAll('input').forEach(inp => { inp.checked = false; });
-            grid.querySelectorAll('.onboardingOption').forEach(card => { card.classList.remove('active'); });
-            input.checked = true;
-            label.classList.add('active');
-            state[question] = input.value;
-          }
+              grid.querySelectorAll('.onboardingOption').forEach(card => {
+                const inp = card.querySelector('input');
+                if (!inp.checked && checked.length >= max) {
+                  inp.disabled = true;
+                  card.style.opacity = '0.45';
+                  card.style.pointerEvents = 'none';
+                } else {
+                  inp.disabled = false;
+                  card.style.opacity = '';
+                  card.style.pointerEvents = '';
+                }
+              });
+            } else {
+              grid.querySelectorAll('.onboardingOption').forEach(card => { card.classList.remove('active'); });
+              label.classList.add('active');
+              state[question] = input.value;
+            }
 
-          evaluate();
+            evaluate();
+          }, 0);
         });
       });
     }
@@ -1703,41 +1701,33 @@
       if (!grid) return;
       const question = grid.dataset.question;
 
-      grid.addEventListener('change', (e) => {
-        const changed = e.target;
-        const allInputs = [...grid.querySelectorAll('input')];
-
-        if (changed.value === 'none' && changed.checked) {
-          // "Not yet" selected — deselect everything else
-          allInputs.forEach(input => {
-            if (input.value !== 'none') input.checked = false;
-          });
-        } else if (changed.value !== 'none' && changed.checked) {
-          // Any other selected — deselect "Not yet"
-          const noneInput = grid.querySelector('input[value="none"]');
-          if (noneInput) noneInput.checked = false;
-        }
-
-        // Sync state — store ['none'] so stage2Complete() can detect a selection
-        state[question] = allInputs.filter(i => i.checked).map(i => i.value);
-
-        // Update active styling
-        grid.querySelectorAll('.onboardingOption').forEach(card => {
-          const input = card.querySelector('input');
-          card.classList.toggle('active', input.checked);
-        });
-
-        renderHostDetails();
-        evaluate();
-      });
-
-      // iOS Safari: change events on checkbox inputs inside labels do not always bubble
       grid.querySelectorAll('.onboardingOption').forEach(label => {
         label.addEventListener('click', () => {
           const input = label.querySelector('input');
           if (!input || input.disabled) return;
-          input.checked = !input.checked;
-          input.dispatchEvent(new Event('change', { bubbles: true }));
+
+          setTimeout(() => {
+            const allInputs = [...grid.querySelectorAll('input')];
+
+            if (input.value === 'none' && input.checked) {
+              allInputs.forEach(inp => {
+                if (inp.value !== 'none') inp.checked = false;
+              });
+            } else if (input.value !== 'none' && input.checked) {
+              const noneInput = grid.querySelector('input[value="none"]');
+              if (noneInput) noneInput.checked = false;
+            }
+
+            state[question] = allInputs.filter(i => i.checked).map(i => i.value);
+
+            grid.querySelectorAll('.onboardingOption').forEach(card => {
+              const inp = card.querySelector('input');
+              card.classList.toggle('active', inp.checked);
+            });
+
+            renderHostDetails();
+            evaluate();
+          }, 0);
         });
       });
     }
