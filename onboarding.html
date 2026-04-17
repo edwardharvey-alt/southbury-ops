@@ -1652,49 +1652,40 @@
       const max = parseInt(grid.dataset.max || '1', 10);
       const question = grid.dataset.question;
 
-      grid.addEventListener('change', () => {
-        if (isMulti) {
-          const checked = [...grid.querySelectorAll('input:checked')].map(i => i.value);
-          state[question] = checked;
-
-          // Enforce max selection: disable unchecked when at limit
-          const allInputs = grid.querySelectorAll('input');
-          allInputs.forEach(input => {
-            if (!input.checked && checked.length >= max) {
-              input.disabled = true;
-              input.closest('.onboardingOption').style.opacity = '0.45';
-              input.closest('.onboardingOption').style.pointerEvents = 'none';
-            } else {
-              input.disabled = false;
-              input.closest('.onboardingOption').style.opacity = '';
-              input.closest('.onboardingOption').style.pointerEvents = '';
-            }
-          });
-        } else {
-          const checked = grid.querySelector('input:checked');
-          state[question] = checked ? checked.value : null;
-        }
-
-        // Update active styling
-        grid.querySelectorAll('.onboardingOption').forEach(card => {
-          const input = card.querySelector('input');
-          card.classList.toggle('active', input.checked);
-        });
-
-        evaluate();
-      });
-
-      // iOS Safari: change events on radio inputs inside labels do not always bubble
       grid.querySelectorAll('.onboardingOption').forEach(label => {
-        label.addEventListener('click', () => {
+        label.addEventListener('click', (e) => {
+          e.preventDefault();
           const input = label.querySelector('input');
           if (!input || input.disabled) return;
+
           if (isMulti) {
             input.checked = !input.checked;
+            label.classList.toggle('active', input.checked);
+
+            const checked = [...grid.querySelectorAll('input:checked')].map(i => i.value);
+            state[question] = checked;
+
+            grid.querySelectorAll('.onboardingOption').forEach(card => {
+              const inp = card.querySelector('input');
+              if (!inp.checked && checked.length >= max) {
+                inp.disabled = true;
+                card.style.opacity = '0.45';
+                card.style.pointerEvents = 'none';
+              } else {
+                inp.disabled = false;
+                card.style.opacity = '';
+                card.style.pointerEvents = '';
+              }
+            });
           } else {
+            grid.querySelectorAll('input').forEach(inp => { inp.checked = false; });
+            grid.querySelectorAll('.onboardingOption').forEach(card => { card.classList.remove('active'); });
             input.checked = true;
+            label.classList.add('active');
+            state[question] = input.value;
           }
-          grid.dispatchEvent(new Event('change'));
+
+          evaluate();
         });
       });
     }
