@@ -1642,16 +1642,14 @@
       const max = parseInt(grid.dataset.max || '1', 10);
       const question = grid.dataset.question;
       grid.querySelectorAll('.onboardingOption').forEach(function(card) {
-        const input = card.querySelector('.onboardingInput');
-        if (!input) return;
         card.addEventListener('click', function() {
           if (isMulti) {
-            const currentChecked = [...grid.querySelectorAll('.onboardingInput:checked')];
-            if (!input.checked && currentChecked.length >= max) return;
-            input.checked = !input.checked;
+            const active = [...grid.querySelectorAll('.onboardingOption.active')];
+            if (!card.classList.contains('active') && active.length >= max) return;
+            card.classList.toggle('active');
           } else {
-            grid.querySelectorAll('.onboardingInput').forEach(function(i){ i.checked = false; });
-            input.checked = true;
+            grid.querySelectorAll('.onboardingOption').forEach(function(c){ c.classList.remove('active'); });
+            card.classList.add('active');
           }
           evaluate();
         });
@@ -1796,11 +1794,11 @@
         if (!grid) return;
         var question = grid.dataset.question;
         var isMulti = grid.dataset.multi === 'true';
-        var checked = [...grid.querySelectorAll('.onboardingInput:checked')];
+        var active = [...grid.querySelectorAll('.onboardingOption.active')];
         if (isMulti){
-          state[question] = checked.map(function(i){ return i.value; });
+          state[question] = active.map(function(c){ return c.dataset.value; });
         } else {
-          state[question] = checked.length > 0 ? checked[0].value : null;
+          state[question] = active.length > 0 ? active[0].dataset.value : null;
         }
       });
     }
@@ -1869,24 +1867,17 @@
     function applySelection(gridId, values){
       const grid = byId(gridId);
       if (!grid || !values) return;
-
       const isArray = Array.isArray(values);
       const valSet = isArray ? new Set(values) : new Set([values]);
-
-      grid.querySelectorAll('input').forEach(input => {
-        if (valSet.has(input.value)){
-          input.checked = true;
-          input.closest('.onboardingOption').classList.add('active');
-        }
+      grid.querySelectorAll('.onboardingOption').forEach(card => {
+        card.classList.toggle('active', valSet.has(card.dataset.value));
       });
-
-      // Sync state
       const question = grid.dataset.question;
       const isMulti = grid.dataset.multi === 'true';
       if (isMulti){
         state[question] = [...valSet].filter(v => v);
       } else {
-        state[question] = values || null;
+        state[question] = isArray ? (values[0] || null) : (values || null);
       }
     }
 
