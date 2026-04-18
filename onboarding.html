@@ -1646,36 +1646,37 @@
       const max = parseInt(grid.dataset.max || '1', 10);
       const question = grid.dataset.question;
 
-      grid.addEventListener('change', () => {
-        if (isMulti) {
-          const checked = [...grid.querySelectorAll('input:checked')].map(i => i.value);
-          state[question] = checked;
-
-          // Enforce max selection: disable unchecked when at limit
-          const allInputs = grid.querySelectorAll('input');
-          allInputs.forEach(input => {
-            if (!input.checked && checked.length >= max) {
-              input.disabled = true;
-              input.closest('.onboardingOption').style.opacity = '0.45';
-              input.closest('.onboardingOption').style.pointerEvents = 'none';
+      grid.querySelectorAll('.onboardingInput').forEach(function(input) {
+        input.addEventListener('change', function() {
+          var self = this;
+          setTimeout(function() {
+            var card = self.closest('.onboardingOption');
+            if (!card) return;
+            if (isMulti) {
+              card.classList.toggle('active', self.checked);
+              var activeCards = [...grid.querySelectorAll('.onboardingOption.active')];
+              state[question] = activeCards.map(function(c){ return c.dataset.value; });
+              grid.querySelectorAll('.onboardingOption').forEach(function(c) {
+                var cInput = c.querySelector('.onboardingInput');
+                if (cInput && !cInput.checked && activeCards.length >= max) {
+                  c.dataset.disabled = 'true';
+                  cInput.disabled = true;
+                } else {
+                  delete c.dataset.disabled;
+                  if (cInput) cInput.disabled = false;
+                }
+              });
             } else {
-              input.disabled = false;
-              input.closest('.onboardingOption').style.opacity = '';
-              input.closest('.onboardingOption').style.pointerEvents = '';
+              if (!self.checked) return;
+              grid.querySelectorAll('.onboardingOption').forEach(function(c) {
+                c.classList.remove('active');
+              });
+              card.classList.add('active');
+              state[question] = self.value;
             }
-          });
-        } else {
-          const checked = grid.querySelector('input:checked');
-          state[question] = checked ? checked.value : null;
-        }
-
-        // Update active styling
-        grid.querySelectorAll('.onboardingOption').forEach(card => {
-          const input = card.querySelector('input');
-          card.classList.toggle('active', input.checked);
+            evaluate();
+          }, 0);
         });
-
-        evaluate();
       });
     }
 
