@@ -486,6 +486,19 @@
         white-space:normal;
         box-sizing:border-box;
       }
+
+      .onboardingOption.active .optionIndicator {
+        background: var(--h-accent) !important;
+        border-color: var(--h-accent) !important;
+      }
+      .onboardingOption.active .optionIndicator::after {
+        content: '' !important;
+        display: block !important;
+        width: 6px !important;
+        height: 6px !important;
+        border-radius: 999px !important;
+        background: #fff !important;
+      }
     }
 
     /* ── Identity fields grid ── */
@@ -1591,19 +1604,43 @@
     function wireGrid(gridId){
       const grid = byId(gridId);
       if (!grid) return;
-
       const isMulti = grid.dataset.multi === 'true';
       const max = parseInt(grid.dataset.max || '1', 10);
       const question = grid.dataset.question;
 
-      grid.querySelectorAll('.onboardingOption').forEach(card => {
-        card.addEventListener('click', () => {
-          handleCardActivate(card, grid, isMulti, max, question);
-        });
-        card.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleCardActivate(card, grid, isMulti, max, question);
+      grid.querySelectorAll('.onboardingOption').forEach(function(label) {
+        label.addEventListener('click', function() {
+          const input = label.querySelector('input');
+          if (!input) return;
+
+          if (isMulti) {
+            setTimeout(function() {
+              const activeInputs = [...grid.querySelectorAll('input:checked')];
+              state[question] = activeInputs.map(i => i.value);
+              grid.querySelectorAll('.onboardingOption').forEach(function(l) {
+                const inp = l.querySelector('input');
+                l.classList.toggle('active', !!(inp && inp.checked));
+                if (!inp.checked && activeInputs.length >= max) {
+                  inp.disabled = true;
+                  l.style.opacity = '0.45';
+                  l.style.pointerEvents = 'none';
+                } else {
+                  inp.disabled = false;
+                  l.style.opacity = '';
+                  l.style.pointerEvents = '';
+                }
+              });
+              evaluate();
+            }, 10);
+          } else {
+            grid.querySelectorAll('input').forEach(i => { i.checked = false; });
+            input.checked = true;
+            state[question] = input.value;
+            grid.querySelectorAll('.onboardingOption').forEach(function(l) {
+              l.classList.remove('active');
+            });
+            label.classList.add('active');
+            evaluate();
           }
         });
       });
