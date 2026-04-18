@@ -199,12 +199,12 @@
       background:color-mix(in srgb, var(--h-accent) 4%, white);
     }
 
-    .onboardingOption.active{
-      border-color:color-mix(in srgb, var(--h-accent) 40%, white);
+    .onboardingOption:has(input:checked),
+    .onboardingOption.active {
+      border:2px solid var(--h-accent) !important;
       background:color-mix(in srgb, var(--h-accent) 8%, white);
       box-shadow:0 4px 12px color-mix(in srgb, var(--h-accent) 10%, transparent);
     }
-
     /* ── Custom indicator circle ── */
     .optionIndicator{
       width:24px;
@@ -220,12 +220,13 @@
       transition:all .15s;
     }
 
-    .onboardingOption.active .optionIndicator{
+    .onboardingOption:has(input:checked) .optionIndicator,
+    .onboardingOption.active .optionIndicator {
       background:var(--h-accent);
       border-color:var(--h-accent);
     }
-
-    .onboardingOption.active .optionIndicator::after{
+    .onboardingOption:has(input:checked) .optionIndicator::after,
+    .onboardingOption.active .optionIndicator::after {
       content:'✓';
       color:#fff;
       font-size:11px;
@@ -1641,42 +1642,28 @@
     function wireGrid(gridId){
       const grid = byId(gridId);
       if (!grid) return;
-
       const isMulti = grid.dataset.multi === 'true';
       const max = parseInt(grid.dataset.max || '1', 10);
       const question = grid.dataset.question;
-
-      grid.querySelectorAll('.onboardingInput').forEach(function(input) {
-        input.addEventListener('change', function() {
-          var self = this;
-          setTimeout(function() {
-            var card = self.closest('.onboardingOption');
-            if (!card) return;
-            if (isMulti) {
-              card.classList.toggle('active', self.checked);
-              var activeCards = [...grid.querySelectorAll('.onboardingOption.active')];
-              state[question] = activeCards.map(function(c){ return c.dataset.value; });
-              grid.querySelectorAll('.onboardingOption').forEach(function(c) {
-                var cInput = c.querySelector('.onboardingInput');
-                if (cInput && !cInput.checked && activeCards.length >= max) {
-                  c.dataset.disabled = 'true';
-                  cInput.disabled = true;
-                } else {
-                  delete c.dataset.disabled;
-                  if (cInput) cInput.disabled = false;
-                }
-              });
+      grid.addEventListener('change', function(e) {
+        const input = e.target;
+        if (!input.classList.contains('onboardingInput')) return;
+        if (isMulti) {
+          const checked = [...grid.querySelectorAll('.onboardingInput:checked')];
+          state[question] = checked.map(function(i){ return i.value; });
+          grid.querySelectorAll('.onboardingInput').forEach(function(i) {
+            if (!i.checked && checked.length >= max) {
+              i.disabled = true;
+              i.closest('.onboardingOption').dataset.disabled = 'true';
             } else {
-              if (!self.checked) return;
-              grid.querySelectorAll('.onboardingOption').forEach(function(c) {
-                c.classList.remove('active');
-              });
-              card.classList.add('active');
-              state[question] = self.value;
+              i.disabled = false;
+              delete i.closest('.onboardingOption').dataset.disabled;
             }
-            evaluate();
-          }, 0);
-        });
+          });
+        } else {
+          state[question] = input.value;
+        }
+        evaluate();
       });
     }
 
