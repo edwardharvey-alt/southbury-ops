@@ -173,6 +173,7 @@
       cursor:pointer;
       transition:border-color .15s, background .15s;
       user-select:none;
+      touch-action:manipulation;
     }
 
     /* Q9 tiles have longer labels — give them more horizontal room */
@@ -1633,30 +1634,6 @@
           }
         });
 
-        label.addEventListener('touchend', function(e) {
-          e.preventDefault();
-
-          if (isMulti) {
-            label.classList.toggle('active');
-            const activeCards = [...grid.querySelectorAll('.onboardingOption.active')];
-            state[question] = activeCards.map(c => c.dataset.value);
-            grid.querySelectorAll('.onboardingOption').forEach(function(l) {
-              if (!l.classList.contains('active') && activeCards.length >= max) {
-                l.dataset.disabled = 'true';
-              } else {
-                delete l.dataset.disabled;
-              }
-            });
-            evaluate();
-          } else {
-            state[question] = label.dataset.value;
-            grid.querySelectorAll('.onboardingOption').forEach(function(l) {
-              l.classList.remove('active');
-            });
-            label.classList.add('active');
-            evaluate();
-          }
-        });
       });
     }
 
