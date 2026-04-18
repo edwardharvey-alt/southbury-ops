@@ -1650,16 +1650,13 @@
         if (input.tagName !== 'INPUT') return;
         if (isMulti) {
           const checked = [...grid.querySelectorAll('.onboardingInput:checked')];
-          state[question] = checked.map(function(i){ return i.value; });
-          grid.querySelectorAll('.onboardingInput').forEach(function(i) {
-            if (!i.checked && checked.length >= max) {
-              i.disabled = true;
-              i.closest('.onboardingOption').dataset.disabled = 'true';
-            } else {
-              i.disabled = false;
-              delete i.closest('.onboardingOption').dataset.disabled;
-            }
-          });
+          if (checked.length > max) {
+            input.checked = false;
+            const rechecked = [...grid.querySelectorAll('.onboardingInput:checked')];
+            state[question] = rechecked.map(function(i){ return i.value; });
+          } else {
+            state[question] = checked.map(function(i){ return i.value; });
+          }
         } else {
           state[question] = input.value;
         }
