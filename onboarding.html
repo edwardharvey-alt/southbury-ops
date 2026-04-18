@@ -1798,7 +1798,23 @@
       return state.typical_capacity_range && state.preferred_fulfilment && state.preferred_cadence;
     }
 
+    function syncStateFromDOM(){
+      ['q1Grid','q2Grid','q3Grid','q4Grid','q5Grid','q6Grid','q7Grid','q8Grid'].forEach(function(gridId){
+        var grid = byId(gridId);
+        if (!grid) return;
+        var question = grid.dataset.question;
+        var isMulti = grid.dataset.multi === 'true';
+        var checked = [...grid.querySelectorAll('.onboardingInput:checked')];
+        if (isMulti){
+          state[question] = checked.map(function(i){ return i.value; });
+        } else {
+          state[question] = checked.length > 0 ? checked[0].value : null;
+        }
+      });
+    }
+
     function evaluate(){
+      syncStateFromDOM();
       if (!stage2Revealed && stage1Complete()){
         stage2Revealed = true;
         revealStage('stage2Wrapper', 'dot1', 'label1', 'dot2', 'label2');
