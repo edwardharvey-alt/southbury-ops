@@ -1649,17 +1649,19 @@
         label.addEventListener('click', function() {
           var input = label.querySelector('.onboardingInput');
           if (!input) return;
-          if (isMulti) {
-            var checked = [...grid.querySelectorAll('.onboardingInput:checked')];
-            if (checked.length > max) {
-              input.checked = false;
+          setTimeout(function() {
+            if (isMulti) {
+              var checked = [...grid.querySelectorAll('.onboardingInput:checked')];
+              if (checked.length > max) {
+                input.checked = false;
+                checked = [...grid.querySelectorAll('.onboardingInput:checked')];
+              }
+              state[question] = checked.map(function(i){ return i.value; });
+            } else {
+              state[question] = input.value;
             }
-            var final = [...grid.querySelectorAll('.onboardingInput:checked')];
-            state[question] = final.map(function(i){ return i.value; });
-          } else {
-            state[question] = input.value;
-          }
-          evaluate();
+            evaluate();
+          }, 0);
         });
       });
     }
