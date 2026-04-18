@@ -1610,32 +1610,21 @@
 
       grid.querySelectorAll('.onboardingOption').forEach(function(label) {
         label.addEventListener('click', function() {
-          const input = label.querySelector('input');
-          if (!input) return;
 
           if (isMulti) {
-            setTimeout(function() {
-              const activeInputs = [...grid.querySelectorAll('input:checked')];
-              state[question] = activeInputs.map(i => i.value);
-              grid.querySelectorAll('.onboardingOption').forEach(function(l) {
-                const inp = l.querySelector('input');
-                l.classList.toggle('active', !!(inp && inp.checked));
-                if (!inp.checked && activeInputs.length >= max) {
-                  inp.disabled = true;
-                  l.style.opacity = '0.45';
-                  l.style.pointerEvents = 'none';
-                } else {
-                  inp.disabled = false;
-                  l.style.opacity = '';
-                  l.style.pointerEvents = '';
-                }
-              });
-              evaluate();
-            }, 10);
+            label.classList.toggle('active');
+            const activeCards = [...grid.querySelectorAll('.onboardingOption.active')];
+            state[question] = activeCards.map(c => c.dataset.value);
+            grid.querySelectorAll('.onboardingOption').forEach(function(l) {
+              if (!l.classList.contains('active') && activeCards.length >= max) {
+                l.dataset.disabled = 'true';
+              } else {
+                delete l.dataset.disabled;
+              }
+            });
+            evaluate();
           } else {
-            grid.querySelectorAll('input').forEach(i => { i.checked = false; });
-            input.checked = true;
-            state[question] = input.value;
+            state[question] = label.dataset.value;
             grid.querySelectorAll('.onboardingOption').forEach(function(l) {
               l.classList.remove('active');
             });
