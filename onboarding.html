@@ -173,7 +173,6 @@
       cursor:pointer;
       transition:border-color .15s, background .15s;
       user-select:none;
-      touch-action:manipulation;
     }
 
     /* Q9 tiles have longer labels — give them more horizontal room */
@@ -182,9 +181,8 @@
       flex:0 0 220px !important;
     }
 
-    .onboardingOption[data-disabled="true"]{
-      opacity:0.45;
-      pointer-events:none;
+    .onboardingOption input{
+      display:none;
     }
 
     .onboardingOption:hover{
@@ -193,18 +191,37 @@
     }
 
     .onboardingOption.active{
-      border:2px solid var(--h-accent) !important;
+      border-color:color-mix(in srgb, var(--h-accent) 40%, white);
       background:color-mix(in srgb, var(--h-accent) 8%, white);
       box-shadow:0 4px 12px color-mix(in srgb, var(--h-accent) 10%, transparent);
     }
 
-    .onboardingInput {
-      position: absolute;
-      opacity: 0;
-      pointer-events: none;
-      width: 0;
-      height: 0;
-      margin: 0;
+    /* ── Custom indicator circle ── */
+    .optionIndicator{
+      width:24px;
+      height:24px;
+      border-radius:999px;
+      border:2px solid var(--h-border);
+      flex:0 0 auto;
+      align-self:flex-start;
+      margin-top:2px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition:all .15s;
+    }
+
+    .onboardingOption.active .optionIndicator{
+      background:var(--h-accent);
+      border-color:var(--h-accent);
+    }
+
+    .onboardingOption.active .optionIndicator::after{
+      content:'✓';
+      color:#fff;
+      font-size:11px;
+      font-weight:900;
+      line-height:1;
     }
 
     .optionTitle{
@@ -495,19 +512,6 @@
         width:100%;
         white-space:normal;
         box-sizing:border-box;
-      }
-
-      .onboardingOption.active .optionIndicator {
-        background: var(--h-accent) !important;
-        border-color: var(--h-accent) !important;
-      }
-      .onboardingOption.active .optionIndicator::after {
-        content: '' !important;
-        display: block !important;
-        width: 6px !important;
-        height: 6px !important;
-        border-radius: 999px !important;
-        background: #fff !important;
       }
     }
 
@@ -953,26 +957,30 @@
           <div class="questionBlock" style="border-top:1px solid var(--h-border-2); padding-top:20px;">
             <p class="questionLabel">What best describes how you operate?</p>
             <div class="optionsGrid" id="q1Grid" data-question="vendor_type" data-multi="false">
-              <label class="onboardingOption" data-value="restaurant" data-question="vendor_type">
-                <input type="radio" name="vendor_type" value="restaurant" class="onboardingInput">
+              <label class="onboardingOption">
+                <input type="radio" name="vendor_type" value="restaurant" />
+                <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">A restaurant or fixed kitchen</div>
                 </div>
               </label>
-              <label class="onboardingOption" data-value="food_truck" data-question="vendor_type">
-                <input type="radio" name="vendor_type" value="food_truck" class="onboardingInput">
+              <label class="onboardingOption">
+                <input type="radio" name="vendor_type" value="food_truck" />
+                <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">A food truck or mobile kitchen</div>
                 </div>
               </label>
-              <label class="onboardingOption" data-value="popup" data-question="vendor_type">
-                <input type="radio" name="vendor_type" value="popup" class="onboardingInput">
+              <label class="onboardingOption">
+                <input type="radio" name="vendor_type" value="popup" />
+                <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">A pop-up chef or occasional service</div>
                 </div>
               </label>
-              <label class="onboardingOption" data-value="caterer" data-question="vendor_type">
-                <input type="radio" name="vendor_type" value="caterer" class="onboardingInput">
+              <label class="onboardingOption">
+                <input type="radio" name="vendor_type" value="caterer" />
+                <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">A caterer</div>
                 </div>
@@ -984,29 +992,33 @@
           <div class="questionBlock">
             <p class="questionLabel">How do you currently get food to customers?</p>
             <div class="optionsGrid" id="q2Grid" data-question="delivery_model" data-multi="false">
-              <label class="onboardingOption" data-value="none" data-question="delivery_model">
-                <input type="radio" name="delivery_model" value="none" class="onboardingInput">
+              <label class="onboardingOption">
+                <input type="radio" name="delivery_model" value="none" />
+                <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">We don't currently deliver</div>
                   <div class="optionSub">We serve in-house or at events only</div>
                 </div>
               </label>
-              <label class="onboardingOption" data-value="direct" data-question="delivery_model">
-                <input type="radio" name="delivery_model" value="direct" class="onboardingInput">
+              <label class="onboardingOption">
+                <input type="radio" name="delivery_model" value="direct" />
+                <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">We deliver directly</div>
                   <div class="optionSub">Our own drivers or couriers</div>
                 </div>
               </label>
-              <label class="onboardingOption" data-value="aggregator" data-question="delivery_model">
-                <input type="radio" name="delivery_model" value="aggregator" class="onboardingInput">
+              <label class="onboardingOption">
+                <input type="radio" name="delivery_model" value="aggregator" />
+                <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">Aggregator platforms (Deliveroo, Uber Eats, Just Eat)</div>
                   <div class="optionSub">Hearth helps you build a direct customer relationship alongside these.</div>
                 </div>
               </label>
-              <label class="onboardingOption" data-value="mixed" data-question="delivery_model">
-                <input type="radio" name="delivery_model" value="mixed" class="onboardingInput">
+              <label class="onboardingOption">
+                <input type="radio" name="delivery_model" value="mixed" />
+                <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">A mix of the above</div>
                 </div>
@@ -1019,40 +1031,46 @@
             <p class="questionLabel">What are you hoping Hearth helps you do?</p>
             <p class="questionSub">Choose up to two.</p>
             <div class="optionsGrid" id="q3Grid" data-question="primary_goal" data-multi="true" data-max="2">
-              <label class="onboardingOption" data-value="grow_customer_base" data-question="primary_goal">
-                <input type="checkbox" name="primary_goal" value="grow_customer_base" class="onboardingInput">
+              <label class="onboardingOption">
+                <input type="checkbox" name="primary_goal" value="grow_customer_base" />
+                <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">Grow and own my customer base</div>
                   <div class="optionSub">Build a direct relationship with customers independent of any platform</div>
                 </div>
               </label>
-              <label class="onboardingOption" data-value="reduce_aggregators" data-question="primary_goal">
-                <input type="checkbox" name="primary_goal" value="reduce_aggregators" class="onboardingInput">
+              <label class="onboardingOption">
+                <input type="checkbox" name="primary_goal" value="reduce_aggregators" />
+                <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">Reduce aggregator dependency</div>
                   <div class="optionSub">Every drop builds customers you own — not rented from a platform</div>
                 </div>
               </label>
-              <label class="onboardingOption" data-value="predictable_demand" data-question="primary_goal">
-                <input type="checkbox" name="primary_goal" value="predictable_demand" class="onboardingInput">
+              <label class="onboardingOption">
+                <input type="checkbox" name="primary_goal" value="predictable_demand" />
+                <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">Create more predictable demand</div>
                 </div>
               </label>
-              <label class="onboardingOption" data-value="new_areas" data-question="primary_goal">
-                <input type="checkbox" name="primary_goal" value="new_areas" class="onboardingInput">
+              <label class="onboardingOption">
+                <input type="checkbox" name="primary_goal" value="new_areas" />
+                <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">Reach customers in new areas</div>
                 </div>
               </label>
-              <label class="onboardingOption" data-value="events" data-question="primary_goal">
-                <input type="checkbox" name="primary_goal" value="events" class="onboardingInput">
+              <label class="onboardingOption">
+                <input type="checkbox" name="primary_goal" value="events" />
+                <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">Run occasional or fundraising events more easily</div>
                 </div>
               </label>
-              <label class="onboardingOption" data-value="weekly_rhythm" data-question="primary_goal">
-                <input type="checkbox" name="primary_goal" value="weekly_rhythm" class="onboardingInput">
+              <label class="onboardingOption">
+                <input type="checkbox" name="primary_goal" value="weekly_rhythm" />
+                <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">Build a repeatable weekly rhythm</div>
                 </div>
@@ -1073,20 +1091,23 @@
               <p class="questionLabel">Do you already have a list of customers you could reach?</p>
               <p class="questionSub" id="q4AggregatorNote" style="display:none;">Most aggregator platforms don't share customer data with you. That's part of what Hearth changes — every order through a drop adds a customer you own directly.</p>
               <div class="optionsGrid" id="q4Grid" data-question="customer_data_posture" data-multi="false">
-                <label class="onboardingOption" data-value="rich" data-question="customer_data_posture">
-                  <input type="radio" name="customer_data_posture" value="rich" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="customer_data_posture" value="rich" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">Yes — we have an email list, booking history, or past order data</div>
                   </div>
                 </label>
-                <label class="onboardingOption" data-value="partial" data-question="customer_data_posture">
-                  <input type="radio" name="customer_data_posture" value="partial" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="customer_data_posture" value="partial" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">Somewhat — we have some contacts but nothing organised</div>
                   </div>
                 </label>
-                <label class="onboardingOption" data-value="light" data-question="customer_data_posture">
-                  <input type="radio" name="customer_data_posture" value="light" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="customer_data_posture" value="light" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">Not yet — we'd be building from scratch</div>
                   </div>
@@ -1098,27 +1119,31 @@
             <div class="questionBlock">
               <p class="questionLabel">Where do most of your current or target customers come from?</p>
               <div class="optionsGrid" id="q5Grid" data-question="customer_geography" data-multi="false">
-                <label class="onboardingOption" data-value="local" data-question="customer_geography">
-                  <input type="radio" name="customer_geography" value="local" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="customer_geography" value="local" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">They're mostly local</div>
                     <div class="optionSub">A specific area or neighbourhood</div>
                   </div>
                 </label>
-                <label class="onboardingOption" data-value="spread" data-question="customer_geography">
-                  <input type="radio" name="customer_geography" value="spread" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="customer_geography" value="spread" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">They're spread across a wider region</div>
                   </div>
                 </label>
-                <label class="onboardingOption" data-value="variable" data-question="customer_geography">
-                  <input type="radio" name="customer_geography" value="variable" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="customer_geography" value="variable" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">It depends on the event or occasion</div>
                   </div>
                 </label>
-                <label class="onboardingOption" data-value="unknown" data-question="customer_geography">
-                  <input type="radio" name="customer_geography" value="unknown" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="customer_geography" value="unknown" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">I'm not sure yet</div>
                   </div>
@@ -1130,48 +1155,54 @@
               <p class="questionLabel">Do you already have venues or community groups you deliver to?</p>
               <p class="questionSub">Select all that apply.</p>
               <div class="optionsGrid" id="q9Grid" data-question="existing_host_contexts" data-multi="true">
-                <div class="onboardingOption" data-value="pub_venue" data-question="existing_host_contexts" role="button" tabindex="0">
-  
+                <label class="onboardingOption">
+                  <input type="checkbox" name="existing_host_contexts" value="pub_venue" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">A pub, bar or venue</div>
                     <div class="optionSub">Regular weekly or monthly nights</div>
                   </div>
-                </div>
-                <div class="onboardingOption" data-value="sports_club" data-question="existing_host_contexts" role="button" tabindex="0">
-  
+                </label>
+                <label class="onboardingOption">
+                  <input type="checkbox" name="existing_host_contexts" value="sports_club" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">A sports club</div>
                     <div class="optionSub">Match days or events</div>
                   </div>
-                </div>
-                <div class="onboardingOption" data-value="school" data-question="existing_host_contexts" role="button" tabindex="0">
-  
+                </label>
+                <label class="onboardingOption">
+                  <input type="checkbox" name="existing_host_contexts" value="school" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">A school or college</div>
                     <div class="optionSub">Fundraisers or term-time drops</div>
                   </div>
-                </div>
-                <div class="onboardingOption" data-value="community_group" data-question="existing_host_contexts" role="button" tabindex="0">
-  
+                </label>
+                <label class="onboardingOption">
+                  <input type="checkbox" name="existing_host_contexts" value="community_group" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">A community group</div>
                     <div class="optionSub">Residents, associations, local groups</div>
                   </div>
-                </div>
-                <div class="onboardingOption" data-value="workplace" data-question="existing_host_contexts" role="button" tabindex="0">
-  
+                </label>
+                <label class="onboardingOption">
+                  <input type="checkbox" name="existing_host_contexts" value="workplace" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">An office or workplace</div>
                     <div class="optionSub">Lunch or regular delivery</div>
                   </div>
-                </div>
-                <div class="onboardingOption" data-value="none" data-question="existing_host_contexts" role="button" tabindex="0">
-  
+                </label>
+                <label class="onboardingOption">
+                  <input type="checkbox" name="existing_host_contexts" value="none" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">Not yet</div>
                     <div class="optionSub">I'd be building these from scratch</div>
                   </div>
-                </div>
+                </label>
               </div>
             </div>
             <!-- Q9 host details — rendered by renderHostDetails() -->
@@ -1190,26 +1221,30 @@
             <div class="questionBlock">
               <p class="questionLabel">In a typical service, how many orders would you expect to handle?</p>
               <div class="optionsGrid" id="q6Grid" data-question="typical_capacity_range" data-multi="false">
-                <label class="onboardingOption" data-value="under_20" data-question="typical_capacity_range">
-                  <input type="radio" name="typical_capacity_range" value="under_20" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="typical_capacity_range" value="under_20" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">Fewer than 20</div>
                   </div>
                 </label>
-                <label class="onboardingOption" data-value="20_40" data-question="typical_capacity_range">
-                  <input type="radio" name="typical_capacity_range" value="20_40" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="typical_capacity_range" value="20_40" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">20–40</div>
                   </div>
                 </label>
-                <label class="onboardingOption" data-value="40_60" data-question="typical_capacity_range">
-                  <input type="radio" name="typical_capacity_range" value="40_60" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="typical_capacity_range" value="40_60" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">40–60</div>
                   </div>
                 </label>
-                <label class="onboardingOption" data-value="over_60" data-question="typical_capacity_range">
-                  <input type="radio" name="typical_capacity_range" value="over_60" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="typical_capacity_range" value="over_60" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">More than 60</div>
                   </div>
@@ -1221,21 +1256,24 @@
             <div class="questionBlock">
               <p class="questionLabel">How do you expect to get food to customers through Hearth?</p>
               <div class="optionsGrid" id="q7Grid" data-question="preferred_fulfilment" data-multi="false">
-                <label class="onboardingOption" data-value="delivery" data-question="preferred_fulfilment">
-                  <input type="radio" name="preferred_fulfilment" value="delivery" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="preferred_fulfilment" value="delivery" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">Delivery to their address</div>
                   </div>
                 </label>
-                <label class="onboardingOption" data-value="collection" data-question="preferred_fulfilment">
-                  <input type="radio" name="preferred_fulfilment" value="collection" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="preferred_fulfilment" value="collection" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">Collection from a fixed point</div>
                     <div class="optionSub">Venue, pub, event</div>
                   </div>
                 </label>
-                <label class="onboardingOption" data-value="mixed" data-question="preferred_fulfilment">
-                  <input type="radio" name="preferred_fulfilment" value="mixed" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="preferred_fulfilment" value="mixed" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">A mix — it depends on the drop</div>
                   </div>
@@ -1247,27 +1285,31 @@
             <div class="questionBlock">
               <p class="questionLabel">How often would you ideally like to run drops?</p>
               <div class="optionsGrid" id="q8Grid" data-question="preferred_cadence" data-multi="false">
-                <label class="onboardingOption" data-value="weekly" data-question="preferred_cadence">
-                  <input type="radio" name="preferred_cadence" value="weekly" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="preferred_cadence" value="weekly" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">Weekly or more</div>
                     <div class="optionSub">I want to build a regular rhythm</div>
                   </div>
                 </label>
-                <label class="onboardingOption" data-value="fortnightly" data-question="preferred_cadence">
-                  <input type="radio" name="preferred_cadence" value="fortnightly" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="preferred_cadence" value="fortnightly" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">A few times a month</div>
                   </div>
                 </label>
-                <label class="onboardingOption" data-value="occasional" data-question="preferred_cadence">
-                  <input type="radio" name="preferred_cadence" value="occasional" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="preferred_cadence" value="occasional" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">Occasionally — events and one-offs for now</div>
                   </div>
                 </label>
-                <label class="onboardingOption" data-value="unknown" data-question="preferred_cadence">
-                  <input type="radio" name="preferred_cadence" value="unknown" class="onboardingInput">
+                <label class="onboardingOption">
+                  <input type="radio" name="preferred_cadence" value="unknown" />
+                  <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">I'm not sure yet — I want to learn first</div>
                   </div>
@@ -1357,15 +1399,16 @@
                 what you can expect from us.
               </p>
 
-              <div class="onboardingOption" id="termsAcceptOption" role="button" tabindex="0" style="margin-top:14px;">
-
+              <label class="onboardingOption" id="termsAcceptOption" style="margin-top:14px;">
+                <input type="checkbox" id="obTermsAccept" />
+                <span class="optionIndicator"></span>
                 <div>
                   <div class="optionTitle">I have read and agree to the Hearth vendor terms of participation</div>
                   <div class="optionSub">
                     You can revisit the terms at any time from your workspace.
                   </div>
                 </div>
-              </div>
+              </label>
             </div>
 
             <div class="brandActions" style="margin-top: 6px;">
@@ -1586,103 +1629,79 @@
     }
 
     // ── Choice card wiring ─────────────────────────────────────────────────
-    function handleCardActivate(card, grid, isMulti, max, question){
-      if (card.dataset.disabled === 'true') return;
-
-      if (isMulti) {
-        card.classList.toggle('active');
-
-        const activeCards = [...grid.querySelectorAll('.onboardingOption.active')];
-        state[question] = activeCards.map(c => c.dataset.value);
-
-        grid.querySelectorAll('.onboardingOption').forEach(c => {
-          if (!c.classList.contains('active') && activeCards.length >= max) {
-            c.dataset.disabled = 'true';
-          } else {
-            delete c.dataset.disabled;
-          }
-        });
-      } else {
-        grid.querySelectorAll('.onboardingOption').forEach(c => { c.classList.remove('active'); });
-        card.classList.add('active');
-        state[question] = card.dataset.value;
-      }
-
-      evaluate();
-    }
-
     function wireGrid(gridId){
       const grid = byId(gridId);
       if (!grid) return;
+
       const isMulti = grid.dataset.multi === 'true';
       const max = parseInt(grid.dataset.max || '1', 10);
       const question = grid.dataset.question;
-      grid.querySelectorAll('.onboardingInput').forEach(function(input) {
-        input.addEventListener('change', function() {
-          const card = input.closest('.onboardingOption');
-          if (isMulti) {
-            card.classList.toggle('active', input.checked);
-            const activeCards = [...grid.querySelectorAll('.onboardingOption.active')];
-            state[question] = activeCards.map(c => c.dataset.value);
-            grid.querySelectorAll('.onboardingOption').forEach(function(c) {
-              const cInput = c.querySelector('.onboardingInput');
-              if (cInput && !cInput.checked && activeCards.length >= max) {
-                c.dataset.disabled = 'true';
-                cInput.disabled = true;
-              } else {
-                delete c.dataset.disabled;
-                if (cInput) cInput.disabled = false;
-              }
-            });
-          } else {
-            grid.querySelectorAll('.onboardingOption').forEach(function(c) {
-              c.classList.remove('active');
-            });
-            card.classList.add('active');
-            state[question] = input.value;
-          }
-          evaluate();
+
+      grid.addEventListener('change', () => {
+        if (isMulti) {
+          const checked = [...grid.querySelectorAll('input:checked')].map(i => i.value);
+          state[question] = checked;
+
+          // Enforce max selection: disable unchecked when at limit
+          const allInputs = grid.querySelectorAll('input');
+          allInputs.forEach(input => {
+            if (!input.checked && checked.length >= max) {
+              input.disabled = true;
+              input.closest('.onboardingOption').style.opacity = '0.45';
+              input.closest('.onboardingOption').style.pointerEvents = 'none';
+            } else {
+              input.disabled = false;
+              input.closest('.onboardingOption').style.opacity = '';
+              input.closest('.onboardingOption').style.pointerEvents = '';
+            }
+          });
+        } else {
+          const checked = grid.querySelector('input:checked');
+          state[question] = checked ? checked.value : null;
+        }
+
+        // Update active styling
+        grid.querySelectorAll('.onboardingOption').forEach(card => {
+          const input = card.querySelector('input');
+          card.classList.toggle('active', input.checked);
         });
+
+        evaluate();
       });
     }
 
     // ── Host context grid — mutual exclusion for "none" ───────────────────
-    function handleHostCardActivate(card, grid, question){
-      if (card.dataset.disabled === 'true') return;
-      const val = card.dataset.value;
-
-      card.classList.toggle('active');
-
-      if (val === 'none' && card.classList.contains('active')) {
-        grid.querySelectorAll('.onboardingOption').forEach(c => {
-          if (c.dataset.value !== 'none') c.classList.remove('active');
-        });
-      } else if (val !== 'none' && card.classList.contains('active')) {
-        const noneCard = grid.querySelector('.onboardingOption[data-value="none"]');
-        if (noneCard) noneCard.classList.remove('active');
-      }
-
-      state[question] = [...grid.querySelectorAll('.onboardingOption.active')].map(c => c.dataset.value);
-
-      renderHostDetails();
-      evaluate();
-    }
-
     function wireHostContextGrid(gridId){
       const grid = byId(gridId);
       if (!grid) return;
       const question = grid.dataset.question;
 
-      grid.querySelectorAll('.onboardingOption').forEach(card => {
-        card.addEventListener('click', () => {
-          handleHostCardActivate(card, grid, question);
+      grid.addEventListener('change', (e) => {
+        const changed = e.target;
+        const allInputs = [...grid.querySelectorAll('input')];
+
+        if (changed.value === 'none' && changed.checked) {
+          // "Not yet" selected — deselect everything else
+          allInputs.forEach(input => {
+            if (input.value !== 'none') input.checked = false;
+          });
+        } else if (changed.value !== 'none' && changed.checked) {
+          // Any other selected — deselect "Not yet"
+          const noneInput = grid.querySelector('input[value="none"]');
+          if (noneInput) noneInput.checked = false;
+        }
+
+        // Sync state — store ['none'] so stage2Complete() can detect a selection
+        state[question] = allInputs.filter(i => i.checked).map(i => i.value);
+
+        // Update active styling
+        grid.querySelectorAll('.onboardingOption').forEach(card => {
+          const input = card.querySelector('input');
+          card.classList.toggle('active', input.checked);
         });
-        card.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleHostCardActivate(card, grid, question);
-          }
-        });
+
+        renderHostDetails();
+        evaluate();
       });
     }
 
@@ -1846,20 +1865,24 @@
     function applySelection(gridId, values){
       const grid = byId(gridId);
       if (!grid || !values) return;
+
       const isArray = Array.isArray(values);
       const valSet = isArray ? new Set(values) : new Set([values]);
-      grid.querySelectorAll('.onboardingOption').forEach(card => {
-        const isSelected = valSet.has(card.dataset.value);
-        card.classList.toggle('active', isSelected);
-        const input = card.querySelector('.onboardingInput');
-        if (input) input.checked = isSelected;
+
+      grid.querySelectorAll('input').forEach(input => {
+        if (valSet.has(input.value)){
+          input.checked = true;
+          input.closest('.onboardingOption').classList.add('active');
+        }
       });
+
+      // Sync state
       const question = grid.dataset.question;
       const isMulti = grid.dataset.multi === 'true';
       if (isMulti){
         state[question] = [...valSet].filter(v => v);
       } else {
-        state[question] = isArray ? (values[0] || null) : (values || null);
+        state[question] = values || null;
       }
     }
 
@@ -1903,10 +1926,12 @@
       const grid = byId(gridId);
       if (!grid) return;
       const max = parseInt(grid.dataset.max || '1', 10);
-      const activeCards = [...grid.querySelectorAll('.onboardingOption.active')];
-      if (activeCards.length >= max){
-        grid.querySelectorAll('.onboardingOption:not(.active)').forEach(card => {
-          card.dataset.disabled = 'true';
+      const checked = [...grid.querySelectorAll('input:checked')];
+      if (checked.length >= max){
+        grid.querySelectorAll('input:not(:checked)').forEach(input => {
+          input.disabled = true;
+          input.closest('.onboardingOption').style.opacity = '0.45';
+          input.closest('.onboardingOption').style.pointerEvents = 'none';
         });
       }
     }
@@ -2066,9 +2091,12 @@
       const wrap = byId('stage6Wrapper');
       wrap.style.display = '';
       wrap.classList.add('visible');
+      // Pre-tick if vendor already accepted (defensive — usually only reached when not accepted).
+      const cb = byId('obTermsAccept');
       const btn = byId('acceptTermsBtn');
       const opt = byId('termsAcceptOption');
       const accepted = !!state.vendor?.terms_accepted;
+      cb.checked = accepted;
       btn.disabled = !accepted;
       opt.classList.toggle('active', accepted);
       setTimeout(() => { wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
@@ -2368,18 +2396,10 @@
         byId('saveSocialsBtn').addEventListener('click', saveSocials);
         byId('skipSocialsBtn').addEventListener('click', skipSocials);
         // T4-25 terms acceptance
-        byId('termsAcceptOption').addEventListener('click', () => {
-          const opt = byId('termsAcceptOption');
-          opt.classList.toggle('active');
-          byId('acceptTermsBtn').disabled = !opt.classList.contains('active');
-        });
-        byId('termsAcceptOption').addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            const opt = byId('termsAcceptOption');
-            opt.classList.toggle('active');
-            byId('acceptTermsBtn').disabled = !opt.classList.contains('active');
-          }
+        byId('obTermsAccept').addEventListener('change', (e) => {
+          const checked = e.target.checked;
+          byId('acceptTermsBtn').disabled = !checked;
+          byId('termsAcceptOption').classList.toggle('active', checked);
         });
         byId('acceptTermsBtn').addEventListener('click', acceptTerms);
         wirePaymentStage();
