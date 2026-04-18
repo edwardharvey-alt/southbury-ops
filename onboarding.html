@@ -1647,7 +1647,7 @@
       const question = grid.dataset.question;
       grid.addEventListener('change', function(e) {
         const input = e.target;
-        if (!input.classList.contains('onboardingInput')) return;
+        if (input.tagName !== 'INPUT') return;
         if (isMulti) {
           const checked = [...grid.querySelectorAll('.onboardingInput:checked')];
           state[question] = checked.map(function(i){ return i.value; });
