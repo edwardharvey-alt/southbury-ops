@@ -192,6 +192,7 @@
       margin: 0;
       cursor: pointer;
       z-index: 1;
+      pointer-events: auto;
     }
 
     .onboardingOption:hover{
@@ -1646,22 +1647,19 @@
       const max = parseInt(grid.dataset.max || '1', 10);
       const question = grid.dataset.question;
       grid.querySelectorAll('.onboardingOption').forEach(function(label) {
-        label.addEventListener('click', function(e) {
-          e.preventDefault();
-          const input = label.querySelector('.onboardingInput');
-          if (!input) return;
-          if (isMulti) {
-            const currentChecked = [...grid.querySelectorAll('.onboardingInput:checked')];
-            if (!input.checked && currentChecked.length >= max) return;
-            input.checked = !input.checked;
-            const nowChecked = [...grid.querySelectorAll('.onboardingInput:checked')];
-            state[question] = nowChecked.map(function(i){ return i.value; });
-          } else {
-            grid.querySelectorAll('.onboardingInput').forEach(function(i){ i.checked = false; });
-            input.checked = true;
-            state[question] = input.value;
-          }
-          evaluate();
+        const input = label.querySelector('.onboardingInput');
+        if (!input) return;
+        input.addEventListener('click', function(e) {
+          e.stopPropagation();
+          setTimeout(function() {
+            if (isMulti) {
+              const checked = [...grid.querySelectorAll('.onboardingInput:checked')];
+              if (checked.length > max) {
+                input.checked = false;
+              }
+            }
+            evaluate();
+          }, 0);
         });
       });
     }
