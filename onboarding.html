@@ -1645,22 +1645,22 @@
       const isMulti = grid.dataset.multi === 'true';
       const max = parseInt(grid.dataset.max || '1', 10);
       const question = grid.dataset.question;
-      grid.addEventListener('change', function(e) {
-        const input = e.target;
-        if (input.tagName !== 'INPUT') return;
-        if (isMulti) {
-          const checked = [...grid.querySelectorAll('.onboardingInput:checked')];
-          if (checked.length > max) {
-            input.checked = false;
-            const rechecked = [...grid.querySelectorAll('.onboardingInput:checked')];
-            state[question] = rechecked.map(function(i){ return i.value; });
+      grid.querySelectorAll('.onboardingInput').forEach(function(input) {
+        input.addEventListener('change', function() {
+          if (isMulti) {
+            const checked = [...grid.querySelectorAll('.onboardingInput:checked')];
+            if (checked.length > max) {
+              input.checked = false;
+              const rechecked = [...grid.querySelectorAll('.onboardingInput:checked')];
+              state[question] = rechecked.map(function(i){ return i.value; });
+            } else {
+              state[question] = checked.map(function(i){ return i.value; });
+            }
           } else {
-            state[question] = checked.map(function(i){ return i.value; });
+            state[question] = input.value;
           }
-        } else {
-          state[question] = input.value;
-        }
-        evaluate();
+          evaluate();
+        });
       });
     }
 
