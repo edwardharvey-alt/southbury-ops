@@ -1140,6 +1140,12 @@ existing vendors-table upserts on that page.
 
 ### Tier 6 — Production readiness
 
+These items must all land before any real vendor starts capturing live
+customer data. The current workflow (direct pushes to main, auto-deploy
+to live site, no staging, no local dev) is fine for solo development
+but dangerous the moment real vendors depend on the platform. A bug in
+order.html today would reach live customers within 30 seconds of commit.
+
 T6-1: Domain migration to lovehearth.co.uk
 Move the production deployment from spiffy-tulumba-848684.netlify.app to
 lovehearth.co.uk. Scope includes: DNS configuration (registrar records
@@ -1151,6 +1157,44 @@ currently references the netlify.app subdomain — needs update and redeploy),
 admin.html Edge Function invoke URL, any other hardcoded URLs across the
 codebase. Also removes the "Dangerous" browser warning that appears on
 the netlify.app subdomain. Blocks T3-8 (Stripe).
+
+T6-2: Local development environment
+Set up Ed's Mac to run the Hearth site locally for testing changes
+before they reach any deployed environment. Requires: Node.js installed,
+a local static file server (netlify dev, or a simpler equivalent like
+npx serve), a separate Supabase dev project with test data (not the
+production database), and a config switch in assets/config.js so the
+site connects to the dev Supabase instance when running locally. This
+is the first line of defence against shipping broken code — changes
+can be verified end-to-end before any commit.
+
+T6-3: Staging environment
+Set up a second Netlify site deployed from a separate branch (e.g.
+"staging"), pointing at a separate Supabase staging project. Accessible
+at a URL like staging.lovehearth.co.uk. All changes flow: local → staging
+branch → verified on staging URL → merged to main → deployed to
+production. Requires: branch created, Netlify site configured against it,
+Supabase staging project, DNS record for staging subdomain, separate
+environment variables in Netlify for staging vs production, documented
+promotion workflow.
+
+T6-4: Branch protection and PR review workflow
+GitHub branch protection rules on main: require pull requests, require
+at least one review before merge, require status checks to pass.
+Claude Code workflow must change — it can no longer commit directly
+to main. It commits to feature branches, opens PRs, and Ed reviews and
+merges. Catches the category of Claude Code mistakes where the commit
+does the wrong thing subtly. Slower per-change, but appropriate once
+real vendors are on the platform. Needs to be agreed in a session with
+CLAUDE.md updated so the new workflow is written down.
+
+T6-5: Supabase backup strategy
+The production Supabase project needs point-in-time recovery enabled,
+which is a Pro-tier feature. Before real customer data lands, upgrade
+to Supabase Pro and verify PITR is active. Without this, a bad SQL
+migration or accidental data deletion has no recovery path beyond
+whatever daily backup Supabase's free tier provides. Separate from
+Netlify Pro (which is about bandwidth — also needed, flagged elsewhere).
 
 ## Recommended next session order
 
@@ -1221,7 +1265,16 @@ T5-B2 / T5-B3 — onboarding capture for social handles and address
 (schema columns already exist; just need the UI)
 T5-B4 — surface social handles and address in Brand Hearth
 
-Next priority: T6-1 (domain migration to lovehearth.co.uk). Blocks T3-8
-(Stripe) and is a prerequisite for any real vendor go-live. Browser
-warnings on the netlify.app subdomain are increasing and affect user
-trust during testing.
+Next priority: T6 workstream (production readiness) must complete before
+any real vendor captures live data. Order:
+  1. T6-1 — Domain migration to lovehearth.co.uk (in progress)
+  2. T6-2 — Local development environment
+  3. T6-3 — Staging environment
+  4. T6-4 — Branch protection and PR review workflow
+  5. T6-5 — Supabase Pro upgrade for point-in-time recovery
+
+Once T6 is complete, T3-8 (Stripe integration) unblocks, and real vendor
+onboarding (Healthy Habits Cafe first) can proceed safely. Going live
+before T6-2, T6-3, and T6-4 means any Claude Code mistake reaches live
+customers within 30 seconds — appropriate for solo development, dangerous
+when real vendors depend on the platform.
