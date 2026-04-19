@@ -459,6 +459,22 @@ Add per-item flags: travels well for delivery, suitable for collection,
 prep complexity. Helps vendors build delivery-appropriate menus and feeds
 future fulfilment intelligence.
 
+T3-12: Order page — neighbourhood radius enforcement
+Validate that a customer's delivery postcode falls within the declared
+drop radius before allowing order submission. This is a hard block, not
+a soft warning — if the postcode is outside the radius, the order cannot
+proceed and a clear message is shown. Applies to neighbourhood delivery
+drops only. Collection drops are unaffected.
+Audit first: check whether any radius validation currently exists in
+order.html before writing a prompt. If none exists, the build requires:
+(1) drop_id to carry a centre postcode and radius value, (2) a postcode
+distance calculation at order submission time, (3) a clear error state
+on the order form.
+This is potentially urgent — if neighbourhood drops go live without
+enforcement, vendors could receive orders from outside their intended
+area and feel obligated to fulfil them. Treat as Tier 3 priority once
+neighbourhood drops are in active use.
+
 ### Tier 4 — Enhancements that will impress
 
 T4-1: Recurring series — actually create drops ✓ COMPLETE
@@ -752,6 +768,41 @@ that's 12 people you can reach without paying commission." Audit
 onboarding Q3 (primary_goal) and Q5 (delivery_model) for clarity and
 prominence of the aggregator reduction pathway.
 
+T4-31: Order page and ordering experience — visual polish pass
+Review and improve the visual quality of the customer-facing ordering
+experience. Known opportunity: per-item menu photography. Allow vendors
+to upload an image per product, stored in Supabase Storage and rendered
+on the order page alongside the item name and description. Schema change
+required: add image_url (text, nullable) to products table. Order page
+renders image when present, degrades gracefully when absent.
+Broader brief: assess what else would make the ordering page feel more
+premium, more locally specific, and more vendor-led. This is about making
+vendors proud to share their order link.
+
+T4-32: Order page — map display for collection point and delivery area
+Add a toggleable map to the order page, controlled per-drop in Drop Studio.
+Two modes:
+- Collection drops: vendor pins an exact location (coordinate or address)
+  when creating the drop. Order page shows a map marker so customers know
+  precisely where to collect. Particularly valuable for food trucks where
+  location changes per drop.
+- Neighbourhood delivery drops: order page shows the delivery area as a
+  shaded radius so customers can see at a glance whether they are covered.
+Map should be off by default and enabled per-drop. Applies to any drop
+type — not exclusive to food trucks. Implementation likely via Google Maps
+embed or equivalent. Dependency: T3-12 for the radius data model.
+
+T4-33: Brand Hearth — vendor customisation review
+Conduct a structured review of Brand Hearth to identify what additional
+brand controls would meaningfully change how vendor-owned the experience
+feels. Current state is minimal: hero image, display name, tagline, colour
+picker. Assess whether vendors currently feel proud showing their Brand
+Hearth page to customers. Candidates for improvement: font choices, accent
+colour application across more UI elements, a secondary brand image, richer
+"about" copy, social handle display.
+Goal is not feature bloat — it is asking what is missing before deciding
+what to build. Run as a focused design review before any build work.
+
 ### Tier 5 — Strategic platform features
 
 T5-1: Delivery optimisation
@@ -894,6 +945,54 @@ finds more than one vendor row linked to a session, show a vendor picker
 before entering the platform. Schema already supports this — auth_user_id
 on vendors means one user can own multiple rows. Deferred: one account =
 one vendor for now.
+
+T5-22: Catering business flow
+Explore how Hearth could support catering enquiries and jobs without
+drifting from the core drop model. The tension: catering is often bespoke,
+negotiated, and not capacity-led in the same way as a drop. The question
+is whether a catering job can be modelled as a private drop — pre-sold,
+fixed menu, fixed window, known recipient — rather than building a
+separate quoting or invoicing flow.
+Spec required before any build: define what a Hearth-native catering model
+looks like and where it diverges enough to need its own UX treatment. This
+is a longer-term item. Do not build until the core drop model is proven
+with real vendors.
+
+T5-23: Multi-vendor events
+An event (festival, community gathering, large fundraiser) creates a Hearth
+event landing page that acts as a hub. Multiple vendors each configure their
+own drop within the event — their own menu, their own window, their own
+capacity — managed independently. Customers land on the event page, browse
+vendors, click through and pre-order. The event link could be sent alongside
+a ticket purchase or promoted by the event organiser.
+Commercial model: this is a vendor-side feature, not an organiser product.
+Vendors already on a Hearth subscription get multi-vendor event participation
+as part of their plan. Hearth does not charge the event organiser — the
+event landing page and unified hub is platform infrastructure, not a
+separately priced service. This makes Hearth a selling point for vendors
+when pitching to event organisers.
+Data model question: is the event a new top-level object sitting above drops,
+or a host with a special presentation layer? To be resolved at spec stage.
+Dependency: subscription model must be live and a vendor base must exist to
+pilot with. Longer-term item — revisit once subscription model is proven.
+
+T5-24: POS integration
+Vendors using an existing POS (Square, Lightspeed, etc.) currently manage
+two separate order streams: real-time in-person or aggregator orders through
+their POS, and Hearth drop orders through the platform. Without integration,
+this creates operational confusion and friction.
+Two separate items:
+(1) Short term — capture POS platform during onboarding. Add a question to
+the vendor onboarding flow asking what POS system the vendor uses today, if
+any. Options: Square, Lightspeed, Clover, none, other. Writes to vendors
+table (new column: pos_platform text). Low effort, useful signal for future
+integration prioritisation and for understanding vendor operational context.
+(2) Longer term — full POS integration. Allow Hearth drop orders to flow
+into the vendor's existing POS so they manage a single order stream. The
+point is not to replace the POS — it is to make Hearth feel like part of
+the vendor's existing operation rather than a parallel one. Scope and
+approach depend on which POS platforms are most common among early vendors.
+Do not build until real friction is confirmed from live vendor feedback.
 
 ### Tier 5-A — Auth workstream
 
@@ -1046,6 +1145,7 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 9.  T3-9  — Order page customer data capture and consent ✓ COMPLETE
 10. T3-10 — Order ready notification
 11. T3-11 — Menu Library delivery and collection suitability flags
+12. T3-12 — Order page neighbourhood radius enforcement
 12. T4-1  — Recurring series drop generation ✓ COMPLETE
 13. T4-2  — Order confirmation page ✓ COMPLETE
 14. T4-3  — Insights drop performance and intelligence layer ✓ COMPLETE
