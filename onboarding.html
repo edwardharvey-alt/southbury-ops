@@ -1039,6 +1039,60 @@
             </div>
           </div>
 
+          <!-- Q2b — POS platform (T5-24 short-term) -->
+          <div class="questionBlock">
+            <p class="questionLabel">Do you use a point-of-sale (POS) system today?</p>
+            <p class="questionSub">If you use one, we may be able to integrate with it in future.</p>
+            <div class="optionsGrid" id="q2bGrid" data-question="pos_platform" data-multi="false">
+              <div class="onboardingOption" role="button" tabindex="0" data-value="square">
+                <input type="radio" class="onboardingInput" name="pos_platform" value="square" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">Square</div>
+                </div>
+              </div>
+              <div class="onboardingOption" role="button" tabindex="0" data-value="lightspeed">
+                <input type="radio" class="onboardingInput" name="pos_platform" value="lightspeed" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">Lightspeed</div>
+                </div>
+              </div>
+              <div class="onboardingOption" role="button" tabindex="0" data-value="clover">
+                <input type="radio" class="onboardingInput" name="pos_platform" value="clover" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">Clover</div>
+                </div>
+              </div>
+              <div class="onboardingOption" role="button" tabindex="0" data-value="toast">
+                <input type="radio" class="onboardingInput" name="pos_platform" value="toast" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">Toast</div>
+                </div>
+              </div>
+              <div class="onboardingOption" role="button" tabindex="0" data-value="other">
+                <input type="radio" class="onboardingInput" name="pos_platform" value="other" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">Another system</div>
+                </div>
+              </div>
+              <div class="onboardingOption" role="button" tabindex="0" data-value="none">
+                <input type="radio" class="onboardingInput" name="pos_platform" value="none" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">I don't use one</div>
+                </div>
+              </div>
+            </div>
+            <div class="field fullWidth" id="obPosPlatformOtherWrap" style="display:none; margin-top:10px;">
+              <input id="obPosPlatformOther" type="text" placeholder="Which system?" />
+              <div class="helperText">Optional — helps us prioritise future integrations.</div>
+            </div>
+          </div>
+
           <!-- Q3 -->
           <div class="questionBlock">
             <p class="questionLabel">What are you hoping Hearth helps you do?</p>
@@ -1616,6 +1670,7 @@
       // Current selections
       vendor_type: null,
       delivery_model: null,
+      pos_platform: null,
       primary_goal: [],
       customer_data_posture: null,
       customer_geography: null,
@@ -1797,7 +1852,7 @@
     }
 
     function syncStateFromDOM(){
-      ['q1Grid','q2Grid','q3Grid','q4Grid','q5Grid','q6Grid','q7Grid','q8Grid','q9Grid'].forEach(function(gridId){
+      ['q1Grid','q2Grid','q2bGrid','q3Grid','q4Grid','q5Grid','q6Grid','q7Grid','q8Grid','q9Grid'].forEach(function(gridId){
         var grid = byId(gridId);
         if (!grid) return;
         var question = grid.dataset.question;
@@ -1813,6 +1868,17 @@
 
     function evaluate(){
       syncStateFromDOM();
+      // POS platform "Other" conditional input — show/clear based on selection
+      const posOtherWrap = byId('obPosPlatformOtherWrap');
+      if (posOtherWrap){
+        if (state.pos_platform === 'other'){
+          posOtherWrap.style.display = '';
+        } else {
+          posOtherWrap.style.display = 'none';
+          const inp = byId('obPosPlatformOther');
+          if (inp) inp.value = '';
+        }
+      }
       if (!stage2Revealed && stage1Complete()){
         stage2Revealed = true;
         revealStage('stage2Wrapper', 'dot1', 'label1', 'dot2', 'label2');
@@ -1897,6 +1963,8 @@
 
       if (vendor.vendor_type)           applySelection('q1Grid', vendor.vendor_type);
       if (vendor.delivery_model)        applySelection('q2Grid', vendor.delivery_model);
+      if (vendor.pos_platform)          applySelection('q2bGrid', vendor.pos_platform);
+      if (vendor.pos_platform_other)    byId('obPosPlatformOther').value = vendor.pos_platform_other;
       if (vendor.primary_goal)          applySelection('q3Grid', vendor.primary_goal);
       if (vendor.customer_data_posture) applySelection('q4Grid', vendor.customer_data_posture);
       if (vendor.customer_geography)    applySelection('q5Grid', vendor.customer_geography);
@@ -1923,6 +1991,9 @@
 
       // Re-enforce multi max limits after prepopulate
       enforceMultiLimits('q3Grid');
+
+      // Sync state and toggle "Other" input visibility based on prepopulated values
+      evaluate();
     }
 
     function enforceMultiLimits(gridId){
@@ -2324,6 +2395,8 @@
         ...(websiteUrl ? { website_url: websiteUrl } : {}),
         vendor_type:             state.vendor_type,
         delivery_model:          state.delivery_model,
+        pos_platform:            state.pos_platform,
+        pos_platform_other:      state.pos_platform === 'other' ? byId('obPosPlatformOther').value.trim() || null : null,
         primary_goal:            state.primary_goal,
         customer_data_posture:   state.customer_data_posture,
         data_posture:            dataPosture,
@@ -2374,6 +2447,7 @@
         initProgress();
         wireGrid('q1Grid');
         wireGrid('q2Grid');
+        wireGrid('q2bGrid');
         wireGrid('q3Grid');
         wireGrid('q4Grid');
         wireGrid('q5Grid');

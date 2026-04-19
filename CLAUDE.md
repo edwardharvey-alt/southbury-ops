@@ -85,9 +85,9 @@ and HearthNav.withVendor).
   default `{}`, shape `{"instagram": "handle", "tiktok": "handle", ...}`
   — added this session), `onboarding_completed` (boolean), and the
   onboarding answer columns (`primary_goal`, `delivery_model`,
-  `customer_data_posture`, `existing_host_contexts`, etc.) populated
-  by the onboarding flow. `terms_accepted` / `terms_accepted_at` to
-  be added when T4-25 is built
+  `pos_platform`, `pos_platform_other`, `customer_data_posture`,
+  `existing_host_contexts`, etc.) populated by the onboarding flow.
+  `terms_accepted` / `terms_accepted_at` to be added when T4-25 is built
 - drops — the core unit: each drop has slug, timing, capacity, host, status,
   collection_point_description (text), delivery_area_description (text),
   customer_notes_enabled (boolean, default true)
@@ -982,11 +982,11 @@ two separate order streams: real-time in-person or aggregator orders through
 their POS, and Hearth drop orders through the platform. Without integration,
 this creates operational confusion and friction.
 Two separate items:
-(1) Short term — capture POS platform during onboarding. Add a question to
-the vendor onboarding flow asking what POS system the vendor uses today, if
-any. Options: Square, Lightspeed, Clover, none, other. Writes to vendors
-table (new column: pos_platform text). Low effort, useful signal for future
-integration prioritisation and for understanding vendor operational context.
+(1) Short term — capture POS platform during onboarding ✓ COMPLETE
+Q2b added to onboarding (Square, Lightspeed, Clover, Toast, Other, None);
+writes `pos_platform` and `pos_platform_other` to the vendors table.
+Useful signal for future integration prioritisation and for understanding
+vendor operational context.
 (2) Longer term — full POS integration. Allow Hearth drop orders to flow
 into the vendor's existing POS so they manage a single order stream. The
 point is not to replace the POS — it is to make Hearth feel like part of
