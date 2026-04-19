@@ -1662,32 +1662,33 @@
       if (!grid) return;
       const question = grid.dataset.question;
 
-      grid.addEventListener('change', (e) => {
-        const changed = e.target;
-        const allInputs = [...grid.querySelectorAll('input')];
+      grid.querySelectorAll('.onboardingOption').forEach(function(card){
+        card.addEventListener('click', function(){
+          const value = card.dataset.value;
+          const isNone = value === 'none';
+          const isCurrentlyActive = card.classList.contains('active');
 
-        if (changed.value === 'none' && changed.checked) {
-          // "Not yet" selected — deselect everything else
-          allInputs.forEach(input => {
-            if (input.value !== 'none') input.checked = false;
-          });
-        } else if (changed.value !== 'none' && changed.checked) {
-          // Any other selected — deselect "Not yet"
-          const noneInput = grid.querySelector('input[value="none"]');
-          if (noneInput) noneInput.checked = false;
-        }
+          if (isNone){
+            if (isCurrentlyActive){
+              card.classList.remove('active');
+            } else {
+              grid.querySelectorAll('.onboardingOption').forEach(function(c){
+                c.classList.remove('active');
+              });
+              card.classList.add('active');
+            }
+          } else {
+            const noneCard = grid.querySelector('.onboardingOption[data-value="none"]');
+            if (noneCard) noneCard.classList.remove('active');
+            card.classList.toggle('active');
+          }
 
-        // Sync state — store ['none'] so stage2Complete() can detect a selection
-        state[question] = allInputs.filter(i => i.checked).map(i => i.value);
+          const activeCards = [...grid.querySelectorAll('.onboardingOption.active')];
+          state[question] = activeCards.map(function(c){ return c.dataset.value; });
 
-        // Update active styling
-        grid.querySelectorAll('.onboardingOption').forEach(card => {
-          const input = card.querySelector('input');
-          card.classList.toggle('active', input.checked);
+          renderHostDetails();
+          evaluate();
         });
-
-        renderHostDetails();
-        evaluate();
       });
     }
 
@@ -1789,7 +1790,7 @@
     }
 
     function syncStateFromDOM(){
-      ['q1Grid','q2Grid','q3Grid','q4Grid','q5Grid','q6Grid','q7Grid','q8Grid'].forEach(function(gridId){
+      ['q1Grid','q2Grid','q3Grid','q4Grid','q5Grid','q6Grid','q7Grid','q8Grid','q9Grid'].forEach(function(gridId){
         var grid = byId(gridId);
         if (!grid) return;
         var question = grid.dataset.question;
