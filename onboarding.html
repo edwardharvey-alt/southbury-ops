@@ -875,6 +875,13 @@
       .paymentComfort{ grid-template-columns:1fr; }
       .paymentPath{ padding:20px 16px; }
     }
+
+    /* Stage 6 vendor terms link — make the inline link legible as a link */
+    #stage6 .questionSub a{
+      color:var(--h-accent);
+      font-weight:800;
+      text-decoration:underline;
+    }
   </style>
 </head>
 <body>
@@ -1939,21 +1946,10 @@
 
       const sub = byId('completionSub');
       const actions = byId('completionActions');
-      sub.textContent = "You're ready to run your first drop.";
-
-      // T4-20: universal first drop CTA. We check existing_host_contexts
-      // so the destination can differentiate in future, but for now the
-      // button always links to Drop Studio and always appears.
-      const hostContexts = state.vendor?.existing_host_contexts;
-      const hasHostContexts = Array.isArray(hostContexts)
-        ? hostContexts.length > 0
-        : !!(hostContexts && String(hostContexts).trim());
-      const firstDropHref = hasHostContexts
-        ? HearthNav.withVendor('drop-manager.html')
-        : HearthNav.withVendor('drop-manager.html');
+      sub.textContent = "Now let's shape how customers will see your brand.";
 
       actions.innerHTML =
-        '<a class="btnAccent" href="' + firstDropHref + '">Create your first drop →</a>' +
+        '<a class="btnAccent" href="' + HearthNav.withVendor('brand-hearth.html') + '">Set up your brand →</a>' +
         '<a class="brandMiniLink" href="' + HearthNav.withVendor('home.html') + '">Go to your dashboard →</a>';
     }
 

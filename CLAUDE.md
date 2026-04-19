@@ -276,6 +276,19 @@ on top of the coding rules above.
    to always start with git fetch origin && git reset --hard origin/main,
    documented above as Critical rule #10.
 
+10. **Onboarding grids use click handlers on the card div, not change
+    events on hidden inputs.** The `.onboardingOption` cards hide their
+    native radio/checkbox input with `pointer-events: none` so the whole
+    card is the tap target. That means input `change` events never fire
+    on iOS Safari — the grid wiring must listen for `click` on the card
+    and toggle `.active` on the card itself, with state read from
+    `.onboardingOption.active` rather than `input:checked`. All nine
+    grids (Q1–Q9) now follow this pattern. `syncStateFromDOM()`
+    enumerates every grid including `q9Grid`, so `evaluate()` sees
+    consistent state after any click. Q1–Q9 click-handler fix validated
+    on iOS Safari — the original iOS radio selection bug flagged in the
+    handover is definitively closed.
+
 ## Brand and tone
 
 - Calm, assured, warm, considered, local
