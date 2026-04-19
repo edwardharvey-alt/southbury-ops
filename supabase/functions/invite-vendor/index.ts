@@ -35,13 +35,33 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       redirectTo: "https://spiffy-tulumba-848684.netlify.app/set-password.html",
     });
 
     if (error) {
       return new Response(JSON.stringify({ error: error.message }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userId = data?.user?.id;
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "Invite succeeded but no user id returned" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { error: linkError } = await supabaseAdmin
+      .from("vendors")
+      .update({ auth_user_id: userId })
+      .eq("email", email);
+
+    if (linkError) {
+      return new Response(JSON.stringify({ error: "Invite sent but vendor link failed: " + linkError.message }), {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
