@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const ALLOWED_ORIGIN = "https://spiffy-tulumba-848684.netlify.app";
+const ALLOWED_ORIGIN = "https://lovehearth.co.uk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     );
 
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: "https://spiffy-tulumba-848684.netlify.app/set-password.html",
+      redirectTo: "https://lovehearth.co.uk/set-password.html",
     });
 
     if (error) {
