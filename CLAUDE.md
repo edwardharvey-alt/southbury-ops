@@ -289,6 +289,18 @@ on top of the coding rules above.
     on iOS Safari — the original iOS radio selection bug flagged in the
     handover is definitively closed.
 
+11. **Vendor provisioning links auth_user_id via the Edge Function, not
+    set-password.html.** When admin.html creates a new vendor via
+    admin.html and triggers the invite-vendor Edge Function, the function
+    now reads the newly created user.id from inviteUserByEmail and
+    immediately updates vendors.auth_user_id where email matches. If the
+    link update fails, the function returns an error rather than silent
+    success. This ensures set-password.html can always resolve the vendor
+    via auth session. The alternative — deferring the link to
+    set-password.html client-side — leaves a window where a vendor row
+    has no owner and resolveVendor() cannot find it by auth_user_id.
+    Server-side linking with the service role is the correct pattern.
+
 ## Brand and tone
 
 - Calm, assured, warm, considered, local
@@ -434,9 +446,13 @@ T3-7: Order page — real-time capacity update
 Add periodic re-fetch or Realtime subscription so capacity shown to
 customer reflects other customers' orders placed while page is open.
 
-T3-8: Stripe integration
-When ready for go-live. Order ID generated, payload structured, TODO
-comment marks exact insertion point.
+T3-8: Stripe integration — DEFERRED
+Intentionally parked until the production domain migration is complete.
+Stripe Connect Express requires a stable production domain for return URLs
+and webhook endpoints. Setting up Stripe against spiffy-tulumba-848684.netlify.app
+would require reconfiguration once the platform moves to lovehearth.co.uk.
+Order ID is generated and payload is structured with a TODO marker in
+handoffToPayment(). Build after T6-1 (domain migration) is complete.
 
 T3-9: Order page — customer data capture and consent ✓ COMPLETE
 At checkout capture customer name, email, and postcode. Write to a new
@@ -611,25 +627,16 @@ Phone number input added to Brand Identity section of Brand Hearth.
 Saves to `vendors.contact_phone`. Pre-populates from saved value on
 load.
 
-T4-19: Onboarding → Brand Hearth continuity
-When a vendor arrives at Brand Hearth having completed onboarding, the
-page should acknowledge that their identity basics are already set. Show
-a quiet confirmation at the top of the Brand Identity section: "Your
-business name and website were carried over from your setup." This
-removes the friction of a vendor feeling they need to re-enter
-information they already provided. No data change — purely a UX state
-based on `onboarding_completed` being true and `display_name` being
-populated.
+T4-19: Onboarding → Brand Hearth continuity ✓ COMPLETE
+Quiet confirmation bar in Brand Identity section when
+onboarding_completed is true. Adapts message based on whether website
+is set. Links back to Setup.
 
-T4-20: Onboarding → first drop pathway
-When a vendor completes onboarding and has flagged existing host
-relationships in Q9, the completion screen should offer a direct pathway
-to creating their first drop with that context pre-populated. Button:
-"Create your first drop →" linking to Drop Studio with the host type
-pre-selected where possible. For vendors with no existing host context,
-the button links to Drop Studio without pre-population. This closes the
-gap between setup and action — the moment onboarding ends should feel
-like the beginning of something, not a dead end.
+T4-20: Onboarding → first drop pathway ✓ COMPLETE
+Completion card leads to Brand Hearth as primary action ("Set up your
+brand →") with dashboard as secondary. The first-drop nudge from Brand
+Hearth carries the vendor into Drop Studio after brand setup is saved.
+This preserves the Brand → Menu → Drop sequence from the brand playbook.
 
 T4-21: Customer import — post-import demand view
 After a vendor completes a customer import (T4-14), surface a
@@ -1131,6 +1138,20 @@ address captured in T5-B3 and the social handles captured in T5-B2,
 alongside the existing website URL field. Save pattern mirrors the
 existing vendors-table upserts on that page.
 
+### Tier 6 — Production readiness
+
+T6-1: Domain migration to lovehearth.co.uk
+Move the production deployment from spiffy-tulumba-848684.netlify.app to
+lovehearth.co.uk. Scope includes: DNS configuration (registrar records
+pointing at Netlify), Netlify custom domain setup with HTTPS certificate
+provisioning, Supabase Auth URL configuration update (site URL, redirect
+URLs), Supabase Auth email template updates (sender address, any hardcoded
+links), Edge Function hardcoded URLs (invite-vendor redirectTo URL
+currently references the netlify.app subdomain — needs update and redeploy),
+admin.html Edge Function invoke URL, any other hardcoded URLs across the
+codebase. Also removes the "Dangerous" browser warning that appears on
+the netlify.app subdomain. Blocks T3-8 (Stripe).
+
 ## Recommended next session order
 
 All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
@@ -1199,3 +1220,8 @@ T5-B1 ✓ — extract resolveVendor() into shared module (complete —
 T5-B2 / T5-B3 — onboarding capture for social handles and address
 (schema columns already exist; just need the UI)
 T5-B4 — surface social handles and address in Brand Hearth
+
+Next priority: T6-1 (domain migration to lovehearth.co.uk). Blocks T3-8
+(Stripe) and is a prerequisite for any real vendor go-live. Browser
+warnings on the netlify.app subdomain are increasing and affect user
+trust during testing.
