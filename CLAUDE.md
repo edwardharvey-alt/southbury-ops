@@ -1216,6 +1216,19 @@ migration or accidental data deletion has no recovery path beyond
 whatever daily backup Supabase's free tier provides. Separate from
 Netlify Pro (which is about bandwidth — also needed, flagged elsewhere).
 
+T6-6: Transactional email via Resend or Postmark
+Supabase currently sends auth emails (magic links, password reset,
+vendor invites) from its default noreply address. These can look
+generic and sometimes land in spam. Configure Supabase to send
+auth emails from noreply@lovehearth.co.uk via a dedicated
+transactional email service — Resend is the modern default, Postmark
+is the deliverability-focused alternative. Requires: Resend or
+Postmark account, DNS records at GoDaddy (SPF, DKIM, DMARC for
+transactional sending), Supabase SMTP configuration updated, test
+the full auth flow end-to-end. Separate infrastructure from the
+Google Workspace account being set up 21 April — regular email
+providers aren't designed for programmatic bulk sending.
+
 ## Recommended next session order
 
 All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
@@ -1292,6 +1305,7 @@ any real vendor captures live data. Order:
   3. T6-3 — Staging environment
   4. T6-4 — Branch protection and PR review workflow
   5. T6-5 — Supabase Pro upgrade for point-in-time recovery
+  6. T6-6 — Transactional email via Resend or Postmark
 
 Once T6 is complete, T3-8 (Stripe integration) unblocks, and real vendor
 onboarding (Healthy Habits Cafe first) can proceed safely. Going live
