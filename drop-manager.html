@@ -4078,25 +4078,33 @@
         body = "A neighbourhood drop is a solid starting point — promote it through social media or in-store to build your first orders. Or find a local host to partner with and let their audience do the work.";
       }
 
+      const isDataRich = posture === "rich" || posture === "partial";
+
+      const ctaHtml = isDataRich
+        ? `<a class="btnAccent" href="${HearthNav.withVendor('customer-import.html')}">Import your customers →</a>`
+        : `<button class="btnAccent" id="firstDropGuidanceCta" type="button">Create your first drop</button>`;
+
       el.innerHTML = `
         <h4 class="firstDropGuidanceHeading">${escapeHtml(heading)}</h4>
         <p class="firstDropGuidanceBody">${escapeHtml(body)}</p>
         <div class="firstDropGuidanceActions">
-          <button class="btnAccent" id="firstDropGuidanceCta" type="button">Create your first drop</button>
+          ${ctaHtml}
         </div>
       `;
       el.style.display = "";
 
-      const cta = byId("firstDropGuidanceCta");
-      if (cta) {
-        cta.addEventListener("click", async () => {
-          try {
-            await createNewDrop();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to create drop.");
-          }
-        });
+      if (!isDataRich) {
+        const cta = byId("firstDropGuidanceCta");
+        if (cta) {
+          cta.addEventListener("click", async () => {
+            try {
+              await createNewDrop();
+            } catch (err) {
+              console.error(err);
+              showError(err.message || "Unable to create drop.");
+            }
+          });
+        }
       }
     }
 
