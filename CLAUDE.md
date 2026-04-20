@@ -30,7 +30,12 @@ Core belief: great local food should strengthen communities, not bypass them.
 
 ## File structure
 
-- index.html — Service Board (live operational view for active drops)
+- index.html — public marketing landing page (served at the root of
+  lovehearth.co.uk). Formerly landing.html; renamed on 2026-04-20 as
+  part of the routing rewire so unauthenticated visitors hit the
+  landing page at the root URL rather than a broken Service Board.
+- service-board.html — Service Board (live operational view for active
+  drops). Formerly index.html; renamed on 2026-04-20.
 - drop-manager.html — Drop Studio (create and configure drops)
 - drop-menu.html — Menu Library (products, bundles, categories)
 - brand-hearth.html — Brand Hearth (vendor identity editor)
@@ -186,7 +191,7 @@ on top of the coding rules above.
    page that queries `v_drop_summary` as a list MUST filter with
    `.eq("vendor_id", state.vendorId)`. The view exposes every vendor's
    drops; the frontend is the only thing scoping them. `loadDrops()` in
-   drop-manager.html and index.html were both missing this filter and
+   drop-manager.html and service-board.html were both missing this filter and
    leaked cross-vendor data until it was fixed. The same rule applies to
    any future view or page that reads drops as a collection. Fetching
    by drop_id (`.eq("id", …)`) must additionally assert
@@ -411,7 +416,7 @@ children. Root cause fix: hearth.css .container overridden to width:100%
 at 768px to fix iOS Safari 100vw feedback loop. Grid display grids use
 minmax(0,1fr) to prevent max-content overflow. Pages completed: order.html,
 home.html, brand-hearth.html, drop-menu.html, drop-manager.html, hosts.html,
-host-profile.html, index.html (Service Board), onboarding.html (Setup),
+host-profile.html, service-board.html (Service Board), onboarding.html (Setup),
 insights.html. Remaining pages (scorecard.html, customer-import.html,
 privacy.html, vendor-terms.html, host-terms.html) are lower priority —
 legal pages are rarely accessed on mobile and scorecard/import are
@@ -1082,6 +1087,11 @@ signup.html) and "Sign in" (routes to login.html). Explains what Hearth
 is, who it's for, and why it's different. Root URL destination for anyone
 arriving at the platform cold.
 
+Note (2026-04-20): landing.html was renamed to index.html and the old
+Service Board was renamed to service-board.html as part of the routing
+rewire. The root URL now serves the landing page directly, and
+/landing.html redirects to / via _redirects for stale bookmarks.
+
 T5-A10: signup.html — new vendor email capture
 Standalone page. No vendor-nav.js. Email input triggers Supabase magic
 link. On click, routes to auth-callback.html which detects no existing
@@ -1104,7 +1114,7 @@ but pay down friction and tech debt.
 T5-B1: Extract `resolveVendor()` into a shared module ✓ COMPLETE
 `assets/hearth-vendor.js` created as a shared module exposing
 `window.HearthVendor.resolveVendor(_sb)`. All 12 operator pages
-(index.html, drop-manager.html, drop-menu.html, brand-hearth.html,
+(service-board.html, drop-manager.html, drop-menu.html, brand-hearth.html,
 insights.html, customers.html, customer-import.html, onboarding.html,
 home.html, hosts.html, host-profile.html, scorecard.html) updated to
 load the module after config.js and before vendor-nav.js, with their

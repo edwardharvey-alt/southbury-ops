@@ -3,2357 +3,888 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Hearth — Service Board</title>
-  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <title>Hearth — Plan food moments with the communities you serve</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
 
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
-  <script src="./assets/config.js"></script>
-  <script src="./assets/hearth-vendor.js?v=1"></script>
-  <script src="./assets/vendor-nav.js?v=2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
-    .dropHeroTopRight {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .heroToggleBtn {
-      font-size: 13px;
-      padding: 4px 10px;
-      white-space: nowrap;
-    }
-    .realtimePill {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 12px;
-      font-weight: 500;
-      color: #2d8c4e;
-      background: #e8f5ed;
-      padding: 3px 9px;
-      border-radius: 20px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.4s;
-    }
-    .realtimePill::before {
-      content: '';
-      display: inline-block;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #2d8c4e;
-      animation: realtimePulse 2s infinite;
-    }
-    .realtimePill.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    @keyframes realtimePulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.35; }
+    :root{
+      --ld-orange: var(--h-accent, #f97316);
+      --ld-orange-2: var(--h-accent-2, #fb923c);
+      --ld-ink: #1f2937;
+      --ld-ink-muted: #4b5563;
+      --ld-ink-soft: #6b7280;
+      --ld-cream: #faf8f5;
+      --ld-warm-grey: #f5f4f1;
+      --ld-dark: #1a1612;
+      --ld-border: #e9e3d8;
+      --ld-tile-soft: #faf7f1;
     }
 
-    /* ================================================================
-       Mobile Service Board — max-width: 768px
-       All layout changes via CSS media queries only.
-       Desktop layout (>768px) is completely unchanged.
-       ================================================================ */
-
-    /* Mobile-only elements — hidden on desktop */
-    .mobileBoardTabs { display: none; }
-
-    /* Realtime dot — hidden on desktop; shown on mobile only */
-    .realtimeDot {
-      display: none;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #2d8c4e;
-      flex-shrink: 0;
-      opacity: 0;
-      transition: opacity 0.4s;
+    *, *::before, *::after{
+      box-sizing:border-box;
     }
-    .realtimeDot.active { opacity: 1; }
 
-    /* dropMetaRow: wraps the meta text and the realtime dot inline */
-    .dropMetaRow { display: flex; align-items: center; gap: 6px; }
+    body.ldBody{
+      margin:0;
+      padding:0;
+      background:#ffffff;
+      color:var(--ld-ink);
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans,
+        Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      line-height:1.55;
+    }
 
-    /* heroButtonRow: transparent on desktop so children sit inline in dropHeroTopRight */
-    .heroButtonRow { display: contents; }
+    /* ---------- Layout primitives ---------- */
 
-    @media (max-width: 768px) {
+    .ldSection{
+      width:100%;
+      padding:96px 24px;
+    }
 
-      /* --- 1. Header bar: stack brand and nav vertically --- */
-      .headerBar {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-        padding: 14px;
-      }
+    .ldContainer{
+      max-width:1100px;
+      margin:0 auto;
+    }
 
-      /* --- 2. Navigation: horizontally scrollable, no wrapping --- */
-      .nav {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        white-space: nowrap;
-        flex-wrap: nowrap;
-        gap: 2px;
-        padding-bottom: 2px;
-        scrollbar-width: none;
-        justify-content: flex-start;
-      }
-      .nav::-webkit-scrollbar { display: none; }
-      .nav a {
-        flex-shrink: 0;
-        min-height: 44px;
-        display: inline-flex;
-        align-items: center;
-      }
-
-      /* --- 3. Drop hero top: stack vertically --- */
-      .dropHeroTop {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-      }
-      /* Single row: compact status pill + Refresh + Show/Hide summary */
-      .dropHeroTopRight {
-        flex-direction: row;
-        flex-wrap: nowrap;
-        gap: 8px;
-        align-items: center;
-      }
-      .dropHeroTopRight .pill {
-        flex: 0 0 auto;
-        min-height: 36px;
-        display: flex;
-        align-items: center;
-      }
-      /* Realtime dot — show on mobile */
-      .realtimeDot { display: inline-block; }
-
-      /* Button row: fills remaining space after pill */
-      .heroButtonRow {
-        display: flex;
-        gap: 8px;
-        flex: 1;
-      }
-      .heroButtonRow button {
-        flex: 1;
-        min-height: 44px;
-        font-size: 12px;
-        padding: 0 10px;
-      }
-
-      /* --- 4. execBar: full-width fields, 44px touch targets --- */
-      .execBar {
-        grid-template-columns: 1fr !important;
-        gap: 10px;
-      }
-      .execField {
-        width: 100%;
-      }
-      .execField select,
-      .execField .filterSummaryBtn {
-        height: 44px;
-        min-height: 44px;
-        width: 100%;
-      }
-      /* Hide execRight on mobile — Realtime indicator lives in dropHeroTopRight */
-      .execRight {
-        display: none !important;
-      }
-
-      /* --- 5. KPI summary section: 2-column grid (6 tiles = 3 rows of 2) --- */
-      .heroGrid {
-        grid-template-columns: repeat(2, 1fr) !important;
-      }
-
-      /* --- 6. Next items to make + Live workflow counts: single column --- */
-      .midGrid {
-        grid-template-columns: 1fr !important;
-      }
-
-      /* --- 7. Workflow counts: 2-column grid; Delivered spans full width --- */
-      .statusGrid {
-        grid-template-columns: 1fr 1fr !important;
-      }
-      .statusTile {
-        padding: 14px 16px;
-        min-height: 44px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-      .statusTile.delivered {
-        grid-column: 1 / -1;
-      }
-
-      /* --- 8. Consolidated drop view: full width, stacks below --- */
-      .summaryPanel {
-        width: 100%;
-      }
-      .summaryGrid {
-        grid-template-columns: 1fr !important;
-      }
-
-      /* --- 9. Mobile Kanban tab bar — horizontally scrollable, right-fade hint --- */
-      .mobileBoardTabs {
-        display: flex;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        width: 100%;
-        gap: 6px;
-        padding: 0 0 8px;
-        margin-bottom: 10px;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-        /* Fade applied to the element's border box — stays fixed at the right
-           edge regardless of scroll position, hinting at off-screen tabs */
-        -webkit-mask-image: linear-gradient(to right, #000 75%, transparent 100%);
-        mask-image: linear-gradient(to right, #000 75%, transparent 100%);
-      }
-      .mobileBoardTabs::-webkit-scrollbar { display: none; }
-
-      .mobileTab {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 10px 14px;
-        min-height: 44px;
-        border: 1.5px solid var(--h-border);
-        border-radius: 22px;
-        background: var(--h-surface);
-        color: var(--h-muted);
-        font-size: 13px;
-        font-weight: 500;
-        font-family: var(--sans);
-        cursor: pointer;
-        white-space: nowrap;
-        flex-shrink: 0;
-        transition: background 0.15s, color 0.15s, border-color 0.15s;
-      }
-
-      .mobileTab.active {
-        background: var(--h-accent);
-        color: #fff;
-        border-color: var(--h-accent);
-      }
-
-      .mobileTabBadge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 20px;
-        height: 20px;
-        padding: 0 5px;
-        border-radius: 10px;
-        font-size: 11px;
-        font-weight: 600;
-        background: rgba(255, 255, 255, 0.3);
-        color: inherit;
-      }
-
-      .mobileTab:not(.active) .mobileTabBadge {
-        background: var(--h-border-2);
-        color: var(--h-text);
-      }
-
-      /* --- 10. Kanban board: tab-driven visibility --- */
-      .boardGrid {
-        grid-template-columns: 1fr !important;
-        gap: 0 !important;
-      }
-
-      /* Hide all columns; only the active tab's column is shown */
-      .boardGrid .boardCol {
-        display: none !important;
-      }
-      .boardGrid[data-active-tab="placed"]    .boardCol.placed,
-      .boardGrid[data-active-tab="confirmed"] .boardCol.confirmed,
-      .boardGrid[data-active-tab="baking"]    .boardCol.baking,
-      .boardGrid[data-active-tab="ready"]     .boardCol.ready,
-      .boardGrid[data-active-tab="delivered"] .boardCol.delivered {
-        display: flex !important;
-        width: 100%;
-      }
-
-      .boardColBody {
-        height: auto !important;
-        max-height: none !important;
-        min-height: 200px;
-        overflow-y: auto;
-      }
-
-      /* --- 11. Order cards: full width, comfortable padding --- */
-      .orderCard {
-        width: 100%;
-        box-sizing: border-box;
-      }
-      .orderCardInner {
-        padding: 14px 12px;
-      }
-      .orderCustomer {
-        font-size: 15px;
-      }
-      .cardActionsInline {
-        grid-template-columns: 1fr 1fr 1fr !important;
-        gap: 6px;
-      }
-      .actionBtnEdge,
-      .actionBtnDetail {
-        width: 100%;
-        min-height: 44px;
-        height: 44px;
+    @media (min-width:769px){
+      .ldSection{
+        padding:120px 48px;
       }
     }
 
-    /* ================================================================
-       Order card — fulfilment and notes additions (T4-7)
-       ================================================================ */
-    .orderFulfilmentRow {
-      display: flex;
-      align-items: flex-start;
-      gap: 7px;
-      margin: 5px 0 3px;
-      flex-wrap: wrap;
+    /* ---------- Wordmark ---------- */
+
+    .ldWordmark{
+      text-align:center;
+      margin:0 0 32px;
     }
 
-    .orderFulfilmentBadge {
-      display: inline-flex;
-      align-items: center;
-      font-size: 9px;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 3px 8px;
-      border-radius: 20px;
-      white-space: nowrap;
-      flex-shrink: 0;
+    .ldWordmarkText{
+      display:inline-block;
+      font-size:22px;
+      font-weight:950;
+      letter-spacing:-0.035em;
+      color:var(--ld-ink);
+      margin:0;
     }
 
-    .orderFulfilmentBadge.collection {
-      background: rgba(15,23,42,0.04);
-      color: var(--h-muted);
-      border: 1px solid var(--h-border-2);
+    .ldWordmarkDot{
+      display:inline-block;
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:linear-gradient(135deg, var(--ld-orange), var(--ld-orange-2));
+      margin-left:6px;
+      vertical-align:middle;
+      transform:translateY(-2px);
     }
 
-    .orderFulfilmentBadge.delivery {
-      background: rgba(249,115,22,0.10);
-      color: var(--h-accent-ink);
-      border: 1px solid rgba(249,115,22,0.22);
+    /* ---------- Hero ---------- */
+
+    .ldHero{
+      background:
+        radial-gradient(900px 450px at 15% -10%, rgba(249,115,22,0.10), rgba(249,115,22,0) 60%),
+        radial-gradient(700px 360px at 90% 5%, rgba(251,146,60,0.08), rgba(251,146,60,0) 55%),
+        var(--ld-cream);
+      padding:80px 24px;
+      text-align:center;
     }
 
-    .orderDeliveryAddress {
-      font-size: 10px;
-      color: var(--h-muted);
-      font-weight: 500;
-      line-height: 1.35;
-      word-break: break-word;
-      padding-top: 2px;
-    }
-
-    .orderNotesBlock {
-      margin: 5px 0 3px;
-      padding: 6px 9px;
-      background: rgba(249,115,22,0.06);
-      border-left: 2px solid rgba(249,115,22,0.35);
-      border-radius: 0 8px 8px 0;
-      font-size: 10px;
-      color: var(--h-text);
-      line-height: 1.4;
-      word-break: break-word;
-    }
-
-    .orderNotesLabel {
-      font-size: 8px;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--h-accent-ink);
-      display: block;
-      margin-bottom: 3px;
-    }
-
-    /* ================================================================
-       Undo toast — Service Board only (not in hearth.css)
-       ================================================================ */
-    #undoToast {
-      position: fixed;
-      bottom: 80px;
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      min-width: 280px;
-      max-width: calc(100vw - 32px);
-      background: #5c2d12;
-      color: #fff;
-      border-radius: 12px;
-      padding: 12px 16px 14px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 14px;
-      font-weight: 500;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.28);
-      z-index: 9999;
-      opacity: 0;
-      pointer-events: none;
-      transition: transform 0.22s ease, opacity 0.22s ease;
-      overflow: hidden;
-    }
-    #undoToast.visible {
-      transform: translateX(-50%) translateY(0);
-      opacity: 1;
-      pointer-events: auto;
-    }
-    #undoToastMsg {
-      flex: 1;
-      line-height: 1.3;
-    }
-    #undoToastBtn {
-      background: none;
-      border: none;
-      color: #f97316;
-      font-weight: 700;
-      font-size: 14px;
-      cursor: pointer;
-      padding: 4px 0 4px 4px;
-      text-decoration: underline;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    #undoToastBtn:hover { color: #fb923c; }
-    #undoToastProgress {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      height: 3px;
-      width: 100%;
-      background: rgba(255,255,255,0.35);
-      transform-origin: left center;
-    }
-    @keyframes toastCountdown {
-      from { transform: scaleX(1); }
-      to   { transform: scaleX(0); }
-    }
-
-    /* Fix 1: card layout — min-height, item summary line, 3-col action row */
-    .orderCard { min-height: 120px; }
-    .orderItemSummary {
-      font-size: 12px;
-      color: var(--h-muted);
-      font-weight: 600;
-      margin-top: 3px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    /* Desktop: 3 columns now that units chip moves to its own line */
-    .cardActionsInline {
-      grid-template-columns: 1fr 52px 1fr;
-    }
-
-    /* Fix 4: total value chip replaces time chip on order cards */
-    .orderTotalChip {
-      flex-shrink: 0;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--h-text);
-      background: var(--h-bg);
-      border: 1px solid var(--h-border-2);
-      border-radius: 6px;
-      padding: 2px 7px;
-      white-space: nowrap;
-      align-self: flex-start;
-    }
-
-    /* Fix 4: independent per-column scroll on desktop with bounded height */
-    @media (min-width: 769px) {
-      .boardColBody {
-        max-height: calc(100vh - 400px);
-        overflow-y: auto;
+    @media (min-width:769px){
+      .ldHero{
+        padding:120px 48px;
       }
     }
 
-    /* Cards must not shrink within the flex column (boardColBody is a fixed-height
-       flex container; default flex-shrink:1 collapses expanded cards back to their
-       shrunk size). flex-shrink:0 lets a card hold its natural height so the column
-       scrolls rather than compressing the card. overflow:visible ensures detailsWrap
-       content is not clipped by the card or its inner wrapper. */
-    .orderCard {
-      overflow: visible !important;
-      height: auto !important;
-      flex-shrink: 0;
-    }
-    .orderCardInner {
-      overflow: visible !important;
-      height: auto !important;
+    .ldHeroInner{
+      max-width:760px;
+      margin:0 auto;
+      display:grid;
+      gap:20px;
+      justify-items:center;
     }
 
-    /* Notify modal — backdrop and content are siblings, not parent/child */
-    #notifyWrap { display: none; }
-    #notifyWrap.open { display: block; }
+    .ldHeroHeadline{
+      font-size:36px;
+      font-weight:700;
+      line-height:1.15;
+      letter-spacing:-0.035em;
+      color:var(--ld-ink);
+      margin:8px 0 0;
+    }
 
-    .notifyOverlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.45);
-      z-index: 590;
-      cursor: pointer;
+    @media (min-width:769px){
+      .ldHeroHeadline{
+        font-size:52px;
+      }
     }
-    .notifyModal {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 600;
-      pointer-events: all;
-      width: min(380px, calc(100vw - 32px));
-      background: var(--h-surface);
-      border-radius: 16px;
-      border: 1px solid var(--h-border-2);
-      box-shadow: 0 20px 44px rgba(15, 23, 42, 0.2);
-      padding: 20px;
+
+    .ldHeroSub{
+      max-width:640px;
+      font-size:16px;
+      font-weight:500;
+      line-height:1.6;
+      color:var(--ld-ink-muted);
+      margin:0;
     }
-    .notifyHeading {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--h-text);
-      margin: 0 0 2px;
+
+    @media (min-width:769px){
+      .ldHeroSub{
+        font-size:18px;
+      }
     }
-    .notifyCustomerName {
-      font-size: 13px;
-      color: var(--h-muted);
-      margin: 0 0 12px;
+
+    .ldCtaRow{
+      display:grid;
+      gap:12px;
+      justify-items:center;
+      margin-top:12px;
+      width:100%;
     }
-    .notifyPhone {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--h-text);
-      margin-bottom: 16px;
-      padding: 9px 12px;
-      background: var(--h-bg);
-      border: 1px solid var(--h-border-2);
-      border-radius: 8px;
+
+    .ldPrimaryBtn{
+      display:inline-block;
+      min-height:52px;
+      padding:0 28px;
+      border-radius:14px;
+      background:linear-gradient(135deg, var(--ld-orange), var(--ld-orange-2));
+      color:#fff;
+      font-size:16px;
+      font-weight:800;
+      letter-spacing:-0.01em;
+      text-decoration:none;
+      line-height:52px;
+      box-shadow:0 4px 14px rgba(249,115,22,0.22);
+      transition:transform .08s ease, box-shadow .15s ease;
     }
-    .notifyActions {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+
+    .ldPrimaryBtn:hover{
+      box-shadow:0 6px 20px rgba(249,115,22,0.32);
     }
-    .notifyActions > a,
-    .notifyActions > button {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      box-sizing: border-box;
-      text-align: center;
-      text-decoration: none;
+
+    .ldPrimaryBtn:active{
+      transform:translateY(1px);
+    }
+
+    @media (max-width:768px){
+      .ldPrimaryBtn{
+        width:100%;
+        max-width:360px;
+        text-align:center;
+      }
+    }
+
+    .ldSecondaryLink{
+      font-size:14px;
+      font-weight:700;
+      color:var(--ld-orange);
+      text-decoration:none;
+    }
+
+    .ldSecondaryLink:hover{
+      text-decoration:underline;
+    }
+
+    .ldSmallPrint{
+      font-size:13px;
+      font-weight:500;
+      color:var(--ld-ink-soft);
+      margin:4px 0 0;
+    }
+
+    /* ---------- Section scaffolding ---------- */
+
+    .ldSectionHead{
+      text-align:center;
+      margin:0 0 56px;
+    }
+
+    .ldSectionTitle{
+      font-size:26px;
+      font-weight:700;
+      line-height:1.2;
+      letter-spacing:-0.03em;
+      color:var(--ld-ink);
+      margin:0;
+    }
+
+    @media (min-width:769px){
+      .ldSectionTitle{
+        font-size:32px;
+      }
+    }
+
+    /* ---------- Section 2 — How it works ---------- */
+
+    .ldHow{
+      background:#ffffff;
+    }
+
+    .ldStepGrid{
+      display:grid;
+      gap:40px;
+      grid-template-columns:1fr;
+    }
+
+    @media (min-width:769px){
+      .ldStepGrid{
+        grid-template-columns:repeat(3, minmax(0, 1fr));
+        gap:48px;
+      }
+    }
+
+    .ldStep{
+      display:grid;
+      gap:10px;
+    }
+
+    .ldStepNum{
+      font-size:40px;
+      font-weight:900;
+      letter-spacing:-0.04em;
+      line-height:1;
+      color:var(--ld-orange);
+      margin:0;
+    }
+
+    .ldStepTitle{
+      font-size:20px;
+      font-weight:700;
+      letter-spacing:-0.02em;
+      color:var(--ld-ink);
+      margin:8px 0 0;
+    }
+
+    .ldStepBody{
+      font-size:16px;
+      line-height:1.6;
+      color:var(--ld-ink-muted);
+      margin:0;
+    }
+
+    @media (min-width:769px){
+      .ldStepBody{
+        font-size:18px;
+      }
+    }
+
+    /* ---------- Section 3 — Difference ---------- */
+
+    .ldDifference{
+      background:var(--ld-warm-grey);
+    }
+
+    .ldDifferenceGrid{
+      display:grid;
+      gap:32px;
+      grid-template-columns:1fr;
+    }
+
+    @media (min-width:769px){
+      .ldDifferenceGrid{
+        grid-template-columns:repeat(3, minmax(0, 1fr));
+        gap:48px;
+      }
+    }
+
+    .ldDifferenceCol{
+      display:grid;
+      gap:10px;
+    }
+
+    .ldDifferenceTitle{
+      font-size:18px;
+      font-weight:700;
+      letter-spacing:-0.02em;
+      color:var(--ld-ink);
+      margin:0;
+    }
+
+    @media (min-width:769px){
+      .ldDifferenceTitle{
+        font-size:20px;
+      }
+    }
+
+    .ldDifferenceCol p{
+      font-size:16px;
+      line-height:1.7;
+      color:var(--ld-ink-muted);
+      margin:0;
+    }
+
+    @media (min-width:769px){
+      .ldDifferenceCol p{
+        font-size:18px;
+      }
+    }
+
+    .ldSectionLead{
+      max-width:680px;
+      margin:16px auto 0;
+      font-size:16px;
+      line-height:1.6;
+      color:var(--ld-ink-muted);
+      text-align:center;
+    }
+
+    @media (min-width:769px){
+      .ldSectionLead{
+        font-size:18px;
+      }
+    }
+
+    /* ---------- Section 4 — Two vendor pathways ---------- */
+
+    .ldPathways{
+      background:#ffffff;
+    }
+
+    .ldPathwaysGrid{
+      display:grid;
+      gap:24px;
+      grid-template-columns:1fr;
+    }
+
+    @media (min-width:769px){
+      .ldPathwaysGrid{
+        grid-template-columns:1fr 1fr;
+        gap:32px;
+      }
+    }
+
+    .ldPathCard{
+      background:#ffffff;
+      border:1px solid var(--ld-border);
+      border-radius:18px;
+      padding:32px 28px;
+      display:grid;
+      gap:12px;
+    }
+
+    @media (min-width:769px){
+      .ldPathCard{
+        padding:40px 36px;
+      }
+    }
+
+    .ldPathTitle{
+      font-size:20px;
+      font-weight:700;
+      letter-spacing:-0.02em;
+      color:var(--ld-ink);
+      margin:0;
+    }
+
+    .ldPathBody{
+      font-size:16px;
+      line-height:1.6;
+      color:var(--ld-ink-muted);
+      margin:0;
+    }
+
+    /* ---------- Section 5 — Who it's for ---------- */
+
+    .ldAudience{
+      background:#ffffff;
+    }
+
+    .ldAudienceGrid{
+      display:grid;
+      gap:16px;
+      grid-template-columns:1fr;
+    }
+
+    @media (min-width:600px) and (max-width:900px){
+      .ldAudienceGrid{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (min-width:901px){
+      .ldAudienceGrid{
+        grid-template-columns:repeat(3, minmax(0, 1fr));
+        gap:20px;
+      }
+    }
+
+    .ldAudienceTile{
+      background:var(--ld-tile-soft);
+      border-radius:16px;
+      padding:24px 22px;
+      display:grid;
+      gap:8px;
+    }
+
+    .ldAudienceTitle{
+      font-size:17px;
+      font-weight:700;
+      letter-spacing:-0.015em;
+      color:var(--ld-ink);
+      margin:0;
+    }
+
+    .ldAudienceBody{
+      font-size:15px;
+      line-height:1.55;
+      color:var(--ld-ink-muted);
+      margin:0;
+    }
+
+    /* ---------- Section 6 — Proof point ---------- */
+
+    .ldProof{
+      background:var(--ld-warm-grey);
+    }
+
+    .ldProofCard{
+      background:#ffffff;
+      border-radius:20px;
+      max-width:680px;
+      margin:0 auto;
+      padding:40px 32px;
+      text-align:center;
+      box-shadow:0 2px 16px rgba(15,23,42,0.04);
+    }
+
+    @media (min-width:769px){
+      .ldProofCard{
+        padding:56px 48px;
+      }
+    }
+
+    .ldProofQuote{
+      font-size:20px;
+      font-weight:600;
+      line-height:1.5;
+      letter-spacing:-0.02em;
+      color:var(--ld-ink);
+      margin:0 0 20px;
+    }
+
+    @media (min-width:769px){
+      .ldProofQuote{
+        font-size:24px;
+      }
+    }
+
+    .ldProofAttr{
+      font-size:14px;
+      font-weight:700;
+      color:var(--ld-ink-soft);
+      margin:0;
+    }
+
+    /* ---------- Section 7 — Final CTA ---------- */
+
+    .ldFinal{
+      background:var(--ld-dark);
+      color:#f5f1ea;
+      text-align:center;
+    }
+
+    .ldFinalInner{
+      max-width:640px;
+      margin:0 auto;
+      display:grid;
+      gap:16px;
+      justify-items:center;
+    }
+
+    .ldFinalHeadline{
+      font-size:26px;
+      font-weight:700;
+      line-height:1.2;
+      letter-spacing:-0.03em;
+      color:#fafaf7;
+      margin:0;
+    }
+
+    @media (min-width:769px){
+      .ldFinalHeadline{
+        font-size:32px;
+      }
+    }
+
+    .ldFinalSub{
+      font-size:16px;
+      line-height:1.6;
+      color:rgba(245,241,234,0.72);
+      margin:0 0 12px;
+      max-width:520px;
+    }
+
+    @media (min-width:769px){
+      .ldFinalSub{
+        font-size:18px;
+      }
+    }
+
+    .ldFinalSecondary{
+      font-size:14px;
+      font-weight:700;
+      color:rgba(245,241,234,0.72);
+      text-decoration:none;
+      margin-top:4px;
+    }
+
+    .ldFinalSecondary:hover{
+      color:#fafaf7;
+      text-decoration:underline;
+    }
+
+    /* ---------- Footer ---------- */
+
+    .ldFooter{
+      background:var(--ld-dark);
+      border-top:1px solid rgba(245,241,234,0.08);
+      padding:32px 24px;
+    }
+
+    @media (min-width:769px){
+      .ldFooter{
+        padding:32px 48px;
+      }
+    }
+
+    .ldFooterInner{
+      max-width:1100px;
+      margin:0 auto;
+      display:grid;
+      gap:16px;
+      grid-template-columns:1fr;
+      align-items:center;
+    }
+
+    @media (min-width:769px){
+      .ldFooterInner{
+        grid-template-columns:auto 1fr;
+      }
+    }
+
+    .ldFooterWordmark{
+      font-size:18px;
+      font-weight:950;
+      letter-spacing:-0.035em;
+      color:#fafaf7;
+      margin:0;
+    }
+
+    .ldFooterLinks{
+      display:flex;
+      gap:24px;
+      flex-wrap:wrap;
+    }
+
+    @media (min-width:769px){
+      .ldFooterLinks{
+        justify-content:flex-end;
+      }
+    }
+
+    .ldFooterLinks a{
+      font-size:13px;
+      font-weight:600;
+      color:rgba(245,241,234,0.65);
+      text-decoration:none;
+    }
+
+    .ldFooterLinks a:hover{
+      color:#fafaf7;
     }
   </style>
 </head>
-<body>
-  <div class="container">
-    <div class="card headerBar">
-      <div class="brand">
-        <div class="brandMark">H</div>
-        <div>
-          <div class="brandTitle">Hearth — Service Board</div>
-          <div class="brandSubtitle">Operational view for live drops</div>
-        </div>
-      </div>
+<body class="ldBody">
 
-      <div class="nav" id="operatorNav"></div>
-      <script>HearthNav.renderNav('operatorNav', 'index.html');</script>
+  <!-- ============================================================= -->
+  <!-- SECTION 1 — HERO                                               -->
+  <!-- ============================================================= -->
+  <section class="ldSection ldHero">
+    <div class="ldWordmark">
+      <p class="ldWordmarkText">Hearth<span class="ldWordmarkDot" aria-hidden="true"></span></p>
     </div>
 
-    <div class="boardShell">
-      <div class="card dropHero">
-        <div class="dropHeroTop">
-          <div>
-            <h1 class="dropName" id="dropName">Loading drops…</h1>
-            <div class="dropMetaRow">
-              <p class="dropMeta" id="dropMeta">Connecting to Supabase</p>
-              <span id="realtimeDot" class="realtimeDot"></span>
-            </div>
-          </div>
+    <div class="ldHeroInner">
+      <h1 class="ldHeroHeadline">Plan food moments with the communities you serve</h1>
+      <p class="ldHeroSub">
+        Hearth is for independent food businesses who want planned, time-bound
+        moments instead of always-on ordering. Each moment — we call it a drop —
+        is pre-order only, capacity-real, and often hosted somewhere that matters
+        locally. No commissions. No algorithms. Every customer you reach is yours
+        to keep.
+      </p>
+      <div class="ldCtaRow">
+        <a class="ldPrimaryBtn" href="./signup.html">Start your Hearth</a>
+        <a class="ldSecondaryLink" href="./login.html">Already have an account? Sign in →</a>
+        <p class="ldSmallPrint">Free to get started. No credit card required.</p>
+      </div>
+    </div>
+  </section>
 
-          <div class="dropHeroTopRight">
-            <div class="pill" id="dropStatusPill">
-              <span class="dot" id="dropStatusDot"></span>
-              <span id="dropStatusText">—</span>
-            </div>
-            <div class="heroButtonRow">
-              <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
-              <button class="btnGhost heroToggleBtn" id="heroToggleBtn" type="button">Hide summary</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="execBar" style="margin-top:0;">
-          <div class="execLeft">
-            <div class="execField">
-              <label for="dropSelect">Selected drop</label>
-              <select id="dropSelect">
-                <option value="">Loading drops…</option>
-              </select>
-              <div class="boardFilterHint" id="dropFilterResultText">Loading drops…</div>
-            </div>
-
-            <div class="execField boardFilterPopoverWrap heroCollapsible">
-              <label>Status filter</label>
-              <button class="filterSummaryBtn" id="boardStatusFilterBtn" type="button">
-                <span id="boardStatusFilterSummary">Live, Scheduled, Draft</span>
-                <span>▾</span>
-              </button>
-
-              <div class="filterPopover" id="boardStatusFilterPopover">
-                <div class="filterQuickActions">
-                  <button class="btnGhost" id="boardStatusActiveBtn" type="button">Active only</button>
-                  <button class="btnGhost" id="boardStatusAllBtn" type="button">All</button>
-                  <button class="btnGhost" id="boardStatusClearBtn" type="button">Clear</button>
-                </div>
-
-                <div class="filterChecklist" id="boardStatusFilterChecklist">
-                  <label><input type="checkbox" value="live" checked /> Live</label>
-                  <label><input type="checkbox" value="scheduled" checked /> Scheduled</label>
-                  <label><input type="checkbox" value="draft" checked /> Draft</label>
-                  <label><input type="checkbox" value="closed" /> Closed</label>
-                  <label><input type="checkbox" value="completed" /> Completed</label>
-                  <label><input type="checkbox" value="cancelled" /> Cancelled</label>
-                  <label><input type="checkbox" value="archived" /> Archived</label>
-                </div>
-              </div>
-            </div>
-
-            <div class="execField heroCollapsible">
-              <label for="boardTypeFilter">Drop type</label>
-              <select id="boardTypeFilter">
-                <option value="all">All types</option>
-                <option value="neighbourhood">Neighbourhood</option>
-                <option value="community">Community</option>
-                <option value="event">Event</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="execRight">
-            <span class="realtimePill" id="realtimeIndicator">Live</span>
-          </div>
-        </div>
-
-        <div class="heroGrid heroCollapsible">
-          <div class="heroTile">
-            <div class="heroLabel">Orders</div>
-            <div class="heroValue" id="kpiOrders">0</div>
-          </div>
-          <div class="heroTile">
-            <div class="heroLabel">Capacity category</div>
-            <div class="heroValue" id="kpiCategory">—</div>
-          </div>
-          <div class="heroTile">
-            <div class="heroLabel">Capacity total</div>
-            <div class="heroValue" id="kpiCapacityTotal">0</div>
-          </div>
-          <div class="heroTile">
-            <div class="heroLabel">Capacity used</div>
-            <div class="heroValue" id="kpiCapacityUsed">0</div>
-          </div>
-          <div class="heroTile">
-            <div class="heroLabel">Capacity remaining</div>
-            <div class="heroValue" id="kpiCapacityRemaining">0</div>
-          </div>
-          <div class="heroTile">
-            <div class="heroLabel">Revenue</div>
-            <div class="heroValue" id="kpiRevenue">£0</div>
-          </div>
-        </div>
-
-        <div class="capacityRow heroCollapsible">
-          <div class="capacityCopy" id="capacityCopyLeft">0 / 0 units</div>
-          <div class="capacityCopy" id="capacityCopyRight">0% full</div>
-          <div class="capacityBar">
-            <div class="capacityFill" id="capacityFill"></div>
-          </div>
-        </div>
-
-        <div class="errorBox" id="errorBox"></div>
+  <!-- ============================================================= -->
+  <!-- SECTION 2 — HOW IT WORKS                                       -->
+  <!-- ============================================================= -->
+  <section class="ldSection ldHow">
+    <div class="ldContainer">
+      <div class="ldSectionHead">
+        <h2 class="ldSectionTitle">How Hearth works</h2>
       </div>
 
-      <div class="midGrid">
-        <div class="card pad">
-          <div class="row space" style="margin-bottom:12px;">
-            <div>
-              <h3 class="sectionTitle">Next items to make</h3>
-              <p class="sectionSub" id="queueSectionSub">Items driving the current drop’s operational capacity</p>
-            </div>
-          </div>
-          <div class="queueGrid" id="queueGrid"></div>
+      <div class="ldStepGrid">
+        <div class="ldStep">
+          <p class="ldStepNum">01</p>
+          <h3 class="ldStepTitle">Plan a drop</h3>
+          <p class="ldStepBody">
+            Set your menu, capacity, timing, and where it's hosted. A drop is
+            a planned moment — not an always-on store. You decide when, where,
+            and how much.
+          </p>
         </div>
-
-        <div class="card pad">
-          <div class="row space" style="margin-bottom:12px;">
-            <div>
-              <h3 class="sectionTitle">Live workflow counts</h3>
-              <p class="sectionSub">Current selected drop</p>
-            </div>
-          </div>
-          <div class="statusGrid">
-            <div class="statusTile placed">
-              <span class="label">Placed</span>
-              <span class="value" id="countPlaced">0</span>
-            </div>
-            <div class="statusTile confirmed">
-              <span class="label">Confirmed</span>
-              <span class="value" id="countConfirmed">0</span>
-            </div>
-            <div class="statusTile baking">
-              <span class="label">Baking</span>
-              <span class="value" id="countBaking">0</span>
-            </div>
-            <div class="statusTile ready">
-              <span class="label">Ready</span>
-              <span class="value" id="countReady">0</span>
-            </div>
-            <div class="statusTile delivered">
-              <span class="label">Delivered</span>
-              <span class="value" id="countDelivered">0</span>
-            </div>
-          </div>
+        <div class="ldStep">
+          <p class="ldStepNum">02</p>
+          <h3 class="ldStepTitle">Your community orders</h3>
+          <p class="ldStepBody">
+            Customers pre-order directly through you. No platform taking a cut,
+            no algorithm deciding who sees you.
+          </p>
         </div>
-      </div>
-
-      <div class="card pad summaryPanel">
-        <div class="row space">
-          <div>
-            <h3 class="sectionTitle">Consolidated drop view</h3>
-            <p class="sectionSub">Roll-up by item across the selected drop</p>
-          </div>
-          <button class="sectionToggle" id="toggleSummaryPanel" type="button">Hide</button>
-        </div>
-
-        <div id="summaryPanelBody">
-          <div class="summaryGrid" style="margin-top:10px;">
-            <div class="summaryBox">
-              <h4 class="summaryBoxTitle" id="capacitySummaryTitle">Capacity items</h4>
-              <div class="summaryList" id="summaryCapacityList"></div>
-            </div>
-
-            <div class="summaryBox">
-              <h4 class="summaryBoxTitle">Other items</h4>
-              <div class="summaryList" id="summaryOtherList"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="mobileBoardTabs" id="mobileBoardTabs" role="tablist" aria-label="Order status tabs">
-        <button class="mobileTab" data-tab="placed" role="tab" type="button">Placed <span class="mobileTabBadge" id="mobileTabBadgePlaced">0</span></button>
-        <button class="mobileTab" data-tab="confirmed" role="tab" type="button">Confirmed <span class="mobileTabBadge" id="mobileTabBadgeConfirmed">0</span></button>
-        <button class="mobileTab" data-tab="baking" role="tab" type="button">Baking <span class="mobileTabBadge" id="mobileTabBadgeBaking">0</span></button>
-        <button class="mobileTab" data-tab="ready" role="tab" type="button">Ready <span class="mobileTabBadge" id="mobileTabBadgeReady">0</span></button>
-        <button class="mobileTab" data-tab="delivered" role="tab" type="button">Delivered <span class="mobileTabBadge" id="mobileTabBadgeDelivered">0</span></button>
-      </div>
-
-      <div class="boardGrid">
-        <div class="boardCol placed">
-          <div class="boardColHead">
-            <span>Placed</span>
-            <span class="colCount" id="badgePlaced">0</span>
-          </div>
-          <div class="boardColBody" id="colPlaced"></div>
-          <div class="boardColFooter"></div>
-        </div>
-
-        <div class="boardCol confirmed">
-          <div class="boardColHead">
-            <span>Confirmed</span>
-            <span class="colCount" id="badgeConfirmed">0</span>
-          </div>
-          <div class="boardColBody" id="colConfirmed"></div>
-          <div class="boardColFooter"></div>
-        </div>
-
-        <div class="boardCol baking">
-          <div class="boardColHead">
-            <span>Baking</span>
-            <span class="colCount" id="badgeBaking">0</span>
-          </div>
-          <div class="boardColBody" id="colBaking"></div>
-          <div class="boardColFooter"></div>
-        </div>
-
-        <div class="boardCol ready">
-          <div class="boardColHead">
-            <span>Ready</span>
-            <span class="colCount" id="badgeReady">0</span>
-          </div>
-          <div class="boardColBody" id="colReady"></div>
-          <div class="boardColFooter"></div>
-        </div>
-
-        <div class="boardCol delivered">
-          <div class="boardColHead">
-            <span>Delivered</span>
-            <span class="colCount" id="badgeDelivered">0</span>
-          </div>
-          <div class="boardColBody" id="colDelivered"></div>
-          <div class="boardColFooter"></div>
-        </div>
-      </div>
-
-      <div class="card pad ordersSection">
-        <div class="row space">
-          <div>
-            <h3 class="sectionTitle">All orders in this drop</h3>
-            <p class="sectionSub">Compact scan view for every order</p>
-          </div>
-          <button class="sectionToggle" id="toggleOrdersPanel" type="button">Show</button>
-        </div>
-
-        <div class="ordersPanelBody hidden" id="ordersPanelBody">
-          <div class="ordersToolbar">
-            <div class="ordersFilters">
-              <button class="filterChip active" type="button" data-status-filter="all">All</button>
-              <button class="filterChip" type="button" data-status-filter="placed">Placed</button>
-              <button class="filterChip" type="button" data-status-filter="confirmed">Confirmed</button>
-              <button class="filterChip" type="button" data-status-filter="baking">Baking</button>
-              <button class="filterChip" type="button" data-status-filter="ready">Ready</button>
-              <button class="filterChip" type="button" data-status-filter="delivered">Delivered</button>
-            </div>
-
-            <input id="orderSearch" class="filterSearch" type="text" placeholder="Search customer or item" />
-          </div>
-
-          <div class="tableWrap">
-            <table class="tableTight">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Customer</th>
-                  <th>Units</th>
-                  <th>Status</th>
-                  <th>Total</th>
-                  <th id="thCapacityItems">Capacity items</th>
-                  <th>Other items</th>
-                </tr>
-              </thead>
-              <tbody id="allOrdersBody">
-                <tr>
-                  <td colspan="7" class="muted">Loading…</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        <div class="ldStep">
+          <p class="ldStepNum">03</p>
+          <h3 class="ldStepTitle">Every drop compounds</h3>
+          <p class="ldStepBody">
+            You build a customer base with real purchase history, loyalty
+            signals, and geographic data. Your host relationships deepen.
+            Hearth turns it into intelligence — helping you reach the right
+            customers, at the right moment, before your next drop opens.
+          </p>
         </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <div id="undoToast" role="status" aria-live="assertive" aria-atomic="true">
-    <span id="undoToastMsg"></span>
-    <button type="button" id="undoToastBtn">Undo</button>
-    <div id="undoToastProgress"></div>
-  </div>
+  <!-- ============================================================= -->
+  <!-- SECTION 3 — THE HEARTH DIFFERENCE                              -->
+  <!-- ============================================================= -->
+  <section class="ldSection ldDifference">
+    <div class="ldContainer">
+      <div class="ldSectionHead">
+        <h2 class="ldSectionTitle">Three things grow with every drop</h2>
+        <p class="ldSectionLead">
+          Most ordering platforms stop at the transaction. Hearth is built so
+          every drop adds to something you own — and can run back.
+        </p>
+      </div>
 
-  <!-- T3-10: Order notification modal — must be before <script> so buttons exist when attachEvents() runs -->
-  <div id="notifyWrap">
-    <div id="notifyBackdrop" class="notifyOverlay"></div>
-    <div class="notifyModal">
-      <p class="notifyHeading" id="readyNotifyHeading">Notify customer?</p>
-      <p class="notifyCustomerName" id="readyNotifyName"></p>
-      <div class="notifyPhone" id="readyNotifyPhoneDisplay"></div>
-      <div class="notifyActions">
-        <a id="readyNotifyCallBtn" class="btnAccent" href="#">Call customer</a>
-        <a id="readyNotifySmsBtn" class="btnGhost" href="#">Send SMS</a>
-        <button id="readyNotifySkipBtn" class="btnGhost" type="button">Skip — mark ready</button>
+      <div class="ldDifferenceGrid">
+        <div class="ldDifferenceCol">
+          <h3 class="ldDifferenceTitle">Your customers</h3>
+          <p>
+            Direct relationships with the people you actually serve. Full
+            purchase history, exportable any time, never rented out to another
+            vendor or used to advertise against you. Loyal core, occasional,
+            lapsed — Hearth tells you who's who.
+          </p>
+        </div>
+        <div class="ldDifferenceCol">
+          <h3 class="ldDifferenceTitle">Your host relationships</h3>
+          <p>
+            Hearth treats community hosts — pubs, clubs, schools, venues,
+            neighbourhoods — as first-class. Their audience, their benefit,
+            their share in your success. Every drop with a host builds a
+            relationship you can run back.
+          </p>
+        </div>
+        <div class="ldDifferenceCol">
+          <h3 class="ldDifferenceTitle">Your decision intelligence</h3>
+          <p>
+            What to sell, to whom, when, and how to communicate. Hearth reads
+            your rhythm, your menu patterns, and your geography, and turns it
+            into plain-English recommendations. The intelligence gets sharper
+            with every drop.
+          </p>
+        </div>
       </div>
     </div>
-  </div>
-
-  <script>
-  (function () {
-    const CONFIG = window.HEARTH_CONFIG || {};
-    const SUPABASE_URL = CONFIG.SUPABASE_URL;
-    const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
-
-    const STATUS_ORDER = ["placed", "confirmed", "baking", "ready", "delivered"];
-    const ACTIVE_DEFAULT_STATUSES = ["live", "scheduled", "draft"];
-    const ALL_DROP_STATUSES = ["live", "scheduled", "draft", "closed", "completed", "cancelled", "archived"];
-
-    let supabase = null;
-    let realtimeChannel = null;
-    let realtimeSubscribedDropId = null;
-    let pendingChange = null;
-    var _notifyOrderId = null;
-    var _notifyToStatus = null;
-
-    const state = {
-      vendor: null,
-      vendorId: null,
-      drops: [],
-      filteredDrops: [],
-      selectedDropId: null,
-      drop: null,
-      dropSummary: null,
-      ordersSummary: [],
-      itemDetails: [],
-      expandedOrders: new Set(),
-      tableStatusFilter: "all",
-      tableSearch: "",
-      ordersPanelOpen: false,
-      summaryPanelOpen: true,
-      heroCollapsed: false,
-      boardStatusFilters: [...ACTIVE_DEFAULT_STATUSES],
-      boardTypeFilter: "all"
-    };
-
-    function byId(id) {
-      return document.getElementById(id);
-    }
-
-    function getUrlParam(name) {
-      return new URLSearchParams(window.location.search).get(name);
-    }
-
-    async function loadVendorId() {
-      const vendor = await window.HearthVendor.resolveVendor(supabase);
-      if (!vendor) {
-        const requestedSlug = getUrlParam('vendor') || getUrlParam('vendor_slug');
-        throw new Error(
-          requestedSlug
-            ? `Vendor "${requestedSlug}" not found. Check the ?vendor= URL parameter.`
-            : 'No vendor found. Add at least one vendor to the database.'
-        );
-      }
-      state.vendor = vendor;
-      state.vendorId = vendor.id;
-      const _sbSubtitle = document.querySelector('.brandSubtitle');
-      if (_sbSubtitle && vendor.display_name) _sbSubtitle.textContent = vendor.display_name;
-    }
-
-    function showError(message) {
-      const el = byId("errorBox");
-      if (!message) {
-        el.style.display = "none";
-        el.textContent = "";
-        return;
-      }
-      el.style.display = "block";
-      el.textContent = message;
-    }
-
-    function stripWindowSuffix(name) {
-      return String(name || "").replace(/\s*[\u2014-]\s*Window\s*\d+\s*$/i, "").trim();
-    }
-
-    function formatMoneyPence(pence) {
-      return new Intl.NumberFormat("en-GB", {
-        style: "currency",
-        currency: "GBP",
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2
-      }).format((Number(pence || 0)) / 100);
-    }
-
-    function formatShortTime(value) {
-      if (!value) return "—";
-      const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return "—";
-      return d.toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit"
-      });
-    }
-
-    function formatDropMeta(drop) {
-      if (!drop) return "Select a drop to view live order flow.";
-
-      const parts = [];
-
-      if (drop.drop_type) parts.push(drop.drop_type);
-
-      if (drop.delivery_start && drop.delivery_end) {
-        const start = new Date(drop.delivery_start).toLocaleString("en-GB", {
-          weekday: "short",
-          day: "numeric",
-          month: "short",
-          hour: "2-digit",
-          minute: "2-digit"
-        });
-        const end = new Date(drop.delivery_end).toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit"
-        });
-        parts.push(`${start}–${end}`);
-      }
-
-      if (drop.closes_at) {
-        const cutoff = new Date(drop.closes_at).toLocaleString("en-GB", {
-          day: "numeric",
-          month: "short",
-          hour: "2-digit",
-          minute: "2-digit"
-        });
-        parts.push(`Orders close ${cutoff}`);
-      }
-
-      return parts.join(" • ");
-    }
-
-    function statusDotClass(status) {
-      if (status === "live") return "dot live";
-      if (status === "draft") return "dot draft";
-      return "dot closed";
-    }
-
-    function normaliseStatus(status) {
-      return String(status || "").toLowerCase();
-    }
-
-    function titleCase(value) {
-      const text = String(value || "");
-      return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
-    }
-
-    function prettifySlug(value) {
-      const text = String(value || "").trim();
-      if (!text) return "";
-      return text
-        .split(/[-_\s]+/)
-        .filter(Boolean)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(" ");
-    }
-
-    function getCapacityCategoryKey() {
-      return String(state.dropSummary?.capacity_category || state.drop?.capacity_category || "").trim().toLowerCase();
-    }
-
-    function getCapacityCategoryLabel() {
-      const explicitName =
-        state.dropSummary?.capacity_category_name ||
-        state.drop?.capacity_category_name ||
-        "";
-
-      if (explicitName) return String(explicitName).trim();
-
-      const key = getCapacityCategoryKey();
-      return key ? prettifySlug(key) : "Unit";
-    }
-
-    function getCapacityLabel(count = 1) {
-      let label = getCapacityCategoryLabel();
-      if (count === 1 && label.endsWith("s")) {
-        label = label.slice(0, -1);
-      }
-      return `${count} × ${label}`;
-    }
-
-    function getNextStatus(status) {
-      const idx = STATUS_ORDER.indexOf(status);
-      if (idx < 0 || idx >= STATUS_ORDER.length - 1) return null;
-      return STATUS_ORDER[idx + 1];
-    }
-
-    function getPrevStatus(status) {
-      const idx = STATUS_ORDER.indexOf(status);
-      if (idx <= 0) return null;
-      return STATUS_ORDER[idx - 1];
-    }
-
-    function getActionLabelForNextStatus(nextStatus) {
-      if (nextStatus === "confirmed") return "Confirm ▶";
-      if (nextStatus === "baking") return "Bake ▶";
-      if (nextStatus === "ready") return "Ready ▶";
-      if (nextStatus === "delivered") return "Deliver ▶";
-      return "Next ▶";
-    }
-
-    function getBackLabel() {
-      return "◀ Back";
-    }
-
-    function getItemName(row) {
-      return row.item_name || row.product_name || row.selected_product_name || row.name || "Item";
-    }
-
-    function getItemCategory(row) {
-      return row.item_category || row.product_category || row.category_name || row.category_slug || row.category || null;
-    }
-
-    function getItemQty(row) {
-      return Number(row.capacity_qty ?? row.expanded_qty ?? row.qty ?? row.quantity ?? 0);
-    }
-
-    function isCapacityItem(row) {
-      const capacityCategoryId =
-        state.dropSummary?.capacity_category_id ||
-        state.drop?.capacity_category_id ||
-        null;
-
-      if (!capacityCategoryId) return false;
-
-      // Primary: category_id UUID match — reliable regardless of name or slug formatting
-      if (row.category_id) {
-        return row.category_id === capacityCategoryId;
-      }
-
-      // Secondary: capacity_units — enriched from products table for bundle components
-      // that don't carry category_id through the expanded view
-      if (row.capacity_units !== null && row.capacity_units !== undefined) {
-        return Number(row.capacity_units) > 0;
-      }
-
-      // Fallback: legacy view — items with capacity_units_snapshot > 0 are capacity items
-      return Number(row.capacity_units_snapshot ?? 0) > 0;
-    }
-
-    function groupItemDetailsByOrder(items) {
-      const map = new Map();
-      items.forEach((row) => {
-        if (!map.has(row.order_id)) map.set(row.order_id, []);
-        map.get(row.order_id).push(row);
-      });
-      return map;
-    }
-
-    function buildOrderModels() {
-      const itemsByOrder = groupItemDetailsByOrder(state.itemDetails);
-
-      return state.ordersSummary.map((order) => {
-        const lines = (itemsByOrder.get(order.order_id) || []).map((line) => ({
-          ...line,
-          _item_name: getItemName(line),
-          _item_category: getItemCategory(line),
-          _item_qty: getItemQty(line)
-        }));
-
-        const grouped = { capacity: [], extras: [] };
-
-        lines.forEach((line) => {
-          if (isCapacityItem(line)) {
-            grouped.capacity.push(line);
-          } else {
-            grouped.extras.push(line);
-          }
-        });
-
-        return { ...order, lines, grouped };
-      });
-    }
-
-    function updateBoardStatusFilterSummary() {
-      const summary = byId("boardStatusFilterSummary");
-      const selected = state.boardStatusFilters;
-
-      if (!selected.length) {
-        summary.textContent = "No statuses";
-        return;
-      }
-
-      if (selected.length <= 3) {
-        summary.textContent = selected.map(titleCase).join(", ");
-        return;
-      }
-
-      summary.textContent = `${selected.length} statuses`;
-    }
-
-    function getFilteredDrops() {
-      return state.drops.filter((drop) => {
-        const statusOk = state.boardStatusFilters.length
-          ? state.boardStatusFilters.includes(normaliseStatus(drop.status))
-          : false;
-
-        const typeOk = state.boardTypeFilter === "all" || drop.drop_type === state.boardTypeFilter;
-
-        return statusOk && typeOk;
-      });
-    }
-
-    function ensureSelectedDropStillValid() {
-      state.filteredDrops = getFilteredDrops();
-
-      const selectedStillVisible = state.filteredDrops.some((drop) => drop.drop_id === state.selectedDropId);
-      if (selectedStillVisible) return;
-
-      const liveMatch = state.filteredDrops.find((d) => normaliseStatus(d.status) === "live");
-      state.selectedDropId = (liveMatch || state.filteredDrops[0] || {}).drop_id || null;
-    }
-
-    function renderDropSelect() {
-      const select = byId("dropSelect");
-      select.innerHTML = "";
-
-      if (!state.filteredDrops.length) {
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.textContent = "No drops match current filters";
-        select.appendChild(opt);
-        byId("dropFilterResultText").textContent = "0 drops match current filters";
-        return;
-      }
-
-      state.filteredDrops.forEach((drop) => {
-        const opt = document.createElement("option");
-        opt.value = drop.drop_id;
-        opt.textContent = `${drop.drop_name} • ${drop.drop_type || "drop"} • ${normaliseStatus(drop.status)}`;
-        if (drop.drop_id === state.selectedDropId) opt.selected = true;
-        select.appendChild(opt);
-      });
-
-      const count = state.filteredDrops.length;
-      byId("dropFilterResultText").textContent = `${count} drop${count === 1 ? "" : "s"} match current filters`;
-    }
-
-    function renderHeader() {
-      const drop = state.drop;
-      const summary = state.dropSummary;
-
-      if (!drop || !summary) {
-        byId("dropName").textContent = "No drop selected";
-        byId("dropMeta").textContent = "Select a drop to view live order flow.";
-        byId("dropStatusText").textContent = "—";
-        byId("dropStatusDot").className = "dot";
-        byId("kpiOrders").textContent = "0";
-        byId("kpiCategory").textContent = "—";
-        byId("kpiCapacityTotal").textContent = "0";
-        byId("kpiCapacityUsed").textContent = "0";
-        byId("kpiCapacityRemaining").textContent = "0";
-        byId("kpiRevenue").textContent = "£0";
-        byId("capacityCopyLeft").textContent = "0 / 0 units";
-        byId("capacityCopyRight").textContent = "0% full";
-        byId("capacityFill").style.width = "0%";
-        byId("queueSectionSub").textContent = "Items driving the current drop's operational capacity";
-        byId("thCapacityItems").textContent = "Capacity items";
-        return;
-      }
-
-      const used = Number(summary.capacity_units_used || 0);
-      const total = Number(summary.capacity_units_total || 0);
-      const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
-      const revenuePence = state.ordersSummary.reduce((sum, row) => sum + Number(row.total_price_pence || 0), 0);
-      const capacityLabel = getCapacityCategoryLabel();
-
-      byId("dropName").textContent = stripWindowSuffix(summary.drop_name || drop.name || "Unnamed drop");
-      byId("dropMeta").textContent = formatDropMeta(summary);
-      byId("dropStatusText").textContent = normaliseStatus(summary.status || drop.status || "draft");
-      byId("dropStatusDot").className = statusDotClass(normaliseStatus(summary.status || drop.status));
-      byId("kpiOrders").textContent = String(state.ordersSummary.length);
-      byId("kpiCategory").textContent = capacityLabel || "—";
-      byId("kpiCapacityTotal").textContent = String(total);
-      byId("kpiCapacityUsed").textContent = String(used);
-      byId("kpiCapacityRemaining").textContent = String(summary.capacity_units_remaining || 0);
-      byId("kpiRevenue").textContent = formatMoneyPence(revenuePence);
-      byId("capacityCopyLeft").textContent = `${used} / ${total} ${capacityLabel || "units"}`;
-      byId("capacityCopyRight").textContent = `${pct}% full`;
-      byId("capacityFill").style.width = `${pct}%`;
-      byId("capacitySummaryTitle").textContent = `${capacityLabel || "Capacity"} items`;
-      byId("queueSectionSub").textContent = capacityLabel
-        ? `Confirmed ${capacityLabel} items queued for preparation`
-        : "Items driving the current drop's operational capacity";
-      byId("thCapacityItems").textContent = `${capacityLabel || "Capacity"} items`;
-    }
-
-    function renderQueue() {
-      const queueGrid = byId("queueGrid");
-      queueGrid.innerHTML = "";
-
-      if (!state.dropSummary) {
-        queueGrid.innerHTML = '<div class="emptyState">No drop selected.</div>';
-        return;
-      }
-
-      const capacityCategoryLabel = getCapacityCategoryLabel();
-
-      const relevant = state.itemDetails.filter((row) =>
-        normaliseStatus(row.status) === "confirmed" && isCapacityItem(row)
-      );
-
-      const counts = new Map();
-      relevant.forEach((row) => {
-        const name = getItemName(row);
-        const qty = getItemQty(row);
-        counts.set(name, (counts.get(name) || 0) + qty);
-      });
-
-      const ordered = [...counts.entries()].sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]));
-
-      if (!ordered.length) {
-        queueGrid.innerHTML = `<div class="emptyState">No confirmed ${capacityCategoryLabel} items waiting.</div>`;
-        return;
-      }
-
-      ordered.forEach(([name, qty]) => {
-        const div = document.createElement("div");
-        div.className = "queueItem";
-        div.innerHTML = `
-          <span>${name}</span>
-          <span class="queueQty">×${qty}</span>
-        `;
-        queueGrid.appendChild(div);
-      });
-    }
-
-    function renderWorkflowCounts() {
-      const counts = {
-        placed: 0,
-        confirmed: 0,
-        baking: 0,
-        ready: 0,
-        delivered: 0
-      };
-
-      state.ordersSummary.forEach((order) => {
-        const status = normaliseStatus(order.status);
-        if (Object.prototype.hasOwnProperty.call(counts, status)) counts[status] += 1;
-      });
-
-      byId("countPlaced").textContent = counts.placed;
-      byId("countConfirmed").textContent = counts.confirmed;
-      byId("countBaking").textContent = counts.baking;
-      byId("countReady").textContent = counts.ready;
-      byId("countDelivered").textContent = counts.delivered;
-
-      byId("badgePlaced").textContent = counts.placed;
-      byId("badgeConfirmed").textContent = counts.confirmed;
-      byId("badgeBaking").textContent = counts.baking;
-      byId("badgeReady").textContent = counts.ready;
-      byId("badgeDelivered").textContent = counts.delivered;
-    }
-
-    function renderSummaryList(targetId, entries) {
-      const el = byId(targetId);
-      el.innerHTML = "";
-
-      if (!entries.length) {
-        el.innerHTML = `<div class="compactMuted">No items.</div>`;
-        return;
-      }
-
-      entries.forEach(([name, qty]) => {
-        const div = document.createElement("div");
-        div.className = "summaryLine";
-        div.innerHTML = `
-          <span>${name}</span>
-          <span class="qty">×${qty}</span>
-        `;
-        el.appendChild(div);
-      });
-    }
-
-    function renderConsolidatedView() {
-      const capacityMap = new Map();
-      const otherMap = new Map();
-
-      state.itemDetails.forEach((line) => {
-        const name = getItemName(line);
-        const qty = getItemQty(line);
-
-        if (isCapacityItem(line)) {
-          capacityMap.set(name, (capacityMap.get(name) || 0) + qty);
-        } else {
-          otherMap.set(name, (otherMap.get(name) || 0) + qty);
-        }
-      });
-
-      const sortEntries = (map) => [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-
-      renderSummaryList("summaryCapacityList", sortEntries(capacityMap));
-      renderSummaryList("summaryOtherList", sortEntries(otherMap));
-    }
-
-    function renderItemsBlock(lines, emptyText) {
-      if (!lines.length) {
-        return `<div class="compactMuted">${emptyText}</div>`;
-      }
-      return `
-        <div class="itemsBlock">
-          ${lines.map((line) => `<div class="itemsLine">${line._item_name} ×${line._item_qty}</div>`).join("")}
+  </section>
+
+  <!-- ============================================================= -->
+  <!-- SECTION 3.5 — REACH THE RIGHT CUSTOMERS                        -->
+  <!-- ============================================================= -->
+  <section class="ldSection" style="background:#ffffff;">
+    <div class="ldContainer">
+      <div class="ldSectionHead">
+        <h2 class="ldSectionTitle">Demand intelligence, built in</h2>
+        <p class="ldSectionLead">
+          Every drop makes the next one easier to plan and fill.
+        </p>
+      </div>
+
+      <div class="ldStepGrid">
+        <div class="ldStep">
+          <div class="ldStepIcon"></div>
+          <h3 class="ldStepTitle">Know who to contact</h3>
+          <p class="ldStepBody">
+            Hearth identifies your loyal core, lapsed customers, and
+            highest-value buyers before every drop. No guesswork — just a
+            clear picture of who is most likely to order.
+          </p>
         </div>
-      `;
-    }
-
-    function getFilteredOrderModels() {
-      const models = buildOrderModels();
-      const search = state.tableSearch.trim().toLowerCase();
-
-      return models.filter((order) => {
-        const statusOk =
-          state.tableStatusFilter === "all" ||
-          normaliseStatus(order.status) === state.tableStatusFilter;
-
-        if (!statusOk) return false;
-
-        if (!search) return true;
-
-        const haystack = [
-          order.customer_name || "",
-          ...order.lines.map((l) => l._item_name || "")
-        ].join(" ").toLowerCase();
-
-        return haystack.includes(search);
-      });
-    }
-
-    function renderAllOrders() {
-      const body = byId("allOrdersBody");
-      body.innerHTML = "";
-
-      const models = getFilteredOrderModels();
-
-      if (!models.length) {
-        body.innerHTML = `
-          <tr>
-            <td colspan="7">
-              <div class="emptyState">No matching orders for this filter.</div>
-            </td>
-          </tr>
-        `;
-        return;
-      }
-
-      models.forEach((order) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td class="mono">${formatShortTime(order.created_at)}</td>
-          <td>${order.customer_name || "—"}</td>
-          <td>${Number(order.capacity_units_in_order || 0)}</td>
-          <td><span class="badgeStatus ${normaliseStatus(order.status)}">${normaliseStatus(order.status)}</span></td>
-          <td>${formatMoneyPence(order.total_price_pence)}</td>
-          <td class="tableItems">
-            ${renderItemsBlock(order.grouped.capacity, "None")}
-          </td>
-          <td class="tableItems">
-            ${renderItemsBlock(order.grouped.extras, "None")}
-          </td>
-        `;
-        body.appendChild(tr);
-      });
-    }
-
-    function renderCompactBlock(title, lines) {
-      if (!lines.length) {
-        return `
-          <div class="lineBlock">
-            <div class="lineBlockTitle">${title}</div>
-            <div class="compactMuted">None</div>
-          </div>
-        `;
-      }
-
-      const html = lines.map((line) => `
-        <div class="compactLine">
-          <span>${line._item_name}</span>
-          <span>×${line._item_qty}</span>
+        <div class="ldStep">
+          <div class="ldStepIcon"></div>
+          <h3 class="ldStepTitle">Communicate with purpose</h3>
+          <p class="ldStepBody">
+            Send targeted messages to the customers most likely to order.
+            Not a broadcast — a considered signal to the right people at
+            the right time.
+          </p>
         </div>
-      `).join("");
-
-      return `
-        <div class="lineBlock">
-          <div class="lineBlockTitle">${title}</div>
-          <div class="compactList">${html}</div>
+        <div class="ldStep">
+          <div class="ldStepIcon"></div>
+          <h3 class="ldStepTitle">Build demand, not noise</h3>
+          <p class="ldStepBody">
+            Customers receive fewer, more relevant messages. That means
+            higher open rates, stronger conversion, and a list that stays
+            healthy over time.
+          </p>
         </div>
-      `;
-    }
+      </div>
+    </div>
+  </section>
 
-    function renderActionRow(orderId, status) {
-      const prev = getPrevStatus(status);
-      const next = getNextStatus(status);
+  <!-- ============================================================= -->
+  <!-- SECTION 4 — TWO VENDOR PATHWAYS                                -->
+  <!-- ============================================================= -->
+  <section class="ldSection ldPathways">
+    <div class="ldContainer">
+      <div class="ldSectionHead">
+        <h2 class="ldSectionTitle">Whether you're bringing an audience already, or building one from scratch</h2>
+      </div>
 
-      return `
-        <div class="cardActions cardActionsInline">
-          ${prev
-            ? `<button class="btnGhost js-prev actionBtn actionBtnEdge" type="button" data-id="${orderId}" data-status="${prev}">${getBackLabel()}</button>`
-            : `<div class="btnPlaceholder actionBtn actionBtnEdge"></div>`
-          }
-
-          <button class="btnSmall js-toggle-details actionBtn actionBtnDetail" type="button" data-id="${orderId}">Details</button>
-
-          ${next
-            ? `<button class="btnAccent js-next actionBtn actionBtnEdge" type="button" data-id="${orderId}" data-status="${next}">${getActionLabelForNextStatus(next)}</button>`
-            : `<div class="btnPlaceholder actionBtn actionBtnEdge"></div>`
-          }
+      <div class="ldPathwaysGrid">
+        <div class="ldPathCard">
+          <h3 class="ldPathTitle">You already run events, markets, or supper clubs</h3>
+          <p class="ldPathBody">
+            Hearth gives you the pre-order, capacity, and customer-ownership
+            layer on top of what you're already doing. Every repeat customer
+            becomes a known relationship. Every drop becomes part of a
+            compounding asset.
+          </p>
         </div>
-      `;
-    }
-
-    function renderFulfilmentRow(order) {
-      const mode = String(order.fulfilment_mode || "").toLowerCase();
-      if (!mode) return "";
-
-      const label = mode === "delivery" ? "Delivery" : mode === "collection" ? "Collection" : titleCase(mode);
-      const badgeClass = mode === "delivery" ? "delivery" : "collection";
-
-      let html = `<div class="orderFulfilmentRow"><span class="orderFulfilmentBadge ${badgeClass}">${label}</span>`;
-
-      if (mode === "delivery" && order.delivery_address) {
-        html += `<span class="orderDeliveryAddress">${order.delivery_address}</span>`;
-      }
-
-      html += `</div>`;
-      return html;
-    }
-
-    function renderNotesBlock(notes) {
-      if (!notes) return "";
-      return `<div class="orderNotesBlock"><span class="orderNotesLabel">Notes</span>${notes}</div>`;
-    }
-
-    function renderOrderCard(order) {
-      const unitsLabel = getCapacityLabel(Number(order.capacity_units_in_order || order.pizzas || 0));
-      const capacityTitle = String(getCapacityCategoryLabel() || "Capacity items").toUpperCase();
-      const totalValue = formatMoneyPence(order.total_price_pence);
-      const isExpanded = state.expandedOrders.has(String(order.order_id));
-
-      const wrapper = document.createElement("div");
-      wrapper.className = "orderCard";
-      wrapper.innerHTML = `
-        <div class="orderCardInner">
-          <div class="orderCardTop">
-            <div class="orderHeaderLeft" style="min-width:0;">
-              <div class="orderId">Order #${String(order.order_id).slice(-8)}</div>
-              <div class="orderCustomer" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${order.customer_name || "Customer"}</div>
-              <div class="orderItemSummary">${unitsLabel}</div>
-            </div>
-            <div class="orderTotalChip">${totalValue}</div>
-          </div>
-
-          ${renderActionRow(order.order_id, normaliseStatus(order.status))}
-
-          ${renderFulfilmentRow(order)}
-          ${renderNotesBlock(order.customer_notes)}
-
-          <div class="detailsWrap ${isExpanded ? "open" : ""}">
-            <div class="detailsScroller">
-              ${renderCompactBlock(capacityTitle, order.grouped.capacity)}
-              ${renderCompactBlock("OTHER ITEMS", order.grouped.extras)}
-            </div>
-          </div>
+        <div class="ldPathCard">
+          <h3 class="ldPathTitle">You're starting something new</h3>
+          <p class="ldPathBody">
+            A planned drop gives you predictability before you cook a single
+            thing — capacity, revenue, and customer count all known in
+            advance. Start with one drop a month. Grow at your own pace.
+          </p>
         </div>
-      `;
-
-      // Attach direct listeners so clicks don't rely on body-level delegation.
-      // stopPropagation prevents any ancestor from consuming the event first.
-      var nextEl   = wrapper.querySelector(".js-next");
-      var prevEl   = wrapper.querySelector(".js-prev");
-      var toggleEl = wrapper.querySelector(".js-toggle-details");
-
-      if (nextEl) {
-        nextEl.addEventListener("click", function (e) {
-          e.stopPropagation();
-          handleNextStatus(nextEl.dataset.id, nextEl.dataset.status).catch(function (err) {
-            console.error(err);
-            showError(err.message || "Status update failed.");
-          });
-        });
-      }
-      if (prevEl) {
-        prevEl.addEventListener("click", function (e) {
-          e.stopPropagation();
-          updateOrderStatus(prevEl.dataset.id, prevEl.dataset.status).catch(function (err) {
-            console.error(err);
-            showError(err.message || "Status update failed.");
-          });
-        });
-      }
-      if (toggleEl) {
-        toggleEl.addEventListener("click", function (e) {
-          e.stopPropagation();
-          var id = String(toggleEl.dataset.id);
-          var detailsEl = wrapper.querySelector(".detailsWrap");
-          if (state.expandedOrders.has(id)) {
-            state.expandedOrders.delete(id);
-            if (detailsEl) detailsEl.classList.remove("open");
-          } else {
-            state.expandedOrders.add(id);
-            if (detailsEl) {
-              detailsEl.classList.add("open");
-              detailsEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
-            }
-          }
-        });
-      }
-
-      return wrapper;
-    }
-
-    function renderBoard() {
-      const cols = {
-        placed: byId("colPlaced"),
-        confirmed: byId("colConfirmed"),
-        baking: byId("colBaking"),
-        ready: byId("colReady"),
-        delivered: byId("colDelivered")
-      };
-
-      Object.values(cols).forEach((col) => {
-        col.innerHTML = "";
-      });
-
-      const models = buildOrderModels();
-
-      STATUS_ORDER.forEach((status) => {
-        const matches = models.filter((order) => normaliseStatus(order.status) === status);
-
-        if (!matches.length) {
-          cols[status].innerHTML = `<div class="emptyState">No ${status} orders.</div>`;
-          return;
-        }
-
-        matches.forEach((order) => {
-          cols[status].appendChild(renderOrderCard(order));
-        });
-      });
-    }
-
-    function renderOrdersPanelState() {
-      const body = byId("ordersPanelBody");
-      const btn = byId("toggleOrdersPanel");
-
-      body.classList.toggle("hidden", !state.ordersPanelOpen);
-      btn.textContent = state.ordersPanelOpen ? "Hide" : "Show";
-    }
-
-    function renderSummaryPanelState() {
-      const body = byId("summaryPanelBody");
-      const btn = byId("toggleSummaryPanel");
-
-      body.style.display = state.summaryPanelOpen ? "block" : "none";
-      btn.textContent = state.summaryPanelOpen ? "Hide" : "Show";
-    }
-
-    function renderHeroCollapseState() {
-      const isCollapsed = state.heroCollapsed;
-      const btn = byId("heroToggleBtn");
-
-      document.querySelectorAll(".heroCollapsible").forEach(function (el) {
-        el.style.display = isCollapsed ? "none" : "";
-      });
-
-      if (btn) {
-        btn.textContent = isCollapsed ? "Show summary" : "Hide summary";
-      }
-    }
-
-    async function loadDrops() {
-      const { data, error } = await supabase
-        .from("v_drop_summary")
-        .select("*")
-        .eq("vendor_id", state.vendorId)
-        .order("delivery_start", { ascending: false });
-
-      if (error) throw error;
-
-      state.drops = data || [];
-
-      const saved = localStorage.getItem("hearth:selectedDropId");
-      const savedExists = state.drops.some((d) => d.drop_id === saved);
-
-      state.selectedDropId = savedExists
-        ? saved
-        : ((state.drops.find((d) => d.status === "live") || state.drops[0] || {}).drop_id || null);
-
-      const hasLiveDrop = state.drops.some((d) => normaliseStatus(d.status) === "live");
-      state.heroCollapsed = hasLiveDrop;
-
-      ensureSelectedDropStillValid();
-      renderDropSelect();
-    }
-
-    // Enrich bundle component rows with category_id and capacity_units from the products table.
-    // v_order_item_detail_expanded returns one row per bundle component but does not
-    // carry category_id or capacity_units for those components.  We fetch those fields
-    // from products and merge them so isCapacityItem() can classify correctly.
-    async function enrichItemDetailsWithProductData(items) {
-      if (!items || !items.length) return items;
-
-      const missingIds = [...new Set(
-        items
-          .filter((row) => (row.category_id === null || row.category_id === undefined) && row.product_id)
-          .map((row) => String(row.product_id))
-      )];
-
-      if (!missingIds.length) return items;
-
-      const { data: products, error } = await supabase
-        .from("products")
-        .select("id, category_id, capacity_units")
-        .in("id", missingIds);
-
-      if (error || !products || !products.length) {
-        console.warn("[Service Board] Could not enrich item details with product data:", error?.message || "no products returned");
-        return items;
-      }
-
-      const productMap = new Map(products.map((p) => [String(p.id), p]));
-
-      return items.map((row) => {
-        if ((row.category_id === null || row.category_id === undefined) && row.product_id) {
-          const product = productMap.get(String(row.product_id));
-          if (product) {
-            return {
-              ...row,
-              category_id: product.category_id,
-              capacity_units: product.capacity_units
-            };
-          }
-        }
-        return row;
-      });
-    }
-
-    async function loadExpandedOrderDetails(dropId) {
-      const expanded = await supabase
-        .from("v_order_item_detail_expanded")
-        .select("*")
-        .eq("drop_id", dropId)
-        .order("created_at", { ascending: true });
-
-      if (!expanded.error) return expanded.data || [];
-
-      console.warn(
-        "[Service Board] v_order_item_detail_expanded unavailable (" + (expanded.error?.message || "unknown error") + ") — falling back to v_order_item_detail_v2."
-      );
-
-      const v2 = await supabase
-        .from("v_order_item_detail_v2")
-        .select("*")
-        .eq("drop_id", dropId)
-        .order("created_at", { ascending: true });
-
-      if (!v2.error) return v2.data || [];
-
-      console.warn(
-        "[Service Board] v_order_item_detail_v2 unavailable (" + (v2.error?.message || "unknown error") + ") — falling back to v_order_item_detail."
-      );
-
-      const legacy = await supabase
-        .from("v_order_item_detail")
-        .select("*")
-        .eq("drop_id", dropId)
-        .order("created_at", { ascending: true });
-
-      if (legacy.error) throw legacy.error;
-      return legacy.data || [];
-    }
-
-    async function loadSelectedDropData() {
-      if (!state.selectedDropId) {
-        state.drop = null;
-        state.dropSummary = null;
-        state.ordersSummary = [];
-        state.itemDetails = [];
-        return;
-      }
-
-      const [dropRes, summaryRes, ordersRes, items] = await Promise.all([
-        supabase.from("drops").select("*").eq("id", state.selectedDropId).single(),
-        supabase.from("v_drop_summary").select("*").eq("drop_id", state.selectedDropId).single(),
-        supabase.from("v_drop_orders_summary").select("*").eq("drop_id", state.selectedDropId).order("created_at", { ascending: true }),
-        loadExpandedOrderDetails(state.selectedDropId)
-      ]);
-
-      if (dropRes.error) throw dropRes.error;
-      if (summaryRes.error) throw summaryRes.error;
-      if (ordersRes.error) throw ordersRes.error;
-
-      // Vendor isolation assertion — defends against a stale
-      // selectedDropId (e.g. from localStorage hearth:selectedDropId
-      // written by a previous session on another vendor) pointing at a
-      // drop that belongs to a different vendor. Mirrors scorecard.html.
-      if (dropRes.data && dropRes.data.vendor_id !== state.vendorId) {
-        localStorage.removeItem("hearth:selectedDropId");
-        state.selectedDropId = null;
-        state.drop = null;
-        state.dropSummary = null;
-        state.ordersSummary = [];
-        state.itemDetails = [];
-        await loadDrops();
-        return;
-      }
-
-      localStorage.setItem("hearth:selectedDropId", state.selectedDropId);
-
-      state.drop = dropRes.data;
-      state.dropSummary = summaryRes.data;
-      state.ordersSummary = ordersRes.data || [];
-      state.itemDetails = await enrichItemDetailsWithProductData(items || []);
-    }
-
-    async function writeStatusEvent(order, fromStatus, toStatus) {
-      const { error } = await supabase
-        .from("order_status_events")
-        .insert({
-          order_id: order.order_id,
-          drop_id: state.selectedDropId,
-          from_status: fromStatus,
-          to_status: toStatus,
-          event_type: "status_change",
-          actor: "service_board",
-          actor_type: "operator"
-        });
-
-      if (error) throw error;
-    }
-
-    // ---- Optimistic status change with undo toast ----
-
-    function applyStatusOptimistically(orderId, toStatus) {
-      const order = state.ordersSummary.find((o) => String(o.order_id) === String(orderId));
-      if (order) order.status = toStatus;
-      renderBoard();
-      renderWorkflowCounts();
-      maybeSelectDefaultMobileTab();
-    }
-
-    function showUndoToast(orderRef, toStatus) {
-      const toast = byId("undoToast");
-      const msg = byId("undoToastMsg");
-      const progress = byId("undoToastProgress");
-
-      const labelMap = {
-        confirmed: "Confirmed",
-        baking: "Preparing",
-        ready: "Ready",
-        delivered: "Delivered",
-        placed: "Placed"
-      };
-      msg.textContent = "Order #" + orderRef + " marked as " + (labelMap[toStatus] || toStatus) + ".";
-
-      // Restart the countdown animation
-      progress.style.animation = "none";
-      void progress.offsetWidth; // force reflow
-      progress.style.animation = "toastCountdown 5s linear forwards";
-
-      toast.classList.add("visible");
-    }
-
-    function hideUndoToast() {
-      byId("undoToast").classList.remove("visible");
-    }
-
-    async function commitPending(skipRefresh) {
-      if (!pendingChange || pendingChange.committed) return;
-      const pc = pendingChange;
-      pc.committed = true;
-      clearTimeout(pc.timerHandle);
-      pendingChange = null;
-      hideUndoToast();
-      showError("");
-
-      try {
-        const { error: updateError } = await supabase
-          .from("orders")
-          .update({ status: pc.toStatus })
-          .eq("id", pc.orderId);
-        if (updateError) throw updateError;
-        await writeStatusEvent(pc.orderSnapshot, pc.fromStatus, pc.toStatus);
-        if (!skipRefresh) await refreshData();
-      } catch (err) {
-        console.error(err);
-        showError(err.message || "Status update failed.");
-        applyStatusOptimistically(pc.orderId, pc.fromStatus);
-      }
-    }
-
-    function undoPending() {
-      if (!pendingChange) return;
-      const pc = pendingChange;
-      clearTimeout(pc.timerHandle);
-      pendingChange = null;
-      hideUndoToast();
-      applyStatusOptimistically(pc.orderId, pc.fromStatus);
-    }
-
-    function toggleDetails(orderId) {
-      if (state.expandedOrders.has(orderId)) {
-        state.expandedOrders.delete(orderId);
-      } else {
-        state.expandedOrders.add(orderId);
-      }
-      renderBoard();
-    }
-
-    // ---- Mobile Kanban tab state ----
-    // null = not yet auto-selected on load
-    let mobileActiveTab = null;
-
-    function updateMobileTabBadges() {
-      const map = {
-        placed:    "mobileTabBadgePlaced",
-        confirmed: "mobileTabBadgeConfirmed",
-        baking:    "mobileTabBadgeBaking",
-        ready:     "mobileTabBadgeReady",
-        delivered: "mobileTabBadgeDelivered"
-      };
-      const src = {
-        placed:    "countPlaced",
-        confirmed: "countConfirmed",
-        baking:    "countBaking",
-        ready:     "countReady",
-        delivered: "countDelivered"
-      };
-      STATUS_ORDER.forEach(function (status) {
-        const badge = byId(map[status]);
-        const count = byId(src[status]);
-        if (badge && count) badge.textContent = count.textContent;
-      });
-    }
-
-    function setMobileActiveTab(tab) {
-      mobileActiveTab = tab;
-      const boardGrid = document.querySelector(".boardGrid");
-      if (boardGrid) boardGrid.setAttribute("data-active-tab", tab);
-      document.querySelectorAll(".mobileTab").forEach(function (btn) {
-        btn.classList.toggle("active", btn.dataset.tab === tab);
-      });
-    }
-
-    function maybeSelectDefaultMobileTab() {
-      updateMobileTabBadges();
-      if (mobileActiveTab !== null) {
-        // Re-apply to keep boardGrid attr and active class in sync after re-render
-        setMobileActiveTab(mobileActiveTab);
-        return;
-      }
-      // Initial load: pick first non-empty status, fallback to "confirmed"
-      const counts = {};
-      STATUS_ORDER.forEach(function (s) {
-        const el = byId("count" + s.charAt(0).toUpperCase() + s.slice(1));
-        counts[s] = el ? Number(el.textContent) : 0;
-      });
-      const firstNonEmpty = STATUS_ORDER.find(function (s) { return counts[s] > 0; });
-      setMobileActiveTab(firstNonEmpty || "confirmed");
-    }
-    // ---- End mobile Kanban tab state ----
-
-    function renderEverything() {
-      updateBoardStatusFilterSummary();
-      renderDropSelect();
-      renderHeader();
-      renderHeroCollapseState();
-      renderQueue();
-      renderWorkflowCounts();
-      renderConsolidatedView();
-      renderSummaryPanelState();
-      renderOrdersPanelState();
-      renderAllOrders();
-      renderBoard();
-      maybeSelectDefaultMobileTab();
-    }
-
-    async function refreshData() {
-      showError("");
-      ensureSelectedDropStillValid();
-      maybeResubscribe();
-      renderDropSelect();
-      await loadSelectedDropData();
-      renderEverything();
-    }
-
-    async function applyBoardFilters() {
-      state.expandedOrders.clear();
-      ensureSelectedDropStillValid();
-      await refreshData();
-    }
-
-    function setRealtimeIndicator(active) {
-      const el = byId("realtimeIndicator");
-      if (el) el.classList.toggle("active", active);
-      const dot = byId("realtimeDot");
-      if (dot) dot.classList.toggle("active", active);
-    }
-
-    function subscribeToDropOrders(dropId) {
-      if (realtimeChannel) {
-        supabase.removeChannel(realtimeChannel);
-        realtimeChannel = null;
-      }
-      setRealtimeIndicator(false);
-
-      if (!dropId) return;
-
-      realtimeChannel = supabase
-        .channel("orders-drop-" + dropId)
-        .on("postgres_changes", {
-          event: "*",
-          schema: "public",
-          table: "orders",
-          filter: "drop_id=eq." + dropId
-        }, async function () {
-          try {
-            await loadSelectedDropData();
-            renderEverything();
-          } catch (err) {
-            console.error("Realtime refresh failed:", err);
-          }
-        })
-        .subscribe(function (status) {
-          setRealtimeIndicator(status === "SUBSCRIBED");
-        });
-
-      realtimeSubscribedDropId = dropId;
-    }
-
-    function maybeResubscribe() {
-      if (realtimeSubscribedDropId !== state.selectedDropId) {
-        subscribeToDropOrders(state.selectedDropId);
-      }
-    }
-
-    // Fix 2 — define updateOrderStatus so direct card listeners and handleNextStatus
-    // can trigger status changes through the optimistic/undo-toast path.
-    // The body-level delegation handler (lines below in attachEvents) handles the same
-    // path for events that reach it, but direct listeners stop propagation before that.
-    async function updateOrderStatus(orderId, toStatus) {
-      if (pendingChange) await commitPending(true);
-
-      const order = state.ordersSummary.find((o) => String(o.order_id) === String(orderId));
-
-      if (!order) throw new Error("Order not found in current state.");
-
-      const fromStatus = normaliseStatus(order.status);
-      const orderRef = String(orderId).slice(0, 8);
-      const orderSnapshot = { ...order };
-
-      applyStatusOptimistically(orderId, toStatus);
-
-      const timerHandle = setTimeout(async function () {
-        await commitPending(false);
-      }, 5000);
-
-      pendingChange = {
-        orderId,
-        fromStatus,
-        toStatus,
-        orderRef,
-        orderSnapshot,
-        timerHandle,
-        committed: false
-      };
-
-      showUndoToast(orderRef, toStatus);
-    }
-
-    // ---- T3-10: Order notification modal ----
-
-    // Stored when modal opens; buttons read these directly — no callback chain.
-    function openNotifyModal(orderId, toStatus, order, config) {
-      _notifyOrderId  = orderId;
-      _notifyToStatus = toStatus;
-
-      const vendorName   = state.dropSummary?.vendor_name || state.drop?.vendor_name || "Hearth";
-      const customerName = (order && order.customer_name) || "Customer";
-      const phone        = (order && (order.customer_phone || order.phone)) || "";
-
-      var headingEl = byId("readyNotifyHeading");
-      var nameEl    = byId("readyNotifyName");
-      var phoneEl   = byId("readyNotifyPhoneDisplay");
-      var callBtn   = byId("readyNotifyCallBtn");
-      var smsBtn    = byId("readyNotifySmsBtn");
-
-      if (headingEl) headingEl.textContent = config.heading || "Notify customer?";
-      if (nameEl)    nameEl.textContent    = customerName;
-
-      if (phone) {
-        if (phoneEl) phoneEl.textContent = phone;
-        if (callBtn) { callBtn.href = "tel:" + phone; callBtn.style.display = ""; }
-        if (smsBtn)  { smsBtn.href  = "sms:" + phone + "?body=" + encodeURIComponent(config.smsText(customerName, vendorName)); smsBtn.style.display = ""; }
-      } else {
-        if (phoneEl) phoneEl.textContent = "No phone number on file";
-        if (callBtn) callBtn.style.display = "none";
-        if (smsBtn)  smsBtn.style.display  = "none";
-      }
-
-      var wrap = byId("notifyWrap");
-      if (wrap) wrap.classList.add("open");
-    }
-
-    function dismissNotifyModal() {
-      var wrap = byId("notifyWrap");
-      if (wrap) wrap.classList.remove("open");
-      _notifyOrderId  = null;
-      _notifyToStatus = null;
-    }
-
-    async function handleNextStatus(orderId, toStatus) {
-      if (toStatus === "ready") {
-        var order = state.ordersSummary.find(function (o) { return String(o.order_id) === String(orderId); });
-        var fulfilmentMode = String((order && order.fulfilment_mode) || "").toLowerCase();
-
-        // Only show the notify modal for collection orders.
-        // Delivery orders skip straight to the status update.
-        if (fulfilmentMode !== "delivery") {
-          openNotifyModal(orderId, toStatus, order, {
-            heading: "Notify customer?",
-            smsText: function (name, vendor) {
-              return "Hi " + name + ", your order is ready for collection. See you soon \u2014 " + vendor;
-            }
-          });
-          return;
-        }
-      }
-      try { await updateOrderStatus(orderId, toStatus); }
-      catch (err) { console.error(err); showError(err.message || "Status update failed."); }
-    }
-    // ---- End T3-10 ----
-
-    function attachEvents() {
-      const boardStatusFilterBtn = byId("boardStatusFilterBtn");
-      const boardStatusFilterPopover = byId("boardStatusFilterPopover");
-
-      boardStatusFilterBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        boardStatusFilterPopover.classList.toggle("open");
-      });
-
-      document.addEventListener("click", function (e) {
-        if (
-          !boardStatusFilterPopover.contains(e.target) &&
-          e.target !== boardStatusFilterBtn &&
-          !boardStatusFilterBtn.contains(e.target)
-        ) {
-          boardStatusFilterPopover.classList.remove("open");
-        }
-      });
-
-      byId("boardStatusFilterChecklist").addEventListener("change", async function () {
-        const selected = Array.from(
-          byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]:checked')
-        ).map((cb) => cb.value);
-
-        state.boardStatusFilters = selected;
-
-        try {
-          await applyBoardFilters();
-        } catch (err) {
-          console.error(err);
-          showError(err.message || "Unable to apply status filter.");
-        }
-      });
-
-      byId("boardStatusActiveBtn").addEventListener("click", async function () {
-        state.boardStatusFilters = [...ACTIVE_DEFAULT_STATUSES];
-        byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-          cb.checked = state.boardStatusFilters.includes(cb.value);
-        });
-
-        try {
-          await applyBoardFilters();
-        } catch (err) {
-          console.error(err);
-          showError(err.message || "Unable to apply status filter.");
-        }
-      });
-
-      byId("boardStatusAllBtn").addEventListener("click", async function () {
-        state.boardStatusFilters = [...ALL_DROP_STATUSES];
-        byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-          cb.checked = true;
-        });
-
-        try {
-          await applyBoardFilters();
-        } catch (err) {
-          console.error(err);
-          showError(err.message || "Unable to apply status filter.");
-        }
-      });
-
-      byId("boardStatusClearBtn").addEventListener("click", async function () {
-        state.boardStatusFilters = [];
-        byId("boardStatusFilterChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => {
-          cb.checked = false;
-        });
-
-        try {
-          await applyBoardFilters();
-        } catch (err) {
-          console.error(err);
-          showError(err.message || "Unable to apply status filter.");
-        }
-      });
-
-      byId("boardTypeFilter").addEventListener("change", async function (e) {
-        state.boardTypeFilter = e.target.value || "all";
-        try {
-          await applyBoardFilters();
-        } catch (err) {
-          console.error(err);
-          showError(err.message || "Unable to apply type filter.");
-        }
-      });
-
-      byId("dropSelect").addEventListener("change", async function (e) {
-        state.selectedDropId = e.target.value || null;
-        state.expandedOrders.clear();
-        try {
-          await refreshData();
-        } catch (err) {
-          console.error(err);
-          showError(err.message || "Unable to refresh selected drop.");
-        }
-      });
-
-      byId("refreshBtn").addEventListener("click", async function () {
-        try {
-          await loadDrops();
-          await refreshData();
-        } catch (err) {
-          console.error(err);
-          showError(err.message || "Unable to refresh Service Board.");
-        }
-      });
-
-      byId("toggleOrdersPanel").addEventListener("click", function () {
-        state.ordersPanelOpen = !state.ordersPanelOpen;
-        renderOrdersPanelState();
-      });
-
-      byId("toggleSummaryPanel").addEventListener("click", function () {
-        state.summaryPanelOpen = !state.summaryPanelOpen;
-        renderSummaryPanelState();
-      });
-
-      byId("heroToggleBtn").addEventListener("click", function () {
-        state.heroCollapsed = !state.heroCollapsed;
-        renderHeroCollapseState();
-      });
-
-      document.querySelectorAll(".filterChip").forEach((btn) => {
-        btn.addEventListener("click", function () {
-          state.tableStatusFilter = btn.dataset.statusFilter;
-          document.querySelectorAll(".filterChip").forEach((b) => {
-            b.classList.toggle("active", b === btn);
-          });
-          renderAllOrders();
-        });
-      });
-
-      byId("orderSearch").addEventListener("input", function (e) {
-        state.tableSearch = e.target.value || "";
-        renderAllOrders();
-      });
-
-      byId("mobileBoardTabs").addEventListener("click", function (e) {
-        const tab = e.target.closest(".mobileTab");
-        if (!tab) return;
-        setMobileActiveTab(tab.dataset.tab);
-      });
-
-      document.body.addEventListener("click", async function (e) {
-        const nextBtn = e.target.closest(".js-next");
-        const prevBtn = e.target.closest(".js-prev");
-        const toggleBtn = e.target.closest(".js-toggle-details");
-        const undoBtn = e.target.closest("#undoToastBtn");
-
-        if (undoBtn) {
-          undoPending();
-          return;
-        }
-
-        if (toggleBtn) {
-          toggleDetails(toggleBtn.dataset.id);
-          return;
-        }
-
-        if (!nextBtn && !prevBtn) return;
-
-        const btn = nextBtn || prevBtn;
-        const orderId = btn.dataset.id;
-        const toStatus = btn.dataset.status;
-
-        // Commit any in-flight change immediately before starting a new one
-        if (pendingChange) {
-          await commitPending(true);
-        }
-
-        const order = state.ordersSummary.find((o) => o.order_id === orderId);
-        if (!order) return;
-
-        const fromStatus = normaliseStatus(order.status);
-        const orderRef = String(orderId).slice(0, 8);
-        const orderSnapshot = { ...order };
-
-        // Optimistically move the card
-        applyStatusOptimistically(orderId, toStatus);
-
-        // Schedule the DB write for 5 s from now
-        const timerHandle = setTimeout(async function () {
-          await commitPending(false);
-        }, 5000);
-
-        pendingChange = {
-          orderId,
-          fromStatus,
-          toStatus,
-          orderRef,
-          orderSnapshot,
-          timerHandle,
-          committed: false
-        };
-
-        showUndoToast(orderRef, toStatus);
-      });
-
-      // T3-10: Notification modal button handlers — buttons exist in DOM before this script runs.
-      var _callBtn   = byId("readyNotifyCallBtn");
-      var _smsBtn    = byId("readyNotifySmsBtn");
-      var _skipBtn   = byId("readyNotifySkipBtn");
-      var _backdrop  = byId("notifyBackdrop");
-
-      if (_callBtn) _callBtn.addEventListener("click", function () {
-        // Browser follows tel: href naturally; capture values before dismissing.
-        var oid = _notifyOrderId; var tos = _notifyToStatus;
-        dismissNotifyModal();
-        if (oid && tos) updateOrderStatus(oid, tos).catch(function (err) { console.error(err); showError(err.message || "Status update failed."); });
-      });
-      if (_smsBtn) _smsBtn.addEventListener("click", function () {
-        var oid = _notifyOrderId; var tos = _notifyToStatus;
-        dismissNotifyModal();
-        if (oid && tos) updateOrderStatus(oid, tos).catch(function (err) { console.error(err); showError(err.message || "Status update failed."); });
-      });
-      if (_skipBtn) _skipBtn.addEventListener("click", function () {
-        var oid = _notifyOrderId; var tos = _notifyToStatus;
-        dismissNotifyModal();
-        if (oid && tos) updateOrderStatus(oid, tos).catch(function (err) { console.error(err); showError(err.message || "Status update failed."); });
-      });
-      // Backdrop click dismisses without completing the transition.
-      if (_backdrop) _backdrop.addEventListener("click", function () { dismissNotifyModal(); });
-    }
-
-    async function init() {
-      try {
-        if (!window.supabase || !window.supabase.createClient) {
-          throw new Error("Supabase library failed to load.");
-        }
-
-        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-          throw new Error("Missing Supabase config. Check ./assets/config.js and ensure window.HEARTH_CONFIG is set.");
-        }
-
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        attachEvents();
-        await loadVendorId();
-        await loadDrops();
-        await refreshData();
-        subscribeToDropOrders(state.selectedDropId);
-      } catch (err) {
-        console.error(err);
-        showError(err.message || "Unable to initialise Service Board.");
-      }
-    }
-
-    init();
-  })();
-</script>
-<script>HearthNav.decorateLinks();</script>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================= -->
+  <!-- SECTION 5 — WHO IT'S FOR                                       -->
+  <!-- ============================================================= -->
+  <section class="ldSection ldAudience">
+    <div class="ldContainer">
+      <div class="ldSectionHead">
+        <h2 class="ldSectionTitle">Made for independent food businesses</h2>
+      </div>
+
+      <div class="ldAudienceGrid">
+        <div class="ldAudienceTile">
+          <h3 class="ldAudienceTitle">Takeaways and independent restaurants</h3>
+          <p class="ldAudienceBody">
+            Reduce aggregator dependency and build a customer base that's
+            yours to keep.
+          </p>
+        </div>
+        <div class="ldAudienceTile">
+          <h3 class="ldAudienceTitle">Food trucks and street food traders</h3>
+          <p class="ldAudienceBody">
+            Formalise the pre-order model you're already running and grow
+            your regular following.
+          </p>
+        </div>
+        <div class="ldAudienceTile">
+          <h3 class="ldAudienceTitle">Market and events vendors</h3>
+          <p class="ldAudienceBody">
+            Turn one-off market customers into a direct audience for your
+            next drop.
+          </p>
+        </div>
+        <div class="ldAudienceTile">
+          <h3 class="ldAudienceTitle">Independent chefs and supper club hosts</h3>
+          <p class="ldAudienceBody">
+            Run planned, capacity-controlled dining experiences with
+            professional infrastructure.
+          </p>
+        </div>
+        <div class="ldAudienceTile">
+          <h3 class="ldAudienceTitle">Small-batch producers and makers</h3>
+          <p class="ldAudienceBody">
+            Sell directly to the people who value what you make, without
+            marketplace fees.
+          </p>
+        </div>
+        <div class="ldAudienceTile">
+          <h3 class="ldAudienceTitle">Cafes and community food businesses</h3>
+          <p class="ldAudienceBody">
+            Build community events and special drops around the audience
+            you've already earned.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================= -->
+  <!-- SECTION 6 — PROOF POINT                                        -->
+  <!-- ============================================================= -->
+  <section class="ldSection ldProof">
+    <div class="ldContainer">
+      <div class="ldProofCard">
+        <p class="ldProofQuote">
+          “Hearth gave us a way to run our pizza drops properly — pre-orders,
+          capacity, and a customer list we actually own.”
+        </p>
+        <p class="ldProofAttr">Southbury Farm Pizza Company</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================= -->
+  <!-- SECTION 7 — FINAL CTA                                          -->
+  <!-- ============================================================= -->
+  <section class="ldSection ldFinal">
+    <div class="ldFinalInner">
+      <h2 class="ldFinalHeadline">Start building something that's yours</h2>
+      <p class="ldFinalSub">
+        Free to get started. Your first drop is yours to own.
+      </p>
+      <a class="ldPrimaryBtn" href="./signup.html">Start your Hearth</a>
+      <a class="ldFinalSecondary" href="./login.html">Sign in →</a>
+    </div>
+  </section>
+
+  <!-- ============================================================= -->
+  <!-- FOOTER                                                         -->
+  <!-- ============================================================= -->
+  <footer class="ldFooter">
+    <div class="ldFooterInner">
+      <p class="ldFooterWordmark">Hearth<span class="ldWordmarkDot" aria-hidden="true"></span></p>
+      <div class="ldFooterLinks">
+        <a href="./vendor-terms.html">Vendor terms</a>
+        <a href="./privacy.html">Privacy</a>
+        <a href="./login.html">Sign in</a>
+      </div>
+    </div>
+  </footer>
 
 </body>
 </html>
