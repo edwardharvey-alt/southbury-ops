@@ -447,9 +447,11 @@ for DB write. Applies to all forward and backward status transitions.
 Notify modal (collection orders marking Ready) routes through the same
 updateOrderStatus path.
 
-T3-7: Order page — real-time capacity update
-Add periodic re-fetch or Realtime subscription so capacity shown to
-customer reflects other customers' orders placed while page is open.
+T3-7: Order page — real-time capacity update ✓ COMPLETE
+Supabase Realtime subscription implemented via
+subscribeToCapacityUpdates() watching INSERT events on orders filtered
+by drop_id. refreshCapacity() re-fetches v_drop_summary and re-renders
+on each event. Channel cleaned up on beforeunload.
 
 T3-8: Stripe integration — DEFERRED
 Intentionally parked until the production domain migration is complete.
@@ -591,12 +593,13 @@ their customer asset through drops instead.
 
 Primary dependency for T4-27 (Customers page). Dependency: T3-9 schema.
 
-T4-15: Multiple drops within a single event
-Allow vendor to create multiple drops linked to the same host context with
-different time windows — e.g. food truck running 12–2pm and 6–8pm at same
-event. Drop Studio to offer "Create another window" option when drop is
-host-linked, pre-populating vendor, host, and menu. Capacity and ordering
-windows remain separate per drop.
+T4-15: Multiple drops within a single event ✓ COMPLETE
+Event windows section added to the Timing pane in Drop Studio, shown
+when a host is selected. Single/Multiple radio toggles a dynamic
+window rows UI. createEventWindow() copies the full drop payload and
+menu assignments, linking windows via window_group_id. Existing
+windows render read-only with a confirm/cancel remove flow. "— Window
+N" suffix applied to names on create and stripped from card display.
 
 T4-16: Host onboarding — host as first-class entity ✓ COMPLETE
 hosts.html created as a vendor-facing Host Directory with card grid,
@@ -1106,15 +1109,11 @@ onboarding_completed is false: redirect to onboarding.html. If row
 found and onboarding_completed is true: redirect to intended URL
 (from ?redirect= param if present) or home.html.
 
-T5-A13: why-hearth.html should not load vendor-nav.js
-why-hearth.html currently loads `assets/vendor-nav.js` and calls
-`HearthNav.renderNav` / `HearthNav.decorateLinks`, but it is a public
-marketing page — the vendor slug must not leak into URLs unauthenticated
-visitors see. Remove the vendor-nav.js script tag and any HearthNav
-calls. If nav is needed on the page, replace with a simple public nav
-pattern pointing at / (landing), /why-hearth.html, /signup.html and
-/login.html. Pre-existing bug surfaced during the 2026-04-20 routing
-rewire audit.
+T5-A13: why-hearth.html should not load vendor-nav.js ✓ COMPLETE
+vendor-nav.js script tag and HearthNav calls removed from
+why-hearth.html. Replaced with a simple public nav pattern pointing at
+/ (landing), /why-hearth.html, /signup.html and /login.html. Vendor
+slug no longer leaks into URLs unauthenticated visitors see.
 
 ### Tier 5-B — Platform improvements
 
@@ -1134,29 +1133,20 @@ depending on the page's local variable). T5-A5 has since landed —
 the module now uses session-aware resolution on production and
 `?vendor=<slug>` dev override on localhost only.
 
-T5-B2: Onboarding — capture social handles
-Add a socials question to the onboarding flow (Q10 or similar)
-capturing Instagram, Facebook, TikTok, and WhatsApp Business handles.
-Writes to `vendors.social_handles` (jsonb) in the shape
-`{"instagram": "handle", "facebook": "handle", "tiktok": "handle",
-"whatsapp": "+44..."}`. Optional — skippable. Populated handles
-flow through to Brand Hearth (T5-B4) and are visible to customers
-on order.html as a footer treatment.
+T5-B2: Onboarding — capture social handles ✓ COMPLETE
+Stage 5 in onboarding captures Instagram, Facebook, TikTok, and
+WhatsApp Business handles. Writes to `vendors.social_handles` as
+jsonb. Skippable.
 
-T5-B3: Onboarding — capture vendor address
-Add an address question to the onboarding flow capturing the
-vendor's primary physical address as a single free-text field
-(house/street, town/city, postcode). Writes to `vendors.address`
-(text). Used downstream by demand targeting (T4-17) as an implicit
-centre for neighbourhood drops when no explicit centre postcode is
-set, and surfaced in Brand Hearth.
+T5-B3: Onboarding — capture vendor address ✓ COMPLETE
+Stage 4 in onboarding captures a free-text address. Writes to
+`vendors.address`. Skippable.
 
-T5-B4: Brand Hearth — edit social handles and address
-Brand Hearth's Brand Identity section currently shows business name,
-phone, website, and tagline. Extend it to display and edit the
-address captured in T5-B3 and the social handles captured in T5-B2,
-alongside the existing website URL field. Save pattern mirrors the
-existing vendors-table upserts on that page.
+T5-B4: Brand Hearth — edit social handles and address ✓ COMPLETE
+Brand Identity section extended with a vendorAddress field and four
+social handle inputs (Instagram, Facebook, TikTok, WhatsApp Business).
+Pre-populated from saved values on load. Saves via the existing
+vendors-table upsert pattern.
 
 ### Tier 6 — Production readiness
 
