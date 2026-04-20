@@ -92,7 +92,8 @@ and HearthNav.withVendor).
   onboarding answer columns (`primary_goal`, `delivery_model`,
   `pos_platform`, `pos_platform_other`, `customer_data_posture`,
   `existing_host_contexts`, etc.) populated by the onboarding flow.
-  `terms_accepted` / `terms_accepted_at` to be added when T4-25 is built
+  `terms_accepted` (boolean), `terms_accepted_at` (timestamptz) — added
+  as part of T4-25
 - drops — the core unit: each drop has slug, timing, capacity, host, status,
   collection_point_description (text), delivery_area_description (text),
   customer_notes_enabled (boolean, default true)
@@ -472,15 +473,19 @@ postcode, created_at) and customer_relationships (id, customer_id,
 owner_type, owner_id, consent_status, source, created_at). Anon INSERT
 RLS policies required on both tables.
 
-T3-10: Order ready notification
-When operator marks order as Ready on Service Board, prompt with customer
-phone number pre-filled for manual SMS notification. Full automation via
-Twilio in T5-11. No dependency.
+T3-10: Order ready notification ✓ COMPLETE
+When operator marks a collection order as Ready on the Service Board, a
+modal appears pre-populated with the customer's name and phone number.
+Offers Call, SMS (pre-filled with "your order is ready" message), and
+Skip options. Delivery orders skip the modal and go straight to status
+update. Modal HTML is in the DOM before attachEvents() runs.
 
-T3-11: Menu Library — delivery and collection suitability flags
-Add per-item flags: travels well for delivery, suitable for collection,
-prep complexity. Helps vendors build delivery-appropriate menus and feeds
-future fulfilment intelligence.
+T3-11: Menu Library — delivery and collection suitability flags ✓ COMPLETE
+Fulfilment suitability section added to the product editor in
+drop-menu.html. Three fields: travels_well checkbox,
+suitable_for_collection checkbox, and prep_complexity select
+(simple/standard/complex). Pre-populated on load, saved to products
+table on Save Product.
 
 T3-12: Order page — neighbourhood radius enforcement
 Validate that a customer's delivery postcode falls within the declared
@@ -619,16 +624,14 @@ audience_description, estimated_audience_size, audience_tags (jsonb),
 service_windows (jsonb), comms_channels (jsonb), relationship_status,
 onboarding_completed.
 
-T4-17: Drop Studio — audience targeting and demand preview
-When creating a drop, surface: known customers in target area, estimated
-demand range from historical data, suggested host if one exists nearby.
-Pre-drop confidence indicator. Dependency: T3-9.
-
-Priority note: should be built immediately after T4-14 (customer import)
-and T5-9 (recommendation engine V1) are complete. This is the moment
-Drop Studio becomes visibly intelligent — a vendor creating a drop sees
-how many known customers are in the target area before they commit.
-Strategically important, not just a nice-to-have.
+T4-17: Drop Studio — audience targeting and demand preview ✓ COMPLETE
+Audience Preview panel added to Basics stage of Drop Studio. Triggers
+on centre postcode blur or host selection change. Shows customer count
+in postcode area, area drop history, host-specific drop history (count
+and avg orders), and a confidence signal (Strong / Building / New
+territory). Panel is context-aware by drop type: hosted/community drops
+lead with host history and suppress postcode customer count;
+neighbourhood drops lead with area signals.
 
 T4-18: Brand Hearth — add contact phone field ✓ COMPLETE
 Phone number input added to Brand Identity section of Brand Hearth.
@@ -646,15 +649,12 @@ brand →") with dashboard as secondary. The first-drop nudge from Brand
 Hearth carries the vendor into Drop Studio after brand setup is saved.
 This preserves the Brand → Menu → Drop sequence from the brand playbook.
 
-T4-21: Customer import — post-import demand view
-After a vendor completes a customer import (T4-14), surface a
-post-import summary showing: total customers imported, geographic
-breakdown by outward postcode, top three demand clusters with customer
-counts. Plain-English framing: "Your strongest area is RG10 with 34
-customers. That's a good starting point for your first neighbourhood
-drop." This is the moment the recommendation engine becomes real for
-data-rich vendors. The summary should appear on the Home dashboard and
-be accessible from Insights.
+T4-21: Customer import — post-import demand view ✓ COMPLETE
+Post-import demand view built in customer-import.html Step 5.
+fetchDemandBreakdown() queries customer postcodes grouped by outward
+code. Renders rich view (10+ customers) with bar chart of top areas
+and plain-English recommendation, or thin data view for smaller
+imports.
 
 Dependency: T4-14 (customer import)
 
@@ -771,17 +771,14 @@ or timing." Depends on real series data from T4-1.
 
 Dependency: T4-1 (recurring series — complete)
 
-T4-30: Onboarding delivery model audit
-Review whether aggregator-dependent vendors are correctly captured in
-the onboarding flow. The `reduce_aggregators` goal and `aggregator`
-delivery_model option exist but may not be prominent enough given that
-reducing aggregator dependency is a core Hearth pitch. Ensure the
-intelligence layer (T4-28) surfaces appropriate recommendations for
-these vendors — e.g. "You told us you want to reduce aggregator
-dependency. Your last 3 drops brought in 12 new direct customers —
-that's 12 people you can reach without paying commission." Audit
-onboarding Q3 (primary_goal) and Q5 (delivery_model) for clarity and
-prominence of the aggregator reduction pathway.
+T4-30: Onboarding delivery model audit ✓ COMPLETE
+Audited and confirmed. detectArchetype() in hearth-intelligence.js
+flags aggregator vendors when primary_goal includes reduce_aggregators
+or delivery_model is aggregator. generateRecommendations() has a
+dedicated archetype-aware block for this condition pushing a
+recommendation about building direct customer relationships independent
+of aggregator platforms. The aggregator reduction pathway is prominent
+in onboarding Q3 and Q5.
 
 T4-31: Order page and ordering experience — visual polish pass
 Review and improve the visual quality of the customer-facing ordering
@@ -1019,13 +1016,15 @@ session-based identity, and RLS moves from frontend filtering to
 server-side enforcement.
 
 T5-A1: Enable Supabase Auth — magic link / passwordless email
-Turn on Supabase Auth with email magic-link sign-in. Configure the
-email template to match Hearth's voice. No passwords.
+SUPERSEDED — password-based authentication was implemented instead of
+magic link. Vendors sign in with email and password via
+signInWithPassword. No magic link infrastructure required.
 
-T5-A2: Link vendors to auth users
-Add `auth_user_id uuid` to the vendors table with a foreign key to
-`auth.users(id)`. A vendor row becomes a workspace owned by exactly
-one authenticated user. Provisioning flow (T5-A6) populates this.
+T5-A2: Link vendors to auth users ✓ COMPLETE
+auth_user_id uuid column confirmed present on vendors table and in
+active use. auth-callback.html queries vendors by auth_user_id and
+performs auto-link on first sign-in by matching email where
+auth_user_id is null.
 
 T5-A3: RLS rewrite — server-side vendor scoping
 Every vendor-scoped table and view (`drops`, `products`, `bundles`,
@@ -1037,11 +1036,12 @@ vendor_id as a filter for correctness — the server enforces it.
 Frontend filters stay for clarity but become belt-and-braces rather
 than the only defence.
 
-T5-A4: Login page
-New static page `login.html` for returning vendors only — not signup.
-Email input, magic-link request, and a clear "check your inbox" state.
-Magic link lands back on `home.html`. New vendors arrive via
-`signup.html` (T5-A10), not this page.
+T5-A4: Login page ✓ COMPLETE
+login.html created as a standalone page for returning vendors. Uses
+signInWithPassword (email + password) rather than magic link as
+originally specced — password-based auth was implemented throughout.
+Routes to auth-callback.html on success. Links to signup.html and
+reset-password.html.
 
 T5-A5: Session-aware `resolveVendor()` ✓ COMPLETE
 `assets/hearth-vendor.js` rewritten with session-aware resolution.
@@ -1078,11 +1078,8 @@ container — no inline onclick attributes. Falls back to redirect if
 config is missing or signOut fails.
 
 T5-A8: Upgrade auth to email OTP + optional 2FA
-Before the platform scales to multiple vendors, upgrade from magic link
-to email OTP (6-digit code entered on login page rather than a
-clickable link) and make 2FA available as an optional vendor setting.
-Primarily a Supabase configuration change with minor login.html updates.
-Build when vendor count warrants it.
+SUPERSEDED — password-based auth was implemented instead of magic link
+or OTP. No upgrade path required.
 
 T5-A9: landing.html — public marketing page
 Unauthenticated. No vendor-nav.js. Two CTAs: "Get started" (routes to
@@ -1095,19 +1092,21 @@ Service Board was renamed to service-board.html as part of the routing
 rewire. The root URL now serves the landing page directly, and
 /landing.html redirects to / via _redirects for stale bookmarks.
 
-T5-A10: signup.html — new vendor email capture
-Standalone page. No vendor-nav.js. Email input triggers Supabase magic
-link. On click, routes to auth-callback.html which detects no existing
-vendor row and redirects to onboarding.html. Separate from login.html —
-different copy, different intent.
+T5-A10: signup.html — new vendor email capture ✓ COMPLETE
+signup.html created as a standalone page for new vendors. No
+vendor-nav.js. Uses signUp with email, password, and confirm password
+fields (password-based auth, not magic link as originally specced).
+Routes to auth-callback.html on success. Links to vendor-terms.html
+and login.html.
 
-T5-A11: auth-callback.html — post-magic-link routing
-Supabase lands here after magic link click. Reads session, queries
-vendors table for a row matching auth_user_id. If no row found: new
-vendor — redirect to onboarding.html. If row found and
-onboarding_completed is false: redirect to onboarding.html. If row
-found and onboarding_completed is true: redirect to intended URL
-(from ?redirect= param if present) or home.html.
+T5-A11: auth-callback.html — post-magic-link routing ✓ COMPLETE
+auth-callback.html handles full post-auth routing. No session →
+redirect to login.html. Auto-link step claims unlinked vendor row by
+email on first sign-in. hearth:redirect read from sessionStorage and
+cleared before routing. No vendor row → onboarding.html.
+onboarding_completed false → onboarding.html. onboarding_completed
+true → stored redirect or home.html. Also handles PASSWORD_RECOVERY
+event for the reset-password flow.
 
 T5-A13: why-hearth.html should not load vendor-nav.js ✓ COMPLETE
 vendor-nav.js script tag and HearthNav calls removed from
@@ -1228,11 +1227,11 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 4.  T3-4  — Insights Supabase chaining pattern ✓ COMPLETE
 5.  T3-5  — Drop Studio unsaved changes warning ✓ COMPLETE
 6.  T3-6  — Service Board confirmation on status changes ✓ COMPLETE
-7.  T3-7  — Order page real-time capacity update
+7.  T3-7  — Order page real-time capacity update ✓ COMPLETE
 8.  T3-8  — Stripe integration
 9.  T3-9  — Order page customer data capture and consent ✓ COMPLETE
-10. T3-10 — Order ready notification
-11. T3-11 — Menu Library delivery and collection suitability flags
+10. T3-10 — Order ready notification ✓ COMPLETE
+11. T3-11 — Menu Library delivery and collection suitability flags ✓ COMPLETE
 12. T3-12 — Order page neighbourhood radius enforcement
 12. T4-1  — Recurring series drop generation ✓ COMPLETE
 13. T4-2  — Order confirmation page ✓ COMPLETE
@@ -1247,11 +1246,11 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
 22. T4-28 — Intelligence engine — extract to shared module ✓ COMPLETE
 23. T4-27 — Customers page — first-class customer asset view ✓ COMPLETE
 24. T4-4  — Home dashboard intelligence surface and next action centre ✓ COMPLETE
-25. T4-30 — Onboarding delivery model audit
+25. T4-30 — Onboarding delivery model audit ✓ COMPLETE
 26. T4-29 — Series intelligence in Insights
 27. T4-12 — Post-drop scorecard ✓ COMPLETE
 28. T4-13 — Minimal host-facing view ✓ COMPLETE
-29. T4-15 — Multiple drops within a single event
+29. T4-15 — Multiple drops within a single event ✓ COMPLETE
 30. T4-16 ✓ — Host onboarding as first-class entity
 31. T4-17 ✓ — Drop Studio audience targeting and demand preview
     Audience Preview panel added to Basics stage of Drop Studio.
@@ -1266,7 +1265,7 @@ All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
     signals. Host-customer relationship intel (customers acquired via
     a specific host) deferred to T4-16 when host becomes a first-class
     entity.
-34. T4-21 ✓ — Customer import post-import demand view
+34. T4-21 ✓ COMPLETE — Customer import post-import demand view
 35. T4-23 ✓ — Drop Studio first drop guidance for new vendors
 36. T4-16 ✓ — Host as first-class entity
     hosts.html (Host Directory), host-profile.html (Host Profile),
