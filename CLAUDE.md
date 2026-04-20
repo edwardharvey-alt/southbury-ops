@@ -1106,6 +1106,16 @@ onboarding_completed is false: redirect to onboarding.html. If row
 found and onboarding_completed is true: redirect to intended URL
 (from ?redirect= param if present) or home.html.
 
+T5-A13: why-hearth.html should not load vendor-nav.js
+why-hearth.html currently loads `assets/vendor-nav.js` and calls
+`HearthNav.renderNav` / `HearthNav.decorateLinks`, but it is a public
+marketing page — the vendor slug must not leak into URLs unauthenticated
+visitors see. Remove the vendor-nav.js script tag and any HearthNav
+calls. If nav is needed on the page, replace with a simple public nav
+pattern pointing at / (landing), /why-hearth.html, /signup.html and
+/login.html. Pre-existing bug surfaced during the 2026-04-20 routing
+rewire audit.
+
 ### Tier 5-B — Platform improvements
 
 Smaller cleanups and onboarding enrichments that don't gate anything
