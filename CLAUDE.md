@@ -847,29 +847,135 @@ interest. Vendor sees interest count in Drop Studio labelled "Signals
 building". Dependency: T3-9.
 
 T5-9: Recommendation engine — matured intelligence
-The matured form of T4-28 (intelligence engine). Not a standalone build —
-this is the intelligence module growing in sophistication as real customer
-and drop data accumulates. Adds: deterministic demand scoring across Home
-and Drop Studio, customer clustering by outward postcode with recency and
-frequency boosts, nearby host matching, plain-English recommendation cards
-(maximum 3) each with Create drop CTA. Shows "Signals are building" if
-insufficient data. The foundation (archetype-aware analysis, capacity and
-rhythm signals) is already built inside T4-28 — this ticket extends it
-with geographic intelligence and predictive scoring.
+The matured form of T4-28 (intelligence engine). Extends hearth-intelligence.js
+with geographic demand scoring and host intelligence, surfacing proactive
+recommendations directly inside Drop Studio and Home — not just in Insights
+after the fact.
 
-Dependency: T4-28 (intelligence engine), meaningful customer data from
-real drops.
+Geographic demand scoring:
+  - Customer clustering by outward postcode with recency and frequency weighting.
+    Identifies the vendor's strongest demand areas from customer_relationships
+    and order history. Output: ranked list of postcode areas with customer count,
+    order history, and a confidence score (Strong / Building / New territory).
+  - Drop Studio integration: Basics pane Audience Preview panel (T4-17) extended
+    to show a plain-English recommendation — "Your strongest area is BH18 with
+    34 customers. Your last two drops there averaged 28 orders. Consider placing
+    your next drop here." Recommendation fires when no host is selected and
+    customer data exists.
+  - Home dashboard integration: replaces the current generic next-action cards
+    with demand-scored recommendations. Maximum 3 cards. Each card names the
+    specific area, customer count, and a Create drop CTA pre-seeded with the
+    postcode. Shows "Signals are building — run more drops to unlock
+    recommendations" when data is insufficient.
+  - data_posture awareness: data-rich vendors (customer_data_posture rich or
+    partial) receive import-first and demand-targeting recommendations.
+    Data-light vendors receive host-first or drop-first recommendations.
+    This distinction must be explicit in the recommendation body copy, not
+    just in the archetype label.
 
-Note (from T4-30 audit, Issue 2): Intelligence engine should incorporate
-data_posture into recommendation generation — data-rich vendors should
-receive import-first recommendations; data-light vendors should receive
-drop-first or host-first recommendations.
+Host intelligence layer — two signals built on top of existing host and drop data:
+
+(1) Repeat host cadence recommendations. When a vendor has run 2+ drops at
+the same host, the engine analyses the gap between them and the fill rate
+trend. If drops at that host are filling well and the gap is longer than 14
+days, the recommendation engine surfaces a cadence nudge: "Your last 3 drops
+at The Bell have averaged 87% capacity. You're running there monthly — could
+you explore fortnightly?" Cadence suggestion is context-aware: recurring event
+hosts (pub, sports club, workplace) get frequency nudges; one-off or event-type
+hosts (charity fundraiser, school fair) are excluded. Host type from the
+host_type field on the hosts table drives this distinction — pub, club, and
+workplace types are eligible; event and other types are not. Also surfaces
+multiple-window suggestions for eligible hosts: "Your Friday evening drop at
+The Bell is consistently strong — could you add a lunchtime window on the same
+day?" Links to Drop Studio with host pre-seeded.
+
+(2) New host discovery recommendations. When a vendor has a successful host
+relationship (2+ drops, avg fill rate ≥ 70%), the engine recommends exploring
+similar host types in the same or adjacent postcode areas. Uses the vendor's
+existing host postcodes and the hosts table to identify host_type matches.
+Surfaces as a plain-English card: "You're doing well at pub drops in BH18.
+There are other venues of the same type in BH18 and neighbouring areas —
+exploring a new pub partnership could open a second demand channel." In V1
+this is a static recommendation with no live venue data. V2 scope (T5-9b,
+do not build now): integrate with Google Places API or similar to surface
+named nearby venues of the relevant type, with estimated audience size where
+available. This is the foundation for the matching engine in T5-4.
+
+Dependency: T4-28 (intelligence engine — complete), meaningful customer and
+order data from real drops, T6 complete so production data is real. Do not
+build the geographic scoring on synthetic test data — wait for Healthy Habits
+Cafe to run at least 2 drops before evaluating signal quality.
 
 T5-11: Comms engine V1
-Event-driven email and SMS. Triggers: drop_published, order_confirmed,
-order_ready, drop_closing_soon, drop_completed. Maximum 2 messages per
-customer per drop. Stack: Postmark for email, Twilio for SMS, Supabase
-Edge Functions. Dependency: T3-9 and T5-6.
+Event-driven transactional and demand generation messaging triggered by order
+and drop lifecycle events. Built on Supabase Edge Functions calling Postmark
+for email. SMS via Twilio deferred to V2 — focus V1 on getting email right.
+
+Transactional triggers (V1 scope — email only):
+  - order_confirmed: fires immediately after order insert in order.html.
+    Sends to customer email if present. Contains order reference, items
+    ordered, fulfilment mode, collection point or delivery address, drop
+    timing. Vendor-branded with display_name and brand_primary_color.
+  - order_ready: fires when Service Board operator marks order as Ready
+    (the same event that currently opens the T3-10 notification modal).
+    Sends to customer if email present. "Your order is ready for
+    collection / on its way." Supplements rather than replaces the manual
+    modal — operator still sees the modal, email sends automatically in
+    parallel.
+  - drop_closing_soon: fires 2 hours before closes_at for any live drop
+    with orders placed. Sends to consented customers (contact_opt_in true)
+    who have not yet ordered this drop. "Orders close soon — don't miss
+    your slot." Maximum one per customer per drop.
+
+Proactive demand generation triggers (V1 scope — email only):
+  - drop_announced: fires when a drop status changes to scheduled or live.
+    Sends to all consented customers (contact_opt_in true) who have
+    previously ordered from this vendor OR who have previously ordered at
+    this host (if the drop has a host). Subject: "[Vendor name] has a drop
+    coming up — [drop name], [date]." Body: drop name, host name if present,
+    timing, capacity signal ("limited spots"), order link. This is the
+    primary demand generation trigger — it turns the vendor's earned customer
+    asset into active pre-drop promotion. Maximum one drop_announced message
+    per customer per drop.
+  - drop_reminder: fires 24 hours before closes_at for drops with remaining
+    capacity. Sends only to consented customers in the vendor's audience who
+    have NOT yet placed an order for this drop. "Orders close tomorrow —
+    [drop name] at [host], [time]." Targets non-orderers who have previously
+    engaged with the vendor. Maximum one drop_reminder per customer per drop.
+
+Hard rules:
+  - Maximum 2 automated messages per customer per drop across all
+    non-transactional triggers combined (drop_announced + drop_reminder).
+    Transactional messages (order_confirmed, order_ready) do not count
+    toward this limit — they are responses to customer actions.
+  - Only send demand generation messages to customers where contact_opt_in
+    is true on at least one previous order from this vendor.
+  - consent_status on customer_relationships must be 'granted' or 'imported'
+    (not pending or revoked).
+  - Vendor-sourced imported customers (T4-14) are eligible if lawful_basis
+    was declared at import.
+  - Host-audience targeting (customers who ordered at this host from a
+    different vendor) requires explicit host consent chain — flagged for
+    T5-18. Do not implement cross-vendor host targeting in V1. Target the
+    vendor's own audience only.
+  - All sends logged to a new comms_log table (customer_id, drop_id, trigger,
+    sent_at, channel, status) for audit and deduplication. Design
+    channel-agnostic from the start so SMS can be added without schema changes.
+
+Infrastructure required before building:
+  - T6-1 (domain — lovehearth.co.uk must be live for sender addresses)
+  - T6-6 (Postmark configured with SPF/DKIM/DMARC)
+  - Supabase Edge Function runtime available (already used for invite-vendor)
+
+Email template design: vendor-branded header using display_name and
+brand_primary_color, Hearth footer. Plain-text fallback required.
+Templates stored as Edge Function string literals initially.
+
+SMS (Twilio) for all triggers including demand generation is V2 scope.
+Consent and eligibility rules are identical across channels — the
+comms_log and eligibility logic must be channel-agnostic from day one.
+
+Dependency: T3-9 (customer capture — complete), T6-1, T6-6.
 
 T5-12: Vendor customer data import — advanced
 Extend T4-14 to support connections to existing vendor systems: email
@@ -1005,6 +1111,47 @@ point is not to replace the POS — it is to make Hearth feel like part of
 the vendor's existing operation rather than a parallel one. Scope and
 approach depend on which POS platforms are most common among early vendors.
 Do not build until real friction is confirmed from live vendor feedback.
+
+T5-25: Drop promotion — marketing copy and print assets
+Vendors currently have no way to promote a drop beyond sharing the order
+link manually. This ticket adds a lightweight promotion tool that generates
+ready-to-use marketing assets directly from drop data — removing the blank
+page problem and making every drop feel professionally promoted.
+
+Two output types:
+
+(1) Social copy generator
+Accessible from the drop card in Drop Studio (and from the Review pane)
+once a drop is published or scheduled. Generates platform-appropriate copy
+variants for Instagram, Facebook, and WhatsApp using the drop's name,
+host, timing, capacity, and the vendor's tagline. Copy is generated
+client-side using the Anthropic API (Claude) with a structured prompt
+drawing on drop fields and vendor brand voice. Vendor can regenerate,
+edit inline, and copy to clipboard. No direct posting integration in V1
+— copy is for the vendor to paste. Platform selector (Instagram /
+Facebook / WhatsApp) adjusts copy length and hashtag style.
+
+(2) Drop poster with QR code
+A printable A5 or A4 poster generated as a styled HTML page using the
+drop's brand colours, vendor logo, drop name, host name, timing, and a
+QR code pointing at the order page. Vendor can download as PDF or PNG
+for printing in-store, at the host venue, or sharing digitally. QR code
+generated via the existing qrserver.com API already used in Drop Studio
+review pane. Poster layout uses the Hearth two-layer brand structure:
+Hearth frames, vendor fills. Vendor name and logo prominent; "Powered
+by Hearth" in footer.
+
+Both outputs are generated on demand, not stored. No new database schema
+required for V1.
+
+Future V2 scope (do not build now): direct Instagram post via Graph API,
+WhatsApp Business API broadcast to consented customers, scheduled posting.
+
+Dependency: Stripe live (T3-8) so drops being promoted are payable.
+Social copy generation uses the Anthropic API from the frontend —
+use the Claude-in-artifact pattern already established in the platform.
+Poster generation is pure client-side HTML/CSS — no external dependency
+beyond QR code API already in use.
 
 ### Tier 5-A — Auth workstream
 
@@ -1297,7 +1444,19 @@ any real vendor captures live data. Order:
   6. T6-6 — Transactional email via Resend or Postmark
 
 Once T6 is complete, T3-8 (Stripe integration) unblocks, and real vendor
-onboarding (Healthy Habits Cafe first) can proceed safely. Going live
-before T6-2, T6-3, and T6-4 means any Claude Code mistake reaches live
-customers within 30 seconds — appropriate for solo development, dangerous
-when real vendors depend on the platform.
+onboarding (Healthy Habits Cafe first) can proceed safely.
+
+After T6 and Stripe, the recommended build sequence is:
+  1. T5-11 — Comms engine V1 (transactional first: order_confirmed,
+     order_ready; then demand generation: drop_announced, drop_reminder)
+  2. T5-9  — Recommendation engine maturation (geographic scoring,
+     host cadence intelligence, new host discovery)
+  3. T5-25 — Drop promotion (social copy generator and print poster)
+  4. T5-14 — Home page demand orchestration dashboard
+  5. T4-29 — Series intelligence in Insights
+  6. T3-12 — Neighbourhood radius enforcement (if neighbourhood drops
+     are in active use by then)
+
+Going live before T6-2, T6-3, and T6-4 means any Claude Code mistake
+reaches live customers within 30 seconds — appropriate for solo
+development, dangerous when real vendors depend on the platform.
