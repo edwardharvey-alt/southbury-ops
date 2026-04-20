@@ -908,7 +908,7 @@
       <!-- COMPLETION STATE -->
       <div class="obCompletionCard" id="completionState" style="display:none;">
         <div class="completionMark">✓</div>
-        <h2 class="completionTitle">Your setup is saved.</h2>
+        <h2 class="completionTitle" id="completionTitle">Your setup is saved.</h2>
         <p class="completionSub" id="completionSub">Now let's shape how customers see your brand.</p>
         <div class="completionActions" id="completionActions">
           <a class="btnAccent" href="brand-hearth.html">Set up your brand →</a>
@@ -2015,13 +2015,29 @@
       byId('flowWrapper').style.display = 'none';
       byId('completionState').style.display = '';
 
+      const titleEl = byId('completionTitle');
       const sub = byId('completionSub');
       const actions = byId('completionActions');
-      sub.textContent = "Now let's shape how customers will see your brand.";
 
-      actions.innerHTML =
-        '<a class="btnAccent" href="' + HearthNav.withVendor('brand-hearth.html') + '">Set up your brand →</a>' +
-        '<a class="brandMiniLink" href="' + HearthNav.withVendor('home.html') + '">Go to your dashboard →</a>';
+      const posture = state.vendor?.customer_data_posture || null;
+      const isDataRich = posture === 'rich' || posture === 'partial';
+
+      if (isDataRich) {
+        titleEl.textContent = 'Your setup is saved — you have a head start.';
+        sub.textContent = posture === 'rich'
+          ? 'You told us you have an existing customer list. Importing it now means Hearth can show you where your audience is strongest before you plan your first drop.'
+          : 'You mentioned you have some contacts. Uploading whatever you have means Hearth can start building a picture of where your audience is before your first drop.';
+        actions.innerHTML =
+          '<a class="btnAccent" href="' + HearthNav.withVendor('customer-import.html') + '">Import your customers →</a>' +
+          '<a class="brandMiniLink" href="' + HearthNav.withVendor('brand-hearth.html') + '">Set up your brand first</a>' +
+          '<a class="brandMiniLink" href="' + HearthNav.withVendor('home.html') + '">Go to your workspace</a>';
+      } else {
+        titleEl.textContent = 'Your setup is saved.';
+        sub.textContent = "Now let\u2019s shape how customers will see your brand.";
+        actions.innerHTML =
+          '<a class="btnAccent" href="' + HearthNav.withVendor('brand-hearth.html') + '">Set up your brand \u2192</a>' +
+          '<a class="brandMiniLink" href="' + HearthNav.withVendor('home.html') + '">Go to your workspace \u2192</a>';
+      }
     }
 
     // ── Reveal optional post-save steps (address, socials) ────────────────
