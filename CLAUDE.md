@@ -1594,6 +1594,79 @@ historical incidents. Builds trust by being transparent about
 outages rather than hiding them. Depends on T7-M1 and T7-M3 as data
 sources.
 
+### Tier 8 — Platform audit and design system consolidation
+
+Hearth has grown page by page, ticket by ticket. Each page is
+well-built in isolation, but the platform has never had a single
+pass of fresh eyes asking whether it feels coherent end to end.
+Tier 8 is that pass — an independent audit across visual design,
+vendor experience, and language, followed by the consolidation of
+findings into a single source of truth so the platform does not
+re-drift as it grows.
+
+Principle: the audit is run by fresh eyes (Claude Chat in a
+dedicated session), not by the original builder. Its purpose is
+to ensure Hearth feels like one coherent platform, not a series
+of well-built but inconsistent pages.
+
+Sequencing:
+- Do not start T8 until T3-8 (Stripe Connect Express) is complete.
+- T8-1 through T8-3 can be run in parallel as independent audits.
+- T8-4 depends on the outputs of T8-1 through T8-3.
+- Findings from T8 become individual backlog items that get picked
+  off alongside feature work — the audit itself does not stop
+  ongoing development.
+
+T8-1: Brand and visual consistency audit
+Independent review of every page in the platform for:
+- Consistent application of design tokens (colours, spacing, type,
+  shadows, radii) from hearth.css
+- Consistent component behaviour and styling (buttons, inputs, cards,
+  modals, empty states, error states, loading states)
+- Consistent iconography and imagery
+- Consistent wordmark usage
+Output: severity-ranked findings document with specific locations,
+recommendations, and fix complexity estimates.
+
+T8-2: Vendor journey experience audit
+End-to-end walkthrough of the vendor experience from invite to
+ongoing operation:
+- Invite and onboarding flow
+- First drop creation
+- Live drop operation via Service Board
+- Menu and brand setup
+- Post-drop insights and history
+- Navigation consistency
+- Mobile-first quality
+Output: journey map with friction points, confusion risks, and
+recommendations for each step.
+
+T8-3: Language, copy, and tone audit
+Platform-wide review for:
+- Vocabulary consistency against the Hearth brand playbook
+  (drop, capacity, host, menu, community — and forbidden terms like
+  campaign, listing, promotion, marketplace)
+- Tone consistency (warm, calm, considered)
+- Clarity (does every screen tell the user what, why, what next)
+- Conciseness
+- Empty and error state quality
+- Microcopy consistency (buttons, form hints, confirmations)
+Output: per-page copy recommendations plus a glossary/style guide
+checkpoint.
+
+T8-4: Design system consolidation
+After T8-1 through T8-3 are complete, codify a single source of
+truth for:
+- Design tokens
+- Component patterns
+- Language and vocabulary
+- Navigation patterns
+- Mobile behaviour standards
+This becomes the reference for all future pages and ensures the
+platform doesn't re-drift.
+
+Dependency: T8-1, T8-2, T8-3 complete.
+
 ## Recommended next session order
 
 All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
