@@ -1294,6 +1294,14 @@ social handle inputs (Instagram, Facebook, TikTok, WhatsApp Business).
 Pre-populated from saved values on load. Saves via the existing
 vendors-table upsert pattern.
 
+T5-B5: Password reset page — button stuck on "Sending..."
+Low priority UX bug. On reset-password.html the submit button never
+resolves to a "Sent" / success state — it stays on "Sending..."
+indefinitely after submit. The "Check your inbox" confirmation block
+below the button renders correctly, so the flow functionally works and
+the user is not blocked. Fix is cosmetic: resolve the button state (or
+hide the button) once the confirmation block appears.
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live
