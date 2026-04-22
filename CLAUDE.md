@@ -307,6 +307,36 @@ on top of the coding rules above.
     has no owner and resolveVendor() cannot find it by auth_user_id.
     Server-side linking with the service role is the correct pattern.
 
+12. **Edge Functions protected only by the gateway `verify_jwt` flag
+    have no real server-side auth boundary.** Any privileged Edge
+    Function must include explicit in-function JWT verification via
+    `supabase.auth.getUser()` and an authorisation check against the
+    returned user claims. The frontend UID check is UX, not security.
+    (Learned from invite-vendor session, 22 April 2026.)
+
+13. **When admin.html or any authenticated page calls a Supabase Edge
+    Function, both `apikey` and `Authorization: Bearer <access_token>`
+    headers must be included,** matching the pattern used for direct
+    PostgREST calls. Missing headers produce
+    UNAUTHORIZED_NO_AUTH_HEADER / 401 errors that fail silently after
+    creating partial database state. (Learned from admin.html bug,
+    22 April 2026.)
+
+14. **Supabase has migrated all projects to asymmetric JWT signing
+    keys (ECC P-256 / ES256).** Edge Functions deployed before this
+    migration that relied on the gateway's HS256 verification will
+    fail with UNAUTHORIZED_UNSUPPORTED_TOKEN_ALGORITHM. Fix: set
+    `verify_jwt = false` in supabase/config.toml for the function and
+    use `supabase.auth.getUser()` in-function, which handles both
+    algorithms natively. (Learned from invite-vendor session, 22 April
+    2026.)
+
+15. **Challenge handover assertions before acting on them.** Session
+    handover notes sometimes describe deployed state rather than
+    source state, or describe an investigation result as a confirmed
+    fact. Before running any Claude Code prompt based on "the file
+    has X", verify with grep/read first. (Learned from aborted
+    branch 8609900 on 22 April 2026.)
 ## Admin and monitoring design principles
 
 These principles apply to any platform oversight or monitoring surface
@@ -1337,6 +1367,25 @@ social handle inputs (Instagram, Facebook, TikTok, WhatsApp Business).
 Pre-populated from saved values on load. Saves via the existing
 vendors-table upsert pattern.
 
+T5-B5: admin.html — password reset button stuck in "Sending..." state
+On the password reset page, the submit button never resolves to a
+success state after submit. The confirmation email does arrive ("Check
+your inbox" works), but the button remains visually stuck. Low priority
+UX bug.
+
+T5-B6: admin.html — vendor creation is not atomic
+If the invite-vendor Edge Function call fails, the vendor row is still
+created, leaving orphan records in the database. Should either be
+wrapped in a transaction (both insert and invite succeed or neither
+does) or the invite should happen before the vendor row insert.
+Medium priority refactor.
+
+T5-B7: admin.html — ADMIN_UID hardcoded in two places
+ADMIN_UID is duplicated in admin.html and
+supabase/functions/invite-vendor/index.ts. Should be moved to a single
+source of truth — options include an environment variable, a config
+table, or an admins table with RLS. Low priority cleanup.
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live
@@ -1345,17 +1394,23 @@ to live site, no staging, no local dev) is fine for solo development
 but dangerous the moment real vendors depend on the platform. A bug in
 order.html today would reach live customers within 30 seconds of commit.
 
-T6-1: Domain migration to lovehearth.co.uk
-Move the production deployment from spiffy-tulumba-848684.netlify.app to
-lovehearth.co.uk. Scope includes: DNS configuration (registrar records
-pointing at Netlify), Netlify custom domain setup with HTTPS certificate
-provisioning, Supabase Auth URL configuration update (site URL, redirect
-URLs), Supabase Auth email template updates (sender address, any hardcoded
-links), Edge Function hardcoded URLs (invite-vendor redirectTo URL
-currently references the netlify.app subdomain — needs update and redeploy),
-admin.html Edge Function invoke URL, any other hardcoded URLs across the
-codebase. Also removes the "Dangerous" browser warning that appears on
-the netlify.app subdomain. Blocks T3-8 (Stripe).
+T6-1: Domain migration to lovehearth.co.uk ✓ COMPLETE
+Production deployment moved from spiffy-tulumba-848684.netlify.app to
+lovehearth.co.uk. DNS configured at registrar, Netlify custom domain
+active with HTTPS certificate provisioned, Supabase Auth site URL and
+redirect URLs updated, Supabase Auth email templates updated (sender
+address and hardcoded links), invite-vendor Edge Function redirectTo URL
+updated and redeployed, admin.html Edge Function invoke URL updated,
+transactional email SMTP configured against the new domain. The
+"Dangerous" browser warning that previously appeared on the netlify.app
+subdomain is gone. Unblocks T3-8 (Stripe Connect Express integration) —
+Stripe now has a stable production domain for return URLs and webhook
+endpoints. Completed 22 April 2026.
+
+Follow-up (manual dashboard task, not a code change): remove the two
+stale Supabase Auth allowlist entries for
+spiffy-tulumba-848684.netlify.app. They are no longer needed now that
+lovehearth.co.uk is the canonical domain.
 
 T6-2: Local development environment
 Set up Ed's Mac to run the Hearth site locally for testing changes
@@ -1665,7 +1720,7 @@ T5-B4 — surface social handles and address in Brand Hearth
 
 Next priority: T6 workstream (production readiness) must complete before
 any real vendor captures live data. Order:
-  1. T6-1 — Domain migration to lovehearth.co.uk (in progress)
+  1. T6-1 ✓ — Domain migration to lovehearth.co.uk (complete 22 April 2026)
   2. T6-2 — Local development environment
   3. T6-3 — Staging environment
   4. T6-4 — Branch protection and PR review workflow
