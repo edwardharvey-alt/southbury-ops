@@ -307,6 +307,49 @@ on top of the coding rules above.
     has no owner and resolveVendor() cannot find it by auth_user_id.
     Server-side linking with the service role is the correct pattern.
 
+## Admin and monitoring design principles
+
+These principles apply to any platform oversight or monitoring surface
+built under Tier 7 (platform oversight and administration). They sit on
+top of the general coding rules and operational learnings above —
+admin and monitoring pages have stricter expectations because they are
+the control surface for the platform itself.
+
+- Admin and monitoring pages are HTML-first (single-file pattern,
+  consistent with the rest of Hearth). No framework, no build step.
+- Read-first, write-second for admin. Default admin surfaces to
+  read-only views. Any write action (claim, unclaim, suspend, override)
+  requires an explicit confirmation step and must be recorded in the
+  admin audit log (T7-7).
+- Server-side auth verification via `supabase.auth.getUser()` on every
+  admin page. Frontend-only UID gating (as used by admin.html today) is
+  UX, not security — it hides the page but does not protect the data.
+  RLS policies and server-side verification are the actual boundary.
+- Admin tone matches platform tone: calm, considered, restrained. No
+  dashboard-y chrome, no alert-red everywhere, no emoji status
+  indicators. Plain language, clear hierarchy, honest signals.
+- No duplication of vendor-facing tooling. Admin surfaces what vendors
+  cannot see (platform-wide state, cross-vendor patterns, health
+  signals, audit trails). It does not re-implement Drop Studio or
+  Insights at a platform level.
+- Alert fatigue is the enemy. Every alert must be rare, actionable,
+  and ranked by severity. An alert that fires daily is noise; an alert
+  that fires for something the operator cannot act on is worse than
+  no alert at all.
+- Every alert must suggest an action, not just describe a symptom.
+  "Edge Function X failed 3 times in the last hour — check logs at
+  [link]" is useful; "Error rate elevated" is not.
+- Monitor what vendors experience (end-to-end flows), not just
+  individual server components. A green Supabase status with a broken
+  order flow is still a broken platform. Synthetic transactions
+  (T7-M9) and end-to-end health checks beat component-level pings.
+- Silence is data. Weekly heartbeat alerts protect against monitoring
+  itself failing — if the digest stops arriving, that is the signal.
+- Phase 1 should feel complete before Phase 2 starts. Resist the
+  temptation to build cohort analytics or structured logging
+  pipelines before the basic cockpit and uptime monitoring are in
+  place and trusted.
+
 ## Brand and tone
 
 - Calm, assured, warm, considered, local
@@ -1364,6 +1407,192 @@ transactional sending), Supabase SMTP configuration updated, test
 the full auth flow end-to-end. Separate infrastructure from the
 Google Workspace account being set up 21 April — regular email
 providers aren't designed for programmatic bulk sending.
+
+### Tier 7 — Platform oversight and administration
+
+Hearth has operator tools for vendors and customer-facing pages for
+diners, but no equivalent surface for Ed as the platform operator.
+Today that visibility comes from ad hoc SQL queries and direct database
+inspection — fine for one vendor, untenable at ten, dangerous at a
+hundred. Tier 7 builds the admin control surface and the monitoring
+spine that sits underneath it.
+
+Two parallel tracks:
+
+- **Oversight** — understanding what vendors are doing on the
+  platform: who is active, which drops are running, where the
+  customer base is concentrated, which vendors are struggling.
+- **Monitoring** — understanding whether the platform itself is
+  healthy: is Supabase reachable, are Edge Functions running, are
+  emails sending, are there any orphan records accumulating.
+
+Both tracks follow the admin and monitoring design principles
+documented above. All admin surfaces are gated on Ed's UID with
+server-side verification via `supabase.auth.getUser()`.
+
+#### Oversight track
+
+**Phase 1 — needed before vendor count reaches ~10**
+
+T7-1: Platform health cockpit
+Single-screen daily overview showing active vendors by state
+(onboarded, active, paused, at risk), upcoming drops with fill rates,
+last-24h orders and revenue across the platform, live drops in
+progress, underfilled drops (below capacity threshold with closes_at
+approaching), vendors without upcoming drops, and a recent events
+timeline (new vendors, new hosts, drops created, drops closed).
+Read-only. The first thing Ed opens each morning.
+
+T7-2: Vendor profile page
+Consolidated per-vendor view: identity (name, contact, address,
+socials), onboarding status (completion state, answers given), drop
+history (all drops with status, fill rate, revenue), revenue
+trajectory (last 30 / 90 days chart), customer base (earned vs
+imported counts, consent breakdown), activity timeline (sign-ins,
+drops published, settings changes from audit log), and quick actions
+(open workspace as vendor, impersonate for support, flag as at risk,
+suspend — all writes audit-logged).
+
+T7-3: Vendor list view
+Searchable/sortable table of every vendor on the platform with
+summary columns (name, slug, onboarding state, drops in last 30 days,
+revenue in last 30 days, last sign-in, relationship status). Each
+row links through to T7-2. Primary navigation into per-vendor detail.
+
+T7-4: Drop oversight page
+All upcoming drops across the platform with fill progression and time
+to close, recently completed drops with outcomes (orders, capacity,
+revenue, customer acquisition), and drill-down into drop detail
+(menu, orders, host, vendor). Read-only equivalent of Drop Studio at
+platform scope.
+
+T7-5: Host management page
+List of hosts with host type, postcode / area, associated vendors
+(how many vendors have run drops there), status and relationship
+status, and claim / unclaim actions for platform-level host
+stewardship. Surfaces the host graph across the platform — which
+hosts are shared, which are single-vendor, which are inactive.
+
+T7-6: Aggregate customer base view
+Platform-wide unique customer count (across all vendors), postcode
+distribution (top outward codes by customer count), repeat rate
+distribution (customers by number of orders placed), consent status
+breakdown (granted / imported / revoked / pending). No individual
+customer records — aggregate only. Informs platform strategy without
+compromising vendor-level ownership of the customer asset.
+
+T7-7: Admin event log / audit trail
+Append-only log of admin actions (vendor created, vendor suspended,
+host claimed, impersonation started, override applied). Writable only
+by admin surfaces; readable by Ed. Required before any admin write
+action ships — without audit, reversing a mistake is guesswork.
+
+**Phase 2 — needed as vendor count approaches ~100**
+
+T7-8: At-risk vendor detection queue
+Heuristic-driven queue of vendors showing signals of disengagement
+(no drops in N days, declining fill rate, onboarded but never
+published, customers imported but no drops run). Ordered by severity.
+Each entry suggests an intervention.
+
+T7-9: Cohort analytics
+Vendor cohort analysis — activation rate, time to first drop, revenue
+at N days since onboarding, retention by cohort. Informs product
+decisions at scale.
+
+T7-10: Geographic map view
+Map of the UK showing vendor locations, host locations, and customer
+density by postcode area. Identifies coverage gaps and clustering
+opportunities.
+
+T7-11: Platform economics dashboard
+GMV, take rate, revenue per vendor, revenue per drop, cost per
+customer acquired, and other platform-level commercial metrics.
+Depends on Stripe (T3-8) being live and billing model being defined.
+
+T7-12: Moderation and intervention tooling
+Tools for handling vendor or host policy violations — suspend
+workspace, freeze drop, revoke host access, notify affected customers.
+Hopefully rarely used, but required before the platform is operating
+at scale without direct trust in every participant.
+
+#### Monitoring track
+
+**Phase 1 — build soon; the platform currently has no observability,
+and failures during drops could erode vendor trust.**
+
+T7-M1: External uptime monitoring
+Subscribe to an external service (Better Uptime or Uptime Robot, free
+tier) that pings `lovehearth.co.uk` and `/api/health` every 1–5
+minutes and alerts on failure via email and mobile push. External is
+the point — if Netlify is down, internal monitoring cannot tell Ed.
+Cheapest and highest-leverage piece of infrastructure on this list.
+
+T7-M2: /api/health endpoint
+A new endpoint (Netlify Function or Supabase Edge Function) that
+verifies Supabase connectivity, runs a trivial query (e.g.
+`select 1` or a count on `vendors`), and returns 200 OK or 5xx with
+diagnostic info. Feeds T7-M1. Must be cheap to call — invoked every
+few minutes by the uptime service.
+
+T7-M3: /admin/status page
+Real-time dashboard showing Supabase connectivity, Resend API
+reachability, Netlify deploy status, recent Edge Function invocation
+success rates, recent email send success rates, orphan record counts
+(orders without order_items, customer_relationships without customers,
+etc.). Red / amber / green per component. Admin-gated.
+
+T7-M4: Critical error alerting
+When something critical fails (Edge Function throws, invite email
+bounces, payment fails, drop closes but notifications don't send),
+send an email to `alerts@lovehearth.co.uk` which forwards to Ed's
+phone. Severity ranked — critical alerts wake him up, warnings wait
+for the digest. Every alert must include a suggested action.
+
+T7-M5: Daily digest email
+Automated 7am email summarising platform uptime (last 24h), drops
+that ran, orders processed, errors encountered, anomalies detected,
+vendor issues flagged. Delivers the "I slept well, here's what
+happened" check. Also serves as the heartbeat — if the digest stops
+arriving, monitoring itself has failed.
+
+T7-M6: Scheduled health checks via Supabase Edge Functions on a cron
+Verify Resend is sending (test send, check API response), Edge
+Functions are responding, no orphan rows have accumulated, auth
+flows are completing. Infrastructure dependency for T7-M4 (alerting
+source) and T7-M5 (digest data source).
+
+**Phase 2 — year 2+, as the platform matures**
+
+T7-M7: Structured logging pipeline
+Route logs from Netlify Functions, Supabase Edge Functions, and
+client-side errors into a single searchable pipeline (Axiom,
+Logflare, or Supabase Log Drains). Replaces ad hoc console
+inspection. Unblocks pattern detection across components.
+
+T7-M8: Error tracking with alerting on new error types
+Sentry or equivalent. Groups errors, alerts on new signatures,
+surfaces release regressions. Builds on T7-M7 once the log volume
+justifies a dedicated error surface.
+
+T7-M9: Synthetic transaction monitoring
+Bot that places a test order every hour against a synthetic drop,
+verifying the full order flow (page load, menu render, item add,
+checkout submit, order_items written, confirmation shown). First
+alert if the checkout flow silently breaks. Higher-signal than any
+component-level ping.
+
+T7-M10: Documented incident response runbooks
+Written playbooks for common failures — Supabase down, auth broken,
+Resend failing, payment provider outage, Netlify deploy stuck. Each
+runbook names the symptom, the diagnostic steps, the likely fix, and
+the rollback path. Written once, used when Ed is stressed.
+
+T7-M11: Public status page at status.lovehearth.co.uk
+Vendor-facing status page showing current platform health and
+historical incidents. Builds trust by being transparent about
+outages rather than hiding them. Depends on T7-M1 and T7-M3 as data
+sources.
 
 ## Recommended next session order
 
