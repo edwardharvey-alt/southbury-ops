@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
 
     const { data: vendor, error: vendorErr } = await supabaseAuth
       .from("vendors")
-      .select("id, contact_email, email, stripe_account_id")
+      .select("id, email, stripe_account_id")
       .eq("id", vendor_id)
       .maybeSingle();
 
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     let stripeAccountId: string | null = vendor.stripe_account_id ?? null;
 
     if (!stripeAccountId) {
-      const email = vendor.contact_email || vendor.email || userData.user.email || "";
+      const email = vendor.email || userData.user.email || "";
 
       const accountForm = new URLSearchParams();
       accountForm.set("type", "express");
