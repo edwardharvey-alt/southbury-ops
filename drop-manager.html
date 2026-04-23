@@ -646,6 +646,7 @@
 
     /* ── First-drop guidance card (T4-23) ── */
     #firstDropGuidance{
+      position:relative;
       margin:14px 0 4px;
       padding:20px 22px;
       border:1px solid var(--h-border);
@@ -654,6 +655,30 @@
       display:flex;
       flex-direction:column;
       gap:10px;
+    }
+    #firstDropGuidance .firstDropGuidanceDismiss{
+      position:absolute;
+      top:10px;
+      right:12px;
+      width:28px;
+      height:28px;
+      border:none;
+      background:transparent;
+      color:var(--h-muted);
+      font-size:18px;
+      line-height:1;
+      cursor:pointer;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:0;
+    }
+    #firstDropGuidance .firstDropGuidanceDismiss:hover,
+    #firstDropGuidance .firstDropGuidanceDismiss:focus-visible{
+      background:rgba(15,23,42,0.06);
+      color:var(--h-text);
+      outline:none;
     }
     #firstDropGuidance .firstDropGuidanceHeading{
       margin:0;
@@ -1424,7 +1449,8 @@
       dragState: {
         key: null,
         categoryName: null
-      }
+      },
+      vendorCustomerCount: null
     };
 
     function byId(id) {
@@ -2005,6 +2031,25 @@
       state.inboundHostContext = getUrlParam('host_context') || null;
       const el = byId('headerVendorSub');
       if (el) el.textContent = vendor.display_name || vendor.name || 'Vendor workspace';
+    }
+
+    /* ── Customer count cache (T3-8d) ──────────────────────────────────────
+       Loaded once on init so renderFirstDropGuidance can gate the
+       "head start" card without re-querying on every render. */
+    async function loadVendorCustomerCount() {
+      if (!state.vendorId) { state.vendorCustomerCount = 0; return; }
+      try {
+        const { count, error } = await supabase
+          .from("customer_relationships")
+          .select("customer_id", { count: "exact", head: true })
+          .eq("owner_id", state.vendorId)
+          .eq("owner_type", "vendor");
+        if (error) throw error;
+        state.vendorCustomerCount = typeof count === "number" ? count : 0;
+      } catch (err) {
+        console.error("loadVendorCustomerCount failed", err);
+        state.vendorCustomerCount = 0;
+      }
     }
 
     async function loadHosts() {
@@ -4119,7 +4164,13 @@
         : [];
       const posture = vendor.customer_data_posture || null;
       const inboundHostContext = state.inboundHostContext || null;
+      const isDataRich = posture === "rich" || posture === "partial";
+      const headStartDismissed = !!vendor.head_start_dismissed;
+      const customerCount = typeof state.vendorCustomerCount === "number"
+        ? state.vendorCustomerCount
+        : 0;
 
+      let variant = null; // 'host' | 'head-start' | 'fallback'
       let heading = "";
       let body = "";
 
@@ -4137,30 +4188,43 @@
           hostReference = FIRST_DROP_HOST_CONTEXT_LABELS[firstContext] || "a host you know";
         }
 
+        variant = "host";
         heading = "Start with what you know";
         body = `You mentioned working with ${hostReference} — a hosted drop is the natural first step. Your host brings the audience; you bring the food. It's the lowest-risk way to run your first Hearth drop.`;
       } else if (inboundHostContext && FIRST_DROP_HOST_CONTEXT_LABELS[inboundHostContext]) {
         // State 1 (soft signal via ?host_context= URL param from Brand Hearth nudge)
         const hostReference = FIRST_DROP_HOST_CONTEXT_LABELS[inboundHostContext];
+        variant = "host";
         heading = "Start with what you know";
         body = `You mentioned working with ${hostReference} — a hosted drop is the natural first step. Your host brings the audience; you bring the food. It's the lowest-risk way to run your first Hearth drop.`;
-      } else if (posture === "rich" || posture === "partial") {
-        // State 2 — has customer data, no host context
+      } else if (isDataRich) {
+        // State 2 — has customer data, no host context.
+        // T3-8d: shown only if vendor hasn't dismissed AND has zero linked customers.
+        if (headStartDismissed || customerCount > 0) {
+          el.style.display = "none";
+          el.innerHTML = "";
+          return;
+        }
+        variant = "head-start";
         heading = "You have a head start";
         body = "You have existing customers to reach. A neighbourhood drop into the areas where they already are is a strong first move. Promote it through social media or in-store to fill your first capacity.";
       } else {
         // State 3 — fallback (customer_data_posture 'light' or null, no host)
+        variant = "fallback";
         heading = "Your first drop starts here";
         body = "A neighbourhood drop is a solid starting point — promote it through social media or in-store to build your first orders. Or find a local host to partner with and let their audience do the work.";
       }
-
-      const isDataRich = posture === "rich" || posture === "partial";
 
       const ctaHtml = isDataRich
         ? `<a class="btnAccent" href="${HearthNav.withVendor('customer-import.html')}">Import your customers →</a>`
         : `<button class="btnAccent" id="firstDropGuidanceCta" type="button">Create your first drop</button>`;
 
+      const dismissHtml = variant === "head-start"
+        ? `<button class="firstDropGuidanceDismiss" id="firstDropGuidanceDismiss" type="button" aria-label="Dismiss">×</button>`
+        : "";
+
       el.innerHTML = `
+        ${dismissHtml}
         <h4 class="firstDropGuidanceHeading">${escapeHtml(heading)}</h4>
         <p class="firstDropGuidanceBody">${escapeHtml(body)}</p>
         <div class="firstDropGuidanceActions">
@@ -4178,6 +4242,29 @@
             } catch (err) {
               console.error(err);
               showError(err.message || "Unable to create drop.");
+            }
+          });
+        }
+      }
+
+      if (variant === "head-start") {
+        const dismissBtn = byId("firstDropGuidanceDismiss");
+        if (dismissBtn) {
+          dismissBtn.addEventListener("click", async () => {
+            dismissBtn.disabled = true;
+            try {
+              const { error } = await supabase
+                .from("vendors")
+                .update({ head_start_dismissed: true })
+                .eq("id", state.vendorId);
+              if (error) throw error;
+              state.vendor.head_start_dismissed = true;
+              el.style.display = "none";
+              el.innerHTML = "";
+            } catch (err) {
+              console.error(err);
+              showError(err.message || "Unable to dismiss. Please try again.");
+              dismissBtn.disabled = false;
             }
           });
         }
@@ -4929,6 +5016,7 @@
         updateStatusFilterSummary();
         updateTypeFilterSummary();
         await loadVendorId();
+        await loadVendorCustomerCount();
         await refreshAll();
       } catch (err) {
         console.error(err);

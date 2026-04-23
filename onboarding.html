@@ -835,11 +835,11 @@
       <!-- FLOW WRAPPER (hidden when showing completion state) -->
       <div id="flowWrapper">
 
-        <!-- PROGRESS INDICATOR -->
+        <!-- PROGRESS INDICATOR — phase-based (T3-8e) -->
         <div class="obProgressCard">
           <div class="progressStep">
             <div class="progressDot" id="dot1">1</div>
-            <span class="progressLabel" id="label1">Who you are</span>
+            <span class="progressLabel" id="label1">About you</span>
           </div>
           <div class="progressConnector"></div>
           <div class="progressStep">
@@ -849,7 +849,7 @@
           <div class="progressConnector"></div>
           <div class="progressStep">
             <div class="progressDot" id="dot3">3</div>
-            <span class="progressLabel" id="label3">How you operate</span>
+            <span class="progressLabel" id="label3">Ready to launch</span>
           </div>
         </div>
 
@@ -1772,11 +1772,12 @@
       }
       if (!stage2Revealed && stage1Complete()){
         stage2Revealed = true;
-        revealStage('stage2Wrapper', 'dot1', 'label1', 'dot2', 'label2');
+        revealStage('stage2Wrapper', ['done', 'active', 'upcoming']);
       }
       if (stage2Revealed && !stage3Revealed && stage2Complete()){
         stage3Revealed = true;
-        revealStage('stage3Wrapper', 'dot2', 'label2', 'dot3', 'label3');
+        // Stage 3 is still in Phase 2, so Phase 2 stays active.
+        revealStage('stage3Wrapper', ['done', 'active', 'upcoming']);
       }
       // Show aggregator data gap note at Q4 when delivery_model is aggregator
       const aggNote = byId('q4AggregatorNote');
@@ -1784,23 +1785,44 @@
       updateSaveButton();
     }
 
-    function revealStage(wrapperId, completedDotId, completedLabelId, activeDotId, activeLabelId){
+    function revealStage(wrapperId, phaseStates){
       const wrapper = byId(wrapperId);
       wrapper.classList.add('visible');
       setTimeout(() => {
         wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 60);
+      if (phaseStates) setPhaseState(phaseStates[0], phaseStates[1], phaseStates[2]);
+    }
 
-      // Mark previous step done, new step active
-      const prevDot = byId(completedDotId);
-      const prevLabel = byId(completedLabelId);
-      if (prevDot){ prevDot.classList.remove('active'); prevDot.classList.add('done'); prevDot.textContent = '✓'; }
-      if (prevLabel){ prevLabel.classList.remove('active'); prevLabel.classList.add('done'); }
-
-      const nextDot = byId(activeDotId);
-      const nextLabel = byId(activeLabelId);
-      if (nextDot){ nextDot.classList.add('active'); }
-      if (nextLabel){ nextLabel.classList.add('active'); }
+    /* ── Phase-based progress indicator (T3-8e) ──────────────────────────
+       Three phases map onto the linear stage flow:
+         Phase 1 "About you"        — Stages 1, 4, 5
+         Phase 2 "Your customers"   — Stages 2, 3
+         Phase 3 "Ready to launch"  — Stages 6, 7
+       Each phase dot is 'active' | 'done' | 'upcoming'. Callers set the
+       trio at each stage transition; this is the single source of truth
+       for dot state. */
+    function setPhaseState(p1, p2, p3){
+      const states = [p1, p2, p3];
+      ['dot1','dot2','dot3'].forEach((dotId, i) => {
+        const dot = byId(dotId);
+        const label = byId('label' + (i + 1));
+        if (!dot || !label) return;
+        dot.classList.remove('active','done');
+        label.classList.remove('active','done');
+        const s = states[i];
+        if (s === 'active'){
+          dot.classList.add('active');
+          label.classList.add('active');
+          dot.textContent = String(i + 1);
+        } else if (s === 'done'){
+          dot.classList.add('done');
+          label.classList.add('done');
+          dot.textContent = '✓';
+        } else {
+          dot.textContent = String(i + 1);
+        }
+      });
     }
 
     function updateSaveButton(){
@@ -1811,21 +1833,8 @@
 
     // ── Progress indicator initialisation ─────────────────────────────────
     function initProgress(){
-      // Stage 1 always active on load
-      const dot1 = byId('dot1');
-      const label1 = byId('label1');
-      // Reset all dots first
-      ['dot1','dot2','dot3'].forEach(id => {
-        const d = byId(id);
-        d.classList.remove('active','done');
-        d.textContent = d.id.replace('dot','');
-      });
-      ['label1','label2','label3'].forEach(id => {
-        const l = byId(id);
-        l.classList.remove('active','done');
-      });
-      dot1.classList.add('active');
-      label1.classList.add('active');
+      // Phase 1 ("About you") active on load; the rest upcoming.
+      setPhaseState('active', 'upcoming', 'upcoming');
     }
 
     // ── Pre-populate from saved values ────────────────────────────────────
@@ -1905,6 +1914,8 @@
     function showCompletion(){
       byId('flowWrapper').style.display = 'none';
       byId('completionState').style.display = '';
+      // All three phases done on completion.
+      setPhaseState('done', 'done', 'done');
 
       const titleEl = byId('completionTitle');
       const sub = byId('completionSub');
@@ -1943,6 +1954,8 @@
       // Pre-populate from saved value if present
       const addrInput = byId('obAddress');
       if (addrInput && state.vendor?.address) addrInput.value = state.vendor.address;
+      // Stage 4 is in Phase 1 ("About you") — phase re-activates.
+      setPhaseState('active', 'done', 'upcoming');
       setTimeout(() => { wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
     }
 
@@ -1957,6 +1970,8 @@
       if (sh.facebook)  byId('obFacebook').value  = sh.facebook;
       if (sh.tiktok)    byId('obTiktok').value    = sh.tiktok;
       if (sh.whatsapp)  byId('obWhatsapp').value  = sh.whatsapp;
+      // Stage 5 is in Phase 1 ("About you").
+      setPhaseState('active', 'done', 'upcoming');
       setTimeout(() => { wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
     }
 
@@ -2069,6 +2084,8 @@
       cb.checked = accepted;
       btn.disabled = !accepted;
       opt.classList.toggle('active', accepted);
+      // Stage 6 is in Phase 3 ("Ready to launch").
+      setPhaseState('done', 'done', 'active');
       setTimeout(() => { wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
     }
 
@@ -2113,6 +2130,9 @@
       const wrap = byId('stage7Wrapper');
       wrap.style.display = '';
       wrap.classList.add('visible');
+
+      // Stage 7 is in Phase 3 ("Ready to launch") — dot stays active.
+      setPhaseState('done', 'done', 'active');
 
       const params = new URLSearchParams(window.location.search);
       if (params.get('stripe_setup') === 'complete'){
@@ -2353,16 +2373,13 @@
           if (stage1Complete()){
             stage2Revealed = true;
             byId('stage2Wrapper').classList.add('visible');
-            byId('dot1').classList.remove('active'); byId('dot1').classList.add('done'); byId('dot1').textContent = '✓';
-            byId('label1').classList.remove('active'); byId('label1').classList.add('done');
-            byId('dot2').classList.add('active'); byId('label2').classList.add('active');
+            setPhaseState('done', 'active', 'upcoming');
           }
           if (stage1Complete() && stage2Complete()){
             stage3Revealed = true;
             byId('stage3Wrapper').classList.add('visible');
-            byId('dot2').classList.remove('active'); byId('dot2').classList.add('done'); byId('dot2').textContent = '✓';
-            byId('label2').classList.remove('active'); byId('label2').classList.add('done');
-            byId('dot3').classList.add('active'); byId('label3').classList.add('active');
+            // Stage 3 still in Phase 2 — phase stays active.
+            setPhaseState('done', 'active', 'upcoming');
           }
           updateSaveButton();
         });
@@ -2374,16 +2391,12 @@
         if (stage1Complete()){
           stage2Revealed = true;
           byId('stage2Wrapper').classList.add('visible');
-          byId('dot1').classList.remove('active'); byId('dot1').classList.add('done'); byId('dot1').textContent = '✓';
-          byId('label1').classList.remove('active'); byId('label1').classList.add('done');
-          byId('dot2').classList.add('active'); byId('label2').classList.add('active');
+          setPhaseState('done', 'active', 'upcoming');
         }
         if (stage1Complete() && stage2Complete()){
           stage3Revealed = true;
           byId('stage3Wrapper').classList.add('visible');
-          byId('dot2').classList.remove('active'); byId('dot2').classList.add('done'); byId('dot2').textContent = '✓';
-          byId('label2').classList.remove('active'); byId('label2').classList.add('done');
-          byId('dot3').classList.add('active'); byId('label3').classList.add('active');
+          setPhaseState('done', 'active', 'upcoming');
         }
         updateSaveButton();
 
