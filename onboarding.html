@@ -554,75 +554,6 @@
       margin:0;
     }
 
-    .paymentPaths{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:14px;
-    }
-
-    .paymentPath{
-      border:2px solid var(--h-border);
-      border-radius:18px;
-      padding:24px 20px;
-      background:#fff;
-      cursor:pointer;
-      transition:border-color .2s, background .2s, box-shadow .2s;
-      display:grid;
-      gap:10px;
-      text-align:center;
-      align-content:start;
-    }
-
-    .paymentPath:hover{
-      border-color:color-mix(in srgb, var(--h-accent) 40%, transparent);
-      background:color-mix(in srgb, var(--h-accent) 3%, white);
-    }
-
-    .paymentPath:active,
-    .paymentPath.active{
-      border-color:var(--h-accent);
-      background:color-mix(in srgb, var(--h-accent) 6%, white);
-      box-shadow:0 4px 16px color-mix(in srgb, var(--h-accent) 12%, transparent);
-    }
-
-    .paymentPathIcon{
-      width:48px;
-      height:48px;
-      border-radius:999px;
-      background:color-mix(in srgb, var(--h-accent) 10%, white);
-      border:2px solid color-mix(in srgb, var(--h-accent) 20%, white);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:20px;
-      margin:0 auto 4px;
-    }
-
-    .paymentPathTitle{
-      font-size:15px;
-      font-weight:900;
-      color:var(--h-text);
-      letter-spacing:-0.01em;
-    }
-
-    .paymentPathTime{
-      font-size:12px;
-      font-weight:800;
-      color:var(--h-accent);
-      background:color-mix(in srgb, var(--h-accent) 8%, white);
-      border-radius:999px;
-      padding:4px 12px;
-      width:fit-content;
-      margin:0 auto;
-    }
-
-    .paymentPathDesc{
-      font-size:12px;
-      font-weight:600;
-      color:var(--h-muted);
-      line-height:1.4;
-    }
-
     .paymentChecklist{
       border:1px solid var(--h-border);
       border-radius:14px;
@@ -792,19 +723,6 @@
       margin:2px 0 0;
     }
 
-    .paymentStepBadge{
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      padding:4px 12px;
-      border-radius:999px;
-      background:rgba(15,23,42,0.05);
-      border:1px solid rgba(15,23,42,0.08);
-      font-size:11px;
-      font-weight:700;
-      color:var(--h-muted);
-    }
-
     .paymentStatus{
       display:none;
       border:1px solid var(--h-border);
@@ -865,15 +783,12 @@
     }
 
     @media (max-width:768px){
-      .paymentPaths{ grid-template-columns:1fr; }
       .paymentComfort{ grid-template-columns:1fr; }
       .paymentSupport{ flex-direction:column; align-items:stretch; text-align:center; }
     }
 
     @media (max-width:500px){
-      .paymentPaths{ grid-template-columns:1fr; }
       .paymentComfort{ grid-template-columns:1fr; }
-      .paymentPath{ padding:20px 16px; }
     }
 
     /* Stage 6 vendor terms link — make the inline link legible as a link */
@@ -1489,10 +1404,7 @@
         <!-- ══════════════════════════════════════ -->
         <div class="stageWrapper" id="stage7Wrapper">
           <div class="obStageCard" id="stage7">
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-              <div class="obStageEyebrow">Payment setup</div>
-              <div class="paymentStepBadge">Step 6 of 7</div>
-            </div>
+            <div class="obStageEyebrow">Payment setup</div>
 
             <div style="display:grid;gap:6px;">
               <p class="paymentIntro">Let's get you ready to accept card payments</p>
@@ -1501,26 +1413,6 @@
                 means money from orders goes straight to your bank account — usually within
                 2 business days. Thousands of UK food businesses use Stripe to do this securely.
               </p>
-            </div>
-
-            <!-- Two paths -->
-            <div class="paymentPaths" id="paymentPaths">
-              <div class="paymentPath" id="pathExisting" tabindex="0" role="button" aria-label="Connect existing Stripe account">
-                <div class="paymentPathIcon">↗</div>
-                <div class="paymentPathTitle">I already accept card payments</div>
-                <div class="paymentPathTime">About 30 seconds</div>
-                <div class="paymentPathDesc">
-                  Connect your existing Stripe account to Hearth. We'll just link the two together.
-                </div>
-              </div>
-              <div class="paymentPath" id="pathNew" tabindex="0" role="button" aria-label="Set up new Stripe account">
-                <div class="paymentPathIcon">+</div>
-                <div class="paymentPathTitle">I need to start accepting card payments</div>
-                <div class="paymentPathTime">About 10 minutes</div>
-                <div class="paymentPathDesc">
-                  We'll walk you through creating a Stripe account. You'll need a few details about your business and your bank account.
-                </div>
-              </div>
             </div>
 
             <!-- What you'll need checklist -->
@@ -1628,16 +1520,15 @@
             <div class="paymentSupport">
               <div class="paymentSupportText">
                 <p class="paymentSupportTitle">Having trouble? We can do this together.</p>
-                <p class="paymentSupportSub">Call us and we'll walk you through it step by step.</p>
+                <p class="paymentSupportSub">Email us and we'll walk you through it.</p>
               </div>
-              <a class="btnAccent" href="tel:+441onal" style="white-space:nowrap;font-size:13px;min-height:40px;padding:0 20px;display:inline-flex;align-items:center;" id="paymentSupportPhone">
-                Call support
+              <a class="btnAccent" href="mailto:support@lovehearth.co.uk" style="white-space:nowrap;font-size:13px;min-height:40px;padding:0 20px;display:inline-flex;align-items:center;" id="paymentSupportPhone">
+                Email support
               </a>
             </div>
 
             <!-- Actions -->
             <div class="brandActions" style="margin-top:6px;" id="paymentActions">
-              <button class="btnAccent" id="connectStripeBtn" type="button">Connect your Stripe account</button>
               <button class="btnAccent" id="setupStripeBtn" type="button">Set up card payments</button>
               <button class="brandMiniLink" id="skipPaymentBtn" type="button" style="background:none;border:none;cursor:pointer;font:inherit;">Set up payments later</button>
             </div>
@@ -2207,7 +2098,6 @@
     }
 
     // ── Payment Setup (Stage 7) ─────────────────────────────────────────
-    let selectedPaymentPath = null;
 
     function revealStage7(){
       ['stage1','stage2Wrapper','stage3Wrapper','stage4Wrapper','stage5Wrapper','stage6Wrapper'].forEach(id => {
@@ -2234,40 +2124,8 @@
       byId('paymentStatusSuccess').className = 'paymentStatus';
       byId('paymentActions').style.display = '';
       byId('paymentContinueActions').style.display = 'none';
-      byId('connectStripeBtn').style.display = 'none';
-      byId('setupStripeBtn').style.display = 'none';
-      selectedPaymentPath = null;
-      byId('pathExisting').classList.remove('active');
-      byId('pathNew').classList.remove('active');
-
-      updatePaymentChecklist(null);
 
       setTimeout(() => { wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
-    }
-
-    function selectPaymentPath(path){
-      selectedPaymentPath = path;
-      byId('pathExisting').classList.toggle('active', path === 'existing');
-      byId('pathNew').classList.toggle('active', path === 'new');
-
-      if (path === 'existing'){
-        byId('connectStripeBtn').style.display = '';
-        byId('setupStripeBtn').style.display = 'none';
-      } else {
-        byId('connectStripeBtn').style.display = 'none';
-        byId('setupStripeBtn').style.display = '';
-      }
-
-      updatePaymentChecklist(path);
-    }
-
-    function updatePaymentChecklist(path){
-      const container = byId('paymentChecklist');
-      if (path === 'existing'){
-        container.style.display = 'none';
-      } else {
-        container.style.display = '';
-      }
     }
 
     function wirePaymentFaq(){
@@ -2280,7 +2138,7 @@
 
     async function initiateStripeConnect(){
       if (!state.vendor?.id) return;
-      const btn = selectedPaymentPath === 'existing' ? byId('connectStripeBtn') : byId('setupStripeBtn');
+      const btn = byId('setupStripeBtn');
       btn.disabled = true;
       btn.textContent = 'Redirecting to Stripe…';
 
@@ -2297,8 +2155,7 @@
           body: {
             vendor_id: state.vendor.id,
             return_url: returnUrl,
-            refresh_url: refreshUrl,
-            account_type: selectedPaymentPath === 'existing' ? 'standard' : 'express'
+            refresh_url: refreshUrl
           }
         });
 
@@ -2311,50 +2168,42 @@
       } catch (err) {
         showNotice('Could not start Stripe setup: ' + (err.message || 'Please try again or contact support.'), 'error');
         btn.disabled = false;
-        btn.textContent = selectedPaymentPath === 'existing' ? 'Connect your Stripe account' : 'Set up card payments';
+        btn.textContent = 'Set up card payments';
       }
     }
 
     async function handleStripeReturn(){
-      byId('paymentPaths').style.display = 'none';
-      byId('paymentChecklist').style.display = 'none';
       byId('paymentActions').style.display = 'none';
       byId('paymentFaq').style.display = 'none';
       byId('paymentStatusWaiting').className = 'paymentStatus waiting';
 
       try {
-        const { data: vendor, error } = await sb
-          .from('vendors')
-          .select('stripe_account_id, stripe_onboarding_complete')
-          .eq('id', state.vendor.id)
-          .single();
+        const { data, error } = await sb.functions.invoke(
+          'check-stripe-connect-status',
+          { body: { vendor_id: state.vendor.id } }
+        );
 
         if (error) throw error;
 
-        if (vendor?.stripe_onboarding_complete){
-          state.vendor.stripe_account_id = vendor.stripe_account_id;
-          state.vendor.stripe_onboarding_complete = true;
+        state.vendor.stripe_onboarding_complete = !!data?.complete;
+
+        if (data?.complete){
           byId('paymentStatusWaiting').className = 'paymentStatus';
           byId('paymentStatusSuccess').className = 'paymentStatus success';
           byId('paymentContinueActions').style.display = '';
-        } else if (vendor?.stripe_account_id){
-          state.vendor.stripe_account_id = vendor.stripe_account_id;
-          byId('paymentStatusWaiting').className = 'paymentStatus';
-          showNotice('Your Stripe account is linked but setup is not complete yet. Stripe may take a moment to verify your details. You can continue and come back later.', '');
-          byId('paymentPaths').style.display = '';
-          byId('paymentActions').style.display = '';
-          byId('paymentFaq').style.display = '';
+        } else if (data?.details_submitted){
+          byId('paymentStatusWaiting').className = 'paymentStatus waiting';
+          showNotice('Stripe is still verifying your details. You can continue to your workspace — we’ll unlock publishing as soon as verification completes.', '');
+          byId('paymentContinueActions').style.display = '';
         } else {
           byId('paymentStatusWaiting').className = 'paymentStatus';
           showNotice('Stripe setup was not completed. You can try again or set up payments later.', '');
-          byId('paymentPaths').style.display = '';
           byId('paymentActions').style.display = '';
           byId('paymentFaq').style.display = '';
         }
       } catch (err) {
         byId('paymentStatusWaiting').className = 'paymentStatus';
         showNotice('Could not verify payment setup: ' + (err.message || 'Please try again.'), 'error');
-        byId('paymentPaths').style.display = '';
         byId('paymentActions').style.display = '';
         byId('paymentFaq').style.display = '';
       }
@@ -2369,11 +2218,6 @@
     }
 
     function wirePaymentStage(){
-      byId('pathExisting').addEventListener('click', () => selectPaymentPath('existing'));
-      byId('pathNew').addEventListener('click', () => selectPaymentPath('new'));
-      byId('pathExisting').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); selectPaymentPath('existing'); } });
-      byId('pathNew').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); selectPaymentPath('new'); } });
-      byId('connectStripeBtn').addEventListener('click', initiateStripeConnect);
       byId('setupStripeBtn').addEventListener('click', initiateStripeConnect);
       byId('skipPaymentBtn').addEventListener('click', skipPaymentSetup);
       byId('paymentContinueBtn').addEventListener('click', showCompletion);

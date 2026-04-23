@@ -607,6 +607,43 @@
       border-radius:0 8px 8px 0;
     }
 
+    /* ── Stripe gate notice (T3-8) ── */
+    #stripeGate{
+      margin:14px 0 4px;
+      padding:16px 20px;
+      border:1px solid color-mix(in srgb, var(--h-accent) 24%, transparent);
+      background:color-mix(in srgb, var(--h-accent) 5%, white);
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+    #stripeGate .stripeGateText{
+      flex:1;
+      min-width:220px;
+    }
+    #stripeGate .stripeGateTitle{
+      margin:0;
+      font-size:14px;
+      font-weight:800;
+      color:var(--h-text);
+    }
+    #stripeGate .stripeGateBody{
+      margin:2px 0 0;
+      font-size:13px;
+      color:var(--h-muted);
+      line-height:1.5;
+    }
+    #stripeGate a.stripeGateCta{
+      white-space:nowrap;
+    }
+    @media (max-width:768px){
+      #stripeGate{ flex-direction:column; align-items:stretch; }
+      #stripeGate a.stripeGateCta{ width:100%; text-align:center; min-height:44px; display:inline-flex; align-items:center; justify-content:center; }
+    }
+
     /* ── First-drop guidance card (T4-23) ── */
     #firstDropGuidance{
       margin:14px 0 4px;
@@ -762,6 +799,8 @@
 
           <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
         </div>
+
+        <div id="stripeGate" style="display:none;"></div>
 
         <div id="firstDropGuidance" style="display:none;"></div>
 
@@ -3141,7 +3180,10 @@
 
       publishBtn.textContent = liveDrop.status === "live" ? "Update Live Drop" : "Publish Drop";
 
-      if (readiness.ready_to_publish) {
+      if (isStripeGated()) {
+        publishHelp.textContent = "Finish payment setup in Setup before publishing drops.";
+        publishBtn.disabled = true;
+      } else if (readiness.ready_to_publish) {
         publishHelp.textContent = liveDrop.status === "live"
           ? "This live drop can be updated."
           : "This drop is ready to publish.";
@@ -3999,6 +4041,7 @@
     function renderEverything() {
       updateStatusFilterSummary();
       updateTypeFilterSummary();
+      renderStripeGate();
       renderDropBand();
       renderFirstDropGuidance();
       populateForm();
@@ -4010,6 +4053,39 @@
       renderContextBar();
       updateWorkspaceHeader();
       renderReview();
+    }
+
+    /* ── Stripe gate (T3-8) ────────────────────────────────────────────────
+       Drops cannot transition to live/published until vendor has completed
+       Stripe Connect onboarding. Draft operations remain unblocked. */
+    function isStripeGated() {
+      return !(state.vendor && state.vendor.stripe_onboarding_complete);
+    }
+
+    function renderStripeGate() {
+      const el = byId("stripeGate");
+      if (!el) return;
+
+      if (!isStripeGated()) {
+        el.style.display = "none";
+        el.innerHTML = "";
+        const liveOpt = document.querySelector('#dropStatus option[value="live"]');
+        if (liveOpt) liveOpt.disabled = false;
+        return;
+      }
+
+      const href = HearthNav.withVendor("onboarding.html");
+      el.innerHTML = `
+        <div class="stripeGateText">
+          <p class="stripeGateTitle">Set up card payments before publishing drops</p>
+          <p class="stripeGateBody">You can create and edit drafts now — publishing unlocks once your Stripe account is connected.</p>
+        </div>
+        <a class="btnAccent stripeGateCta" href="${href}">Finish payment setup →</a>
+      `;
+      el.style.display = "";
+
+      const liveOpt = document.querySelector('#dropStatus option[value="live"]');
+      if (liveOpt) liveOpt.disabled = true;
     }
 
     /* ── First-drop guidance card (T4-23) ────────────────────────────────── */
@@ -4578,6 +4654,10 @@
       });
 
       byId("publishBtn").addEventListener("click", async () => {
+        if (isStripeGated()) {
+          showError("Finish payment setup in Setup before publishing drops.");
+          return;
+        }
         try {
           await saveDrop(false);
           const wasLive = (getLiveDropFromForm()?.status || state.drop?.status) === "live";

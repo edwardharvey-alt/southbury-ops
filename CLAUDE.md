@@ -93,7 +93,10 @@ and HearthNav.withVendor).
   `pos_platform`, `pos_platform_other`, `customer_data_posture`,
   `existing_host_contexts`, etc.) populated by the onboarding flow.
   `terms_accepted` (boolean), `terms_accepted_at` (timestamptz) — added
-  as part of T4-25
+  as part of T4-25. `stripe_account_id` (text, nullable) and
+  `stripe_onboarding_complete` (boolean, NOT NULL DEFAULT false) — added
+  as part of T3-8 Phase 1. Partial index
+  `idx_vendors_stripe_account_id` WHERE `stripe_account_id IS NOT NULL`
 - drops — the core unit: each drop has slug, timing, capacity, host, status,
   collection_point_description (text), delivery_area_description (text),
   customer_notes_enabled (boolean, default true)
@@ -306,6 +309,39 @@ on top of the coding rules above.
     set-password.html client-side — leaves a window where a vendor row
     has no owner and resolveVendor() cannot find it by auth_user_id.
     Server-side linking with the service role is the correct pattern.
+
+## Stripe Connect Express (T3-8)
+
+- vendors schema: `stripe_account_id` TEXT (nullable),
+  `stripe_onboarding_complete` BOOLEAN NOT NULL DEFAULT FALSE
+- Partial index `idx_vendors_stripe_account_id` WHERE
+  `stripe_account_id IS NOT NULL`
+- Edge Functions: `create-stripe-connect-link`,
+  `check-stripe-connect-status`
+- Both use `verify_jwt = false` in `supabase/config.toml` plus in-function
+  `supabase.auth.getUser()` for JWT verification (mirrors the
+  `invite-vendor` pattern)
+- Stripe account type: Express (`country=GB`,
+  `business_type=individual`)
+- Secret in Supabase: `STRIPE_SECRET_KEY` (test/sandbox mode at launch)
+- Publishable key exposed via
+  `window.HEARTH_CONFIG.STRIPE_PUBLISHABLE_KEY`
+- After Stripe redirects back, ALWAYS call
+  `check-stripe-connect-status` Edge Function. Never read the DB
+  directly — it may not be updated yet when the vendor returns. The
+  Edge Function hits Stripe for the authoritative state and, on
+  completion, flips `stripe_onboarding_complete` via a service-role
+  update.
+- Drop publish gate: drops cannot transition to live/published status
+  unless `vendor.stripe_onboarding_complete = true`. Draft operations
+  (create, edit, save) remain unblocked. The gate in `drop-manager.html`
+  renders a notice above the drop list, disables the Publish button,
+  and disables the `live` option in the status dropdown until Stripe
+  onboarding completes.
+- Platform handover note: `stripe_account_id` values are scoped to a
+  single Stripe platform. If platform ownership changes, all
+  `stripe_account_id` values must be nulled and affected vendors
+  re-onboard. Document this as a known migration task.
 
 ## Admin and monitoring design principles
 
