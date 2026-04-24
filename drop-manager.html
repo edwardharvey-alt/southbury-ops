@@ -2056,6 +2056,7 @@
       const { data, error } = await supabase
         .from("hosts")
         .select("*")
+        .eq("vendor_id", state.vendorId)
         .neq("status", "archived")
         .order("name", { ascending: true });
 
@@ -4435,6 +4436,11 @@
       const name = byId("newHostName").value.trim();
       if (!name) throw new Error("Host Name is required.");
 
+      if (!state.vendorId) {
+        console.error("createHost aborted: state.vendorId is", state.vendorId);
+        return;
+      }
+
       const payload = {
         name,
         slug: slugify(name),
@@ -4444,6 +4450,8 @@
         vendor_id: state.vendorId,
         created_by_vendor_id: state.vendorId
       };
+
+      console.log("createHost inserting with vendor_id:", state.vendorId);
 
       const { data, error } = await supabase
         .from("hosts")
