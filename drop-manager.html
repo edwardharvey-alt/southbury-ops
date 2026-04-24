@@ -5027,13 +5027,10 @@
         if (!window.supabase || !window.supabase.createClient) throw new Error("Supabase library failed to load.");
         if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error("Missing Supabase config. Check ./assets/config.js.");
 
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        supabase = window._getHearthClient();
         window._hearthSupabase = supabase;
 
         const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          await supabase.auth.setSession(session);
-        }
         console.log('Supabase session on init:', session?.user?.id ?? 'NO SESSION');
 
         attachEvents();
