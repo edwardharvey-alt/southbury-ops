@@ -5021,6 +5021,12 @@
 
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await supabase.auth.setSession(session);
+        }
+        console.log('Supabase session on init:', session?.user?.id ?? 'NO SESSION');
+
         attachEvents();
         updateStatusFilterSummary();
         updateTypeFilterSummary();
