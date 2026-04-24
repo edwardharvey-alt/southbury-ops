@@ -4461,18 +4461,37 @@
         if (session) await supabase.auth.setSession(session);
       }
 
-      const { data, error } = await supabase
-        .from("hosts")
-        .insert(payload)
-        .select("*")
-        .single();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        console.error('createHost: no access token available');
+        showError('Authentication error. Please refresh and try again.');
+        return;
+      }
 
-      if (error) throw error;
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/hosts`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || `Insert failed: ${response.status}`);
+      }
+
+      const rows = await response.json();
+      const newHost = rows[0];
 
       await loadHosts();
       renderHostOptions();
-      byId("hostSelect").value = data.id;
-      state.drop.host_id = data.id;
+      byId("hostSelect").value = newHost.id;
+      state.drop.host_id = newHost.id;
       renderHostPreview();
       markDirty();
       closeModal("hostModal");
