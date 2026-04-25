@@ -4465,13 +4465,16 @@
         body: payload
       });
 
+      console.log('create-host invoke returned:', newHost);
+
       if (error) throw error;
       if (!newHost || newHost.error) throw new Error(newHost?.error || 'Host creation failed');
 
       await loadHosts();
       renderHostOptions();
-      byId("hostSelect").value = newHost.id;
-      state.drop.host_id = newHost.id;
+      const hostSelectEl = byId("hostSelect");
+      if (hostSelectEl) hostSelectEl.value = newHost.id;
+      if (state.drop) state.drop.host_id = newHost.id;
       renderHostPreview();
       markDirty();
       closeModal("hostModal");
