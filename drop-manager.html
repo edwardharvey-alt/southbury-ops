@@ -4473,7 +4473,10 @@
       await loadHosts();
       renderHostOptions();
       const hostSelectEl = byId("hostSelect");
-      if (hostSelectEl) hostSelectEl.value = newHost.id;
+      if (hostSelectEl) {
+        hostSelectEl.value = newHost.id;
+        hostSelectEl.dispatchEvent(new Event('change'));
+      }
       if (state.drop) state.drop.host_id = newHost.id;
       renderHostPreview();
       markDirty();
