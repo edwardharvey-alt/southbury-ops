@@ -351,6 +351,35 @@ on top of the coding rules above.
     the Authorization header via `global.headers` and
     `onAuthStateChange`.
 
+14. **Manual Authorization header attachment in the Supabase singleton.**
+    The supabase-js library does not reliably attach the user session
+    JWT to outbound PostgREST requests when the apikey is in the new
+    publishable-key format (`sb_publishable_...`). Without manual
+    intervention, authenticated mutations silently fail with HTTP 204 /
+    zero rows changed. The singleton in `assets/config.js` now manually
+    attaches the Authorization header by writing to
+    `client.rest.headers["Authorization"]` and keeps it in sync via
+    `onAuthStateChange`. This is documented in Supabase's own docs as
+    "no longer recommended" — that recommendation assumes the library's
+    auto-attach works, which it does not in our configuration. Pages
+    MUST use `window._getHearthClient()` to benefit from this fix.
+    Pages that call `window.supabase.createClient()` inline do NOT
+    benefit and will continue to silently fail. Migration of remaining
+    inline-createClient pages to the singleton is tracked separately.
+
+15. **Never run two Claude Code sessions in parallel against the same
+    repo.** Today's debugging session was complicated by a parallel
+    session merging five unrelated PRs (#180–#184) to main while we
+    were diagnosing the auth-attach bug. Although neither session
+    reverted the other's changes, the local clone diverged silently
+    from origin/main, and there was a real risk of one session
+    reverting another's work without anyone noticing. Hard rule going
+    forward: only one Claude Code session active per repo at a time.
+    If a session is paused, finish or close it before starting another.
+    The cost of breaking this rule is hours of confused debugging
+    chasing phantom bugs in code that's been silently changed by the
+    other session.
+
 ## Stripe Connect Express (T3-8)
 
 - vendors schema: `stripe_account_id` TEXT (nullable),
