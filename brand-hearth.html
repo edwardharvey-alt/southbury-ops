@@ -1833,7 +1833,7 @@
           throw new Error("Missing Supabase config. Check ./assets/config.js.");
         }
 
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        supabase = window._getHearthClient();
         attachEvents();
         await refreshAll();
       } catch (err) {

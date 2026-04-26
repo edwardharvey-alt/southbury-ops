@@ -318,6 +318,21 @@ on top of the coding rules above.
     has no owner and resolveVendor() cannot find it by auth_user_id.
     Server-side linking with the service role is the correct pattern.
 
+12. **Inline `window.supabase.createClient(url, key)` calls produce
+    clients that silently fail authenticated mutations.** The bare
+    two-argument form does not reliably attach the persisted user
+    session to subsequent requests. Mutations leave the browser with
+    the anon publishable key as Bearer, RLS on the target table
+    evaluates `auth.uid()` as null, the request matches zero rows, and
+    PostgREST returns 204 No Content. The UI receives no error and
+    displays success. Nothing is written. Always use
+    `window._getHearthClient()` from `assets/config.js` — never
+    instantiate a Supabase client inline on operator pages. A
+    platform-wide audit identified one page (drop-manager.html) using
+    the singleton and most other operator pages using inline
+    createClient — the migration is staged: brand-hearth.html first as
+    validation (this commit), other operator pages to follow.
+
 ## Stripe Connect Express (T3-8)
 
 - vendors schema: `stripe_account_id` TEXT (nullable),
