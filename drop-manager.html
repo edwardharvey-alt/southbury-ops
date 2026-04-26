@@ -856,7 +856,7 @@
             </button>
             <button class="stagePill" data-stage="menu" type="button">
               <span class="stageIcon" id="icon-menu">3</span>
-              <span>Menu</span>
+              <span>Offer</span>
             </button>
             <button class="stagePill" data-stage="commercials" type="button">
               <span class="stageIcon" id="icon-commercials">4</span>
@@ -1193,7 +1193,7 @@
                       <div class="helperText">Enable menu items from the catalogue, override prices, manage stock limits, and control per-drop ordering.</div>
                     </div>
                     <div class="row" style="gap:8px; flex-wrap:wrap;">
-                      <a href="drop-menu.html" class="utilityLink">Open Menu Library</a>
+                      <a href="drop-menu.html" class="utilityLink">Open Offer Library</a>
                     </div>
                   </div>
 
@@ -1244,8 +1244,8 @@
                       </div>
 
                       <div class="field hidden" id="fundraisingPerOrderField">
-                        <label for="fundraisingPerOrderPence">Amount per Order (pence)</label>
-                        <input id="fundraisingPerOrderPence" type="number" min="0" step="1" placeholder="100" />
+                        <label for="fundraisingPerOrderPence">Amount per Order (£)</label>
+                        <input id="fundraisingPerOrderPence" type="number" min="0" step="0.01" placeholder="1.00" />
                       </div>
 
                       <div class="field" style="grid-column:1 / -1;">
@@ -1286,13 +1286,13 @@
                       </div>
 
                       <div class="field hidden" id="hostSharePerOrderField">
-                        <label for="hostSharePerOrderPence">Amount per Order (pence)</label>
-                        <input id="hostSharePerOrderPence" type="number" min="0" step="1" placeholder="150" />
+                        <label for="hostSharePerOrderPence">Amount per Order (£)</label>
+                        <input id="hostSharePerOrderPence" type="number" min="0" step="0.01" placeholder="1.50" />
                       </div>
 
                       <div class="field hidden" id="hostShareFixedField">
-                        <label for="hostShareFixedPence">Fixed Amount (pence)</label>
-                        <input id="hostShareFixedPence" type="number" min="0" step="1" placeholder="7500" />
+                        <label for="hostShareFixedPence">Fixed Amount (£)</label>
+                        <input id="hostShareFixedPence" type="number" min="0" step="0.01" placeholder="75.00" />
                       </div>
 
                       <div class="field">
@@ -1966,7 +1966,7 @@
       const map = {
         basics: ["Basics", "Define the core setup for this drop"],
         timing: ["Timing", "Set fulfilment timing, ordering window and recurrence"],
-        menu: ["Menu", "Choose what can be ordered"],
+        menu: ["Offer", "Choose what can be ordered for this drop"],
         commercials: ["Commercials", "Optional economics and support settings"],
         review: ["Review", "Check readiness, share and publish"]
       };
@@ -2765,14 +2765,14 @@
       byId("fundraisingEnabled").checked = Boolean(d.fundraising_enabled);
       byId("fundraisingModel").value = d.fundraising_model || "";
       byId("fundraisingPercentage").value = d.fundraising_percentage ?? "";
-      byId("fundraisingPerOrderPence").value = d.fundraising_per_order_pence ?? "";
+      byId("fundraisingPerOrderPence").value = d.fundraising_per_order_pence == null ? "" : (d.fundraising_per_order_pence / 100).toFixed(2);
       byId("fundraisingDisplayText").value = d.fundraising_display_text || "";
 
       byId("hostShareEnabled").checked = Boolean(d.host_share_enabled);
       byId("hostShareModel").value = d.host_share_model || "";
       byId("hostSharePercentage").value = d.host_share_percentage ?? "";
-      byId("hostSharePerOrderPence").value = d.host_share_per_order_pence ?? "";
-      byId("hostShareFixedPence").value = d.host_share_fixed_pence ?? "";
+      byId("hostSharePerOrderPence").value = d.host_share_per_order_pence == null ? "" : (d.host_share_per_order_pence / 100).toFixed(2);
+      byId("hostShareFixedPence").value = d.host_share_fixed_pence == null ? "" : (d.host_share_fixed_pence / 100).toFixed(2);
       byId("hostShareCustomerVisible").value = String(Boolean(d.host_share_customer_visible));
 
       renderConditionalFields();
@@ -2868,7 +2868,7 @@
                 <td style="width:85px;">${titleCase(row.menu_item_type)}</td>
                 <td style="width:110px;">${escapeHtml(row.category_name || "Uncategorised")}</td>
                 <td style="width:95px;">${row.base_price_pence == null ? "—" : formatMoneyPence(row.base_price_pence)}</td>
-                <td style="width:110px;"><input class="js-assign-override" type="number" min="0" step="1" value="${row.price_override_pence ?? ""}" placeholder="—" /></td>
+                <td style="width:110px;"><input class="js-assign-override" type="number" min="0" step="0.01" value="${row.price_override_pence == null ? "" : (row.price_override_pence / 100).toFixed(2)}" placeholder="—" /></td>
                 <td style="width:100px;"><input class="js-assign-stock-limit" type="number" min="0" step="1" value="${row.stock_limit ?? ""}" placeholder="∞" /></td>
                 <td style="width:80px;">${row.stock_remaining == null ? "—" : row.stock_remaining}</td>
                 <td style="width:150px;"><span class="capacityTag ${Number(row.capacity_units || 0) > 0 ? "yes" : "no"}">${escapeHtml(capacityText)}</span></td>
@@ -3293,7 +3293,7 @@
           ? (byId("fundraisingPercentage").value === "" ? null : Number(byId("fundraisingPercentage").value))
           : null,
         fundraising_per_order_pence: byId("fundraisingEnabled").checked && byId("fundraisingModel").value === "per_order"
-          ? (byId("fundraisingPerOrderPence").value === "" ? null : Number(byId("fundraisingPerOrderPence").value))
+          ? (byId("fundraisingPerOrderPence").value === "" ? null : Math.round(Number(byId("fundraisingPerOrderPence").value) * 100))
           : null,
         fundraising_display_text: byId("fundraisingEnabled").checked ? (byId("fundraisingDisplayText").value.trim() || null) : null,
 
@@ -3303,10 +3303,10 @@
           ? (byId("hostSharePercentage").value === "" ? null : Number(byId("hostSharePercentage").value))
           : null,
         host_share_per_order_pence: byId("hostShareEnabled").checked && byId("hostShareModel").value === "per_order"
-          ? (byId("hostSharePerOrderPence").value === "" ? null : Number(byId("hostSharePerOrderPence").value))
+          ? (byId("hostSharePerOrderPence").value === "" ? null : Math.round(Number(byId("hostSharePerOrderPence").value) * 100))
           : null,
         host_share_fixed_pence: byId("hostShareEnabled").checked && byId("hostShareModel").value === "fixed"
-          ? (byId("hostShareFixedPence").value === "" ? null : Number(byId("hostShareFixedPence").value))
+          ? (byId("hostShareFixedPence").value === "" ? null : Math.round(Number(byId("hostShareFixedPence").value) * 100))
           : null,
         host_share_customer_visible: byId("hostShareEnabled").checked ? (byId("hostShareCustomerVisible").value === "true") : false
       };
@@ -4340,7 +4340,7 @@
       const overrideValue = tr.querySelector(".js-assign-override").value;
       const stockLimitValue = tr.querySelector(".js-assign-stock-limit").value;
 
-      assignment.price_override_pence = overrideValue === "" ? null : Number(overrideValue);
+      assignment.price_override_pence = overrideValue === "" ? null : Math.round(Number(overrideValue) * 100);
       assignment.stock_limit = stockLimitValue === "" ? null : Number(stockLimitValue);
 
       markDirty();
