@@ -84,6 +84,11 @@ and HearthNav.withVendor).
 
 ## Database — key tables
 
+For the full schema reference (every table, every column, every
+foreign key, plus views and known gotchas), see SCHEMA.md at the
+repo root. Regenerate it when meaningful migrations land — the
+regeneration query is at the top of that file.
+
 - vendors — vendor identity and brand settings. Key columns include
   `slug`, `display_name`, `name`, `contact_phone`, `address` (text,
   physical address — added this session), `social_handles` (jsonb,
@@ -121,9 +126,12 @@ and HearthNav.withVendor).
   `service_windows` (jsonb array of objects with day_of_week,
   time_start, time_end, occasion_label, notes),
   `comms_channels` (jsonb array of objects with type, detail,
-  estimated_reach), `notes_internal` (text). Hosts are platform-wide
-  entities (not vendor-scoped) — drop history shown per vendor is
-  filtered via v_drop_summary
+  estimated_reach), `notes_internal` (text). Hosts are vendor-scoped
+  — `vendor_id` is NOT NULL and the unique constraint is
+  `(vendor_id, slug)`, so two vendors can each own a host with the
+  same slug. `created_by_vendor_id` is retained for audit but new
+  rows should set both. Drop history shown per vendor is filtered
+  via v_drop_summary.
 - drop_series / drop_series_schedule — recurring drop infrastructure
 
 ## Database — key views
