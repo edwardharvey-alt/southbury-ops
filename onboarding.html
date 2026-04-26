@@ -913,6 +913,85 @@
                   <div class="optionTitle">A caterer</div>
                 </div>
               </div>
+              <div class="onboardingOption" role="button" tabindex="0" data-value="butcher_deli">
+                <input type="radio" class="onboardingInput" name="vendor_type" value="butcher_deli" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">A butcher, deli or farm shop</div>
+                  <div class="optionSub">Weekly or pre-order produce drops</div>
+                </div>
+              </div>
+              <div class="onboardingOption" role="button" tabindex="0" data-value="baker">
+                <input type="radio" class="onboardingInput" name="vendor_type" value="baker" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">A baker or patisserie</div>
+                  <div class="optionSub">Pre-order bread, pastry and baked goods</div>
+                </div>
+              </div>
+              <div class="onboardingOption" role="button" tabindex="0" data-value="producer">
+                <input type="radio" class="onboardingInput" name="vendor_type" value="producer" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">A maker or artisan producer</div>
+                  <div class="optionSub">Sauces, preserves, pantry goods and speciality food</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Q1b — drop format -->
+          <div class="questionBlock">
+            <p class="questionLabel">What kind of drop are you planning to run?</p>
+            <div class="optionsGrid" id="q1bGrid" data-question="drop_format" data-multi="false">
+              <div class="onboardingOption" role="button" tabindex="0" data-value="hot_food">
+                <input type="radio" class="onboardingInput" name="drop_format" value="hot_food" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">Hot food</div>
+                  <div class="optionSub">Ready to eat on collection</div>
+                </div>
+              </div>
+              <div class="onboardingOption" role="button" tabindex="0" data-value="finish_at_home">
+                <input type="radio" class="onboardingInput" name="drop_format" value="finish_at_home" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">Finish at home</div>
+                  <div class="optionSub">Prepped by you, customers finish the cook</div>
+                </div>
+              </div>
+              <div class="onboardingOption" role="button" tabindex="0" data-value="fresh_produce">
+                <input type="radio" class="onboardingInput" name="drop_format" value="fresh_produce" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">Fresh produce or cuts</div>
+                  <div class="optionSub">Meat, veg, hampers, raw ingredients</div>
+                </div>
+              </div>
+              <div class="onboardingOption" role="button" tabindex="0" data-value="baked_goods">
+                <input type="radio" class="onboardingInput" name="drop_format" value="baked_goods" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">Baked goods</div>
+                  <div class="optionSub">Bread, pastry, pre-ordered fresh</div>
+                </div>
+              </div>
+              <div class="onboardingOption" role="button" tabindex="0" data-value="pantry">
+                <input type="radio" class="onboardingInput" name="drop_format" value="pantry" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">Pantry and speciality</div>
+                  <div class="optionSub">Sauces, preserves, cured goods</div>
+                </div>
+              </div>
+              <div class="onboardingOption" role="button" tabindex="0" data-value="unknown">
+                <input type="radio" class="onboardingInput" name="drop_format" value="unknown" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">I'm not sure yet</div>
+                  <div class="optionSub">Help me figure it out</div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1057,6 +1136,14 @@
                   <div class="optionTitle">Build a repeatable weekly rhythm</div>
                 </div>
               </div>
+              <div class="onboardingOption" role="button" tabindex="0" data-value="pre_order_channel">
+                <input type="checkbox" class="onboardingInput" name="primary_goal" value="pre_order_channel" />
+                <span class="optionIndicator"></span>
+                <div>
+                  <div class="optionTitle">Create a reliable pre-order channel</div>
+                  <div class="optionSub">Build committed demand before I produce anything</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1174,7 +1261,7 @@
                   <span class="optionIndicator"></span>
                   <div>
                     <div class="optionTitle">An office or workplace</div>
-                    <div class="optionSub">Lunch or regular delivery</div>
+                    <div class="optionSub">Regular drops for a captive group</div>
                   </div>
                 </div>
                 <div class="onboardingOption" role="button" tabindex="0" data-value="none">
@@ -1560,6 +1647,7 @@
       vendor: null,
       // Current selections
       vendor_type: null,
+      drop_format: null,
       delivery_model: null,
       pos_platform: null,
       primary_goal: [],
@@ -1743,7 +1831,7 @@
     }
 
     function syncStateFromDOM(){
-      ['q1Grid','q2Grid','q2bGrid','q3Grid','q4Grid','q5Grid','q6Grid','q7Grid','q8Grid','q9Grid'].forEach(function(gridId){
+      ['q1Grid','q1bGrid','q2Grid','q2bGrid','q3Grid','q4Grid','q5Grid','q6Grid','q7Grid','q8Grid','q9Grid'].forEach(function(gridId){
         var grid = byId(gridId);
         if (!grid) return;
         var question = grid.dataset.question;
@@ -2326,6 +2414,7 @@
 
         initProgress();
         wireGrid('q1Grid');
+        wireGrid('q1bGrid');
         wireGrid('q2Grid');
         wireGrid('q2bGrid');
         wireGrid('q3Grid');
