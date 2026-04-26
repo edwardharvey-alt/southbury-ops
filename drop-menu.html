@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Hearth — Menu Library</title>
+  <title>Hearth — Offer Library</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
@@ -292,8 +292,8 @@
       <div class="brand">
         <a class="brandMark" href="/home.html" aria-label="Hearth home">H</a>
         <div>
-          <div class="brandTitle">Hearth — Menu Library</div>
-          <div class="brandSubtitle" id="headerVendorSub">Manage products, bundles and categories</div>
+          <div class="brandTitle">Hearth — Offer Library</div>
+          <div class="brandSubtitle" id="headerVendorSub">Manage your offer catalogue</div>
         </div>
       </div>
 
@@ -306,7 +306,7 @@
         <div class="row space" style="margin-bottom:10px;">
           <div>
             <h3 class="sectionTitle">Catalogue</h3>
-            <p class="sectionSub">Reusable products, bundles and categories</p>
+            <p class="sectionSub">Reusable items, bundles and categories</p>
           </div>
         </div>
 
@@ -559,8 +559,8 @@
                       </div>
 
                       <div class="field">
-                        <label for="productPricePence">Base Price (pence)</label>
-                        <input id="productPricePence" type="number" min="0" step="1" />
+                        <label for="productPricePence">Base Price (£)</label>
+                        <input id="productPricePence" type="number" min="0" step="0.01" />
                       </div>
 
                       <div class="field">
@@ -634,7 +634,7 @@
                     <div class="row space" style="margin-bottom:10px;">
                       <div>
                         <h4 class="stageSectionTitle">Selected bundle</h4>
-                        <p class="stageSectionSub">Create optional combinations, offers and meal deals</p>
+                        <p class="stageSectionSub">Build combinations, hampers and multi-item offers</p>
                       </div>
                       <div class="row" style="gap:8px; flex-wrap:wrap;">
                         <button class="btnGhost" id="duplicateBundleBtn" type="button">Duplicate</button>
@@ -661,8 +661,8 @@
                       </div>
 
                       <div class="field">
-                        <label for="bundlePricePence">Bundle Price (pence)</label>
-                        <input id="bundlePricePence" type="number" min="0" step="1" />
+                        <label for="bundlePricePence">Bundle Price (£)</label>
+                        <input id="bundlePricePence" type="number" min="0" step="0.01" />
                       </div>
 
                       <div class="field">
@@ -854,7 +854,7 @@
               <div class="modalHead">
                 <div>
                   <h3 class="sectionTitle">Create Product</h3>
-                  <p class="sectionSub">Add a new individual menu item</p>
+                  <p class="sectionSub">Add a new item to your catalogue</p>
                 </div>
                 <button class="btnGhost" id="closeNewProductModalBtn" type="button">Close</button>
               </div>
@@ -876,8 +876,8 @@
                 </div>
 
                 <div class="field">
-                  <label for="newProductPricePence">Base Price (pence)</label>
-                  <input id="newProductPricePence" type="number" min="0" step="1" value="0" />
+                  <label for="newProductPricePence">Base Price (£)</label>
+                  <input id="newProductPricePence" type="number" min="0" step="0.01" value="0" />
                 </div>
 
                 <div class="field">
@@ -908,7 +908,7 @@
               <div class="modalHead">
                 <div>
                   <h3 class="sectionTitle">Create Bundle</h3>
-                  <p class="sectionSub">Add a new optional combination, offer or meal deal</p>
+                  <p class="sectionSub">Add a new combination, hamper or bundle offer</p>
                 </div>
                 <button class="btnGhost" id="closeNewBundleModalBtn" type="button">Close</button>
               </div>
@@ -931,8 +931,8 @@
                 </div>
 
                 <div class="field">
-                  <label for="newBundlePricePence">Bundle Price (pence)</label>
-                  <input id="newBundlePricePence" type="number" min="0" step="1" value="0" />
+                  <label for="newBundlePricePence">Bundle Price (£)</label>
+                  <input id="newBundlePricePence" type="number" min="0" step="0.01" value="0" />
                 </div>
 
                 <div class="field">
@@ -1791,8 +1791,8 @@
       function renderWorkspaceHeader() {
         const titleMap = {
           categories: ["Categories", "Organise products and bundles into groups"],
-          products: ["Products", "Manage individual menu items and their pricing"],
-          bundles: ["Bundles", "Build optional combinations and meal deals"]
+          products: ["Products", "Manage individual items and their pricing"],
+          bundles: ["Bundles", "Build combinations, hampers and multi-item offers"]
         };
 
         byId("workspaceTitle").textContent = titleMap[state.currentTab][0];
@@ -2044,7 +2044,7 @@
         byId("bundleName").value = bundle.name || "";
         byId("bundleDescription").value = bundle.description || "";
         byId("bundleCategory").value = bundle.category_id || "";
-        byId("bundlePricePence").value = Number(bundle.price_pence || 0);
+        byId("bundlePricePence").value = (Number(bundle.price_pence || 0) / 100).toFixed(2);
         byId("bundleCapacityUnits").value = bundle.capacity_units ?? 0;
         byId("bundleIsActive").value = String(Boolean(bundle.is_active));
         byId("toggleBundleActiveBtn").textContent = bundle.is_active ? "Deactivate" : "Activate";
@@ -2131,7 +2131,7 @@
         byId("productName").value = product.name || "";
         byId("productDescription").value = product.description || "";
         byId("productCategory").value = product.category_id || "";
-        byId("productPricePence").value = Number(product.price_pence || 0);
+        byId("productPricePence").value = (Number(product.price_pence || 0) / 100).toFixed(2);
         byId("productCapacityUnits").value = product.capacity_units ?? 0;
         byId("productIsActive").value = String(Boolean(product.is_active));
         byId("productTravelsWell").checked = product.travels_well !== false;
@@ -2233,7 +2233,7 @@
           description: byId("newProductDescription").value.trim() || null,
           category_id: categoryId,
           category: state.categories.find((c) => c.id === categoryId)?.name || "uncategorised",
-          price_pence: Number(byId("newProductPricePence").value || 0),
+          price_pence: Math.round(Number(byId("newProductPricePence").value || 0) * 100),
           capacity_units: Number(byId("newProductCapacityUnits").value || 0),
           sort_order: getNextSortOrder(itemsInCategory),
           is_active: byId("newProductActive").value === "true"
@@ -2263,7 +2263,7 @@
           name,
           description: byId("newBundleDescription").value.trim() || null,
           category_id: categoryId,
-          price_pence: Number(byId("newBundlePricePence").value || 0),
+          price_pence: Math.round(Number(byId("newBundlePricePence").value || 0) * 100),
           capacity_units: Number(byId("newBundleCapacityUnits").value || 0),
           sort_order: getNextSortOrder(itemsInCategory),
           is_active: byId("newBundleActive").value === "true"
@@ -2319,7 +2319,7 @@
           description: byId("productDescription").value.trim() || null,
           category_id: categoryId,
           category: state.categories.find((c) => c.id === categoryId)?.name || product.legacy_category || "uncategorised",
-          price_pence: Number(byId("productPricePence").value || 0),
+          price_pence: Math.round(Number(byId("productPricePence").value || 0) * 100),
           capacity_units: Number(byId("productCapacityUnits").value || 0),
           sort_order: product.sort_order ?? 10,
           is_active: byId("productIsActive").value === "true",
@@ -2352,7 +2352,7 @@
           name: byId("bundleName").value.trim(),
           description: byId("bundleDescription").value.trim() || null,
           category_id: categoryId,
-          price_pence: Number(byId("bundlePricePence").value || 0),
+          price_pence: Math.round(Number(byId("bundlePricePence").value || 0) * 100),
           capacity_units: Number(byId("bundleCapacityUnits").value || 0),
           sort_order: bundle.sort_order ?? 10,
           is_active: byId("bundleIsActive").value === "true"
