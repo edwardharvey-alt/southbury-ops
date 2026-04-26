@@ -333,6 +333,24 @@ on top of the coding rules above.
     createClient — the migration is staged: brand-hearth.html first as
     validation (this commit), other operator pages to follow.
 
+13. **supabase-js version pinning experiment in progress.** As of this
+    commit, brand-hearth.html is pinned to
+    `@supabase/supabase-js@2.74.0`. All other pages remain on `@2`
+    (currently resolving to 2.104.1). This is a deliberate A/B
+    experiment to test whether 2.104.1 has a regression in user-JWT
+    attachment when paired with the publishable-key format.
+    Pre-experiment evidence: with 2.104.1, brand save silently fails —
+    PATCH requests go out with `Authorization: Bearer sb_publishable_...`
+    instead of the user session JWT, RLS rejects with 204 No Content,
+    no rows update. The session is correctly stored in the client
+    (verified via `getSession()`) but is not attached to outbound
+    requests. If pinning to 2.74.0 restores correct auth-attachment
+    behaviour on brand-hearth.html, a follow-up PR will pin all 24
+    remaining pages. If pinning does not fix it, the version pin will
+    be reverted and the investigation will move to manually setting
+    the Authorization header via `global.headers` and
+    `onAuthStateChange`.
+
 ## Stripe Connect Express (T3-8)
 
 - vendors schema: `stripe_account_id` TEXT (nullable),
