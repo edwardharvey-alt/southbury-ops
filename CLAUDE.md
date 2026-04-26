@@ -84,6 +84,11 @@ and HearthNav.withVendor).
 
 ## Database — key tables
 
+For the full schema reference (every table, every column, every
+foreign key, plus views and known gotchas), see SCHEMA.md at the
+repo root. Regenerate it when meaningful migrations land — the
+regeneration query is at the top of that file.
+
 - vendors — vendor identity and brand settings. Key columns include
   `slug`, `display_name`, `name`, `contact_phone`, `address` (text,
   physical address — added this session), `social_handles` (jsonb,
@@ -121,9 +126,12 @@ and HearthNav.withVendor).
   `service_windows` (jsonb array of objects with day_of_week,
   time_start, time_end, occasion_label, notes),
   `comms_channels` (jsonb array of objects with type, detail,
-  estimated_reach), `notes_internal` (text). Hosts are platform-wide
-  entities (not vendor-scoped) — drop history shown per vendor is
-  filtered via v_drop_summary
+  estimated_reach), `notes_internal` (text). Hosts are vendor-scoped
+  — `vendor_id` is NOT NULL and the unique constraint is
+  `(vendor_id, slug)`, so two vendors can each own a host with the
+  same slug. `created_by_vendor_id` is retained for audit but new
+  rows should set both. Drop history shown per vendor is filtered
+  via v_drop_summary.
 - drop_series / drop_series_schedule — recurring drop infrastructure
 
 ## Database — key views
@@ -1372,6 +1380,33 @@ Brand Identity section extended with a vendorAddress field and four
 social handle inputs (Instagram, Facebook, TikTok, WhatsApp Business).
 Pre-populated from saved values on load. Saves via the existing
 vendors-table upsert pattern.
+
+T5-B5: Schema cleanup — legacy artefacts and missing constraints
+Tech debt ticket from the SCHEMA.md generation. Not blocking; tackle
+before any T6 production data work so migrations run against test
+data, not live vendor data.
+
+Specific items:
+- drop_menu_items has both `item_type` and `menu_item_type` columns,
+  both NOT NULL. Investigate which is canonical, migrate writes to a
+  single column, drop the other.
+- drop_products and drop_menu_items both exist as tables. Confirm
+  whether drop_products is deprecated and drop it if so.
+- drop_capacity table has all-nullable columns, no FKs, and uses
+  legacy pizza vocabulary. Likely a stale view that didn't get the
+  v_ prefix. Confirm whether it's a relation or a view.
+- vendors brand columns — three overlapping generations exist. Pick
+  one canonical set, migrate reads/writes, drop the others.
+- Missing FK constraints: drops.series_id should reference
+  drop_series.id; drop_series.vendor_id should reference vendors.id.
+- Legacy NOT NULL columns: orders.pizzas (>= 1 constraint),
+  drops.capacity_pizzas, drops.max_orders.
+- bundles.vendor_id and products.vendor_id are nullable but always
+  set in practice. Tighten to NOT NULL after orphan cleanup.
+- hosts.created_by_vendor_id alongside hosts.vendor_id — decide if
+  the audit column is still needed.
+
+Reference: SCHEMA.md "Schema observations" section.
 
 ### Tier 6 — Production readiness
 
