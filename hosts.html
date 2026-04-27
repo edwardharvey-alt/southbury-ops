@@ -719,20 +719,19 @@
           slug: slugify(name),
           host_type: hostType,
           postcode,
-          status: 'active',
+          vendor_id: state.vendorId,
+          created_by_vendor_id: state.vendorId,
           terms_accepted: true,
           terms_accepted_at: new Date().toISOString()
         };
 
-        const { error } = await sb
-          .from('hosts')
-          .insert(payload)
-          .select('id')
-          .single();
+        const { data, error } = await sb.functions.invoke('create-host', {
+          body: payload
+        });
 
-        if (error){
+        if (error || !data || data.error){
           const msg = byId('hostModalMessage');
-          msg.textContent = error.message || 'Unable to create host.';
+          msg.textContent = (data && data.error) || (error && error.message) || 'Unable to create host.';
           msg.classList.add('error');
           msg.style.display = 'block';
           return;
