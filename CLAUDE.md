@@ -194,6 +194,30 @@ regeneration query is at the top of that file.
     diverged, which is a known persistent issue with this repo. The hard
     reset always wins regardless of local state.
 
+11. **Edge Function changes follow the deploy-before-merge workflow.**
+    Claude Code drafts the function source, the `supabase/config.toml`
+    block, and any page changes on a feature branch and opens a PR.
+    Claude Code does NOT push to main and does NOT attempt to deploy.
+    Ed deploys the function from his linked Supabase CLI:
+    ```
+    git fetch origin
+    git checkout feature/<branch-name>
+    supabase functions deploy <function-name>
+    supabase functions list
+    ```
+    Then runs the smoke test:
+    ```
+    curl -i -X OPTIONS https://tvqhhjvumgumyetvpgid.supabase.co/functions/v1/<function-name> \
+      -H "Origin: https://lovehearth.co.uk" \
+      -H "Access-Control-Request-Method: POST"
+    ```
+    Expect HTTP 204 with `access-control-allow-origin:
+    https://lovehearth.co.uk`. Only after the smoke test passes is
+    the PR merged. Merging before deploy produces 404s on every
+    save in production until the Edge Function is deployed. T6-1
+    (auto-deploy via GitHub Actions) is outstanding — manual
+    deploy required for now.
+
 ## Operational learnings
 
 Gotchas and patterns captured from real bugs. Treat these as hard rules
@@ -379,6 +403,43 @@ on top of the coding rules above.
     The cost of breaking this rule is hours of confused debugging
     chasing phantom bugs in code that's been silently changed by the
     other session.
+
+16. **Authenticated mutations migrate to Edge Functions following the
+    `update-vendor` and `create-host` pattern.** The supabase-js +
+    publishable-key auth-attach bug documented in learnings #12, #13,
+    #14 is a real, persistent issue and cannot be sidestepped at the
+    config level — the legacy anon JWT path was confirmed closed on
+    27 April. The proven fix is to invoke an Edge Function via
+    `client.functions.invoke()`, which uses a separate code path
+    that does correctly attach the user JWT, and have the function
+    verify ownership server-side and use a service-role client for
+    the actual write. Pattern reference:
+    `supabase/functions/update-vendor/index.ts` (UPDATE template
+    with whitelist) and `supabase/functions/create-host/index.ts`
+    (INSERT template). Each Edge Function:
+    - Sets `verify_jwt = false` in `supabase/config.toml`
+    - Verifies the JWT manually via `anonClient.auth.getUser()`
+    - Verifies the user owns the relevant vendor / parent resource
+    - Uses a service-role client (`SUPABASE_SERVICE_ROLE_KEY`) for
+      the actual database write, bypassing RLS
+    - Uses a tight `ALLOWED_ORIGIN` (currently
+      `https://lovehearth.co.uk`)
+    - Returns `{ error: "..." }` JSON for 4xx/5xx and the updated
+      row for 200
+    Page-side wiring uses `supabase.functions.invoke("<name>", { body })`
+    and checks BOTH `error` (transport) and `data.error` (function
+    error response). Migration is in progress: `update-vendor` and
+    `create-host` are done; `onboarding.html`, `drop-manager.html`
+    drops CRUD, `drop-menu.html` products/bundles/categories,
+    `customer-import.html`, and `update-host` are still on the
+    direct PostgREST path and silently fail. RLS reads on tables
+    without permissive `anon USING (true)` SELECT policies are also
+    broken silently (`hosts`, `customer_relationships`, `customers`,
+    `drop_series`, `drop_series_schedule`, `order_items`,
+    `order_item_selections`, `order_status_events`) — those need
+    either `list-X` Edge Functions or relaxed SELECT policies as
+    part of the same workstream. See session handover dated 27
+    April 2026 for the full migration plan and priority order.
 
 ## Stripe Connect Express (T3-8)
 
@@ -1323,14 +1384,36 @@ performs auto-link on first sign-in by matching email where
 auth_user_id is null.
 
 T5-A3: RLS rewrite — server-side vendor scoping
-Every vendor-scoped table and view (`drops`, `products`, `bundles`,
-`categories`, `orders`, `customer_relationships`, `v_drop_summary`,
-`v_hearth_drop_stats`, `v_item_sales`, `v_host_performance`, etc.)
-gets RLS policies filtering on `vendor_id IN (SELECT id FROM vendors
-WHERE auth_user_id = auth.uid())`. Frontend no longer needs to pass
-vendor_id as a filter for correctness — the server enforces it.
-Frontend filters stay for clarity but become belt-and-braces rather
-than the only defence.
+Today's RLS layer is incoherent. Most vendor-scoped tables have BOTH
+a strict authenticated-only policy AND one or more permissive
+`anon USING (true)` policies. Postgres RLS is additive, so the
+permissive anon path is what's actually keeping the platform
+functional under the auth-attach bug — but the same permissive
+policies allow any authenticated or anon user to read every other
+vendor's drops, products, orders, and customer data.
+
+Once the Edge Function migration covers the legitimate authenticated
+paths (see operational learning #16), this workstream:
+
+- Removes the permissive `anon USING (true)` SELECT policies on
+  tables that should be vendor-scoped (`drops`, `products`,
+  `bundles`, `categories`, `drop_menu_items`, `vendors`)
+- Removes the permissive `anon UPDATE/INSERT` policies on `orders`,
+  `order_items`, `order_item_selections`, `vendors`
+- Tightens vendor SELECT to expose only public-readable columns
+  via a dedicated view, removing direct public access to
+  contact_phone, address, social_handles, etc.
+- Consolidates duplicate policies (e.g. `drops` has six different
+  anon SELECT policies — one is enough)
+- Adds RLS to authenticated-only views where missing
+  (e.g. `v_drop_summary`)
+
+Do this strictly AFTER the Edge Function migration. Removing
+permissive policies before the Edge Functions are in place breaks
+the platform. The migration creates the legitimate auth paths;
+this ticket removes the illegitimate ones.
+
+Reference: full RLS audit performed in session dated 27 April 2026.
 
 T5-A4: Login page ✓ COMPLETE
 login.html created as a standalone page for returning vendors. Uses
