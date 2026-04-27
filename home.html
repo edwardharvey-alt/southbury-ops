@@ -1165,7 +1165,6 @@
         bundlesRes,
         summaryRes,
         insightDropsRes,
-        hostsRes,
         relsRes,
         ordersRes,
         itemSalesRes,
@@ -1176,7 +1175,6 @@
         sb.from('bundles').select('*').eq('vendor_id', vendorId),
         (async () => { try { return await sb.from('v_hearth_summary').select('*').eq('vendor_id', vendorId).maybeSingle(); } catch(e) { return { data: null }; } })(),
         (async () => { try { return await sb.from('v_hearth_drop_stats').select('*').eq('vendor_id', vendorId).order('delivery_start', { ascending: false }); } catch(e) { return { data: [] }; } })(),
-        (async () => { try { return await sb.from('hosts').select('*').order('name'); } catch(e) { return { data: [] }; } })(),
         (async () => { try { return await sb.from('customer_relationships').select('*, customers(name, email, postcode, phone)').eq('owner_id', vendorId).eq('owner_type', 'vendor'); } catch(e) { return { data: [] }; } })(),
         (async () => { try { const { data: vendorDrops } = await sb.from('drops').select('id').eq('vendor_id', vendorId); const vendorDropIds = (vendorDrops || []).map(d => d.id); if (vendorDropIds.length === 0) return { data: [] }; return await sb.from('orders').select('customer_email, created_at').in('drop_id', vendorDropIds); } catch(e) { return { data: [] }; } })(),
         (async () => { try { return await sb.from('v_item_sales').select('*').eq('vendor_id', vendorId); } catch(e) { return { data: [] }; } })(),
@@ -1188,7 +1186,6 @@
       state.bundles = bundlesRes.data || [];
       state.summary = summaryRes.data || null;
       state.insightsDrops = insightDropsRes.data || [];
-      state.hosts = hostsRes.data || [];
       state.itemSales = itemSalesRes.data || [];
       state.hostPerformance = hostPerfRes.data || [];
 

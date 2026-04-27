@@ -2054,15 +2054,12 @@
     }
 
     async function loadHosts() {
-      const { data, error } = await supabase
-        .from("hosts")
-        .select("*")
-        .eq("vendor_id", state.vendorId)
-        .neq("status", "archived")
-        .order("name", { ascending: true });
-
+      const { data: hosts, error } = await supabase.functions.invoke('list-hosts', {
+        body: { vendor_id: state.vendorId }
+      });
       if (error) throw error;
-      state.hosts = data || [];
+      if (!hosts || hosts.error) throw new Error(hosts?.error || 'Failed to load hosts');
+      state.hosts = Array.isArray(hosts) ? hosts : [];
     }
 
     async function loadCategories() {
