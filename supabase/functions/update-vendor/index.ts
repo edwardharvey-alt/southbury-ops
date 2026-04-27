@@ -46,6 +46,7 @@ const ALLOWED_FIELDS = new Set([
 
   // Onboarding answers (covers future onboarding migration without code change)
   "vendor_type",
+  "drop_format",
   "data_posture",
   "delivery_model",
   "customer_data_posture",

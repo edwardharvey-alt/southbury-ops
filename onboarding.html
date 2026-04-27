@@ -2066,11 +2066,11 @@
     // ── Save/skip handlers for address (T5-B3) ────────────────────────────
     async function writeAddress(value){
       if (!state.vendor?.id) return;
-      const { error } = await sb
-        .from('vendors')
-        .update({ address: value })
-        .eq('id', state.vendor.id);
+      const { data, error } = await sb.functions.invoke('update-vendor', {
+        body: { vendor_id: state.vendor.id, fields: { address: value } }
+      });
       if (error) throw error;
+      if (!data || data.error) throw new Error(data?.error || 'Save failed');
       state.vendor.address = value;
     }
 
@@ -2106,11 +2106,11 @@
     // ── Save/skip handlers for social handles (T5-B2) ─────────────────────
     async function writeSocialHandles(obj){
       if (!state.vendor?.id) return;
-      const { error } = await sb
-        .from('vendors')
-        .update({ social_handles: obj })
-        .eq('id', state.vendor.id);
+      const { data, error } = await sb.functions.invoke('update-vendor', {
+        body: { vendor_id: state.vendor.id, fields: { social_handles: obj } }
+      });
       if (error) throw error;
+      if (!data || data.error) throw new Error(data?.error || 'Save failed');
       state.vendor.social_handles = obj;
     }
 
@@ -2186,14 +2186,13 @@
       btn.disabled = true;
       btn.textContent = 'Saving…';
       try {
-        const acceptedAt = new Date().toISOString();
-        const { error } = await sb
-          .from('vendors')
-          .update({ terms_accepted: true, terms_accepted_at: acceptedAt })
-          .eq('id', state.vendor.id);
+        const { data, error } = await sb.functions.invoke('complete-onboarding', {
+          body: { vendor_id: state.vendor.id, step: 'terms' }
+        });
         if (error) throw error;
+        if (!data || data.error) throw new Error(data?.error || 'Save failed');
         state.vendor.terms_accepted = true;
-        state.vendor.terms_accepted_at = acceptedAt;
+        state.vendor.terms_accepted_at = new Date().toISOString();
         revealStage7();
       } catch (err) {
         showNotice('Could not record terms acceptance: ' + (err.message || 'Unknown error. Please try again.'), 'error');
@@ -2374,18 +2373,31 @@
         typical_capacity_range:  state.typical_capacity_range,
         preferred_fulfilment:    state.preferred_fulfilment,
         preferred_cadence:       state.preferred_cadence,
-        onboarding_completed:    true,
       };
 
       try {
-        const { error } = await sb
-          .from('vendors')
-          .update(payload)
-          .eq('id', state.vendor.id);
+        // First, persist the preference fields via the general-purpose
+        // update-vendor endpoint. onboarding_completed is intentionally
+        // not in this payload — it is a protected field handled below.
+        const updateRes = await sb.functions.invoke('update-vendor', {
+          body: { vendor_id: state.vendor.id, fields: payload }
+        });
+        if (updateRes.error) throw updateRes.error;
+        if (!updateRes.data || updateRes.data.error) {
+          throw new Error(updateRes.data?.error || 'Save failed');
+        }
 
-        if (error) throw error;
+        // Only flip onboarding_completed once the preferences write
+        // succeeded. complete-onboarding is the sole writer of that field.
+        const completeRes = await sb.functions.invoke('complete-onboarding', {
+          body: { vendor_id: state.vendor.id, step: 'preferences' }
+        });
+        if (completeRes.error) throw completeRes.error;
+        if (!completeRes.data || completeRes.data.error) {
+          throw new Error(completeRes.data?.error || 'Save failed');
+        }
 
-        state.vendor = { ...state.vendor, ...payload };
+        state.vendor = { ...state.vendor, ...payload, onboarding_completed: true };
         revealStage4();
       } catch (err) {
         showNotice('Save failed: ' + (err.message || 'Unknown error. Please try again.'), 'error');
