@@ -77,6 +77,17 @@ Core belief: great local food should strengthen communities, not bypass them.
 - Test Vendor (slug: test-vendor) — clean test workspace with no drops
   or catalogue, used to verify first-drop guidance, vendor isolation,
   and empty-state rendering. onboarding_completed: false
+- Test 11 (slug: test-11, vendor_id 26e3721b-34d9-4b13-9dc3-e92c47d058a8,
+  email eddierenzo1@gmail.com) — primary verification fixture for
+  Edge Function PRs. Used to verify PR #192 (get-host bundle).
+  Currently has eight hosts attached, kept in place as test fixtures:
+  Large Balls, Massive Balls, Medium Balls, Small balls, The Bell,
+  Tiny balls (all pre-existing). Mini Balls (created via Drop Studio
+  inline → terms_accepted: false — see T4-34 backlog item) and
+  Blue Balls (created via hosts.html Add Host → terms_accepted: true)
+  were added during PR #192 verification and are deliberately
+  retained as test fixtures covering both terms-acceptance code
+  paths.
 
 Load any vendor's workspace via the ?vendor=<slug> URL param on any
 operator page (see the Operational learnings section on resolveVendor
@@ -496,6 +507,33 @@ Stripe integration is next. Order ID is generated, payload is structured,
 TODO comment marks exact insertion point in handoffToPayment().
 When configuring the Stripe Payment Element, set it to skip address
 collection — Hearth captures the full address at order time.
+
+## Production mutation/read status
+
+Snapshot of which read/write paths are working in production and which
+are known broken. Update whenever a PR confirms or breaks a path. Last
+updated 2026-04-27 after PR #192 (get-host bundle).
+
+- Host listing — WORKING via `list-hosts` Edge Function.
+- Single-host fetch — WORKING via `get-host` Edge Function (added by
+  PR #192).
+- Host creation from `hosts.html` — WORKING via `create-host` Edge
+  Function (migrated by PR #192). Sends `terms_accepted: true` and
+  `terms_accepted_at` — host row is written with terms recorded.
+- Host creation from Drop Studio inline ("+ New Host" modal) —
+  WORKING via `create-host`, BUT does NOT capture terms acceptance.
+  Hosts created via this path land with `terms_accepted: false`. See
+  T4-34 backlog.
+- Brand Hearth preview-drop host fetch — WORKING via `get-host`
+  (migrated by PR #192).
+- Hosts UPDATE (host-profile.html save) — CONFIRMED BROKEN. Direct
+  PATCH to `/rest/v1/hosts?id=eq.<host-id>` returns 204 with empty
+  body — RLS rejects, UI shows success toast, nothing is written.
+  Operational learning #14 verified in production on 2026-04-27.
+  Blocking host editing entirely. Tracked as T5-B7 (Priority 6 —
+  update-host Edge Function).
+- Drops INSERT — BROKEN. Tracked as Priority 3 / pending Edge
+  Function migration. No change in PR #192.
 
 ## Development backlog
 
@@ -963,6 +1001,23 @@ colour application across more UI elements, a secondary brand image, richer
 "about" copy, social handle display.
 Goal is not feature bloat — it is asking what is missing before deciding
 what to build. Run as a focused design review before any build work.
+
+T4-34: Drop Studio inline host creation — capture terms acceptance
+The inline "+ New Host" modal in `drop-manager.html`
+(`createHostInline` around line 4464) calls `create-host` without
+`terms_accepted` or `terms_accepted_at`. Hosts created via this path
+land in the database with `terms_accepted: false` (confirmed on Test
+11 vendor — Mini Balls and Medium Balls both have
+`terms_accepted: false`). The `hosts.html` Add Host flow already
+captures terms; this is the only remaining path that bypasses it.
+Build needs: (a) UX decision on where the terms checkbox lives in
+the inline modal (the inline flow is intentionally minimal —
+name/type/postcode only — to keep drop creation fast), (b) payload
+update to send `terms_accepted: true` and
+`terms_accepted_at: new Date().toISOString()`. Once both paths
+capture terms, `terms_accepted` can be made required in
+`create-host` (currently optional for backwards compatibility — see
+the comment in `supabase/functions/create-host/index.ts`).
 
 ### Tier 5 — Strategic platform features
 
@@ -1470,6 +1525,32 @@ Specific items:
 
 Reference: SCHEMA.md "Schema observations" section.
 
+T5-B6: Edge Function `.single()` vs `.maybeSingle()` consistency sweep
+PR #192 flipped `create-host` from `.single()` to `.maybeSingle()` on
+the ownership check. `.maybeSingle()` is the canonical default — it
+returns `null` when no row is found, where `.single()` throws a 406
+that bypasses the explicit `if (!vendor)` guard immediately
+following. Confirmed consistent after #192: `update-vendor`,
+`list-hosts`, `complete-onboarding`, `get-host`, `create-host`.
+Audit remaining functions and flip if needed:
+`check-stripe-connect-status`, `create-stripe-connect-link`,
+`invite-vendor`. Low priority — no known live failures, just
+hygiene.
+
+T5-B7: `update-host` Edge Function (Priority 6 — migration sequence)
+Migrate the direct `hosts` UPDATE at `host-profile.html:1007` to a
+new `update-host` Edge Function following the same pattern as
+`update-vendor`: auth via `supabase.auth.getUser()`, ownership check
+on `vendors`, service-role write, explicit field whitelist. Remove
+the TODO comment added by PR #192 once landed.
+
+Silent-204 behaviour confirmed in production on 2026-04-27. Host
+profile save shows the success toast but writes are RLS-rejected.
+Direct PATCH to `/rest/v1/hosts?id=eq.<host-id>` returns 204 with
+empty body. This is now blocking host editing entirely on
+production. Operational learning #14 verified in the wild — this is
+no longer theoretical.
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live
@@ -1540,6 +1621,29 @@ transactional sending), Supabase SMTP configuration updated, test
 the full auth flow end-to-end. Separate infrastructure from the
 Google Workspace account being set up 21 April — regular email
 providers aren't designed for programmatic bulk sending.
+
+T6-7: Edge Function CORS allowlist — support Netlify preview domains
+Every Edge Function currently hardcodes
+`ALLOWED_ORIGIN = "https://lovehearth.co.uk"`. Netlify deploy
+previews (`deploy-preview-*--spiffy-tulumba-848684.netlify.app` and
+the equivalent on the production custom domain) cannot talk to the
+functions, which blocks pre-merge browser verification of any PR
+that touches HTML → Edge Function wiring. Discovered while
+verifying PR #192 — the only verification path is post-merge
+against the live site, which is the wrong default once real vendors
+depend on the platform.
+Options:
+- Allow `*.netlify.app` (broad, simple, accepts any Netlify-hosted
+  caller — slightly looser than ideal).
+- Allow a specific preview pattern (e.g. exact match on the
+  production preview prefix). Tighter, but requires the production
+  URL to be stable and known.
+- Environment-aware CORS config: read allowed origins from a
+  function-level secret or runtime env var. Cleanest, most
+  flexible.
+Affects every current and future PR that touches HTML → Edge
+Function wiring. Should land before T6-3 (staging) so previews
+work end-to-end against deployed Edge Functions.
 
 ### Tier 7 — Platform oversight and administration
 
