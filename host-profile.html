@@ -998,6 +998,12 @@
         };
 
         try {
+          // TODO (Priority 6): migrate this direct UPDATE to an
+          // update-host Edge Function. Direct PostgREST writes here
+          // are vulnerable to the silent-204 auth-attach behaviour
+          // documented in CLAUDE.md Operational learning #14 — RLS
+          // can reject the request, return 204 No Content, and the UI
+          // will report success while nothing was written.
           var result = await _sb.from("hosts").update(payload).eq("id", state.hostId);
           if (result.error) throw result.error;
 
@@ -1138,15 +1144,17 @@
             return;
           }
 
-          /* Load host record */
-          var hostResult = await _sb.from("hosts").select("*").eq("id", state.hostId).single();
-          if (hostResult.error || !hostResult.data) {
+          /* Load host record via get-host Edge Function (owner-scoped read) */
+          var invokeRes = await _sb.functions.invoke("get-host", {
+            body: { vendor_id: state.vendorId, host_id: state.hostId }
+          });
+          if (invokeRes.error || !invokeRes.data || invokeRes.data.error) {
             byId("loadingState").style.display = "none";
             byId("errorState").style.display = "block";
             return;
           }
 
-          state.host = hostResult.data;
+          state.host = invokeRes.data;
 
           /* Show content, hide loading */
           byId("loadingState").style.display = "none";

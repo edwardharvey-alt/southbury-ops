@@ -1602,14 +1602,13 @@
       state.previewDrop = drop;
 
       if (drop?.host_id) {
-        const { data, error } = await supabase
-          .from("hosts")
-          .select("*")
-          .eq("id", drop.host_id)
-          .maybeSingle();
-
-        if (!error) {
-          state.previewHost = data || null;
+        const { data, error } = await supabase.functions.invoke("get-host", {
+          body: { vendor_id: state.vendor.id, host_id: drop.host_id }
+        });
+        if (!error && data && !data.error) {
+          state.previewHost = data;
+        } else {
+          state.previewHost = null;
         }
       }
     }

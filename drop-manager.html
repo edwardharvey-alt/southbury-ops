@@ -2662,13 +2662,23 @@
       if (!hostId || !preview) return;
 
       try {
-        const { data: fullHost, error } = await supabase
-          .from("hosts")
-          .select("*")
-          .eq("id", hostId)
-          .single();
+        // Memoise full host fetches per-hostId. enrichHostPreview() is
+        // called from populateForm(), markDirty() and the inline
+        // createHost() flow — easily 3+ invocations per host selection.
+        // Cache lifetime is the page session; host edits live on a
+        // separate page and a refresh will repopulate the cache.
+        if (!state._fullHosts) state._fullHosts = {};
+        let fullHost = state._fullHosts[hostId];
 
-        if (error || !fullHost) return;
+        if (!fullHost) {
+          const { data, error } = await supabase.functions.invoke("get-host", {
+            body: { vendor_id: state.vendorId, host_id: hostId }
+          });
+          if (error) return;
+          if (!data || data.error) return;
+          fullHost = data;
+          state._fullHosts[hostId] = fullHost;
+        }
 
         /* Build enrichment lines */
         let enrichHtml = "";
