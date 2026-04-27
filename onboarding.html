@@ -2085,6 +2085,7 @@
         revealStage5();
       } catch (err) {
         showNotice('Save failed: ' + (err.message || 'Unknown error. Please try again.'), 'error');
+      } finally {
         btn.disabled = false; skip.disabled = false;
         btn.textContent = 'Save and continue';
       }
@@ -2099,6 +2100,7 @@
         revealStage5();
       } catch (err) {
         showNotice('Skip failed: ' + (err.message || 'Unknown error. Please try again.'), 'error');
+      } finally {
         btn.disabled = false; skip.disabled = false;
       }
     }
@@ -2136,6 +2138,7 @@
         revealStage6();
       } catch (err) {
         showNotice('Save failed: ' + (err.message || 'Unknown error. Please try again.'), 'error');
+      } finally {
         btn.disabled = false; skip.disabled = false;
         btn.textContent = 'Save and continue';
       }
@@ -2150,6 +2153,7 @@
         revealStage6();
       } catch (err) {
         showNotice('Skip failed: ' + (err.message || 'Unknown error. Please try again.'), 'error');
+      } finally {
         btn.disabled = false; skip.disabled = false;
       }
     }
@@ -2196,6 +2200,7 @@
         revealStage7();
       } catch (err) {
         showNotice('Could not record terms acceptance: ' + (err.message || 'Unknown error. Please try again.'), 'error');
+      } finally {
         btn.disabled = false;
         btn.textContent = 'Accept terms and continue';
       }
@@ -2368,7 +2373,7 @@
         customer_data_posture:   state.customer_data_posture,
         data_posture:            dataPosture,
         customer_geography:      state.customer_geography,
-        existing_host_contexts:  state.existing_host_contexts.includes('none') ? [] : state.existing_host_contexts,
+        existing_host_contexts:  state.existing_host_contexts,
         existing_host_details:   collectHostDetails(),
         typical_capacity_range:  state.typical_capacity_range,
         preferred_fulfilment:    state.preferred_fulfilment,
