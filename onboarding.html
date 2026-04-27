@@ -2487,6 +2487,8 @@
             // Stage 3 still in Phase 2 — phase stays active.
             setPhaseState('done', 'active', 'upcoming');
           }
+          const saveBtn = byId('saveBtn');
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save my preferences'; }
           updateSaveButton();
         });
 
