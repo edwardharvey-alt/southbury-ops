@@ -1392,12 +1392,12 @@
         updateAssetPreview(previewId, displayUrl);
 
         const dbField = assetType === "logo" ? "logo_url" : "hero_image_url";
-        const { error: dbError } = await supabase
-          .from("vendors")
-          .update({ [dbField]: cleanUrl })
-          .eq("id", state.vendor.id);
+        const { data: updateData, error: dbError } = await supabase.functions.invoke("update-vendor", {
+          body: { vendor_id: state.vendor.id, fields: { [dbField]: cleanUrl } }
+        });
 
         if (dbError) throw dbError;
+        if (!updateData || updateData.error) throw new Error(updateData?.error || "Save failed");
 
         state.vendor = { ...state.vendor, [dbField]: cleanUrl };
 
@@ -1631,7 +1631,7 @@
       if (!state.vendor?.id) throw new Error("Vendor not found.");
 
       const form = getFormData();
-      const payload = {
+      const fields = {
         name: form.name || state.vendor.name || "Vendor",
         display_name: form.display_name || null,
         tagline: form.tagline || null,
@@ -1650,14 +1650,15 @@
       setSaveState("saving");
 
       try {
-        const { error } = await supabase
-          .from("vendors")
-          .update(payload)
-          .eq("id", state.vendor.id);
+        const { data, error } = await supabase.functions.invoke("update-vendor", {
+          body: { vendor_id: state.vendor.id, fields }
+        });
 
         if (error) throw error;
+        if (!data || data.error) throw new Error(data?.error || "Save failed");
 
-        state.vendor = { ...state.vendor, ...payload };
+        // Edge Function returns the updated row — use it to refresh state.
+        state.vendor = { ...state.vendor, ...data };
         setSaveState("saved");
         showInlineSuccess("Brand updated");
         await showFirstDropNudge(); // T4-20
