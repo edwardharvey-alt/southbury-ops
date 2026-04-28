@@ -77,6 +77,16 @@ Core belief: great local food should strengthen communities, not bypass them.
 - Test Vendor (slug: test-vendor) — clean test workspace with no drops
   or catalogue, used to verify first-drop guidance, vendor isolation,
   and empty-state rendering. onboarding_completed: false
+- Test 12 (slug: test-12) — Stripe-incomplete fixture. vendor_id
+  `32a6665a-7b68-428d-90b3-d9b11259c16e`, auth_user_id
+  `40d17b2d-2960-4d06-afd4-d27d399becd9`, email `eddierenzo1+test12@gmail.com`. `stripe_account_id`
+  populated (`acct_1TRIxBDLu8y9FWo2`), `stripe_onboarding_complete =
+  false`. Used for verifying the publish-time Stripe gate fires
+  correctly server-side and the gate UI renders correctly client-side
+  (orange banner, disabled "Live" status option). Do NOT complete
+  Stripe onboarding on this fixture — the value is precisely that it
+  stays incomplete. If a future test requires a fully-connected
+  vendor, use Test 11.
 
 Load any vendor's workspace via the ?vendor=<slug> URL param on any
 operator page (see the Operational learnings section on resolveVendor
@@ -1614,6 +1624,13 @@ policies and tighten if needed (defence-in-depth — every gap
 should be guarded at both the surface and the row level). Surfaced
 during PR 4a audit pass.
 
+Observation (parked here for the broader RLS audit): Categories RLS
+policies have a duplicate — "Categories: anon select" and
+"allow_anonymous_category_select" both grant SELECT to anon/public
+with `qual=true`. Also, the "Categories: authenticated owner all"
+policy lacks explicit `with_check` (relies on PostgreSQL's fallback
+of using `qual` as `with_check` for ALL policies). Not urgent.
+
 T5-B15: PR 4b — clone-mode for create-drop, retire residual stamps
 PR 4a leaves two residual direct-PostgREST writes alongside the
 migrated paths because their fields (`series_id`, `series_position`,
@@ -1629,15 +1646,48 @@ landed in PR 4a) replaces both flows with create-drop sibling
 generation, at which point both residuals can be deleted. Carries
 over from the PR 4a build prompt.
 
-T5-B16: drop-menu.html category INSERT blocked by RLS policy on
-`categories` table. Authenticated POST fails with `new row violates
-row-level security policy for table "categories"`. Surfaced during
-PR 4a in-browser verification: Test 11 had zero categories because
-the create flow has never worked. Manually inserted "Mains" via SQL
-(service-role context bypasses RLS). Investigate in PR 4b: is the
-policy missing or wrong, or is the client query missing a required
-field? Coordinate with Priority 4 (Menu Library writes migration) —
-likely either fixed in PR 4b standalone or rolled into Priority 4.
+T5-B16: drop-menu.html category INSERT blocked by RLS — manifestation
+of the auth-not-attached pattern, third surface (after hosts SELECT
+in PR 4a verification and customers UPSERT in earlier work). Network
+inspection confirms supabase-js sends the publishable anon key as the
+Authorization Bearer token rather than a user JWT, so PostgREST
+evaluates the request as the anon role. The "Categories: authenticated
+owner all" policy doesn't apply to anon, no anon INSERT policy exists
+on categories, request fails with 401 and "new row violates row-level
+security policy". Fix: bundle into Priority 4 (Menu Library writes)
+via a create-category / update-category / delete-category Edge
+Function set, mirroring the create-host / update-host / create-drop
+/ update-drop pattern. Do NOT add an anon INSERT policy on categories
+as a workaround — would be a security regression (any anon request
+could insert categories for any vendor by passing vendor_id). Out of
+scope for PR 4b.
+
+T5-B17: underlying auth-not-attached client bug. The Edge Function
+migration treats symptoms; the underlying problem is that
+`supabase.auth.getSession()` doesn't return a hydrated session on
+certain pages, even when the user is logged in. Three confirmed
+surfaces: drop-menu.html category INSERT (T5-B16), drop-manager.html
+host SELECT (PR 4a verification), order page customer UPSERT (earlier
+RLS work). Possible causes: race condition between page load and
+`getSession()`, session storage hydration issue, supabase-js client
+initialisation pattern. Worth investigating before declaring the
+platform "done" — the Edge Function migration makes this
+non-blocking but doesn't address root cause. Slot after Priority 7,
+alongside the broader RLS hygiene workstream (T5-B14).
+
+T5-B18: Stripe status visibility surface. No UI path to inspect,
+manage, or re-enter Stripe Connect onboarding from any vendor page.
+Vendor cannot self-serve "am I set up to get paid" status; operator
+(Edward) cannot diagnose vendor payment readiness without SQL.
+Surfaced when checking Test 11's Stripe state during Test 12 fixture
+setup. Likely belongs in a future Stripe-surface workstream of its
+own (no existing priority covers full lifecycle). Not blocking PR 4b.
+
+T5-B19: drop-menu.html surfaces a CSP eval-blocked warning in the
+browser console — "Content Security Policy of your site blocks the
+use of 'eval' in JavaScript". Probably a third-party library
+(qrcode generator or similar). Minor, not blocking. Worth
+identifying which lib at some point.
 
 ### Tier 6 — Production readiness
 
