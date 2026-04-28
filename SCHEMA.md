@@ -205,7 +205,9 @@ and for capacity categorisation on drops. `vendor_id` (FK), `name`,
 - **Timing** — `opens_at`, `closes_at`, `cutoff_time`,
   `delivery_start`, `delivery_end`.
 - **Capacity** — `capacity_units_total` (current),
-  `capacity_category` (text, default 'pizza' — legacy default),
+  `capacity_category` (text, nullable, no default — must be set
+  before the drop is published, but optional at draft; the publish
+  gate in `drop-manager.html:getLiveReadiness` enforces this),
   `capacity_category_id` (FK to `categories`, current). Older
   `capacity_pizzas` and `max_orders` columns also still present.
 - **Geography** — `is_radius_restricted`, `radius_km`,

@@ -1528,6 +1528,53 @@ to the `update-host` whitelist with valid-value validation. If
 no: hide or remove the dropdown from host-profile.html. Surfaced
 during the update-host migration audit.
 
+T5-B10: Server-side payload validation on create-drop / update-drop
+create-drop (PR 3) and update-drop (PR 4) accept the field whitelist
+as-is and rely on the database for type and constraint enforcement.
+No server-side checks for: capacity_units_total > 0, closes_at <
+delivery_start, delivery_end > delivery_start, drop_type in
+{neighbourhood, hosted, community, event}, status in {draft,
+scheduled, live, closed, archived}. Drop Studio sets sane defaults
+and the publish gate (T3-8) blocks bad live drops, but the Edge
+Functions themselves should validate explicitly so any future
+non-Drop-Studio client (e.g. PR 4 createEventWindow path or a
+future API surface) cannot insert nonsense rows. Surfaced during
+PR 3 audit pass.
+
+T5-B11: Drop Studio readiness checklist — surface capacity row
+explicitly. The Review pane checklist in `drop-manager.html`
+(renderReview, lines 3217–3221) shows five rows: Basics complete,
+Timing complete, Menu items enabled, Capacity item present,
+Commercials valid. "Capacity model set" (capacity_category and
+capacity_units_total) is bundled inside `basics_complete` rather
+than surfaced as its own row. Post PR 3 fix, capacity is now
+publish-gated (not NOT-NULL-gated) — vendors who haven't set
+capacity will see "Basics complete" failing without immediately
+knowing it's the capacity field. Add capacity-set as its own
+readiness row, or add an inline hint inside the basics row, so
+the gating reason is legible. Surfaced during PR 3 publish-gate
+audit. Low priority — the gate works correctly today; this is
+purely a UX legibility improvement.
+
+T5-B12: capacity_category_id references a non-existent
+capacity_categories table. The publish gate (getLiveReadiness() in
+drop-manager.html) requires capacity_category_id to be truthy as
+part of basicsComplete. The column is a UUID, presumably a FK to
+capacity_categories, but the table does not exist in the database
+(confirmed during PR 3 fix investigation: ERROR: 42P01: relation
+"capacity_categories" does not exist). This means the publish gate
+cannot currently be satisfied by any vendor on any drop — but the
+issue has been masked because the + New Drop flow was broken
+upstream. PR 3 fixes the upstream create-drop blocker, which means
+the next vendor to attempt publishing will hit this trap.
+Investigate: was there a capacity_categories table that got
+dropped, is the schema mid-migration, or is the publish-gate check
+premature for a feature that never shipped? Decide between (a)
+adding the missing table and seeding it, (b) removing
+capacity_category_id from the publish gate (relying only on
+capacity_category text + capacity_units_total), or (c) something
+else entirely. Related to T7-13 (capacity model conceptual review).
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live
@@ -1706,6 +1753,20 @@ Tools for handling vendor or host policy violations — suspend
 workspace, freeze drop, revoke host access, notify affected customers.
 Hopefully rarely used, but required before the platform is operating
 at scale without direct trust in every participant.
+
+T7-13: Capacity driver concept and modelling
+The platform currently models capacity via `capacity_category`
+(text, now nullable post-PR-3) and `capacity_units_total`
+(integer). This implicitly assumes capacity is menu-driven —
+vendors think in terms of "I can make 40 pizzas." Real-world
+capacity may also be order-driven ("I can handle 30 orders
+regardless of items"), time-driven ("I can serve 10 customers
+per 30-minute slot"), or hybrid. Review whether the data model
+needs to express capacity as a typed driver (units / orders /
+time-slots) rather than a free-text category. Surfaced during
+PR 3 (`create-drop`) when the legacy `'pizza'` default was
+removed and the broader question of how capacity should be
+modelled became visible.
 
 #### Monitoring track
 
