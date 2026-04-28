@@ -1528,18 +1528,22 @@ to the `update-host` whitelist with valid-value validation. If
 no: hide or remove the dropdown from host-profile.html. Surfaced
 during the update-host migration audit.
 
-T5-B10: Server-side payload validation on create-drop / update-drop
-create-drop (PR 3) and update-drop (PR 4) accept the field whitelist
-as-is and rely on the database for type and constraint enforcement.
-No server-side checks for: capacity_units_total > 0, closes_at <
-delivery_start, delivery_end > delivery_start, drop_type in
-{neighbourhood, hosted, community, event}, status in {draft,
-scheduled, live, closed, archived}. Drop Studio sets sane defaults
-and the publish gate (T3-8) blocks bad live drops, but the Edge
-Functions themselves should validate explicitly so any future
-non-Drop-Studio client (e.g. PR 4 createEventWindow path or a
-future API surface) cannot insert nonsense rows. Surfaced during
-PR 3 audit pass.
+T5-B10: Server-side payload validation on create-drop / update-drop ✓ PARTIAL
+update-drop (PR 4a) implements the validation surface: drop_type enum
+check, capacity_units_total >= 0, radius_km >= 0, delivery_end >
+delivery_start, closes_at <= delivery_start, host_id ownership lookup
+against hosts.vendor_id (closes the cross-vendor host-poisoning gap),
+capacity_category_id ownership lookup against categories.vendor_id with
+slug reconciled server-side (Audit B(a)), and coherence checks on the
+fundraising and host_share blocks. transition-drop-status (PR 4a) ports
+the publish gate server-side and stamps lifecycle timestamps.
+
+Remaining: retrofit create-drop with the same validation set. Today
+create-drop only enforces required-name/slug; the rest of the invariants
+are unguarded. Source: see ALLOWED_FIELDS and the validation block in
+update-drop/index.ts — port the same checks across. Drop Studio is the
+only client today, but a non-Drop-Studio client could insert nonsense
+rows via create-drop.
 
 T5-B11: Drop Studio readiness checklist — surface capacity row
 explicitly. The Review pane checklist in `drop-manager.html`
@@ -1556,24 +1560,58 @@ the gating reason is legible. Surfaced during PR 3 publish-gate
 audit. Low priority — the gate works correctly today; this is
 purely a UX legibility improvement.
 
-T5-B12: capacity_category_id references a non-existent
-capacity_categories table. The publish gate (getLiveReadiness() in
-drop-manager.html) requires capacity_category_id to be truthy as
-part of basicsComplete. The column is a UUID, presumably a FK to
-capacity_categories, but the table does not exist in the database
-(confirmed during PR 3 fix investigation: ERROR: 42P01: relation
-"capacity_categories" does not exist). This means the publish gate
-cannot currently be satisfied by any vendor on any drop — but the
-issue has been masked because the + New Drop flow was broken
-upstream. PR 3 fixes the upstream create-drop blocker, which means
-the next vendor to attempt publishing will hit this trap.
-Investigate: was there a capacity_categories table that got
-dropped, is the schema mid-migration, or is the publish-gate check
-premature for a feature that never shipped? Decide between (a)
-adding the missing table and seeding it, (b) removing
-capacity_category_id from the publish gate (relying only on
-capacity_category text + capacity_units_total), or (c) something
-else entirely. Related to T7-13 (capacity model conceptual review).
+T5-B12: capacity_category_id reconciliation — wrong-premise correction ✓ CLOSED
+The original framing assumed `capacity_category_id` referenced a
+missing `capacity_categories` table. That was wrong. The column is a
+working FK to the existing `categories` table (which is dual-purpose:
+menu-section grouping AND capacity-category grouping per
+SCHEMA.md:190). The publish gate works as-is.
+What was actually missing was server-side reconciliation between
+`capacity_category_id` (uuid) and `capacity_category` (text slug).
+update-drop (PR 4a) implements Audit B(a): when a payload includes
+`capacity_category_id`, the server looks up the matching row in
+`categories` filtered by vendor_id and writes that row's `slug` to
+`capacity_category`, ignoring whatever the client sent. The two
+columns are now a server-managed pair on the update path. Closing
+this entry; T7-13 (capacity model conceptual review) is the right
+home for any further capacity-driver rework.
+
+T5-B13: Drop Studio — remove dead `dropStatus` dropdown
+Post PR 4a, `update-drop`'s whitelist excludes `status`. Lifecycle
+transitions go through `transition-drop-status`. The status dropdown
+in the Basics pane (`#dropStatus`) is now a no-op on save — selecting
+a value writes to the form payload, the Edge Function silently drops
+it, and `loadSelectedDrop()` resets the dropdown to the actual DB
+status afterwards. No data inconsistency, but it's dead UX. Remove
+the dropdown in PR 4b cleanup, alongside the form-level
+`dropData.status` and `payload.status` references in
+`getDropPayload()` / `readDropFromForm()`.
+
+T5-B14: Cross-vendor host-poisoning — defence-in-depth on RLS
+PR 4a's `update-drop` rejects payloads where `host_id` does not
+belong to the calling vendor (lookup against `hosts.vendor_id`).
+That closes the save surface on Drop Studio. But direct PostgREST
+mutations against `drops` could still in principle write a foreign
+host_id if the per-row RLS policy on `drops` does not assert the
+host belongs to the same vendor. Audit `drops` and `hosts` RLS
+policies and tighten if needed (defence-in-depth — every gap
+should be guarded at both the surface and the row level). Surfaced
+during PR 4a audit pass.
+
+T5-B15: PR 4b — clone-mode for create-drop, retire residual stamps
+PR 4a leaves two residual direct-PostgREST writes alongside the
+migrated paths because their fields (`series_id`, `series_position`,
+`window_group_id`, `status`) are excluded from `update-drop`'s
+whitelist (clone-mode shape — stamped on creation only). Targets:
+- `drop-manager.html` series-template branch (after the update-drop
+  call, a follow-up PostgREST `.update({ series_id, series_position,
+  status: 'draft' })`).
+- `drop-manager.html` `handleCreateEventWindows()` parent
+  `window_group_id` stamp.
+PR 4b's clone-mode work on `create-drop` (using the widened whitelist
+landed in PR 4a) replaces both flows with create-drop sibling
+generation, at which point both residuals can be deleted. Carries
+over from the PR 4a build prompt.
 
 ### Tier 6 — Production readiness
 
