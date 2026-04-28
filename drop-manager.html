@@ -3686,13 +3686,13 @@
         host_share_enabled: false
       };
 
-      const { data, error } = await supabase
-        .from("drops")
-        .insert(payload)
-        .select("id")
-        .single();
+      const { vendor_id, ...fields } = payload;
+      const { data, error } = await supabase.functions.invoke("create-drop", {
+        body: { vendor_id, fields }
+      });
 
       if (error) throw error;
+      if (!data || data.error) throw new Error(data?.error || "Drop creation failed");
 
       state.selectedDropId = data.id;
       state.currentStage = "basics";

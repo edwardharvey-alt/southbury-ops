@@ -1528,6 +1528,19 @@ to the `update-host` whitelist with valid-value validation. If
 no: hide or remove the dropdown from host-profile.html. Surfaced
 during the update-host migration audit.
 
+T5-B10: Server-side payload validation on create-drop / update-drop
+create-drop (PR 3) and update-drop (PR 4) accept the field whitelist
+as-is and rely on the database for type and constraint enforcement.
+No server-side checks for: capacity_units_total > 0, closes_at <
+delivery_start, delivery_end > delivery_start, drop_type in
+{neighbourhood, hosted, community, event}, status in {draft,
+scheduled, live, closed, archived}. Drop Studio sets sane defaults
+and the publish gate (T3-8) blocks bad live drops, but the Edge
+Functions themselves should validate explicitly so any future
+non-Drop-Studio client (e.g. PR 4 createEventWindow path or a
+future API surface) cannot insert nonsense rows. Surfaced during
+PR 3 audit pass.
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live
