@@ -98,6 +98,15 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Drop null/undefined values so DB defaults apply.
+    // A whitelisted key with a null value would override the DB default
+    // and fail NOT NULL constraints. Required fields are validated below.
+    for (const key of Object.keys(insert)) {
+      if (insert[key] === null || insert[key] === undefined) {
+        delete insert[key];
+      }
+    }
+
     if (!insert.name || !insert.slug) {
       return jsonResponse({ error: "name and slug are required" }, 400);
     }

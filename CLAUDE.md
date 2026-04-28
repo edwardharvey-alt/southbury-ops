@@ -1541,6 +1541,21 @@ non-Drop-Studio client (e.g. PR 4 createEventWindow path or a
 future API surface) cannot insert nonsense rows. Surfaced during
 PR 3 audit pass.
 
+T5-B11: Drop Studio readiness checklist — surface capacity row
+explicitly. The Review pane checklist in `drop-manager.html`
+(renderReview, lines 3217–3221) shows five rows: Basics complete,
+Timing complete, Menu items enabled, Capacity item present,
+Commercials valid. "Capacity model set" (capacity_category and
+capacity_units_total) is bundled inside `basics_complete` rather
+than surfaced as its own row. Post PR 3 fix, capacity is now
+publish-gated (not NOT-NULL-gated) — vendors who haven't set
+capacity will see "Basics complete" failing without immediately
+knowing it's the capacity field. Add capacity-set as its own
+readiness row, or add an inline hint inside the basics row, so
+the gating reason is legible. Surfaced during PR 3 publish-gate
+audit. Low priority — the gate works correctly today; this is
+purely a UX legibility improvement.
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live
@@ -1719,6 +1734,20 @@ Tools for handling vendor or host policy violations — suspend
 workspace, freeze drop, revoke host access, notify affected customers.
 Hopefully rarely used, but required before the platform is operating
 at scale without direct trust in every participant.
+
+T7-13: Capacity driver concept and modelling
+The platform currently models capacity via `capacity_category`
+(text, now nullable post-PR-3) and `capacity_units_total`
+(integer). This implicitly assumes capacity is menu-driven —
+vendors think in terms of "I can make 40 pizzas." Real-world
+capacity may also be order-driven ("I can handle 30 orders
+regardless of items"), time-driven ("I can serve 10 customers
+per 30-minute slot"), or hybrid. Review whether the data model
+needs to express capacity as a typed driver (units / orders /
+time-slots) rather than a free-text category. Surfaced during
+PR 3 (`create-drop`) when the legacy `'pizza'` default was
+removed and the broader question of how capacity should be
+modelled became visible.
 
 #### Monitoring track
 
