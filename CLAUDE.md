@@ -194,6 +194,22 @@ regeneration query is at the top of that file.
     diverged, which is a known persistent issue with this repo. The hard
     reset always wins regardless of local state.
 
+11. Backlog items get logged in the same commit as the PR that surfaced
+    them. When an audit pass surfaces issues that are out of scope for
+    the current PR, log them in CLAUDE.md's backlog section as part of
+    the same commit as the PR's main changes. Do not defer to a
+    follow-up commit. Rationale: keeps audit findings and backlog
+    entries atomic, and `git blame` on the backlog entry lands on the
+    PR that surfaced it.
+
+12. Verification steps use the lowest-blast-radius surface that
+    exercises the change. Prefer read-only or non-mutating surfaces
+    over write paths, and prefer the same surface used in earlier
+    verification steps (e.g. the curl smoke test) so the verification
+    story is consistent. Only escalate to write-path surfaces if no
+    read path exercises the code under test. Rationale: avoids
+    mutating production data during routine PR verification.
+
 ## Operational learnings
 
 Gotchas and patterns captured from real bugs. Treat these as hard rules
@@ -1469,6 +1485,37 @@ Specific items:
   the audit column is still needed.
 
 Reference: SCHEMA.md "Schema observations" section.
+
+T5-B6: invite-vendor — hardcoded production redirect URL
+`supabase/functions/invite-vendor/index.ts:64` sets
+`redirectTo: "https://lovehearth.co.uk/set-password.html"` on the
+`inviteUserByEmail` call. Vendors invited from a preview deploy still
+get redirected to production after accepting. Same root-cause class as
+the CORS preview-domain issue (PR that introduced
+`_shared/cors.ts`) — hardcoded production URL inside an Edge Function.
+Fix: derive the redirect host from the request's `Origin` header when
+it matches the same allowlist `_shared/cors.ts` already enforces, fall
+back to production otherwise. Surfaced during the CORS audit pass.
+
+T5-B7: Edge Functions missing top-level try/catch
+`update-vendor`, `complete-onboarding`, and `create-host` have no
+top-level `try/catch` around the handler body. An unhandled throw
+returns Supabase's default 500 with no CORS headers, which means the
+browser surfaces it as an opaque CORS failure rather than the actual
+error. This masks unrelated server bugs as apparent CORS errors during
+development — the fix has real diagnostic value, not just cosmetic.
+The other five functions wrap their bodies in `try/catch` and return a
+CORS-decorated 500 via `jsonResponse`. Align the three by adding
+matching wrappers. Surfaced during the CORS audit pass.
+
+T5-B8: invite-vendor — does not use jsonResponse helper
+The other seven Edge Functions converged on a `jsonResponse(body,
+status)` helper. `invite-vendor` instead inlines `{ ...corsHeaders,
+"Content-Type": "application/json" }` at eight separate Response
+constructors. Functionally equivalent, structurally inconsistent — and
+adds an extra editing surface every time the response shape changes.
+Refactor to match the pattern used elsewhere. Surfaced during the CORS
+audit pass.
 
 ### Tier 6 — Production readiness
 
