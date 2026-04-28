@@ -210,6 +210,22 @@ regeneration query is at the top of that file.
     read path exercises the code under test. Rationale: avoids
     mutating production data during routine PR verification.
 
+13. Claude Code's environment has no Supabase CLI, no Stripe
+    credentials, no preview deploy access. Manual verification on the
+    developer's machine is the contract between Claude Code and the
+    human. Each PR description spells out the manual verification
+    checklist explicitly: CLI deploy commands, curl smoke tests with
+    expected responses, in-browser verification steps, and SQL
+    confirmations. Do not merge on TypeScript parse + transpile alone.
+
+14. When an audit declares a hard prerequisite for a future PR, run a
+    quick prerequisite investigation as the first step of that PR's
+    build session. The audit framing may be stale by the time the
+    build runs (PR 4a's T5-B12 prerequisite was wrong-premise — the
+    actual question was different). The investigation is read-only,
+    ~5–30 minutes, and locks in the build strategy before any code is
+    written.
+
 ## Operational learnings
 
 Gotchas and patterns captured from real bugs. Treat these as hard rules
@@ -1612,6 +1628,16 @@ PR 4b's clone-mode work on `create-drop` (using the widened whitelist
 landed in PR 4a) replaces both flows with create-drop sibling
 generation, at which point both residuals can be deleted. Carries
 over from the PR 4a build prompt.
+
+T5-B16: drop-menu.html category INSERT blocked by RLS policy on
+`categories` table. Authenticated POST fails with `new row violates
+row-level security policy for table "categories"`. Surfaced during
+PR 4a in-browser verification: Test 11 had zero categories because
+the create flow has never worked. Manually inserted "Mains" via SQL
+(service-role context bypasses RLS). Investigate in PR 4b: is the
+policy missing or wrong, or is the client query missing a required
+field? Coordinate with Priority 4 (Menu Library writes migration) —
+likely either fixed in PR 4b standalone or rolled into Priority 4.
 
 ### Tier 6 — Production readiness
 
