@@ -1517,6 +1517,17 @@ adds an extra editing surface every time the response shape changes.
 Refactor to match the pattern used elsewhere. Surfaced during the CORS
 audit pass.
 
+T5-B9: host-profile.html — host-status-field no-ops after update-host migration
+The Save button on host-profile.html sends a `status` field, but
+`update-host`'s whitelist deliberately excludes `status` (server-
+controlled per the Edge Function design). Result: the dropdown is
+visible and editable but selections silently fail to persist on
+save. Decide whether vendors should be able to set host status
+(active / inactive / archived) themselves. If yes: add `status`
+to the `update-host` whitelist with valid-value validation. If
+no: hide or remove the dropdown from host-profile.html. Surfaced
+during the update-host migration audit.
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live
