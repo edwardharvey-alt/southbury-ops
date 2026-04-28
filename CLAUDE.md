@@ -1556,6 +1556,25 @@ the gating reason is legible. Surfaced during PR 3 publish-gate
 audit. Low priority — the gate works correctly today; this is
 purely a UX legibility improvement.
 
+T5-B12: capacity_category_id references a non-existent
+capacity_categories table. The publish gate (getLiveReadiness() in
+drop-manager.html) requires capacity_category_id to be truthy as
+part of basicsComplete. The column is a UUID, presumably a FK to
+capacity_categories, but the table does not exist in the database
+(confirmed during PR 3 fix investigation: ERROR: 42P01: relation
+"capacity_categories" does not exist). This means the publish gate
+cannot currently be satisfied by any vendor on any drop — but the
+issue has been masked because the + New Drop flow was broken
+upstream. PR 3 fixes the upstream create-drop blocker, which means
+the next vendor to attempt publishing will hit this trap.
+Investigate: was there a capacity_categories table that got
+dropped, is the schema mid-migration, or is the publish-gate check
+premature for a feature that never shipped? Decide between (a)
+adding the missing table and seeding it, (b) removing
+capacity_category_id from the publish gate (relying only on
+capacity_category text + capacity_units_total), or (c) something
+else entirely. Related to T7-13 (capacity model conceptual review).
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live
