@@ -32,6 +32,9 @@ const ALLOWED_FIELDS = new Set([
   "delivery_end",
   "fundraising_enabled",
   "host_share_enabled",
+  "window_group_id",
+  "series_id",
+  "series_position",
 ]);
 
 Deno.serve(async (req) => {
