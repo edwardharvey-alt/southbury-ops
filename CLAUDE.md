@@ -1516,6 +1516,11 @@ Specific items:
   single column, drop the other.
 - drop_products and drop_menu_items both exist as tables. Confirm
   whether drop_products is deprecated and drop it if so.
+- Confirm whether drop_products is deprecated and drop it if so.
+  drop_menu_items is the canonical table per PR 4b's
+  assign-menu-items Edge Function. Investigation: row count on
+  drop_products and pg_stat_user_tables.last_seq_scan. Read-only,
+  bounded, unblocks no other work.
 - drop_capacity table has all-nullable columns, no FKs, and uses
   legacy pizza vocabulary. Likely a stale view that didn't get the
   v_ prefix. Confirm whether it's a relation or a view.
@@ -1651,20 +1656,30 @@ with `qual=true`. Also, the "Categories: authenticated owner all"
 policy lacks explicit `with_check` (relies on PostgreSQL's fallback
 of using `qual` as `with_check` for ALL policies). Not urgent.
 
-T5-B15: PR 4b — clone-mode for create-drop, retire residual stamps
-PR 4a leaves two residual direct-PostgREST writes alongside the
+- service-board.html:1683 enrichItemDetailsWithProductData() reads
+  products by id with no vendor filter — relies on RLS for
+  cross-vendor protection. Latent isolation gap that PR 4b's
+  assign-menu-items per-item product/bundle ownership check does
+  not close (write-side only). Defend at view / RLS layer.
+
+T5-B15: PR 4b — clone-mode for create-drop, retire residual stamps ✓ RESOLVED BY PR 4b
+PR 4a left two residual direct-PostgREST writes alongside the
 migrated paths because their fields (`series_id`, `series_position`,
-`window_group_id`, `status`) are excluded from `update-drop`'s
-whitelist (clone-mode shape — stamped on creation only). Targets:
+`window_group_id`, `status`) were excluded from `update-drop`'s
+whitelist (clone-mode shape — stamped on creation only). Targets
+were:
 - `drop-manager.html` series-template branch (after the update-drop
   call, a follow-up PostgREST `.update({ series_id, series_position,
   status: 'draft' })`).
 - `drop-manager.html` `handleCreateEventWindows()` parent
   `window_group_id` stamp.
-PR 4b's clone-mode work on `create-drop` (using the widened whitelist
-landed in PR 4a) replaces both flows with create-drop sibling
-generation, at which point both residuals can be deleted. Carries
-over from the PR 4a build prompt.
+PR 4b retires both via create-drop clone-mode (using the widened
+whitelist landed in PR 4a): series_id / series_position / status
+(call site 2) and window_group_id (call site 5) are stamped via
+create-drop sibling generation, and the drop_menu_items writes
+(call sites 1, 4, 6, 7) move to the assign-menu-items Edge
+Function. All residual direct-PostgREST writes on
+`drop-manager.html` are now retired.
 
 T5-B16: drop-menu.html category INSERT blocked by RLS — manifestation
 of the auth-not-attached pattern, third surface (after hosts SELECT
@@ -1708,6 +1723,19 @@ browser console — "Content Security Policy of your site blocks the
 use of 'eval' in JavaScript". Probably a third-party library
 (qrcode generator or similar). Minor, not blocking. Worth
 identifying which lib at some point.
+
+T5-B20: PR 4b build session — hard prerequisite
+Before deploying update-drop with the W-4 server guard, run
+`select count(*) from drops where capacity_category is not null and
+capacity_category_id is null;` against production. Expected: 0. If
+non-zero, pause build session pending Edward's decision per
+PR-4B-AUDIT.md Section 7.3 (backfill / clear / defer).
+
+T5-B21: Window cancellation with existing orders — distinct from
+remove-event-window. Future flow with refunds, customer
+notifications, audit trail. Not a force flag on remove-event-window
+(per PR-4B-AUDIT.md Section 9.5). Out of scope until
+cancellation-with-refunds infrastructure exists.
 
 ### Tier 6 — Production readiness
 
@@ -1901,6 +1929,14 @@ time-slots) rather than a free-text category. Surfaced during
 PR 3 (`create-drop`) when the legacy `'pizza'` default was
 removed and the broader question of how capacity should be
 modelled became visible.
+
+- With W-4 closed by orphan-text refusal in update-drop (PR 4b),
+  the redundant capacity_category non-null check in
+  transition-drop-status:71-74 becomes a candidate for removal.
+  Slug field is provably non-null only when the FK is non-null
+  after the guard lands. Removing the check is a one-line change
+  but adds noise to PR 4b for no behavioural benefit. Defer to
+  T7-13.
 
 #### Monitoring track
 
