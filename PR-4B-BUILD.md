@@ -78,3 +78,25 @@ Both required invariants present on both rows:
 
 Proceeding to Edge Functions.
 
+### Checkpoint 2 — orphan capacity_category data check (PASSED)
+
+Audit Section 7.3 / 8a.1 hard prerequisite. Run against production
+linked Supabase project before deploying the `update-drop` W-4
+guard.
+
+```sql
+select count(*)
+from drops
+where capacity_category is not null
+  and capacity_category_id is null;
+```
+
+Result: `0`.
+
+`Drop Studio's getDropPayload() always sends both fields together,
+so the orphan state should not exist in the wild` (audit Section
+7.3). The data confirms that. The W-4 server guard is safe to
+deploy — no migration / backfill / clear required.
+
+Proceeding to update-drop W-4 guard.
+
