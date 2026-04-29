@@ -1737,6 +1737,24 @@ notifications, audit trail. Not a force flag on remove-event-window
 (per PR-4B-AUDIT.md Section 9.5). Out of scope until
 cancellation-with-refunds infrastructure exists.
 
+T5-B22: Customer-flow order placement fails on order_items RLS insert.
+Confirmed during PR 4b fixture provisioning on Test 11: customer order
+page successfully INSERTs the orders row (orders.id created, customer
+fields populated, total_pence set), but fails on the subsequent
+order_items insert with 'new row violates row-level security policy
+for table order_items'. Stripe Checkout is never invoked because the
+items insert dies first. Result: orphan orders rows in the database
+with no order_items, no Stripe session, status='placed' (default).
+Test 11 has zero historical order_items rows across all its drops.
+Test 11 vendor_id 26e3721b-34d9-4b13-9dc3-e92c47d058a8. Reproducible
+by attempting any order via the order.html customer flow on a Test 11
+drop. Likely root cause: order_items RLS policy missing public-insert
+grant, or the order-creation Edge Function isn't being invoked and
+the client is falling back to direct PostgREST writes. Pre-PR-4b bug;
+not in scope for that work. Worth investigating before any
+production-vendor onboarding because no real customer order can
+complete on this platform until this is fixed.
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live
