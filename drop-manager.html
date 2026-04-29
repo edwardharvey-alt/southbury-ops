@@ -3951,16 +3951,13 @@
         if (error) throw error;
 
         if (!data || !data.length) {
-          /* No siblings left — clear window_group_id on current drop and revert to creation UI */
-          await supabase
-            .from("drops")
-            .update({ window_group_id: null })
-            .eq("id", state.selectedDropId);
-          if (state.drop) state.drop.window_group_id = null;
-          byId("existingWindowsList").classList.add("hidden");
-          byId("eventWindowsChoice").classList.remove("hidden");
-          document.querySelector('input[name="eventWindowPattern"][value="single"]').checked = true;
-          byId("eventWindowsBlock").classList.add("hidden");
+          /* No siblings remain. Post PR 4b the survivor un-grouping
+             is performed server-side by remove-event-window's RPC
+             and reflected in state.drop.window_group_id by the click
+             handler — this branch is a defensive fallback for
+             unusual states (e.g. siblings removed via another path).
+             Render an empty list; no DB write. */
+          content.innerHTML = "";
           existingWindowsLoaded = true;
           return;
         }
@@ -4860,11 +4857,15 @@
           const dropId = ewConfirmLink.getAttribute("data-drop-id");
           if (!dropId) return;
           try {
-            const { error: delErr } = await supabase
-              .from("drops")
-              .delete()
-              .eq("id", dropId);
+            const { data, error: delErr } = await supabase.functions.invoke("remove-event-window", {
+              body: { vendor_id: state.vendorId, drop_id: dropId }
+            });
             if (delErr) throw delErr;
+            if (!data || data.error) throw new Error(data?.error || "Unable to remove window.");
+
+            if (data.group_dissolved && data.survivor_drop_id === state.selectedDropId) {
+              if (state.drop) state.drop.window_group_id = null;
+            }
 
             existingWindowsLoaded = false;
             await renderExistingWindows();
