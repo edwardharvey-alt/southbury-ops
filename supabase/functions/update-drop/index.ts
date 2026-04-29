@@ -9,11 +9,14 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 //   slug (server-controlled identity post-creation; vendors cannot
 //     rename drops via this surface — see PR 4a build prompt)
 //   status (lifecycle — handled by transition-drop-status)
-//   series_id, series_position, window_group_id (clone-mode shape —
-//     stamped on creation only via create-drop's widened whitelist)
 //   created_at, updated_at, published_at, closed_at, archived_at
 //     (lifecycle timestamps — server-managed)
 //   capacity_pizzas, max_orders (legacy NOT NULL — T5-B5 cleanup)
+//
+// PR 4b precondition (audit Section 4.0): clone-mode shape fields
+// (series_id, series_position, window_group_id) are accepted on
+// the update path with explicit validation. See the validation
+// blocks below the whitelist.
 const ALLOWED_FIELDS = new Set([
   "name",
   "drop_type",
@@ -43,6 +46,9 @@ const ALLOWED_FIELDS = new Set([
   "host_share_per_order_pence",
   "host_share_fixed_pence",
   "host_share_customer_visible",
+  "window_group_id",
+  "series_id",
+  "series_position",
 ]);
 
 const VALID_DROP_TYPES = new Set(["neighbourhood", "hosted", "community", "event"]);
@@ -182,6 +188,70 @@ Deno.serve(async (req) => {
         if (hostErr) return jsonResponse({ error: "Host lookup failed" }, 500);
         if (!host) {
           return jsonResponse({ error: "host_id does not belong to this vendor" }, 400);
+        }
+      }
+    }
+
+    // capacity_category text writes must be paired with capacity_category_id
+    // so the server can reconcile the text from the FK lookup. An orphan
+    // text write would bypass reconciliation and let the client supply
+    // arbitrary text. Refuse it. (Audit Section 7.2 / W-4.)
+    if (
+      Object.prototype.hasOwnProperty.call(update, "capacity_category") &&
+      !Object.prototype.hasOwnProperty.call(update, "capacity_category_id")
+    ) {
+      return jsonResponse(
+        { error: "capacity_category cannot be set without capacity_category_id" },
+        400
+      );
+    }
+
+    // window_group_id: uuid or null. Accepted on the update path so
+    // handleCreateEventWindows can stamp the parent before generating
+    // siblings (audit Section 4.5).
+    if (Object.prototype.hasOwnProperty.call(update, "window_group_id")) {
+      const wgi = update.window_group_id;
+      if (wgi !== null && typeof wgi !== "string") {
+        return jsonResponse({ error: "window_group_id must be a uuid string or null" }, 400);
+      }
+    }
+
+    // series_id + series_position: paired. Accepted on the update path
+    // so saveDrop's series-branch can promote a soloist drop into a new
+    // series template without a follow-up direct-PostgREST stamp
+    // (audit Section 4.0 / 4.2). Both must be present together or both
+    // null. series_id is uuid; series_position is integer >= 1.
+    {
+      const hasSid = Object.prototype.hasOwnProperty.call(update, "series_id");
+      const hasSpos = Object.prototype.hasOwnProperty.call(update, "series_position");
+      if (hasSid !== hasSpos) {
+        return jsonResponse(
+          { error: "series_id and series_position must be set together (both null clears them)" },
+          400
+        );
+      }
+      if (hasSid) {
+        const sid = update.series_id;
+        const spos = update.series_position;
+        if (sid === null && spos !== null) {
+          return jsonResponse(
+            { error: "series_position must be null when series_id is null" },
+            400
+          );
+        }
+        if (sid !== null && spos === null) {
+          return jsonResponse(
+            { error: "series_id must be null when series_position is null" },
+            400
+          );
+        }
+        if (sid !== null && typeof sid !== "string") {
+          return jsonResponse({ error: "series_id must be a uuid string or null" }, 400);
+        }
+        if (spos !== null) {
+          if (typeof spos !== "number" || !Number.isInteger(spos) || spos < 1) {
+            return jsonResponse({ error: "series_position must be an integer >= 1" }, 400);
+          }
         }
       }
     }
