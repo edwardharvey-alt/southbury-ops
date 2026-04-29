@@ -47,6 +47,8 @@ const ALLOWED_FIELDS = new Set([
   "host_share_fixed_pence",
   "host_share_customer_visible",
   "window_group_id",
+  "series_id",
+  "series_position",
 ]);
 
 const VALID_DROP_TYPES = new Set(["neighbourhood", "hosted", "community", "event"]);
@@ -211,6 +213,46 @@ Deno.serve(async (req) => {
       const wgi = update.window_group_id;
       if (wgi !== null && typeof wgi !== "string") {
         return jsonResponse({ error: "window_group_id must be a uuid string or null" }, 400);
+      }
+    }
+
+    // series_id + series_position: paired. Accepted on the update path
+    // so saveDrop's series-branch can promote a soloist drop into a new
+    // series template without a follow-up direct-PostgREST stamp
+    // (audit Section 4.0 / 4.2). Both must be present together or both
+    // null. series_id is uuid; series_position is integer >= 1.
+    {
+      const hasSid = Object.prototype.hasOwnProperty.call(update, "series_id");
+      const hasSpos = Object.prototype.hasOwnProperty.call(update, "series_position");
+      if (hasSid !== hasSpos) {
+        return jsonResponse(
+          { error: "series_id and series_position must be set together (both null clears them)" },
+          400
+        );
+      }
+      if (hasSid) {
+        const sid = update.series_id;
+        const spos = update.series_position;
+        if (sid === null && spos !== null) {
+          return jsonResponse(
+            { error: "series_position must be null when series_id is null" },
+            400
+          );
+        }
+        if (sid !== null && spos === null) {
+          return jsonResponse(
+            { error: "series_id must be null when series_position is null" },
+            400
+          );
+        }
+        if (sid !== null && typeof sid !== "string") {
+          return jsonResponse({ error: "series_id must be a uuid string or null" }, 400);
+        }
+        if (spos !== null) {
+          if (typeof spos !== "number" || !Number.isInteger(spos) || spos < 1) {
+            return jsonResponse({ error: "series_position must be an integer >= 1" }, 400);
+          }
+        }
       }
     }
 
