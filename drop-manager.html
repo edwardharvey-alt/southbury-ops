@@ -921,19 +921,6 @@
                       </select>
                     </div>
 
-                    <div class="field">
-                      <label for="dropStatus">Status</label>
-                      <select id="dropStatus">
-                        <option value="draft">Draft</option>
-                        <option value="scheduled">Scheduled</option>
-                        <option value="live">Live</option>
-                        <option value="closed">Closed</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                        <option value="archived">Archived</option>
-                      </select>
-                      <div class="helperText">Starts as Draft during setup. Status can be changed later when the drop is ready.</div>
-                    </div>
                   </div>
                 </div>
 
@@ -2743,7 +2730,6 @@
       byId("dropName").value = d.name || "";
       byId("dropSlug").value = d.slug || "";
       byId("dropType").value = d.drop_type || "neighbourhood";
-      byId("dropStatus").value = d.status || "draft";
       byId("notesInternal").value = d.notes_internal || "";
 
       byId("fulfilmentMode").value = d.fulfilment_mode || "";
@@ -3275,7 +3261,6 @@
         name: byId("dropName").value.trim(),
         slug: slugify(byId("dropSlug").value.trim()),
         drop_type: byId("dropType").value,
-        status: byId("dropStatus").value,
         host_id: byId("hostSelect").value || null,
         notes_internal: byId("notesInternal").value.trim() || null,
 
@@ -3326,7 +3311,6 @@
         slug: dropData.slug,
         name: dropData.name,
         drop_type: dropData.drop_type,
-        status: dropData.status,
         fulfilment_mode: dropData.fulfilment_mode,
         collection_point_description: dropData.collection_point_description,
         delivery_area_description: dropData.delivery_area_description,
@@ -4031,8 +4015,6 @@
       if (!isStripeGated()) {
         el.style.display = "none";
         el.innerHTML = "";
-        const liveOpt = document.querySelector('#dropStatus option[value="live"]');
-        if (liveOpt) liveOpt.disabled = false;
         return;
       }
 
@@ -4045,9 +4027,6 @@
         <a class="btnAccent stripeGateCta" href="${href}">Finish payment setup →</a>
       `;
       el.style.display = "";
-
-      const liveOpt = document.querySelector('#dropStatus option[value="live"]');
-      if (liveOpt) liveOpt.disabled = true;
     }
 
     /* ── First-drop guidance card (T4-23) ────────────────────────────────── */
@@ -4531,7 +4510,7 @@
       });
 
       [
-        "dropType", "dropStatus", "hostSelect", "notesInternal",
+        "dropType", "hostSelect", "notesInternal",
         "fulfilmentMode", "collectionPointDescription", "deliveryAreaDescription", "customerNotesEnabled",
         "centrePostcode", "radiusKm", "capacityCategory", "capacityTotal",
         "deliveryStartTime", "deliveryEndTime",
