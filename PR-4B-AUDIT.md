@@ -3111,3 +3111,136 @@ exercised by the create-drop validation that landed in PR 4a. If a
 future capacity-driver rework (T7-13) reshapes the
 capacity_category vocabulary entirely, the guard moves with the
 rework; it is not load-bearing infrastructure.
+
+---
+
+## Section 10 — Open questions
+
+The audit could not resolve the following questions from the
+information available in the codebase and the handover. Each is an
+explicit handoff to either (a) the build session that implements PR
+4b, or (b) follow-up backlog work. Resolution is recorded as part of
+the build session, not in this document.
+
+### 10.1 Concrete UUIDs and JWT for the Section 8a.3 curl smokes
+
+**Why open.** Section 8a.3 specifies fixture vendors and the slugs
+they own (Test 11, Test 12, southbury-farm-pizza, healthy-habits)
+but writes the curl bodies with placeholder tokens like
+`<test-11 vendor uuid>`, `<test-11 drop uuid>`,
+`<southbury-farm-pizza other vendor's product uuid>`, and `$JWT`.
+The audit deliberately stops at slugs because resolving them to
+UUIDs requires a live Supabase session — Claude Code's environment
+has no Supabase CLI and no service-role credentials (CLAUDE.md rule
+#13). The build session has a session and can resolve them.
+
+**What would resolve it.** First step of the build session: open the
+relevant fixture vendors in the Supabase table editor (or via SQL),
+copy out the required UUIDs (vendor, drop, product/bundle, category,
+host as needed), mint a JWT for the calling vendor via
+`supabase.auth.signInWithPassword` against the test-12 / test-11 /
+southbury-farm-pizza email, and inline the resolved values into the
+PR description as run-the-tests artefacts. The PR description is the
+canonical record; the curl blocks in Section 8a.3 stay in audit form
+(slug-based) so they remain readable independent of any specific
+fixture state.
+
+### 10.2 Test 5 fixture availability for the orders-presence smoke
+
+**Why open.** Section 8a.3 Test 5 verifies the hardest gate —
+remove-event-window's 409 refusal when order_items exist on a window
+in a multi-window group. The test calls for a southbury-farm-pizza
+window-group drop with at least one row in `order_items`. The audit
+cannot confirm such a drop exists today: the southbury-farm-pizza
+fixture has historical drops with orders, but whether any of those
+drops sit in a `window_group_id` group with siblings is operator
+state, not codebase state. If no such fixture exists, the build
+session has two paths: (a) create one (operator action — multi-step:
+create a parent drop, create a sibling via `createEventWindow`,
+place a test order against the parent, then run the smoke); or (b)
+skip the curl and verify Test 5 via UI by attempting "Remove window"
+on a real drop with orders and confirming the 409 surfaces as a
+human-readable refusal.
+
+**What would resolve it.** Edward's call at the start of the build
+session: provision the fixture or accept UI-only verification for
+Test 5. Default recommendation if undecided: provision the fixture —
+this is the only smoke where an UI-only verification has weaker
+signal than the curl, because the cascade hazard (Section 5.2) is
+exactly the silent corruption a UI test cannot reliably surface.
+
+### 10.3 Sequencing of the seven sub-deliverables within the single PR
+
+**Why open.** Section 9.1 commits to shipping PR 4b as a single PR
+but does not sequence the work inside it. Three plausible orderings:
+(a) Edge Functions first (assign-menu-items + remove-event-window +
+update-drop W-4 guard), then all client migrations together, then
+dropStatus removal and capacity_category client-throw retirement;
+(b) Interleaved per call site — land assign-menu-items, then
+saveAssignments migration, then series template, then duplicateDrop,
+then createEventWindow, then remove-event-window with its single
+client site; (c) Vertical slices — pair each Edge Function deploy
+with its first client consumer to validate the shape end-to-end
+before extending to other call sites.
+
+**What would resolve it.** Build-session call. The audit's
+recommendation: ordering (a) — server-first lets the build session
+validate Edge Function shape via curl (the Section 8a.3 smokes)
+before any client edit is in flight, so a wrong whitelist or
+mis-specified RPC signature surfaces against the curl, not
+against a partly-migrated client. The server-first ordering also
+matches the W-1 through W-4 widenings in Section 4.0 — those are
+preconditions, not co-changes.
+
+### 10.4 Partial-failure recovery in saveDrop's series clone loop
+
+**Why open.** Section 4.4 specifies the saveDrop series branch
+calls `assign-menu-items` once per sibling drop (clone-mode,
+`clone_from_drop_id` = template) inside a JS `for` loop. If sibling
+3 of 5 fails — Edge Function returns 500, network timeout,
+ownership check rejects — the loop has already cloned siblings 1
+and 2 successfully. The current series-branch implementation has
+no rollback for partial-success state; it surfaces a generic
+"Failed to save" toast and leaves the half-populated siblings in
+place. The audit deferred the recovery semantics to the build
+session because the answer depends on UX trade-offs (silent partial
+success vs. all-or-nothing rollback) that the audit cannot decide
+in isolation.
+
+**What would resolve it.** Build-session decision between three
+options: (1) continue the loop on individual failures and surface
+a per-sibling status report ("3 of 5 clones succeeded — siblings
+4 and 5 failed"); (2) abort on first failure and leave earlier
+clones in place, surfacing "Saved 1–2, stopped at 3"; (3) abort on
+first failure and roll back earlier clones via a follow-up
+`assign-menu-items` with empty `items[]` on each successful sibling.
+Recommendation: option (2) — matches the existing saveDrop error
+handling shape (toast + leave state as-is), is the cheapest to
+implement, and keeps the user-visible behaviour predictable. A
+true atomic rollback (option 3) is out of scope for PR 4b and
+would arguably belong inside a future bulk-clone RPC that takes
+the full sibling list in a single call.
+
+### 10.5 `drop_products` vs `drop_menu_items` schema decision
+
+**Why open.** Sections 2.9 and 4.10 flag that `drop_products` and
+`drop_menu_items` both exist as tables. The audit confirms PR 4b
+touches `drop_menu_items` exclusively — `assign-menu-items` writes
+there, the existing saveAssignments writes there, and no PR 4b
+call site references `drop_products`. The status of `drop_products`
+(deprecated stub, in-use legacy table, or active-but-shadowed
+duplicate) is a schema-cleanup question that predates PR 4b and is
+already partially captured in T5-B5 ("Schema cleanup — legacy
+artefacts and missing constraints"). PR 4b does not have authority
+to drop `drop_products`; it would need a separate migration with a
+data check first.
+
+**What would resolve it.** Add a sub-bullet under T5-B5 in
+CLAUDE.md's backlog: "Confirm whether `drop_products` is deprecated
+and drop it if so — `drop_menu_items` is the canonical table per
+PR 4b's `assign-menu-items` Edge Function." The investigation is
+read-only (run a row count and a `pg_stat_user_tables.last_seq_scan`
+check on `drop_products`), bounded, and unblocks no other work.
+Park there until a schema-cleanup pass is scheduled; PR 4b proceeds
+on the basis that `drop_menu_items` is canonical for menu
+assignments.
