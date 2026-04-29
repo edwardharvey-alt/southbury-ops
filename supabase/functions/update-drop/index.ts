@@ -186,6 +186,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    // capacity_category text writes must be paired with capacity_category_id
+    // so the server can reconcile the text from the FK lookup. An orphan
+    // text write would bypass reconciliation and let the client supply
+    // arbitrary text. Refuse it. (Audit Section 7.2 / W-4.)
+    if (
+      Object.prototype.hasOwnProperty.call(update, "capacity_category") &&
+      !Object.prototype.hasOwnProperty.call(update, "capacity_category_id")
+    ) {
+      return jsonResponse(
+        { error: "capacity_category cannot be set without capacity_category_id" },
+        400
+      );
+    }
+
     // capacity_category_id ownership + reconcile slug from categories.
     if (Object.prototype.hasOwnProperty.call(update, "capacity_category_id")) {
       const catId = update.capacity_category_id;
