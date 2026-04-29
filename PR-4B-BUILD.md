@@ -612,5 +612,64 @@ If any UI walk fails:
   are fix-forward only — not a rollback trigger
   (audit Section 8b.3.d).
 
+### Phase 2 complete — PR ready for review
+
+```
+6242079 docs: Phase 2 checkpoint 3 — UI walk gate (operator-side; static gates green)
+0a2884c refactor: retire capacity_category client-side throw
+d722f62 refactor: remove dead dropStatus dropdown
+2a7f59b docs: Phase 2 checkpoint 2 verified — all eight call sites migrated, greps green
+334ac5d feat: migrate saveDrop series siblings + cloned menus (call sites 3 + 4)
+985c951 feat: migrate saveDrop series template promotion (call site 2)
+4191857 docs: Phase 2 checkpoint 1 verified — five call sites migrated
+48a5bd0 feat: migrate renderExistingWindows confirm-remove to remove-event-window (call site 8)
+f848aef feat: migrate createEventWindow to create-drop + assign-menu-items (call site 7)
+3a303e0 feat: migrate duplicateDrop to create-drop + assign-menu-items (call site 6)
+c0f0897 feat: migrate handleCreateEventWindows to update-drop (call site 5)
+7364805 feat: migrate saveAssignments to assign-menu-items (call site 1)
+a9f8570 docs: PR 4b Phase 2 start
+```
+
+Diff stats since end of Phase 1 (`50d091e`):
+
+```
+drop-manager.html                       | 437 +++++++++++---------------------
+supabase/functions/update-drop/index.ts |  60 ++++-
+PR-4B-BUILD.md                          | 283 +++++++++++++++++++++
+```
+
+437 lines changed in `drop-manager.html`. The migration is a
+net reduction (143 deletions, 0 net insertions inside the file —
+the per-call-site Edge Function invocations are dramatically
+shorter than the per-row marshalling and chained PostgREST
+writes they replaced).
+
+`supabase/functions/update-drop/index.ts` gains 60 lines net:
+the whitelist now accepts `window_group_id`, `series_id`, and
+`series_position`, plus their explicit validation blocks.
+Phase 1 already deployed Version 2 of `update-drop` with the
+W-4 capacity-category guard. Phase 2 widens the whitelist on
+the same function — the operator must redeploy `update-drop`
+to pick up the precondition widenings before merging Phase 2's
+client edits to production.
+
+**Build-session contract — both 8b.2 greps return zero
+matches.** The defining promise of PR 4b is upheld:
+`drop-manager.html` contains zero direct-PostgREST writes
+against `drops` or `drop_menu_items`.
+
+**Three fixtures pending operator verification.** Audit
+Section 8b.1.a (Test 11 full call-site walk), Section 8b.1.b
+(Test 12 Stripe gate cross-reference), Section 8b.1.c
+(southbury-farm-pizza production-shaped regression check) are
+manual prerequisites for the human operator on the developer's
+Mac. Per Critical rule #13, the build environment cannot
+exercise these. The operator runs them post-merge before
+moving PR #201 out of draft.
+
+PR #201 is now ready to be moved out of draft once the
+operator's UI walks and the `update-drop` redeploy are
+complete.
+
 
 
