@@ -41,3 +41,40 @@ stop point, the failure detail, and the resume condition.
 
 Entries appended in commit-order as Phase 1 progresses.
 
+### Checkpoint 1 — RPC verification (PASSED)
+
+Migrations applied to the linked production Supabase project
+(`tvqhhjvumgumyetvpgid`) via `supabase db push --linked --yes`:
+
+```
+Applying migration 20260429210900_assign_drop_menu_items.sql...
+Applying migration 20260429211000_remove_event_window.sql...
+Finished supabase db push.
+```
+
+Verification query (per audit Section 8a.2):
+
+```sql
+select
+  proname,
+  prosecdef                                   as is_security_definer,
+  pg_get_function_identity_arguments(oid)     as args,
+  proconfig                                   as config
+from pg_proc
+where proname in ('assign_drop_menu_items', 'remove_event_window')
+order by proname;
+```
+
+Result:
+
+| proname                | is_security_definer | args                       | config                             |
+|------------------------|---------------------|----------------------------|------------------------------------|
+| assign_drop_menu_items | true                | p_drop_id uuid, p_items jsonb | `["search_path=public, pg_temp"]` |
+| remove_event_window    | true                | p_drop_id uuid             | `["search_path=public, pg_temp"]` |
+
+Both required invariants present on both rows:
+- `is_security_definer = true`
+- `config` includes `search_path=public, pg_temp`
+
+Proceeding to Edge Functions.
+
