@@ -331,3 +331,116 @@ the draft PR is moved out of draft.
   `items[]` and `clone_from_drop_id`. Phase 2 client call sites 4,
   6, 7 use clone-mode; call site 1 uses bulk-replace mode.
 
+---
+
+## Phase 2 — client migration in drop-manager.html
+
+Author: Claude Code (build session, Phase 2 — client-side)
+Date: 2026-04-29
+Branch: `claude/build-pr-4b-server-side` (continuing the Phase 1
+branch — Phase 2 lands as additional commits on the same branch
+that hosts PR #201).
+
+### Scope of Phase 2
+
+Client-side only, all in `drop-manager.html`:
+
+1. Migrate the eight call sites named in audit Section 4.10 from
+   direct PostgREST writes to Edge Function invocations.
+2. Remove the `dropStatus` dropdown across the seven reference sites
+   in audit Section 6.1.
+3. Retire the `capacity_category` client-side throw at
+   `drop-manager.html:3519` (audit Section 7.1).
+
+Out of scope: any edit to `supabase/functions/`, any edit to
+`supabase/migrations/`, any RPC changes, any new server work.
+Phase 1 deployed everything the server needs.
+
+Precondition correction. Phase 1's "preconditions confirmed"
+note above stated `update-drop`'s ALLOWED_FIELDS already
+included `series_id`, `series_position`, and
+`window_group_id`. Re-inspection at the start of Phase 2 shows
+the actual whitelist (`supabase/functions/update-drop/index.ts:17–46`)
+explicitly excludes those three fields with a comment block
+("clone-mode shape — stamped on creation only via create-drop's
+widened whitelist"). The widening still has to land. Phase 2
+adds it as part of the relevant client-migration commits per
+audit Section 4.0:
+
+- Commit 3 widens `update-drop` to accept `window_group_id`
+  (uuid or null).
+- Commit 8 widens `update-drop` to accept `series_id` and
+  `series_position` together (paired validation: both present
+  together or both null; `series_id` is uuid; `series_position`
+  is integer >= 1).
+
+`create-drop`'s whitelist is correct as documented — no widening
+required there.
+
+### Phase 2 commit ordering
+
+Server-first ordering of call sites is intentional. Simpler /
+lower-risk migrations land first; the series-branch (commits 8 +
+9) is last because it carries the per-sibling loop with
+partial-failure semantics.
+
+```
+Commit 1  docs: PR 4b Phase 2 start
+Commit 2  feat: migrate saveAssignments to assign-menu-items (call site 1)
+Commit 3  feat: migrate handleCreateEventWindows window_group_id stamp (call site 5)
+Commit 4  feat: migrate duplicateDrop (call site 6)
+Commit 5  feat: migrate createEventWindow (call site 7)
+Commit 6  feat: migrate renderExistingWindows confirm-remove (call site 8)
+Commit 7  docs: Phase 2 checkpoint 1 verified — five call sites migrated
+Commit 8  feat: migrate saveDrop series-branch template promotion (call site 2)
+Commit 9  feat: migrate saveDrop series siblings + cloned menus (call sites 3 + 4)
+Commit 10 docs: Phase 2 checkpoint 2 verified — all eight call sites migrated, greps green
+Commit 11 refactor: remove dropStatus dropdown (Section 6)
+Commit 12 refactor: retire capacity_category client-throw (Section 7.1)
+Commit 13 docs: Phase 2 checkpoint 3 — UI walk green on all three fixtures
+Commit 14 docs: Phase 2 complete — PR ready for review
+```
+
+### Four checkpoints
+
+Phase 2 has four verification gates. Each is captured below as it
+fires.
+
+- **Checkpoint 1** — call sites 1, 5, 6, 7, 8 migrated. UI walk on
+  Test 11 (saveAssignments, duplicateDrop, createEventWindow +
+  handleCreateEventWindows, remove-event-window) confirming each
+  step calls the correct Edge Function and shows no direct-
+  PostgREST writes on the Network tab.
+- **Checkpoint 2** — all eight call sites migrated. The static
+  invariant from audit Section 8b.2 — both direct-PostgREST greps
+  return zero — plus a saveDrop recurring-toggle UI walk to confirm
+  the per-sibling loop's partial-failure semantics.
+- **Checkpoint 3** — full UI walk (audit Section 8b.1.a/b/c) on
+  Test 11, Test 12, southbury-farm-pizza. Stripe gate, dropdown
+  removal, and production-shaped data regression check.
+- **Checkpoint 4** — Phase 2 complete. Final greps green, all three
+  fixtures verified, PR ready to move out of draft.
+
+If any checkpoint trips a STOP condition, the build session stops
+and this file records the stop point, the failure detail, and the
+resume condition.
+
+### Build environment limitations
+
+Per CLAUDE.md Critical rule #13, the Claude Code build environment
+has no Supabase CLI / no Stripe credentials / no preview-deploy
+access — and equally no browser, no DevTools, and no Network tab.
+The UI verification surfaces in audit Sections 8b.1.a, 8b.1.b, and
+8b.1.c are manual prerequisites for the human operator and
+**cannot** be exercised from inside the build session. The static
+verification surfaces (the two greps in audit Section 8b.2, the
+file-level invariants, and the precondition checks on Edge
+Functions) are exercised inside the build session and recorded in
+the checkpoint commits below.
+
+The PR description names every UI walk that the operator must run
+post-merge before moving the PR out of draft. The static gates are
+flagged as build-session-verified.
+
+
+
