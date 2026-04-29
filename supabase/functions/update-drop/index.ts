@@ -9,11 +9,14 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 //   slug (server-controlled identity post-creation; vendors cannot
 //     rename drops via this surface — see PR 4a build prompt)
 //   status (lifecycle — handled by transition-drop-status)
-//   series_id, series_position, window_group_id (clone-mode shape —
-//     stamped on creation only via create-drop's widened whitelist)
 //   created_at, updated_at, published_at, closed_at, archived_at
 //     (lifecycle timestamps — server-managed)
 //   capacity_pizzas, max_orders (legacy NOT NULL — T5-B5 cleanup)
+//
+// PR 4b precondition (audit Section 4.0): clone-mode shape fields
+// (series_id, series_position, window_group_id) are accepted on
+// the update path with explicit validation. See the validation
+// blocks below the whitelist.
 const ALLOWED_FIELDS = new Set([
   "name",
   "drop_type",
@@ -43,6 +46,7 @@ const ALLOWED_FIELDS = new Set([
   "host_share_per_order_pence",
   "host_share_fixed_pence",
   "host_share_customer_visible",
+  "window_group_id",
 ]);
 
 const VALID_DROP_TYPES = new Set(["neighbourhood", "hosted", "community", "event"]);
@@ -198,6 +202,16 @@ Deno.serve(async (req) => {
         { error: "capacity_category cannot be set without capacity_category_id" },
         400
       );
+    }
+
+    // window_group_id: uuid or null. Accepted on the update path so
+    // handleCreateEventWindows can stamp the parent before generating
+    // siblings (audit Section 4.5).
+    if (Object.prototype.hasOwnProperty.call(update, "window_group_id")) {
+      const wgi = update.window_group_id;
+      if (wgi !== null && typeof wgi !== "string") {
+        return jsonResponse({ error: "window_group_id must be a uuid string or null" }, 400);
+      }
     }
 
     // capacity_category_id ownership + reconcile slug from categories.
