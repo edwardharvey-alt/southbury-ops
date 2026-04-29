@@ -496,5 +496,64 @@ DevTools → Network tab open:
 If the operator's UI walk does not match these expectations, stop
 and investigate before continuing to Commits 8/9.
 
+### Checkpoint 2 — all eight call sites migrated (build-session, static)
+
+Call sites 2 (`saveDrop` series template promotion), 3
+(`saveDrop` series siblings), and 4 (`saveDrop` cloned menus)
+migrated. All eight audit Section 4.10 call sites now route
+through Edge Functions.
+
+Audit Section 8b.2 single-line greps:
+
+```
+$ grep -nE 'from\("drops"\).*\.(insert|update|delete|upsert)' drop-manager.html
+$ grep -nE 'from\("drop_menu_items"\).*\.(insert|update|delete|upsert)' drop-manager.html
+(both return zero — required gate)
+```
+
+Multi-line scan (awk `.from("drops|drop_menu_items")` then
+`.insert|.update|.delete|.upsert` within six lines, ignoring
+chains that hit `.select` first):
+
+```
+(zero matches — defence-in-depth gate, returns clean)
+```
+
+Edge Function preconditions for the series branch:
+
+- `update-drop`'s ALLOWED_FIELDS now includes `series_id` and
+  `series_position` with paired validation (Commit 8 added
+  them):
+  - both fields present together or both null
+  - `series_id` uuid string or null
+  - `series_position` integer >= 1 or null
+- `create-drop`'s widened whitelist (Phase 1) is exercised by
+  the per-sibling loop's `series_id` / `series_position` /
+  `status` fields stamped at creation.
+- `assign-menu-items` clone-mode is exercised by the per-sibling
+  loop's clone of the template drop's menu items.
+
+Partial-failure semantics for the per-sibling loop (audit
+Section 10.4 / 4.3): abort on first failure with the build-
+prompt-locked wording:
+
+```
+"Failed creating series occurrence N of M. Occurrences 1-(N-1)
+ were created as drafts; you can edit the series from the drop
+ list to add remaining windows."
+```
+
+UI walk — manual prerequisite for the operator (cannot run
+inside the build session per Critical rule #13). Per audit
+Section 8b.1.a step 1 plus the recurring-toggle path:
+
+| Step | Surface | Expected POSTs |
+|---|---|---|
+| Series happy-path | Toggle Recurring on a draft, configure schedule (e.g. 5 occurrences), Save | 1× `/functions/v1/update-drop` (template promotion with `series_id` / `series_position`) + 1× `/functions/v1/assign-menu-items` (template menu) + 4× `/functions/v1/create-drop` + 4× `/functions/v1/assign-menu-items` (clone mode) |
+| Series partial-failure | Force a refusal mid-loop (e.g. simulate a server error on sibling 3 of 5) | Toast carries audit Section 10.4 wording; siblings 1–2 persist as drafts; siblings 3–5 absent. |
+
+If the operator's UI walk does not match these expectations, stop
+and investigate before continuing to Commits 11/12.
+
 
 
