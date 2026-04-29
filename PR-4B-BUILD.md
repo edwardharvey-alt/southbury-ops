@@ -1,0 +1,43 @@
+# PR 4b — Build Session Log
+
+Author: Claude Code (build session, Phase 1 — server-side)
+Date: 2026-04-29
+Branch: `claude/build-pr-4b-server-side`
+Base: `origin/main` @ b4f0c90
+
+This document tracks the PR 4b Phase 1 build (Edge Functions + RPCs +
+update-drop W-4 guard). The authoritative spec is
+[PR-4B-AUDIT.md](PR-4B-AUDIT.md). Phase 2 (client migration in
+`drop-manager.html`) begins in a fresh chat after Phase 1 lands as a
+draft PR.
+
+## Scope of Phase 1
+
+Server-side only. Five artefacts:
+
+1. RPC migration `assign_drop_menu_items` (audit Section 2.4).
+2. RPC migration `remove_event_window` (audit Section 3.7).
+3. New Edge Function `assign-menu-items` (audit Section 2 entire).
+4. New Edge Function `remove-event-window` (audit Section 3 entire).
+5. Modify `update-drop` to add the W-4 server guard (audit
+   Section 7.2).
+
+Out of scope for Phase 1: any edit to `drop-manager.html`, the
+`dropStatus` dropdown removal, the `capacity_category` client-throw
+retirement. Those wait for Phase 2.
+
+## Three Phase 1 checkpoints
+
+- **Checkpoint 1** — RPC verification. Both functions exist with
+  `security definer` + `search_path=public, pg_temp`.
+- **Checkpoint 2** — SQL prerequisite for `update-drop` W-4 guard.
+  Orphan `capacity_category` count = 0 (audit Section 7.3 / 8a.1).
+- **Checkpoint 3** — Six 8a curl smokes pass (audit Section 8a.3).
+
+If any checkpoint trips a STOP condition, this file records the
+stop point, the failure detail, and the resume condition.
+
+## Build session log
+
+Entries appended in commit-order as Phase 1 progresses.
+
