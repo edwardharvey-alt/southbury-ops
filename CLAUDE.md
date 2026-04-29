@@ -995,16 +995,19 @@ Map should be off by default and enabled per-drop. Applies to any drop
 type — not exclusive to food trucks. Implementation likely via Google Maps
 embed or equivalent. Dependency: T3-12 for the radius data model.
 
-T4-33: Brand Hearth — vendor customisation review
-Conduct a structured review of Brand Hearth to identify what additional
-brand controls would meaningfully change how vendor-owned the experience
-feels. Current state is minimal: hero image, display name, tagline, colour
-picker. Assess whether vendors currently feel proud showing their Brand
-Hearth page to customers. Candidates for improvement: font choices, accent
-colour application across more UI elements, a secondary brand image, richer
-"about" copy, social handle display.
-Goal is not feature bloat — it is asking what is missing before deciding
-what to build. Run as a focused design review before any build work.
+T4-33: Brand Hearth — vendor copy generation and customisation review
+
+Two parts:
+
+**Part 1 — GenAI brand copy generation**
+
+The blank page problem is real for food vendors who aren't confident writers. After onboarding completes, Brand Hearth offers to generate a first-draft tagline and about paragraph. The vendor triggers generation on demand via a "Generate a starting point →" prompt — never automatic, always opt-in. The API call passes structured onboarding data: business name, operating model, primary goal, existing host contexts, customer data posture, food category (inferred from brand and product data where available), and social handles if set. Haiku 4.5 generates a tagline and 2–3 sentence about paragraph in Hearth's warm, local, artisan tone. Vendor reviews and edits inline before saving. Frame explicitly as a starting point, not a finished output. Client-side, same pattern as T5-25.
+
+Key constraint: the model must never generate claims about specific locations, specific products, or specific customers — those must come from vendor input. The generation scope is tone and framing only. See GenAI shared principles for hard rules.
+
+**Part 2 — Customisation review**
+
+Conduct a structured review of Brand Hearth to identify what additional brand controls would meaningfully change how vendor-owned the experience feels. Current state is minimal: hero image, display name, tagline, colour picker. Assess whether vendors currently feel proud showing their brand to customers. Candidates: font choices, accent colour application across more UI elements, secondary brand image, richer about copy, social handle display. Goal is not feature bloat — identify what is missing before deciding what to build. Run as a focused design review before any build work.
 
 ### Tier 5 — Strategic platform features
 
@@ -1037,134 +1040,99 @@ with name and email. Writes to customer_relationships with source =
 interest. Vendor sees interest count in Drop Studio labelled "Signals
 building". Dependency: T3-9.
 
+### GenAI use cases — shared principles
+
+Five confirmed GenAI use cases are planned across the platform. All follow the same architectural pattern and must observe the hard rules below.
+
+**The five use cases**
+
+| Entry | Use case | When it fires | Where | Model |
+|---|---|---|---|---|
+| T4-33 | Brand copy generation | Post-onboarding, on demand | Client-side | Haiku 4.5 |
+| T5-9 | Recommendation copy | Nightly pre-compute | Edge Function / Batch API | Haiku 4.5 |
+| T5-11 | Email body copy | Event-triggered | Edge Function | Haiku 4.5 |
+| T5-25 | Social copy generator | On demand, drop published | Client-side | Haiku 4.5 |
+| T5-26 | Host introduction copy | On demand, vendor-triggered | Client-side | Haiku 4.5 |
+
+Haiku 4.5 is the default for all five. Sonnet 4.6 is only worth considering if copy quality is demonstrably flat after real vendor testing. Opus is not appropriate for any of these use cases.
+
+**Hard rules — apply to every GenAI call across the platform**
+
+- SQL and structured data own the facts. Prices, times, order counts, fill rates, references, and postcodes are always passed as structured data and rendered deterministically. They are never left to the model to recall, infer, or generate. A model hallucinating an order total or a wrong collection time inside copy is a trust-destroying failure.
+- LLM owns the framing only. The model's job is to turn structured signal data into plain-English copy that matches vendor voice and Hearth tone. Nothing more.
+- System prompts explaining Hearth's vocabulary, tone, and the vendor's archetype are fixed per call type and should be prompt-cached. Variable signal data goes in the user message. This reduces cost and latency on every subsequent call.
+- Client-side calls (T4-33, T5-25, T5-26) use the existing Anthropic API pattern established in the platform. The API key is handled by the infrastructure — do not expose it in client code.
+- Server-side calls (T5-9, T5-11) run inside Supabase Edge Functions. The Anthropic API key lives in Supabase secrets alongside STRIPE_SECRET_KEY and Postmark credentials.
+- Batch API should be used for T5-9 nightly pre-computation. 50% cost reduction, no quality tradeoff, latency is irrelevant for overnight jobs.
+- Never use GenAI to make capacity, pricing, or fulfilment decisions. Copy generation only.
+
+**Cost framing**
+
+At current Haiku 4.5 pricing ($1/$5 per million input/output tokens), a typical recommendation or copy call costs under $0.000005. Even at 1,000 active vendors running multiple sessions daily, API cost is not a meaningful constraint. Architectural decisions should be driven by copy quality, latency, and maintainability — not cost optimisation.
+
 T5-9: Recommendation engine — matured intelligence
-The matured form of T4-28 (intelligence engine). Extends hearth-intelligence.js
-with geographic demand scoring and host intelligence, surfacing proactive
-recommendations directly inside Drop Studio and Home — not just in Insights
-after the fact.
 
-Geographic demand scoring:
-  - Customer clustering by outward postcode with recency and frequency weighting.
-    Identifies the vendor's strongest demand areas from customer_relationships
-    and order history. Output: ranked list of postcode areas with customer count,
-    order history, and a confidence score (Strong / Building / New territory).
-  - Drop Studio integration: Basics pane Audience Preview panel (T4-17) extended
-    to show a plain-English recommendation — "Your strongest area is BH18 with
-    34 customers. Your last two drops there averaged 28 orders. Consider placing
-    your next drop here." Recommendation fires when no host is selected and
-    customer data exists.
-  - Home dashboard integration: replaces the current generic next-action cards
-    with demand-scored recommendations. Maximum 3 cards. Each card names the
-    specific area, customer count, and a Create drop CTA pre-seeded with the
-    postcode. Shows "Signals are building — run more drops to unlock
-    recommendations" when data is insufficient.
-  - data_posture awareness: data-rich vendors (customer_data_posture rich or
-    partial) receive import-first and demand-targeting recommendations.
-    Data-light vendors receive host-first or drop-first recommendations.
-    This distinction must be explicit in the recommendation body copy, not
-    just in the archetype label.
+The matured form of T4-28 (intelligence engine). Extends hearth-intelligence.js with geographic demand scoring, host intelligence, and cross-category affinity matching, surfacing proactive recommendations directly inside Drop Studio and Home — not just in Insights after the fact.
 
-Host intelligence layer — two signals built on top of existing host and drop data:
+**Architecture decisions (locked before build)**
 
-(1) Repeat host cadence recommendations. When a vendor has run 2+ drops at
-the same host, the engine analyses the gap between them and the fill rate
-trend. If drops at that host are filling well and the gap is longer than 14
-days, the recommendation engine surfaces a cadence nudge: "Your last 3 drops
-at The Bell have averaged 87% capacity. You're running there monthly — could
-you explore fortnightly?" Cadence suggestion is context-aware: recurring event
-hosts (pub, sports club, workplace) get frequency nudges; one-off or event-type
-hosts (charity fundraiser, school fair) are excluded. Host type from the
-host_type field on the hosts table drives this distinction — pub, club, and
-workplace types are eligible; event and other types are not. Also surfaces
-multiple-window suggestions for eligible hosts: "Your Friday evening drop at
-The Bell is consistently strong — could you add a lunchtime window on the same
-day?" Links to Drop Studio with host pre-seeded.
+Three decisions must be confirmed at the start of the T5-9 build session rather than left open:
 
-(2) New host discovery recommendations. When a vendor has a successful host
-relationship (2+ drops, avg fill rate ≥ 70%), the engine recommends exploring
-similar host types in the same or adjacent postcode areas. Uses the vendor's
-existing host postcodes and the hosts table to identify host_type matches.
-Surfaces as a plain-English card: "You're doing well at pub drops in BH18.
-There are other venues of the same type in BH18 and neighbouring areas —
-exploring a new pub partnership could open a second demand channel." In V1
-this is a static recommendation with no live venue data. V2 scope (T5-9b,
-do not build now): integrate with Google Places API or similar to surface
-named nearby venues of the relevant type, with estimated audience size where
-available. This is the foundation for the matching engine in T5-4.
+(1) Postcode → coordinates via postcodes.io enrichment at write time. When a customer or vendor address is saved, call postcodes.io to retrieve lat/lng and write coordinates back to the relevant row. Enables proper proximity queries without full PostGIS adoption. PostGIS remains an option if spatial query volume warrants it later — postcodes.io is the pragmatic first step.
 
-Dependency: T4-28 (intelligence engine — complete), meaningful customer and
-order data from real drops, T6 complete so production data is real. Do not
-build the geographic scoring on synthetic test data — wait for Healthy Habits
-Cafe to run at least 2 drops before evaluating signal quality.
+(2) Nightly materialisation via Edge Function cron. Demand scores, host performance summaries, and postcode cluster rankings are pre-computed and written to dedicated tables overnight. Intelligence surfaces read pre-computed rows — they do not scan raw order and customer data on page load. This is the correct architecture from the start; retrofitting materialisation onto a live-compute model is expensive.
+
+(3) SQL owns signals, LLM owns framing. The SQL layer computes scores, gaps, fill rates, and trends. Those structured outputs are passed to Haiku 4.5 via the Anthropic API to generate the plain-English recommendation card copy. See GenAI shared principles above for hard rules.
+
+**Geographic demand scoring**
+
+Customer clustering by outward postcode with recency and frequency weighting. Identifies the vendor's strongest demand areas from customer_relationships and order history. Output: ranked list of postcode areas with customer count, order history, and a confidence score (Strong / Building / New territory).
+
+Drop Studio integration: Basics pane Audience Preview panel (T4-17) extended to show a plain-English recommendation — "Your strongest area is BH18 with 34 customers. Your last two drops there averaged 28 orders. Consider placing your next drop here." Recommendation fires when no host is selected and customer data exists.
+
+Home dashboard integration: replaces the current generic next-action cards with demand-scored recommendations. Maximum 3 cards. Each card names the specific area, customer count, and a Create drop CTA pre-seeded with the postcode. Shows "Signals are building — run more drops to unlock recommendations" when data is insufficient.
+
+data_posture awareness: data-rich vendors receive import-first and demand-targeting recommendations. Data-light vendors receive host-first or drop-first recommendations. This distinction must be explicit in the recommendation body copy.
+
+**Host intelligence layer**
+
+(1) Repeat host cadence recommendations. When a vendor has run 2+ drops at the same host, the engine analyses the gap between them and the fill rate trend. If drops at that host are filling well and the gap is longer than 14 days, the recommendation engine surfaces a cadence nudge: "Your last 3 drops at The Bell have averaged 87% capacity. You're running there monthly — could you explore fortnightly?" Cadence suggestion is context-aware: recurring event hosts (pub, sports club, workplace) get frequency nudges; one-off or event-type hosts (charity fundraiser, school fair) are excluded. Host type from the host_type field on the hosts table drives this distinction. Also surfaces multiple-window suggestions for eligible hosts.
+
+(2) Same-type geographic host discovery. When a vendor has a successful host relationship (2+ drops, avg fill rate ≥ 70%), the engine recommends exploring similar host types in the same or adjacent postcode areas. Uses the vendor's existing host postcodes and the hosts table to identify host_type matches. Surfaces as a plain-English recommendation card with a "Draft introduction" CTA linking to T5-26. In V1 this uses host records already in the platform. V2 scope (do not build now): integrate with Google Places API to surface named nearby venues not yet in the platform.
+
+(3) Cross-category affinity matching. Extends host discovery beyond same-type matching to audience alignment. A vendor's food category and positioning is matched against audience_description and audience_tags on the hosts table. Example: a healthy food vendor surfaces gym, sports club, and workplace wellness hosts as strong candidates even if those host types differ from the vendor's existing relationships. LLM-assisted matching is the mechanism — structured vendor and host profile data passed to Haiku 4.5, affinity scored and explained in plain English. Surfaced as a distinct recommendation card from same-type geographic discovery, with its own "Draft introduction" CTA linking to T5-26.
+
+Dependency: T4-28 (intelligence engine — complete), meaningful customer and order data from real drops. Do not build geographic scoring on synthetic test data — wait for Healthy Habits Cafe to run at least 2 drops before evaluating signal quality.
 
 T5-11: Comms engine V1
-Event-driven transactional and demand generation messaging triggered by order
-and drop lifecycle events. Built on Supabase Edge Functions calling Postmark
-for email. SMS via Twilio deferred to V2 — focus V1 on getting email right.
 
-Transactional triggers (V1 scope — email only):
-  - order_confirmed: fires immediately after order insert in order.html.
-    Sends to customer email if present. Contains order reference, items
-    ordered, fulfilment mode, collection point or delivery address, drop
-    timing. Vendor-branded with display_name and brand_primary_color.
-  - order_ready: fires when Service Board operator marks order as Ready
-    (the same event that currently opens the T3-10 notification modal).
-    Sends to customer if email present. "Your order is ready for
-    collection / on its way." Supplements rather than replaces the manual
-    modal — operator still sees the modal, email sends automatically in
-    parallel.
-  - drop_closing_soon: fires 2 hours before closes_at for any live drop
-    with orders placed. Sends to consented customers (contact_opt_in true)
-    who have not yet ordered this drop. "Orders close soon — don't miss
-    your slot." Maximum one per customer per drop.
+Event-driven transactional and demand generation messaging triggered by order and drop lifecycle events. Built on Supabase Edge Functions calling Postmark for email. SMS via Twilio deferred to V2 — focus V1 on getting email right.
 
-Proactive demand generation triggers (V1 scope — email only):
-  - drop_announced: fires when a drop status changes to scheduled or live.
-    Sends to all consented customers (contact_opt_in true) who have
-    previously ordered from this vendor OR who have previously ordered at
-    this host (if the drop has a host). Subject: "[Vendor name] has a drop
-    coming up — [drop name], [date]." Body: drop name, host name if present,
-    timing, capacity signal ("limited spots"), order link. This is the
-    primary demand generation trigger — it turns the vendor's earned customer
-    asset into active pre-drop promotion. Maximum one drop_announced message
-    per customer per drop.
-  - drop_reminder: fires 24 hours before closes_at for drops with remaining
-    capacity. Sends only to consented customers in the vendor's audience who
-    have NOT yet placed an order for this drop. "Orders close tomorrow —
-    [drop name] at [host], [time]." Targets non-orderers who have previously
-    engaged with the vendor. Maximum one drop_reminder per customer per drop.
+**GenAI integration**
 
-Hard rules:
-  - Maximum 2 automated messages per customer per drop across all
-    non-transactional triggers combined (drop_announced + drop_reminder).
-    Transactional messages (order_confirmed, order_ready) do not count
-    toward this limit — they are responses to customer actions.
-  - Only send demand generation messages to customers where contact_opt_in
-    is true on at least one previous order from this vendor.
-  - consent_status on customer_relationships must be 'granted' or 'imported'
-    (not pending or revoked).
-  - Vendor-sourced imported customers (T4-14) are eligible if lawful_basis
-    was declared at import.
-  - Host-audience targeting (customers who ordered at this host from a
-    different vendor) requires explicit host consent chain — flagged for
-    T5-18. Do not implement cross-vendor host targeting in V1. Target the
-    vendor's own audience only.
-  - All sends logged to a new comms_log table (customer_id, drop_id, trigger,
-    sent_at, channel, status) for audit and deduplication. Design
-    channel-agnostic from the start so SMS can be added without schema changes.
+Email body copy is generated via the Anthropic API (Haiku 4.5) inside the Edge Function at send time, not from static string literal templates. Each trigger passes structured event data (order reference, drop name, timing, vendor name, host name where present, fulfilment mode) plus the vendor's brand voice settings from Brand Hearth to the API. The model generates the connecting prose and the framing of the message in the vendor's voice. Subject lines, CTAs, order references, times, and prices are deterministic — templated and rendered separately, never generated. See GenAI shared principles for hard rules.
 
-Infrastructure required before building:
-  - T6-1 (domain — lovehearth.co.uk must be live for sender addresses)
-  - T6-6 (Postmark configured with SPF/DKIM/DMARC)
-  - Supabase Edge Function runtime available (already used for invite-vendor)
+The Anthropic API key lives in Supabase secrets alongside STRIPE_SECRET_KEY and the Postmark credentials. The Edge Function pattern is the same as invite-vendor and create-stripe-connect-link.
 
-Email template design: vendor-branded header using display_name and
-brand_primary_color, Hearth footer. Plain-text fallback required.
-Templates stored as Edge Function string literals initially.
+**Transactional triggers (V1 scope — email only)**
 
-SMS (Twilio) for all triggers including demand generation is V2 scope.
-Consent and eligibility rules are identical across channels — the
-comms_log and eligibility logic must be channel-agnostic from day one.
+order_confirmed: fires immediately after order insert in order.html. Sends to customer email if present. Contains order reference, items ordered, fulfilment mode, collection point or delivery address, drop timing. Vendor-branded with display_name and brand_primary_color.
+
+order_ready: fires when Service Board operator marks order as Ready (the same event that currently opens the T3-10 notification modal). Sends to customer if email present. Supplements rather than replaces the manual modal — operator still sees the modal, email sends automatically in parallel.
+
+drop_closing_soon: fires 2 hours before closes_at for any live drop with orders placed. Sends to consented customers (contact_opt_in true) who have not yet ordered this drop. Maximum one per customer per drop.
+
+**Proactive demand generation triggers (V1 scope — email only)**
+
+drop_announced: fires when a drop status changes to scheduled or live. Sends to all consented customers who have previously ordered from this vendor OR who have previously ordered at this host (if the drop has a host). Maximum one drop_announced message per customer per drop.
+
+drop_reminder: fires 24 hours before closes_at for drops with remaining capacity. Sends only to consented customers who have NOT yet placed an order for this drop. Maximum one drop_reminder per customer per drop.
+
+**Hard rules**
+
+Maximum 2 automated messages per customer per drop across all non-transactional triggers combined (drop_announced + drop_reminder). Transactional messages (order_confirmed, order_ready) do not count toward this limit. Only send demand generation messages to customers where contact_opt_in is true on at least one previous order from this vendor. consent_status on customer_relationships must be 'granted' or 'imported'. Vendor-sourced imported customers (T4-14) are eligible if lawful_basis was declared at import. Host-audience targeting requires explicit host consent chain — flagged for T5-18, do not implement cross-vendor host targeting in V1. All sends logged to a new comms_log table (customer_id, drop_id, trigger, sent_at, channel, status) — design channel-agnostic from the start so SMS can be added without schema changes.
+
+Infrastructure required before building: T6-1 (domain — lovehearth.co.uk must be live for sender addresses), T6-6 (Postmark configured with SPF/DKIM/DMARC).
 
 Dependency: T3-9 (customer capture — complete), T6-1, T6-6.
 
@@ -1343,6 +1311,58 @@ Social copy generation uses the Anthropic API from the frontend —
 use the Claude-in-artifact pattern already established in the platform.
 Poster generation is pure client-side HTML/CSS — no external dependency
 beyond QR code API already in use.
+
+T5-26: Host discovery outreach
+
+When the intelligence engine (T5-9) surfaces a prospective host recommendation — whether via same-type geographic discovery or cross-category affinity matching — the vendor needs a way to act on it. This entry covers the outreach capability in two phases.
+
+**V1 — vendor-mediated, no host login required**
+
+A "Draft introduction" CTA appears on each host discovery recommendation card generated by T5-9. The vendor triggers a generated introduction message drawing on: their own brand voice and display name from Brand Hearth, headline facts from their strongest existing host relationships (fill rates, average orders, drop cadence — written deterministically from SQL, never generated), the prospective host's audience description and audience_tags from the hosts table where available, and a plain-English framing of the mutual benefit specific to the vendor's food category and the host's audience type.
+
+Vendor reviews, edits, and sends directly — email, phone, or in person. The platform generates the copy and provides the key facts; the vendor owns the contact channel. No host authentication required.
+
+Outreach outcome recorded by the vendor on the host record. Add relationship_status progression to host records if not already present: prospect → approached → responded → active. Vendor updates this manually after making contact. The hosts.html Host Directory should surface relationship_status as a visible column or filter so the vendor can track their outreach pipeline.
+
+V1 GenAI pattern: client-side, Haiku 4.5. Structured signal data in, introduction copy out. Deterministic facts (fill rates, order counts, drop history) passed as structured data and rendered separately — never generated. See GenAI shared principles for hard rules.
+
+**V2 — platform-mediated outreach**
+
+Requires T5-27 (host platform participation) Phases 1–3 to be complete. When hosts have their own authenticated accounts and an inbox, the vendor sends the introduction through the platform rather than copying it into an external channel. The introduction lands in the host's inbox with the vendor's profile and key performance data attached. Host can respond through the platform. Vendor sees response status. This closes the outreach loop that V1 leaves open and gives the platform visibility of partnership formation — the foundation for the T5-4 marketplace evolution.
+
+Dependency: T5-9 (host discovery recommendations). V2 additionally depends on T5-27 Phases 1–3.
+
+T5-27: Host platform participation
+
+Hosts currently exist as vendor-owned records. The read-only host-view.html is the entirety of the host-facing experience. This workstream elevates hosts to authenticated platform participants with their own identity, inbox, and view of the platform. Treat as a parallel tier to T5-A (which did the same for vendors) — significant scope, build incrementally across six phases.
+
+**Phase 1 — Host identity and login**
+
+Host account creation (email, password) with matching to an existing host record by email or vendor invite link. Auth flow mirrors vendor auth: signup → callback → session-aware resolution. Host record gains auth_user_id. resolveHost() pattern analogous to resolveVendor(). Hosts authenticated separately from vendors — different session namespace, different post-auth routing. Existing host-view.html remains unauthenticated for passive drop viewing; authenticated hosts get access to additional surfaces.
+
+**Phase 2 — Host self-onboarding**
+
+A host discovering Hearth independently (not via a vendor) can register their venue, declare audience size and description, add service windows and comms channels, and accept host terms. Creates a host record in a discoverable state — vendors and the intelligence engine can surface it as a prospective partner. This is the supply side of the T5-4 marketplace evolution: hosts making themselves available; vendors finding and approaching them. Distinct from the vendor-initiated host creation flow already in place, which remains unchanged.
+
+**Phase 3 — Host inbox and platform-mediated outreach**
+
+Host inbox surface where vendor introductions land (T5-26 V2). Host receives a notification when a vendor sends an introduction, can review the vendor's profile and existing drop performance data, and respond through the platform. Vendor sees response status in their outreach pipeline. This phase is the prerequisite for T5-26 V2 and closes the outreach loop.
+
+**Phase 4 — Host-managed profile**
+
+Hosts edit their own audience description, service windows, comms channels, and availability directly rather than the vendor managing it on their behalf. Vendor retains read access to the host profile for drops they have run together. Host owns their data; the vendor relationship becomes a link, not ownership. Resolves the current model where host profile accuracy depends entirely on vendor diligence.
+
+**Phase 5 — Host analytics surface**
+
+Host-facing view of their own performance: drops hosted, total orders fulfilled, audience reached, revenue share earned, growth over time. The compounding asset made visible from the host's perspective, not just the vendor's. Motivation for hosts to stay active on the platform and attract further vendor partnerships. Data already exists in v_host_performance — this phase is primarily a new host-facing UI surface reading from existing views.
+
+**Phase 6 — Host-initiated partnerships**
+
+Hosts browse vendors on the platform, express interest in hosting a drop, and initiate the conversation. Vendor receives the approach in their inbox. Completes the two-sided model implied by T5-4 — supply (hosts) and demand (vendors) can find each other without a manual introduction from either side.
+
+Dependency chain: T5-A (vendor auth — complete) provides the auth pattern to follow. T4-16 (hosts as first-class entities — complete) provides the data model foundation. T5-26 V1 ships before any phase of T5-27. Phases 1–3 are prerequisites for T5-26 V2. Phases 4–6 depend on meaningful host adoption — do not build ahead of evidence that hosts want platform participation.
+
+Relationship to T5-4 (marketplace evolution): T5-27 is the infrastructure T5-4 assumes. T5-4 should not be built until at least Phases 1–3 of T5-27 are complete and validated with real hosts.
 
 ### Tier 5-A — Auth workstream
 
