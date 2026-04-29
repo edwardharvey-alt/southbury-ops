@@ -3357,111 +3357,66 @@
       };
     }
 
+    function buildAssignmentItem(row, index) {
+      const keyParts = String(row.key || "").split(":");
+      const keyType = normalizeItemType(keyParts[0] || "");
+      const keyId = keyParts[1] || null;
+      const itemType = normalizeItemType(row.menu_item_type || row.item_type || keyType);
+
+      const productId =
+        itemType === "product"
+          ? (row.product_id || (keyType === "product" ? keyId : null))
+          : null;
+
+      const bundleId =
+        itemType === "bundle"
+          ? (row.bundle_id || (keyType === "bundle" ? keyId : null))
+          : null;
+
+      if (!itemType) {
+        throw new Error(`Enabled menu row is missing item type: ${row.name || row.key || "unknown row"}`);
+      }
+
+      if (itemType === "product" && !productId) {
+        throw new Error(`Enabled product row is missing product_id: ${row.name || row.key || "unknown row"}`);
+      }
+
+      if (itemType === "bundle" && !bundleId) {
+        throw new Error(`Enabled bundle row is missing bundle_id: ${row.name || row.key || "unknown row"}`);
+      }
+
+      return {
+        item_type: itemType,
+        menu_item_type: itemType,
+        product_id: itemType === "product" ? productId : null,
+        bundle_id: itemType === "bundle" ? bundleId : null,
+        is_available: true,
+        price_override_pence:
+          row.price_override_pence === "" || row.price_override_pence == null
+            ? null
+            : Number(row.price_override_pence),
+        stock_limit:
+          row.stock_limit === "" || row.stock_limit == null
+            ? null
+            : Number(row.stock_limit),
+        sort_order:
+          row.sort_order == null
+            ? (index + 1) * 10
+            : Number(row.sort_order)
+      };
+    }
+
     async function saveAssignments() {
       const enabledRows = getEnabledAssignments();
+      const items = enabledRows.map((row, index) => buildAssignmentItem(row, index));
 
-      const cleanedRows = enabledRows.map((row, index) => {
-        const keyParts = String(row.key || "").split(":");
-        const keyType = normalizeItemType(keyParts[0] || "");
-        const keyId = keyParts[1] || null;
-        const itemType = normalizeItemType(row.menu_item_type || row.item_type || keyType);
-
-        const productId =
-          itemType === "product"
-            ? (row.product_id || (keyType === "product" ? keyId : null))
-            : null;
-
-        const bundleId =
-          itemType === "bundle"
-            ? (row.bundle_id || (keyType === "bundle" ? keyId : null))
-            : null;
-
-        if (!itemType) {
-          throw new Error(`Enabled menu row is missing item type: ${row.name || row.key || "unknown row"}`);
-        }
-
-        if (itemType === "product" && !productId) {
-          throw new Error(`Enabled product row is missing product_id: ${row.name || row.key || "unknown row"}`);
-        }
-
-        if (itemType === "bundle" && !bundleId) {
-          throw new Error(`Enabled bundle row is missing bundle_id: ${row.name || row.key || "unknown row"}`);
-        }
-
-        return {
-          drop_id: state.selectedDropId,
-          item_type: itemType,
-          menu_item_type: itemType,
-          product_id: itemType === "product" ? productId : null,
-          bundle_id: itemType === "bundle" ? bundleId : null,
-          is_available: true,
-          price_override_pence:
-            row.price_override_pence === "" || row.price_override_pence == null
-              ? null
-              : Number(row.price_override_pence),
-          stock_limit:
-            row.stock_limit === "" || row.stock_limit == null
-              ? null
-              : Number(row.stock_limit),
-          sort_order:
-            row.sort_order == null
-              ? (index + 1) * 10
-              : Number(row.sort_order)
-        };
+      const { data, error } = await supabase.functions.invoke("assign-menu-items", {
+        body: { vendor_id: state.vendorId, drop_id: state.selectedDropId, items }
       });
+      if (error) throw error;
+      if (!data || data.error) throw new Error(data?.error || "Unable to save menu items");
 
-      const productRows = cleanedRows.filter((r) => r.item_type === "product");
-      const bundleRows  = cleanedRows.filter((r) => r.item_type === "bundle");
-
-      if (productRows.length) {
-        const { error: productUpsertError } = await supabase
-          .from("drop_menu_items")
-          .upsert(productRows, { onConflict: "drop_id,product_id" });
-
-        if (productUpsertError) {
-          console.error("drop_menu_items product upsert failed", {
-            productRows,
-            productUpsertError
-          });
-          throw productUpsertError;
-        }
-      }
-
-      if (bundleRows.length) {
-        const { error: bundleUpsertError } = await supabase
-          .from("drop_menu_items")
-          .upsert(bundleRows, { onConflict: "drop_id,bundle_id" });
-
-        if (bundleUpsertError) {
-          console.error("drop_menu_items bundle upsert failed", {
-            bundleRows,
-            bundleUpsertError
-          });
-          throw bundleUpsertError;
-        }
-      }
-
-      const enabledProductIds = new Set(cleanedRows.filter((r) => r.product_id).map((r) => r.product_id));
-      const enabledBundleIds = new Set(cleanedRows.filter((r) => r.bundle_id).map((r) => r.bundle_id));
-
-      const idsToDelete = (state.dropMenuItems || [])
-        .filter((row) => {
-          const itemType = row.menu_item_type || row.item_type;
-          if (itemType === "product") return row.product_id && !enabledProductIds.has(row.product_id);
-          if (itemType === "bundle") return row.bundle_id && !enabledBundleIds.has(row.bundle_id);
-          return false;
-        })
-        .map((row) => row.id)
-        .filter(Boolean);
-
-      if (idsToDelete.length) {
-        const { error: deleteError } = await supabase
-          .from("drop_menu_items")
-          .delete()
-          .in("id", idsToDelete);
-
-        if (deleteError) throw deleteError;
-      }
+      state.dropMenuItems = data.items || [];
     }
 
     function generateSeriesOccurrences() {
