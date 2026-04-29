@@ -555,5 +555,62 @@ Section 8b.1.a step 1 plus the recurring-toggle path:
 If the operator's UI walk does not match these expectations, stop
 and investigate before continuing to Commits 11/12.
 
+### Checkpoint 3 — UI walk gate (operator-side; static gates green here)
+
+Audit Section 8b.1.a/b/c is the integrated UI happy-path walk
+across three fixtures: Test 11 (full call-site walk), Test 12
+(Stripe-gate cross-reference post-dropStatus removal), and
+southbury-farm-pizza (production-shaped data regression check).
+
+**Build-session gates (verified inside this commit):**
+
+| Gate | Result |
+|---|---|
+| Single-line `.from("drops").(insert\|update\|delete\|upsert)` grep | zero matches |
+| Single-line `.from("drop_menu_items").(insert\|update\|delete\|upsert)` grep | zero matches |
+| Multi-line scan (awk over six-line window) | zero matches |
+| `grep -n "dropStatus\|#dropStatus" drop-manager.html` | zero matches |
+| `grep -n "Capacity Category is required" drop-manager.html` | zero matches |
+
+The four static invariants are the build-session contract.
+Static parity with audit Section 8b.2 is achieved; the file
+contains zero direct-PostgREST writes against `drops` or
+`drop_menu_items`, zero references to the dead `dropStatus`
+element, and the retired `capacity_category` throw is gone.
+
+**UI walks — operator-side prerequisite (manual, post-merge):**
+
+The build environment cannot exercise these (no browser, no
+DevTools, no Network tab — Critical rule #13). The operator
+runs them on the developer's Mac before moving PR #201 out of
+draft. The walks are recorded for future reference here so
+the contract is explicit.
+
+| Fixture | Audit Section | What the operator confirms |
+|---|---|---|
+| `?vendor=test-11` | 8b.1.a | Steps 1–5: create drop → save assignments (call site 1) → duplicate (call site 6) → add two windows (call sites 5 + 7) → remove a window (call site 8). For each step: action succeeds, exactly one outbound POST per step (no double-fire), no console errors. |
+| `?vendor=test-12` | 8b.1.b | Stripe gate banner present, publish button disabled with "Finish payment setup in Setup before publishing drops.", `document.getElementById("dropStatus")` returns `null`, Status row in Review summary still renders read-only. |
+| `?vendor=southbury-farm-pizza` | 8b.1.c | Drop list renders, spot-check 3–5 drop cards across statuses, capacity_category text on 3+ existing drops still renders, draft drop edit (add/remove a menu item) round-trips through assign-menu-items cleanly. |
+
+**The hardest single assertion across all three walks** is
+audit Section 8b.1.a step 5 — the orders-bearing window
+removal must not delete a drop. Per audit Section 5.2 / 8b.3,
+this is the only failure class that triggers automatic
+rollback (8b.3.d). Every other failure is fix-forward.
+Phase 1's Test 5 smoke (HTTP 409 + drop+order both intact)
+confirmed the server-side refusal; the operator's UI walk
+re-confirms the client-side migration didn't introduce a
+bypass path.
+
+If any UI walk fails:
+
+- Capture console output and Network tab HAR.
+- If failure class is data-loss / security-regression
+  (audit Section 8b.3.a), trigger rollback per Section
+  8b.3.b. Otherwise, fix-forward.
+- Cosmetic UI failures (toast wording, spinner timing, etc.)
+  are fix-forward only — not a rollback trigger
+  (audit Section 8b.3.d).
+
 
 
