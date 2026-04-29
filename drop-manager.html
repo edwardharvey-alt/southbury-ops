@@ -3741,13 +3741,6 @@
 
       if (sourceError) throw sourceError;
 
-      const { data: sourceAssignments, error: assignmentsError } = await supabase
-        .from("drop_menu_items")
-        .select("*")
-        .eq("drop_id", targetId);
-
-      if (assignmentsError) throw assignmentsError;
-
       let windowCount = 1;
       if (sourceDrop.host_id && sourceDrop.delivery_start) {
         const sourceDate = new Date(sourceDrop.delivery_start);
@@ -3782,8 +3775,9 @@
       const windowName = `${baseName} \u2014 Window ${windowCount + 1}`;
       const windowSlugBase = slugify(windowName);
 
+      const { vendor_id: _ignoredVendorId, ...sourceFields } = getDropPayload(sourceDrop);
       const windowPayload = {
-        ...getDropPayload(sourceDrop),
+        ...sourceFields,
         slug: buildUniqueSlug(windowSlugBase),
         name: windowName,
         status: "draft",
@@ -3796,45 +3790,22 @@
         ...(windowGroupId ? { window_group_id: windowGroupId } : {})
       };
 
-      const { data: insertedDrop, error: insertDropError } = await supabase
-        .from("drops")
-        .insert(windowPayload)
-        .select("id")
-        .single();
-
+      const { data: insertedDrop, error: insertDropError } = await supabase.functions.invoke("create-drop", {
+        body: { vendor_id: state.vendorId, fields: windowPayload }
+      });
       if (insertDropError) throw insertDropError;
-
-      if ((sourceAssignments || []).length) {
-        const rows = sourceAssignments
-          .map((row) => {
-            const itemType = row.menu_item_type || row.item_type;
-            return {
-              drop_id: insertedDrop.id,
-              item_type: itemType,
-              menu_item_type: itemType,
-              product_id: row.product_id,
-              bundle_id: row.bundle_id,
-              is_available: row.is_available,
-              price_override_pence: row.price_override_pence,
-              stock_limit: row.stock_limit,
-              sort_order: row.sort_order
-            };
-          })
-          .filter((row) =>
-            row.item_type &&
-            (
-              (row.item_type === "product" && row.product_id) ||
-              (row.item_type === "bundle" && row.bundle_id)
-            )
-          );
-
-        if (rows.length) {
-          const { error: insertAssignmentsError } = await supabase
-            .from("drop_menu_items")
-            .insert(rows);
-          if (insertAssignmentsError) throw insertAssignmentsError;
-        }
+      if (!insertedDrop || insertedDrop.error) {
+        throw new Error(insertedDrop?.error || "Window creation failed");
       }
+
+      const { error: assignError } = await supabase.functions.invoke("assign-menu-items", {
+        body: {
+          vendor_id: state.vendorId,
+          drop_id: insertedDrop.id,
+          clone_from_drop_id: targetId
+        }
+      });
+      if (assignError) throw assignError;
 
       state.selectedDropId = insertedDrop.id;
       state.currentStage = "timing";
