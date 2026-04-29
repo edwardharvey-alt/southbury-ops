@@ -442,5 +442,59 @@ The PR description names every UI walk that the operator must run
 post-merge before moving the PR out of draft. The static gates are
 flagged as build-session-verified.
 
+### Checkpoint 1 — five call sites migrated (build-session, static)
+
+Call sites 1 (`saveAssignments`), 5 (`handleCreateEventWindows`
+window_group_id stamp), 6 (`duplicateDrop`), 7 (`createEventWindow`),
+and 8 (`renderExistingWindows` confirm-remove) migrated. Static
+verification:
+
+```
+$ grep -nE 'from\("drops"\).*\.(insert|update|delete|upsert)' drop-manager.html
+$ grep -nE 'from\("drop_menu_items"\).*\.(insert|update|delete|upsert)' drop-manager.html
+(both return zero)
+```
+
+The audit's single-line greps return zero matches. A multi-line
+scan (awk over `.from("drops|drop_menu_items")` followed within six
+lines by `.insert`, `.update`, `.delete`, or `.upsert`) shows three
+remaining writes — all in the `saveDrop` series branch. They are
+the call sites Phase 2 has not yet migrated:
+
+```
+3522: .from("drops") .update({ series_id, series_position, status: "draft" })  → call site 2 (Commit 8)
+3557: .from("drops") .insert(seriesDrops)                                       → call site 3 (Commit 9)
+3583: .from("drop_menu_items") .insert(allAssignmentRows)                       → call site 4 (Commit 9)
+```
+
+These three lines are the entire remaining surface. Commits 8 and
+9 retire them.
+
+Other Edge Function preconditions checked at this checkpoint:
+
+- `update-drop`'s ALLOWED_FIELDS now includes `window_group_id`
+  with explicit uuid-or-null validation (Commit 3 added it).
+  `series_id` and `series_position` not yet added — Commit 8 lands
+  those alongside the call-site-2 migration.
+- `create-drop`'s ALLOWED_FIELDS already includes `window_group_id`,
+  `series_id`, `series_position` (Phase 1 verification).
+- `assign-menu-items` accepts both `items[]` and `clone_from_drop_id`
+  (Phase 1 deployment).
+
+UI walk — manual prerequisite for the human operator (cannot run
+inside the build session per Critical rule #13). Per audit Section
+8b.1.a steps 2–5, walk the following on Test 11 in Chrome with
+DevTools → Network tab open:
+
+| Step | Surface | Expected POST |
+|---|---|---|
+| 2 | Open a drop, add 3+ menu items, save | `/functions/v1/assign-menu-items` (no direct PostgREST writes) |
+| 3 | Drop card kebab → Duplicate | `/functions/v1/create-drop` + `/functions/v1/assign-menu-items` |
+| 4 | Timing pane → Multiple → save two windows | `/functions/v1/update-drop` (window_group_id stamp) + 2× `/functions/v1/create-drop` + 2× `/functions/v1/assign-menu-items` |
+| 5 | renderExistingWindows → Remove on a sibling | `/functions/v1/remove-event-window` (no other writes) |
+
+If the operator's UI walk does not match these expectations, stop
+and investigate before continuing to Commits 8/9.
+
 
 
