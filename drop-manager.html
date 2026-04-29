@@ -3517,61 +3517,50 @@
           state.drop = { ...state.drop, ...dropData, series_id: seriesId, series_position: 1 };
           await saveAssignments();
 
-          // Fetch assignments for the template drop to copy to series drops
-          const { data: templateAssignments, error: assignErr } = await supabase
-            .from("drop_menu_items")
-            .select("*")
-            .eq("drop_id", state.selectedDropId);
-          if (assignErr) throw assignErr;
-
-          // Generate remaining drops (position 2+)
+          // Generate remaining drops (position 2+) via per-sibling create-drop loop.
+          // Each sibling creates the drop row, then clones the template's menu items
+          // via assign-menu-items clone-mode (the source-fetch happens server-side
+          // per audit Section 2.6 hydration sequence).
+          //
+          // Partial-failure semantics (audit Section 10.4 / 4.3): abort on first
+          // failure. Earlier siblings stay persisted; the user sees the named
+          // position in the error message and can resume from the drop list.
           if (occurrences.length > 1) {
+            const totalOccurrences = occurrences.length;
             const remainingOccurrences = occurrences.slice(1);
-            const seriesDrops = remainingOccurrences.map((occ, idx) => {
+            const { vendor_id: _ignoredVendorId, ...siblingBase } = payload;
+
+            for (let idx = 0; idx < remainingOccurrences.length; idx++) {
+              const occ = remainingOccurrences[idx];
               const position = idx + 2;
-              return {
-                ...payload,
-                id: crypto.randomUUID(),
+              const siblingFields = {
+                ...siblingBase,
                 slug: buildUniqueSlug(`${payload.slug}-${position}`),
+                series_id: seriesId,
                 series_position: position,
                 delivery_start: combineDateTime(occ.dateStr, occ.fulfilment_start),
                 delivery_end: combineDateTime(occ.dateStr, occ.fulfilment_end),
                 closes_at: occ.order_close_time ? combineDateTime(occ.dateStr, occ.order_close_time) : null,
-                opens_at: null, // Recurring drops after the first don't inherit a specific opens_at
+                opens_at: null,
                 status: "draft"
               };
-            });
 
-            const { error: insertError } = await supabase
-              .from("drops")
-              .insert(seriesDrops);
-            if (insertError) throw insertError;
-
-            // Copy menu assignments to each new drop
-            if ((templateAssignments || []).length) {
-              const allAssignmentRows = [];
-              seriesDrops.forEach((seriesDrop) => {
-                templateAssignments.forEach((row) => {
-                  const itemType = row.menu_item_type || row.item_type;
-                  allAssignmentRows.push({
-                    drop_id: seriesDrop.id,
-                    item_type: itemType,
-                    menu_item_type: itemType,
-                    product_id: row.product_id,
-                    bundle_id: row.bundle_id,
-                    is_available: row.is_available,
-                    price_override_pence: row.price_override_pence,
-                    stock_limit: row.stock_limit,
-                    sort_order: row.sort_order
-                  });
-                });
+              const { data: createdSibling, error: createErr } = await supabase.functions.invoke("create-drop", {
+                body: { vendor_id: state.vendorId, fields: siblingFields }
               });
+              if (createErr || !createdSibling || createdSibling.error) {
+                throw new Error(`Failed creating series occurrence ${position} of ${totalOccurrences}. Occurrences 1-${position - 1} were created as drafts; you can edit the series from the drop list to add remaining windows.`);
+              }
 
-              if (allAssignmentRows.length) {
-                const { error: assignInsertError } = await supabase
-                  .from("drop_menu_items")
-                  .insert(allAssignmentRows);
-                if (assignInsertError) throw assignInsertError;
+              const { error: assignErr } = await supabase.functions.invoke("assign-menu-items", {
+                body: {
+                  vendor_id: state.vendorId,
+                  drop_id: createdSibling.id,
+                  clone_from_drop_id: state.selectedDropId
+                }
+              });
+              if (assignErr) {
+                throw new Error(`Failed creating series occurrence ${position} of ${totalOccurrences}. Occurrences 1-${position - 1} were created as drafts; you can edit the series from the drop list to add remaining windows.`);
               }
             }
 
@@ -3581,7 +3570,7 @@
             renderEverything();
             isDirty = false;
             setSaveState("saved");
-            if (showSuccess) showInlineSuccess(`Series created — ${occurrences.length} drops generated`);
+            if (showSuccess) showInlineSuccess(`Series created — ${totalOccurrences} drops generated`);
           } else {
             await loadDrops();
             await loadSelectedDrop();
