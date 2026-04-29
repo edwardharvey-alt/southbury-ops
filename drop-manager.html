@@ -3455,7 +3455,6 @@
 
       let dropData = readDropFromForm();
       if (!dropData.slug) throw new Error("Drop Link Name is required.");
-      if (!dropData.capacity_category_id || !dropData.capacity_category) throw new Error("Capacity Category is required.");
 
       dropData.slug = buildUniqueSlug(dropData.slug, state.selectedDropId);
       byId("dropSlug").value = dropData.slug;
