@@ -219,3 +219,115 @@ The client-supplied `capacity_category` text was discarded; the server reconcile
 
 All six gates green. No vendor data mutated by any smoke (Test 6b reconciled `capacity_category` from `mains` → `mains` via the FK, which was already the persisted state — no behavioural change). Phase 1 server-side work is complete.
 
+## Phase 2 handoff
+
+Phase 1 is complete. Phase 2 begins in a fresh chat against the same
+branch (`claude/build-pr-4b-server-side`) and migrates the eight
+client call sites in `drop-manager.html` per audit Section 4. Phase 1
+introduces no client edits — the Edge Functions and the W-4 guard
+are deployed and validated, but `drop-manager.html` still issues the
+direct-PostgREST writes documented in audit Section 1.
+
+### Phase 1 commit log (in order)
+
+```
+eb2cd9b docs: PR 4b build session start
+6cb95a0 feat: assign_drop_menu_items RPC migration
+c90917e feat: remove_event_window RPC migration
+03423a0 docs: Phase 1 checkpoint 1 verified
+74969d3 feat: assign-menu-items Edge Function
+e8632b4 feat: remove-event-window Edge Function
+46c3a5f docs: Phase 1 checkpoint 2 verified — orphan capacity_category count = 0
+66f61eb feat: update-drop W-4 server guard
+822eed9 docs: Phase 1 checkpoint 3 — all 8a smokes green
+```
+
+### Edge Functions deployed (project `tvqhhjvumgumyetvpgid`)
+
+From `supabase functions list` at the close of Phase 1:
+
+| Function | Version | Last deployed (UTC) |
+|---|---|---|
+| `assign-menu-items` | 1 | 2026-04-29 21:12:09 |
+| `remove-event-window` | 1 | 2026-04-29 21:13:15 |
+| `update-drop` (W-4 guard) | 2 | 2026-04-29 21:14:27 |
+
+### RPCs migrated
+
+Both `security definer` with `set search_path = public, pg_temp`,
+verified via `pg_proc` query in Checkpoint 1:
+
+- `public.assign_drop_menu_items(p_drop_id uuid, p_items jsonb)` —
+  bulk-replace + clone-mode reconcile, returns `setof drop_menu_items`.
+  Source: `supabase/migrations/20260429210900_assign_drop_menu_items.sql`.
+- `public.remove_event_window(p_drop_id uuid)` — atomic delete +
+  conditional survivor clear, returns `table (deleted_drop_id uuid,
+  survivor_drop_id uuid, cascaded_drop_menu_items integer,
+  group_dissolved boolean)`.
+  Source: `supabase/migrations/20260429211000_remove_event_window.sql`.
+
+Both function comment headers enumerate the three downstream
+corruption surfaces named in audit Section 5.2 (scorecard.html
+new-vs-returning, hearth-intelligence customer segmentation,
+order_status_events audit history) so a future contributor cannot
+silently break the safety property.
+
+### Smoke results
+
+All six 8a smokes green. Captured in the Checkpoint 3 section above
+with response bodies, pre/post SQL assertions on the count-bearing
+smokes (Test 1, Test 3, Test 5), and a positive-control follow-up
+on Test 6 confirming the existing reconciliation path still works.
+
+### Phase 2 scope (in fresh chat)
+
+Phase 2 implements audit Section 4 in `drop-manager.html`:
+
+1. Call site 1 (`saveAssignments`) → `assign-menu-items` bulk-replace.
+2. Call site 2 (`saveDrop` series template promotion) → `update-drop`
+   carries `series_id` / `series_position`; drop the `status: "draft"`
+   no-op write.
+3. Call site 3 (`saveDrop` series sibling INSERT) → per-sibling
+   `create-drop` loop using the widened whitelist landed in PR 4a.
+4. Call site 4 (`saveDrop` series clone menus) → per-sibling
+   `assign-menu-items` clone-mode (interleaved with call site 3).
+5. Call site 5 (`handleCreateEventWindows` window_group_id stamp) →
+   `update-drop` carries `window_group_id`.
+6. Call site 6 (`duplicateDrop`) → `create-drop` + `assign-menu-items`
+   clone-mode.
+7. Call site 7 (`createEventWindow`) → `create-drop` +
+   `assign-menu-items` clone-mode.
+8. Call site 8 (`renderExistingWindows` confirm-remove) →
+   `remove-event-window`. The parent-clear inside
+   `renderExistingWindows()` (lines 4057–4070) is also retired,
+   subsumed by the RPC's survivor-clear.
+
+Plus the two retirements parked from Phase 1:
+- Deliverable 4 — remove the dead `dropStatus` dropdown (audit
+  Section 6).
+- Deliverable 5 — retire the `capacity_category` client-throw at
+  `drop-manager.html:3519` (audit Section 7.1). The server-side W-4
+  guard backing this retirement is already live.
+
+Phase 2 verification surfaces (audit Section 8b) cover UI
+happy-paths on Test 11 / Test 12 / southbury fixtures, the two-line
+direct-PostgREST grep regression check on `drop-manager.html`, and
+the rollback playbook. Those run after Phase 2 lands but before
+the draft PR is moved out of draft.
+
+### Preconditions confirmed for Phase 2
+
+- `update-drop`'s ALLOWED_FIELDS already includes `series_id`,
+  `series_position`, `window_group_id` per audit Section 4.0
+  preconditions. Verified via inspection: PR 4a widened the
+  whitelist; the W-4 guard added in Phase 1 sits before the
+  capacity-category reconciliation block and does not interact
+  with the new series / window fields.
+- `create-drop`'s ALLOWED_FIELDS already includes `window_group_id`,
+  `series_id`, `series_position` (verified at
+  `supabase/functions/create-drop/index.ts:35–37`). No further
+  whitelist widening required for clone-mode at creation.
+- The RPC + Edge Function pair for `assign-menu-items` accepts both
+  `items[]` and `clone_from_drop_id`. Phase 2 client call sites 4,
+  6, 7 use clone-mode; call site 1 uses bulk-replace mode.
+
