@@ -1,3 +1,21 @@
+> # ⚠️ ARCHIVED — DIAGNOSIS WAS INCORRECT — DO NOT IMPLEMENT
+>
+> **This audit document is preserved for historical reference only. Its core diagnosis is wrong and its proposed fixes have been rolled back. Do not implement anything in this document.**
+>
+> **What this document got wrong:** The audit framed T5-B22 as an RLS policy asymmetry on `order_items` (the `{public}` vs `{anon}` role pattern). PR 1 was applied to production on 30 April 2026 and DID NOT fix the bug — the customer flow continued to fail with the identical 401/42501 error after the migration. The migration was rolled back the same day with zero production impact. Diagnostic SQL run as `SET ROLE anon` afterwards proved that anon CAN insert into `order_items` directly via SQL, which means the failure was never in the database layer.
+>
+> **What is actually broken:** The supabase-js publishable-key auth-attach bug. The platform's `assets/config.js` uses the new `sb_publishable_...` key format, and supabase-js does not reliably attach apikey/JWT headers to outbound PostgREST writes under this key format. PostgREST receives requests it can't authenticate as anon and rejects with 401 — which it formats with code 42501 ("RLS violation") even though the underlying cause is authentication, not policy.
+>
+> This bug was diagnosed in detail during the 27 April 2026 session. The fix template — Edge Functions following the `update-vendor` pattern — was established that session. The customer flow specifically requires a `create-order` Edge Function (likely combined with Stripe Checkout session creation) that performs the `orders` + `order_items` + `order_item_selections` writes server-side as service-role. See the post-PR-4b session handover and the `update-vendor` Edge Function source for the canonical template.
+>
+> **Bug B from this audit** (the drop-menu.html and customer-import.html singleton swap) is partially correct in shape but mis-framed. It is the same publishable-key bug surfacing on the authenticated-vendor write path. The fix is the same as what `brand-hearth.html` already uses: route writes through `_getHearthClient()` for session-attach OR through Edge Functions following the `update-vendor` template. This is part of the broader migration plan, not a standalone fix.
+>
+> **Operational lesson:** Always search past Claude chats before starting any RLS or auth investigation on Hearth. The publishable-key bug is the answer to almost all RLS-shaped errors on this platform. This audit was produced without consulting prior session context, which led to a confident-sounding wrong diagnosis. See the appended postscript at the end of this document for fuller detail.
+>
+> The original content of the audit follows below, preserved verbatim. Read it knowing the diagnosis is wrong.
+
+---
+
 # PR-RLS-FIXES — Audit
 
 **Status:** Audit complete, awaiting PR 1 and PR 2 implementation.
@@ -838,3 +856,57 @@ ORDER BY tablename, policyname;
 ---
 
 *End of audit.*
+
+---
+
+## Postscript — what was actually wrong
+
+Added 30 April 2026, end of investigation session.
+
+### Timeline of how the audit went wrong
+
+The audit was produced in a chat session without first consulting past Claude chats. Multiple prior sessions (notably 8 April, 27 April, and the 30 April PR-4b session) had already diagnosed the publishable-key auth-attach bug in detail and established the Edge Function migration plan. None of that context was loaded before the audit began.
+
+The diagnostic path the audit followed:
+
+1. Dumped `pg_policies` for the customer-flow tables.
+2. Spotted that `orders` and `order_item_selections` had `{public}` INSERT policies while `order_items` had only `{anon}`.
+3. Theorised that `{public}` covers both `anon` and `authenticated` and that the asymmetry would block authenticated requests from inserting into `order_items` (the T5-B22 reproduction case described an authenticated session leaking from the vendor browser into the customer flow).
+4. Wrote the audit, drafted a one-policy migration, planned smoke tests.
+5. Applied the migration to production.
+6. Smoke test failed — same 401/42501 error.
+7. Rolled back. Database returned to known-good.
+8. Smoke test still failed — proving the bug was never the policy.
+9. Ran `SET ROLE anon; INSERT INTO public.order_items ...` directly. Insert succeeded. Confirmed the database accepts the row.
+10. Read `assets/config.js`. Saw the documented comment block explaining the publishable-key bug.
+11. Searched past chats. Found the full prior diagnosis and migration plan.
+
+### What the evidence actually says
+
+- `anon` can insert into `order_items` via direct SQL with the rolled-back original policy (`Order items: anon insert` on `{anon}`, `check_clause = true`).
+- The customer flow on `order.html` cannot insert into `order_items` via PostgREST.
+- Same role, same row shape, different result.
+- Conclusion: the failure is in the path between the browser and PostgREST, not in the database. PostgREST is receiving a request it cannot identify as anon under the `sb_publishable_` key format.
+
+### What the actual fix looks like
+
+The `create-order` Edge Function (name TBD), following the established `update-vendor` template:
+
+- `verify_jwt = false` config.
+- In-function authentication is unnecessary for the customer flow (anonymous orders); the function accepts an anonymous payload.
+- Stripe Checkout session creation happens server-side in the same call (the function returns the Checkout URL to the client).
+- Service-role client performs the inserts: `orders`, `order_items` (and `order_item_selections` if bundles are involved), all atomically.
+- `order.html` calls `client.functions.invoke("create-order", ...)` instead of the current direct PostgREST writes.
+
+The function is multi-hour Claude Code work, not chat work, and is the next major piece of platform building. It belongs to the broader Edge Function migration plan, not as a standalone fix.
+
+### What the audit got right
+
+The investigative discipline and document structure are reusable. The investigation history section, the smoke test plan structure, the rollback procedure, and the appendix of diagnostic SQL queries are all sound patterns for future audits. The error was in the diagnosis, not the audit format.
+
+### Action items resulting from this session
+
+- This audit doc archived (this postscript and the prepended warning).
+- T5-B22 in CLAUDE.md needs reframing: the bug is a manifestation of the publishable-key auth-attach bug, not a separate RLS policy gap. The fix is the `create-order` Edge Function, not a SQL migration.
+- New CLAUDE.md operational rule: search past chats before starting any RLS or auth investigation on Hearth. The publishable-key bug is the answer to almost all RLS-shaped errors on this platform.
+- Stale draft files in repo root (`pr4-audit-partial.md.txt`, `pr4-audit-partial.md.rtf.sb-...`) and `.DS_Store` files — file as small backlog cleanup item, not blocking.
