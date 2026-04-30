@@ -1009,6 +1009,51 @@ Key constraint: the model must never generate claims about specific locations, s
 
 Conduct a structured review of Brand Hearth to identify what additional brand controls would meaningfully change how vendor-owned the experience feels. Current state is minimal: hero image, display name, tagline, colour picker. Assess whether vendors currently feel proud showing their brand to customers. Candidates: font choices, accent colour application across more UI elements, secondary brand image, richer about copy, social handle display. Goal is not feature bloat — identify what is missing before deciding what to build. Run as a focused design review before any build work.
 
+T4-34: Multiple windows — windowCount race condition on sibling naming
+Multiple windows flow assigns the same "Window N" suffix to multiple
+siblings. handleCreateEventWindows iterates over user-defined window rows
+and calls createEventWindow once per row in sequence. createEventWindow's
+windowCount is computed by querying drops at the same host on the same
+delivery_start date. When two siblings are created in rapid succession,
+the second iteration's query may not observe the just-created first
+sibling, so both siblings get assigned "Window 2" as their suffix instead
+of "Window 2" / "Window 3". Confirmed during PR 4b Phase 2 verification
+on test-11 deploy preview — two siblings created from the Multiple
+windows flow both ended up named "Test 8b.1.a 1 Copy — Window 2"
+(window_group_id and unique slug were correct via buildUniqueSlug; only
+the human-readable name field collided). Pre-PR-4b bug; PR 4b's migration
+preserved the same windowCount logic. Fix candidates: pass an explicit
+position counter through the loop instead of querying, or await each
+sibling's commit confirmation before the next iteration. Cosmetic — does
+not break functionality but creates operator confusion.
+
+T4-35: Multiple windows + Close Orders duplicative timing UX
+In Drop Studio Timing pane, when "Multiple windows" is selected, each
+window row has its own Close time field — but the parent drop's overall
+closes_at is also still required separately at the bottom of the pane via
+the Close Orders date/time fields. Operator confusion: the parent close
+is duplicative-feeling and could conflict with the per-window closes;
+readiness check requires parent closes_at regardless. Confirmed during
+PR 4b Phase 2 verification on test-11 deploy preview. Pre-PR-4b UX issue;
+PR 4b inherited it. Proposed fix: when Multiple windows is selected and
+at least one window has a close time set, hide the parent-level Close
+Orders fields and auto-derive parent closes_at from the latest window
+close.
+
+T4-36: Multiple windows — discoverability of Create windows action
+In Drop Studio Timing pane, the "Multiple windows" radio toggle shows
+when a host is selected and the drop has no window_group_id. After
+toggling Multiple windows, operator must (a) configure window rows, then
+(b) click "Create windows" button to materialise the siblings. Step (b)
+is easily missed — the Create windows button is small, lives below "Add
+another window", and is not visually emphatic. Operator can save the
+drop and proceed through Continue without ever clicking Create windows,
+leaving configured windows unmaterialised. Confirmed during PR 4b Phase 2
+verification on test-11 deploy preview. Proposed fix: either
+auto-materialise windows on save (treat configured rows as committed),
+or strengthen Create windows button visual prominence (larger, primary
+colour, separator above).
+
 ### Tier 5 — Strategic platform features
 
 T5-1: Delivery optimisation
@@ -1754,6 +1799,23 @@ the client is falling back to direct PostgREST writes. Pre-PR-4b bug;
 not in scope for that work. Worth investigating before any
 production-vendor onboarding because no real customer order can
 complete on this platform until this is fixed.
+
+T5-B23: categories RLS violation on fresh-vendor inserts.
+On test-12 (no historical categories, no historical drops), attempting
+to create a category via drop-menu.html's "Create Category" modal fails
+with "new row violates row-level security policy for table categories".
+UI is reachable, modal opens, form submits, but the underlying direct
+PostgREST insert is rejected. Same pattern as T5-B22 (customer-flow
+order_items RLS): fresh-vendor table inserts via direct PostgREST hit
+RLS gaps. Likely root cause: categories table's RLS policy doesn't
+grant insert to authenticated role, OR the auth session isn't being
+attached to direct-from-client writes (T5-B17 territory). Pre-PR-4b
+platform bug. Test 12 vendor_id available via vendors slug = 'test-12'.
+Reproducible by signing in as Test 12 and attempting any new category.
+Worth investigating before any production-vendor onboarding because
+new vendors cannot create categories — which means they cannot create
+products, which means they cannot run drops. Cross-reference T5-B22;
+same root-cause hypothesis.
 
 ### Tier 6 — Production readiness
 
