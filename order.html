@@ -2596,7 +2596,7 @@
 
       function buildCheckoutPayload() {
         const customerName = byId("customerName").value.trim();
-        const customerPhone = byId("customerPhone").value.trim();
+        const customerPhone = byId("customerPhone").value.replace(/[\s-]/g, "").trim();
         const customerEmail = byId("customerEmail").value.trim();
         const rawPostcode = byId("customerPostcode").value.trim();
         const customerPostcode = rawPostcode ? formatPostcode(rawPostcode) : "";
@@ -2743,35 +2743,31 @@ async function handoffToPayment() {
   payBtn.disabled = true;
   payBtn.innerHTML = '<span class="spinner"></span>Placing order\u2026';
 
-  let orderId = null;
-  let orderPersisted = false;
+  const payload = buildCheckoutPayload();
 
-  try {
-    orderId = await persistOrder();
+  const { data, error } = await supabase.functions.invoke(
+    'create-order',
+    { body: payload }
+  );
 
-    orderPersisted = true;
-    payBtn.innerHTML = "Order placed \u2714";
-
-    console.log("Order persisted successfully. ID:", orderId);
-
-    // TODO: Stripe handoff — insert call here once Stripe is connected.
-
-    window.location.href = `order-confirmation.html?order_id=${encodeURIComponent(orderId)}`;
-
-  } catch (err) {
-    console.error(err);
-    const context = orderId
-      ? `Order was saved (ID: ${orderId}) but something went wrong after.`
-      : "Order could not be saved. Please try again.";
-    showCheckoutNotice(`${context} ${err.message || ""}`.trim(), "error");
-
-  } finally {
-    if (!orderPersisted) {
-      isSubmitting = false;
-      payBtn.disabled = false;
-      payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
-    }
+  if (error) {
+    showCheckoutNotice(error?.message || 'Could not place order \u2014 please try again.', 'error');
+    isSubmitting = false;
+    payBtn.disabled = false;
+    payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
+    return;
   }
+
+  if (data?.error) {
+    showCheckoutNotice(data.error, 'error');
+    isSubmitting = false;
+    payBtn.disabled = false;
+    payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
+    return;
+  }
+
+  console.log('Order created \u2014 redirecting to Stripe');
+  window.location.href = data.checkout_url;
 }
 
       function renderAll() {
