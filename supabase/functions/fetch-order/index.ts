@@ -97,13 +97,24 @@ Deno.serve(async (req) => {
     }
 
     // Step 3 — selections for bundle items, joined to products for the
-    // selected product name (avoids a second round-trip on the client).
+    // selected product name and to bundle_lines for the line label
+    // (avoids a second round-trip on the client).
     const itemIds = (items || []).map((i) => i.id as string);
-    let selectionsByItemId: Record<string, Array<{ bundle_line_id: string; selected_product_name: string | null; quantity: number }>> = {};
+    let selectionsByItemId: Record<
+      string,
+      Array<{
+        bundle_line_id: string;
+        bundle_line_label: string | null;
+        selected_product_name: string | null;
+        quantity: number;
+      }>
+    > = {};
     if (itemIds.length > 0) {
       const { data: selections, error: selErr } = await serviceClient
         .from("order_item_selections")
-        .select("order_item_id, bundle_line_id, quantity, selected_product_id, products:selected_product_id ( name )")
+        .select(
+          "order_item_id, bundle_line_id, quantity, selected_product_id, products:selected_product_id ( name ), bundle_lines:bundle_line_id ( label )"
+        )
         .in("order_item_id", itemIds);
       if (selErr) {
         console.error("order_item_selections lookup failed", selErr);
@@ -116,8 +127,13 @@ Deno.serve(async (req) => {
           s.products && typeof s.products === "object" && !Array.isArray(s.products)
             ? ((s.products as { name?: string }).name ?? null)
             : null;
+        const lineLabel =
+          s.bundle_lines && typeof s.bundle_lines === "object" && !Array.isArray(s.bundle_lines)
+            ? ((s.bundle_lines as { label?: string }).label ?? null)
+            : null;
         selectionsByItemId[oid].push({
           bundle_line_id: s.bundle_line_id as string,
+          bundle_line_label: lineLabel,
           selected_product_name: productName,
           quantity: Number(s.quantity ?? 1),
         });
