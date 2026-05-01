@@ -673,11 +673,15 @@ updated 2026-04-27 after PR #192 (get-host bundle).
 
 ### Tier 1 — Must work before first real drop
 
-T1-1: Double-submit protection on order.html
+T1-1: Double-submit protection on order.html ✓ COMPLETE
+Confirmed complete. isSubmitting flag at order.html:1340, button
+disabled at :2880, resets only on failure path.
 Disable Pay button permanently after successful order insert. Prevent
 duplicate orders from impatient taps.
 
-T1-2: Service Board — verify new order structure
+T1-2: Service Board — verify new order structure ✓ COMPLETE
+Confirmed complete. service-board.html reads item_name_snapshot and
+capacity_units_snapshot from v_order_item_detail_expanded.
 Confirm Service Board reads correctly from new order_items structure
 including item_name_snapshot. Ensure capacity display is accurate.
 
@@ -685,7 +689,10 @@ T1-3: Home page — fix vendor resolution error
 maybeSingle().catch is not a function — Supabase JS v2 chaining issue.
 Replace .catch() with proper async try/catch. Page flashes then fails.
 
-T1-4: Order page — hero image white strip
+T1-4: Order page — hero image white strip ✓ COMPLETE
+Confirmed complete. Visual verification by Edward — hero image fills
+correctly with no white strip. CSS min-height and background-size:cover
+working as intended.
 Hero image not filling top section, leaving white strip at bottom of
 image area. CSS background-size or min-height fix required.
 
@@ -699,21 +706,31 @@ T2-2: Service Board — remove need to scroll to reach Kanban
 Operator needs Kanban visible on load during live service. Hero KPI section
 should be collapsible or layout restructured.
 
-T2-3: Service Board — Realtime auto-refresh
+T2-3: Service Board — Realtime auto-refresh ✓ COMPLETE
+Confirmed complete. subscribeToDropOrders() with Supabase Realtime
+postgres_changes subscription at service-board.html:1972.
 Add Supabase Realtime subscription to orders table for selected drop.
 Board updates live as orders come in. No manual refresh needed.
 
-T2-4: Drop Studio — fix inconsistent horizontal tile spacing
+T2-4: Drop Studio — fix inconsistent horizontal tile spacing ✓ COMPLETE
+Confirmed complete. Visual verification by Edward — Drop Studio
+horizontal tile spacing consistent across breakpoints.
 Drop card band spacing inconsistent. Audit and fix across all breakpoints.
 
-T2-5: Menu Library — fix inconsistent horizontal tile spacing
+T2-5: Menu Library — fix inconsistent horizontal tile spacing ✓ COMPLETE
+Confirmed complete. Visual verification by Edward — Menu Library
+horizontal tile spacing consistent across breakpoints.
 Same issue as Drop Studio.
 
-T2-6: Brand Hearth — fix text and button edge positioning
+T2-6: Brand Hearth — fix text and button edge positioning ✓ COMPLETE
+Confirmed complete. Visual verification by Edward — Brand Hearth text
+and button edge positioning correct.
 Text in first major horizontal section too close to edge. Buttons on right
 need proper padding/margin.
 
-T2-7: Brand Hearth — file upload for logo and hero image
+T2-7: Brand Hearth — file upload for logo and hero image ✓ COMPLETE
+Confirmed complete. File inputs for logo and hero in brand-hearth.html,
+wired to Supabase Storage upload.
 Replace URL inputs with file upload. Save to Supabase Storage under
 assets/vendors/{vendor-slug}/. Blocking proper brand setup and testing.
 
@@ -782,6 +799,11 @@ and webhook endpoints. Setting up Stripe against spiffy-tulumba-848684.netlify.a
 would require reconfiguration once the platform moves to lovehearth.co.uk.
 Order ID is generated and payload is structured with a TODO marker in
 handoffToPayment(). Build after T6-1 (domain migration) is complete.
+
+Status: PARTIAL. Connect Express scaffold complete (Edge Functions,
+schema, publish gate in drop-manager.html). Customer checkout not
+wired — order.html:2894 still has TODO comment; no create-order Edge
+Function exists yet.
 
 T3-9: Order page — customer data capture and consent ✓ COMPLETE
 At checkout capture customer name, email, and postcode. Write to a new
@@ -1783,6 +1805,10 @@ The other five functions wrap their bodies in `try/catch` and return a
 CORS-decorated 500 via `jsonResponse`. Align the three by adding
 matching wrappers. Surfaced during the CORS audit pass.
 
+Status: PARTIAL. update-vendor and complete-onboarding have top-level
+try/catch. create-host is missing the wrapper — one function remains
+unaligned with the pattern.
+
 T5-B8: invite-vendor — does not use jsonResponse helper
 The other seven Edge Functions converged on a `jsonResponse(body,
 status)` helper. `invite-vendor` instead inlines `{ ...corsHeaders,
@@ -1851,7 +1877,9 @@ columns are now a server-managed pair on the update path. Closing
 this entry; T7-13 (capacity model conceptual review) is the right
 home for any further capacity-driver rework.
 
-T5-B13: Drop Studio — remove dead `dropStatus` dropdown
+T5-B13: Drop Studio — remove dead `dropStatus` dropdown ✓ COMPLETE
+Confirmed complete. dropStatus dropdown removed from drop-manager.html;
+no payload.status write paths remain.
 Post PR 4a, `update-drop`'s whitelist excludes `status`. Lifecycle
 transitions go through `transition-drop-status`. The status dropdown
 in the Basics pane (`#dropStatus`) is now a no-op on save — selecting
@@ -1885,6 +1913,10 @@ of using `qual` as `with_check` for ALL policies). Not urgent.
   cross-vendor protection. Latent isolation gap that PR 4b's
   assign-menu-items per-item product/bundle ownership check does
   not close (write-side only). Defend at view / RLS layer.
+
+Status: PARTIAL. Write-side closed by update-drop host_id ownership
+check. RLS-side defence-in-depth not implemented — no policy
+definitions in supabase/migrations/ for drops/hosts cross-vendor guard.
 
 T5-B15: PR 4b — clone-mode for create-drop, retire residual stamps ✓ RESOLVED BY PR 4b
 PR 4a left two residual direct-PostgREST writes alongside the
@@ -1933,6 +1965,10 @@ initialisation pattern. Worth investigating before declaring the
 platform "done" — the Edge Function migration makes this
 non-blocking but doesn't address root cause. Slot after Priority 7,
 alongside the broader RLS hygiene workstream (T5-B14).
+
+Status: PARTIAL. Manual Authorization header workaround implemented
+in assets/config.js via onAuthStateChange. Root-cause session
+hydration race not resolved.
 
 T5-B18: Stripe status visibility surface. No UI path to inspect,
 manage, or re-enter Stripe Connect onboarding from any vendor page.
@@ -2017,7 +2053,9 @@ supabase/functions/invite-vendor/index.ts. Should be moved to a single
 source of truth — options include an environment variable, a config
 table, or an admins table with RLS. Low priority cleanup.
 
-T5-B27: Edge Function `.single()` vs `.maybeSingle()` consistency sweep
+T5-B27: Edge Function `.single()` vs `.maybeSingle()` consistency sweep ✓ COMPLETE
+Confirmed complete. All audited Edge Functions use .maybeSingle() for
+ownership lookups; no .single() offenders found.
 PR #192 flipped `create-host` from `.single()` to `.maybeSingle()` on
 the ownership check. `.maybeSingle()` is the canonical default — it
 returns `null` when no row is found, where `.single()` throws a 406
@@ -2029,7 +2067,10 @@ Audit remaining functions and flip if needed:
 `invite-vendor`. Low priority — no known live failures, just
 hygiene.
 
-T5-B28: `update-host` Edge Function (Priority 6 — migration sequence)
+T5-B28: `update-host` Edge Function (Priority 6 — migration sequence) ✓ COMPLETE
+Confirmed complete. update-host Edge Function exists with JWT
+verification, vendor ownership check, and ALLOWED_FIELDS whitelist.
+host-profile.html invokes via functions.invoke().
 Migrate the direct `hosts` UPDATE at `host-profile.html:1007` to a
 new `update-host` Edge Function following the same pattern as
 `update-vendor`: auth via `supabase.auth.getUser()`, ownership check
@@ -2131,7 +2172,15 @@ the full auth flow end-to-end. Separate infrastructure from the
 Google Workspace account being set up 21 April — regular email
 providers aren't designed for programmatic bulk sending.
 
-T6-7: Edge Function CORS allowlist — support Netlify preview domains
+Status: PARTIAL. Resend integrated for auth and onboarding emails —
+plumbing confirmed present. Transactional email triggers
+(order_confirmed, order_ready, drop_announced, drop_reminder) not yet
+built.
+
+T6-7: Edge Function CORS allowlist — support Netlify preview domains ✓ COMPLETE
+Confirmed complete. supabase/functions/_shared/cors.ts implements
+getCorsHeaders() supporting both lovehearth.co.uk and Netlify preview
+domain pattern.
 Every Edge Function currently hardcodes
 `ALLOWED_ORIGIN = "https://lovehearth.co.uk"`. Netlify deploy
 previews (`deploy-preview-*--spiffy-tulumba-848684.netlify.app` and
