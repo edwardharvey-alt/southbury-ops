@@ -2284,6 +2284,31 @@ modelled became visible.
   but adds noise to PR 4b for no behavioural benefit. Defer to
   T7-13.
 
+T7-14: Multi-admin access
+Platform-level admin access is currently gated to a single hardcoded
+UID. As the platform adds partners or staff, a proper admins table is
+required: id, auth_user_id, name, role (owner/admin/support),
+granted_at, granted_by. Admin pages query this table server-side via
+supabase.auth.getUser() rather than comparing against a hardcoded UID.
+Prerequisite for adding a business partner to the admin surface.
+Unblocks T5-B25 and T5-B26. Build before any second person needs
+admin access.
+
+T7-15: Admin write capability — vendor and drop data amendment
+T7-1 through T7-7 cover read-only oversight. A write surface is needed
+for admin interventions: correcting vendor profile data, amending a
+drop on a vendor's behalf, resetting onboarding state. Every write
+action must route through T7-7 (audit log). Pattern: admin selects
+vendor → read-only view → "Edit on behalf of vendor" → confirms →
+audit log entry written → change applied via service-role Edge Function.
+Dependency: T7-7.
+
+T7-16: Business partner admin access
+Specific instance of T7-14. Add business partner as platform admin
+with owner-level access. Requires T7-14 admins table and Supabase
+Auth invite. Do not build until T7-14 is in place — do not add their
+UID to the hardcoded list as a temporary measure.
+
 #### Monitoring track
 
 **Phase 1 — build soon; the platform currently has no observability,
