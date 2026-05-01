@@ -484,7 +484,8 @@ Deno.serve(async (req) => {
       `&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl =
       `https://lovehearth.co.uk/order.html?drop=${encodeURIComponent(dropSlug)}` +
-      `&checkout_cancelled=1&order_id=${encodeURIComponent(orderId)}`;
+      `&checkout_cancelled=1&order_id=${encodeURIComponent(orderId)}` +
+      `&session_id={CHECKOUT_SESSION_ID}`;
 
     let session;
     try {

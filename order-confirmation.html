@@ -256,6 +256,35 @@
       text-decoration:underline;
     }
 
+    /* Bundle selections nested under item */
+    .confItemSelections{
+      margin-top:6px;
+      display:grid;
+      gap:3px;
+    }
+
+    .confItemSelection{
+      font-size:12px;
+      font-weight:600;
+      color:#6b7280;
+      line-height:1.4;
+    }
+
+    /* Cancelled-state CTA */
+    .confStateAction{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      margin-top:12px;
+      padding:10px 18px;
+      background:var(--conf-brand-primary);
+      color:#fff;
+      font-size:14px;
+      font-weight:800;
+      border-radius:999px;
+      text-decoration:none;
+    }
+
     /* Loading / empty states */
     .confState{
       text-align:center;
@@ -359,12 +388,14 @@
     }
 
     async function loadOrder() {
-      const page = document.getElementById('confPage');
-
       const orderId = getQueryParam("order_id");
+      const sessionId = getQueryParam("session_id");
 
-      if (!orderId) {
-        renderEmpty("No order reference found.", "Check the link you received and try again, or contact the vendor directly.");
+      if (!orderId || !sessionId) {
+        renderEmpty(
+          "We couldn't find that order.",
+          "Check the link you received and try again, or contact the vendor directly."
+        );
         return;
       }
 
@@ -375,72 +406,68 @@
           window.HEARTH_CONFIG.SUPABASE_ANON_KEY
         );
       } catch (initErr) {
-        renderEmpty("Could not connect to the platform.", "Please try refreshing the page. If the problem persists, contact the vendor directly.");
+        renderEmpty(
+          "Could not connect to the platform.",
+          "Please try refreshing the page. If the problem persists, contact the vendor directly."
+        );
         return;
       }
 
-      try {
-        const { data: order, error: orderError } = await supabase
-          .from("orders")
-          .select("id, customer_name, customer_postcode, fulfilment_mode, delivery_address, total_pence, created_at, drop_id")
-          .eq("id", orderId)
-          .maybeSingle();
+      const { data, error } = await supabase.functions.invoke('fetch-order', {
+        body: { order_id: orderId, session_id: sessionId }
+      });
 
-        if (orderError) throw orderError;
+      if (error) {
+        renderEmpty(
+          "We couldn't load your order — please refresh.",
+          "If the problem persists, contact the vendor with your reference."
+        );
+        return;
+      }
 
-        if (!order) {
-          renderEmpty(
-            "We couldn't find that order.",
-            "If you placed an order recently, it may take a moment to appear. If this persists, please contact the vendor with your reference."
-          );
-          return;
-        }
+      if (data?.error) {
+        renderEmpty(
+          data.error,
+          "If you placed an order recently, it may take a moment to appear. If this persists, please contact the vendor with your reference."
+        );
+        return;
+      }
 
-        const [dropRes, itemsRes] = await Promise.all([
-          supabase
-            .from("drops")
-            .select("id, name, opens_at, closes_at, fulfilment_mode, host_id, vendor_id, collection_point_description, delivery_area_description")
-            .eq("id", order.drop_id)
-            .single(),
-          supabase
-            .from("order_items")
-            .select("id, item_name_snapshot, qty, price_pence, item_type")
-            .eq("order_id", orderId)
-            .order("created_at", { ascending: true }),
-        ]);
+      const status = data?.order?.status;
 
-        if (dropRes.error) throw dropRes.error;
-        const drop = dropRes.data;
-
-        const items = itemsRes.data || [];
-
-        const { data: vendor, error: vendorError } = await supabase
-          .from("vendors")
-          .select("id, name, display_name, website_url, powered_by_hearth_visible")
-          .eq("id", drop.vendor_id)
-          .single();
-
-        if (vendorError) throw vendorError;
-
+      if (status === 'placed') {
         try {
-          renderConfirmation(order, drop, vendor, items);
+          renderConfirmation(data);
         } catch (renderErr) {
           renderEmpty(
             "Something went wrong displaying your order.",
             renderErr.message || "Please try refreshing the page. If the problem persists, contact the vendor with your reference."
           );
         }
-
-      } catch (err) {
-        renderEmpty(
-          "Something went wrong loading your order.",
-          "Please try refreshing the page. If the problem persists, contact the vendor with your reference."
-        );
+        return;
       }
+
+      if (status === 'cancelled') {
+        renderCancelled(data);
+        return;
+      }
+
+      if (status === 'pending_payment') {
+        renderPending(data);
+        setupPendingWatch(supabase, orderId, sessionId);
+        return;
+      }
+
+      renderEmpty(
+        "We couldn't display this order.",
+        "Please try refreshing the page. If the problem persists, contact the vendor with your reference."
+      );
     }
 
-    function renderConfirmation(order, drop, vendor, items) {
+    function renderConfirmation(payload) {
       const page = document.getElementById("confPage");
+
+      const { order, items, drop, vendor } = payload;
 
       const vendorName = vendor.display_name || vendor.name || "the vendor";
       const dropName = stripWindowSuffix(drop.name) || "this drop";
@@ -482,13 +509,26 @@
         </div>`;
       }
 
-      // Build item rows
-      const itemRows = items.map((item) => {
+      // Build item rows (with bundle selections nested for bundle items)
+      const itemRows = (items || []).map((item) => {
         const lineTotal = Number(item.price_pence || 0) * Number(item.qty || 1);
+        let selectionsBlock = "";
+        if (item.item_type === "bundle" && Array.isArray(item.selections) && item.selections.length > 0) {
+          const selectionLines = item.selections.map((sel) => {
+            const label = sel.bundle_line_label || "";
+            const productName = sel.selected_product_name || "—";
+            const qty = Number(sel.quantity || 1);
+            const labelPart = label ? `${escapeHtml(label)}: ` : "";
+            const qtyPart = qty > 1 ? ` ×${qty}` : "";
+            return `<div class="confItemSelection">${labelPart}${escapeHtml(productName)}${qtyPart}</div>`;
+          }).join("");
+          selectionsBlock = `<div class="confItemSelections">${selectionLines}</div>`;
+        }
         return `<div class="confItem">
           <div class="confItemLeft">
             <p class="confItemName">${escapeHtml(item.item_name_snapshot || "Item")}</p>
             ${Number(item.qty) > 1 ? `<p class="confItemQty">Qty ${escapeHtml(String(item.qty))}</p>` : ""}
+            ${selectionsBlock}
           </div>
           <span class="confItemPrice">${formatMoneyPence(lineTotal)}</span>
         </div>`;
@@ -565,6 +605,157 @@
           ${footerParts.join(" &middot; ")}
         </div>
       `;
+    }
+
+    function renderCancelled(payload) {
+      const page = document.getElementById("confPage");
+      const drop = payload && payload.drop ? payload.drop : null;
+      const vendor = payload && payload.vendor ? payload.vendor : null;
+      const vendorName = (vendor && (vendor.display_name || vendor.name)) || "the vendor";
+      const backHref = drop && drop.slug ? `/order.html?drop=${encodeURIComponent(drop.slug)}` : "/order.html";
+
+      page.innerHTML = `
+        <div class="confState">
+          <div class="confStateIcon">⨯</div>
+          <h2 class="confStateTitle">This order was cancelled</h2>
+          <p class="confStateSub">Your previous attempt with ${escapeHtml(vendorName)} wasn't completed. No payment was taken.</p>
+          <a class="confStateAction" href="${escapeHtml(backHref)}">Back to drop</a>
+        </div>
+      `;
+    }
+
+    function renderPending(payload) {
+      const page = document.getElementById("confPage");
+      const order = (payload && payload.order) || {};
+      const drop = (payload && payload.drop) || {};
+      const vendor = (payload && payload.vendor) || {};
+      const vendorName = vendor.display_name || vendor.name || "the vendor";
+      const dropName = stripWindowSuffix(drop.name) || "this drop";
+      const refDisplay = order.id ? shortId(order.id) : "—";
+      const totalPence = Number(order.total_pence || 0);
+
+      page.innerHTML = `
+        <div class="confState">
+          <div class="confStateIcon">⏳</div>
+          <h2 class="confStateTitle">Confirming your payment…</h2>
+          <p class="confStateSub" id="pendingSub">This usually takes a few seconds. Please don't refresh.</p>
+          <div id="pendingTimeoutAction"></div>
+        </div>
+
+        <div class="confCard">
+          <div class="confCardHead">
+            <span class="confCardHeadIcon">📦</span>
+            <h2 class="confCardHeadTitle">Order summary</h2>
+          </div>
+          <div class="confCardBody">
+            <div class="confDetailRow">
+              <span class="confDetailLabel">Vendor</span>
+              <span class="confDetailValue">${escapeHtml(vendorName)}</span>
+            </div>
+            <div class="confDetailRow">
+              <span class="confDetailLabel">Drop</span>
+              <span class="confDetailValue">${escapeHtml(dropName)}</span>
+            </div>
+            <div class="confDetailRow">
+              <span class="confDetailLabel">Total</span>
+              <span class="confDetailValue">${formatMoneyPence(totalPence)}</span>
+            </div>
+            <div class="confDetailRow">
+              <span class="confDetailLabel">Reference</span>
+              <span class="confDetailValue">${escapeHtml(refDisplay)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function setupPendingWatch(supabase, orderId, sessionId) {
+      let channel = null;
+      let pollInterval = null;
+      let timeoutHandle = null;
+      let cleaned = false;
+
+      const onBeforeUnload = () => cleanup();
+
+      function cleanup() {
+        if (cleaned) return;
+        cleaned = true;
+        if (channel) {
+          try { supabase.removeChannel(channel); } catch (e) { /* ignore */ }
+          channel = null;
+        }
+        if (pollInterval !== null) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
+        if (timeoutHandle !== null) {
+          clearTimeout(timeoutHandle);
+          timeoutHandle = null;
+        }
+        window.removeEventListener('beforeunload', onBeforeUnload);
+      }
+
+      function handleStatus(newPayload) {
+        if (!newPayload || newPayload.error) return;
+        const newStatus = newPayload && newPayload.order && newPayload.order.status;
+        if (newStatus === 'pending_payment') return;
+        cleanup();
+        if (newStatus === 'placed') {
+          try {
+            renderConfirmation(newPayload);
+          } catch (renderErr) {
+            renderEmpty(
+              "Something went wrong displaying your order.",
+              renderErr.message || "Please try refreshing the page. If the problem persists, contact the vendor with your reference."
+            );
+          }
+        } else if (newStatus === 'cancelled') {
+          renderCancelled(newPayload);
+        } else {
+          renderEmpty(
+            "We couldn't display this order.",
+            "Please try refreshing the page. If the problem persists, contact the vendor with your reference."
+          );
+        }
+      }
+
+      async function refetch() {
+        try {
+          const { data, error } = await supabase.functions.invoke('fetch-order', {
+            body: { order_id: orderId, session_id: sessionId }
+          });
+          if (error) return;
+          handleStatus(data);
+        } catch (err) {
+          /* keep watching — transient errors are expected */
+        }
+      }
+
+      channel = supabase
+        .channel('order-' + orderId)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'orders', filter: 'id=eq.' + orderId },
+          () => { refetch(); }
+        )
+        .subscribe();
+
+      pollInterval = setInterval(refetch, 3000);
+
+      timeoutHandle = setTimeout(() => {
+        const subEl = document.getElementById('pendingSub');
+        const actionEl = document.getElementById('pendingTimeoutAction');
+        if (subEl) {
+          subEl.textContent = "This is taking longer than expected. Refresh to check the latest status.";
+        }
+        if (actionEl) {
+          actionEl.innerHTML = '<button type="button" class="confStateAction" id="pendingRefreshBtn">Refresh page</button>';
+          const btn = document.getElementById('pendingRefreshBtn');
+          if (btn) btn.addEventListener('click', () => window.location.reload());
+        }
+      }, 60000);
+
+      window.addEventListener('beforeunload', onBeforeUnload);
     }
 
     function renderEmpty(title, sub) {

@@ -2596,7 +2596,7 @@
 
       function buildCheckoutPayload() {
         const customerName = byId("customerName").value.trim();
-        const customerPhone = byId("customerPhone").value.trim();
+        const customerPhone = byId("customerPhone").value.replace(/[\s-]/g, "").trim();
         const customerEmail = byId("customerEmail").value.trim();
         const rawPostcode = byId("customerPostcode").value.trim();
         const customerPostcode = rawPostcode ? formatPostcode(rawPostcode) : "";
@@ -2728,143 +2728,6 @@
         return "";
       }
 
-async function persistOrder() {
-  const capacityUnitsConsumed = Math.max(1, getBasketCapacityUnits());
-
-  const contactOptIn = byId("contactOptIn").checked;
-  const customerName = byId("customerName").value.trim();
-  const customerEmail = byId("customerEmail").value.trim() || null;
-  const rawPostcode = byId("customerPostcode").value.trim();
-  const formattedPostcode = rawPostcode ? formatPostcode(rawPostcode) : null;
-  const addrLine1 = byId("addrLine1").value.trim();
-  const addrLine2 = byId("addrLine2").value.trim();
-  const addrTown = byId("addrTown").value.trim();
-  const deliveryAddress = [addrLine1, addrLine2, addrTown, formattedPostcode].filter(Boolean).join(", ");
-
-  // Step 1 — upsert customer record (non-blocking: errors are logged but never surface to the customer)
-  let customerId = null;
-  if (customerEmail) {
-    try {
-      const { data: customerData, error: customerError } = await supabase
-        .from("customers")
-        .upsert(
-          { name: customerName, email: customerEmail, postcode: formattedPostcode, phone: byId("customerPhone").value.trim().replace(/[\s-]/g, "") || null },
-          { onConflict: "email", ignoreDuplicates: false }
-        )
-        .select("id")
-        .single();
-
-      if (customerError) {
-        console.error("Customer upsert failed:", customerError);
-      } else {
-        customerId = customerData?.id ?? null;
-      }
-    } catch (err) {
-      console.error("Customer upsert threw:", err);
-    }
-  }
-
-  // Step 2 — record customer_relationship (non-blocking)
-  if (customerId && state.drop?.vendor_id) {
-    try {
-      const { error: relError } = await supabase
-        .from("customer_relationships")
-        .upsert(
-          {
-            customer_id:    customerId,
-            owner_type:     "vendor",
-            owner_id:       state.drop.vendor_id,
-            consent_status: contactOptIn ? "granted" : "pending",
-            source:         "order"
-          },
-          { onConflict: "customer_id,owner_id", ignoreDuplicates: true }
-        );
-
-      if (relError) {
-        console.error("Customer relationship insert failed:", relError);
-      }
-    } catch (err) {
-      console.error("Customer relationship insert threw:", err);
-    }
-  }
-
-  // Step 3 — insert order
-  const orderRow = {
-    drop_id:              state.drop.id,
-    customer_name:        customerName,
-    customer_phone:       byId("customerPhone").value.trim().replace(/[\s-]/g, ""),
-    customer_email:       customerEmail,
-    customer_notes:       byId("customerNotes").value.trim() || null,
-    customer_postcode:    formattedPostcode,
-    fulfilment_mode:      state.selectedFulfilmentMode || state.drop?.fulfilment_mode || null,
-    delivery_address:     deliveryAddress || null,
-    contact_opt_in:       contactOptIn,
-    contact_opt_in_scope: contactOptIn ? "both" : null,
-    total_pence:          getGrandTotalPence(),
-    pizzas:               capacityUnitsConsumed,
-  };
-
-  if (customerId) {
-    orderRow.customer_id = customerId;
-  }
-
-  const { data: orderData, error: orderError } = await supabase
-    .from("orders")
-    .insert(orderRow)
-    .select("id")
-    .single();
-
-  if (orderError) {
-    throw new Error(`Failed to save order: ${orderError.message}`);
-  }
-
-  const orderId = orderData.id;
-
-  for (const item of state.basket) {
-    const itemRow = {
-      order_id:                orderId,
-      item_type:               item.type,
-      product_id:              item.type === "product" ? item.product_id : null,
-      bundle_id:               item.type === "bundle"  ? item.bundle_id  : null,
-      item_name_snapshot:      item.name,
-      qty:                     Number(item.quantity || 1),
-      price_pence:             Number(item.unit_price_pence || 0),
-      capacity_units_snapshot: Number(item.capacity_units || 0),
-    };
-
-    const { data: itemData, error: itemError } = await supabase
-      .from("order_items")
-      .insert(itemRow)
-      .select("id")
-      .single();
-
-    if (itemError) {
-      throw new Error(`Failed to save order item "${item.name}": ${itemError.message}`);
-    }
-
-    const orderItemId = itemData.id;
-
-    if (item.type === "bundle" && item.selections && item.selections.length > 0) {
-      const selectionRows = item.selections.map((s) => ({
-        order_item_id:       orderItemId,
-        bundle_line_id:      s.bundle_line_id,
-        selected_product_id: s.selected_product_id,
-        quantity:            Number(s.quantity || 1),
-      }));
-
-      const { error: selectionsError } = await supabase
-        .from("order_item_selections")
-        .insert(selectionRows);
-
-      if (selectionsError) {
-        throw new Error(`Failed to save bundle selections for "${item.name}": ${selectionsError.message}`);
-      }
-    }
-  }
-
-  return orderId;
-}
-
 async function handoffToPayment() {
   if (isSubmitting) return;
 
@@ -2880,35 +2743,31 @@ async function handoffToPayment() {
   payBtn.disabled = true;
   payBtn.innerHTML = '<span class="spinner"></span>Placing order\u2026';
 
-  let orderId = null;
-  let orderPersisted = false;
+  const payload = buildCheckoutPayload();
 
-  try {
-    orderId = await persistOrder();
+  const { data, error } = await supabase.functions.invoke(
+    'create-order',
+    { body: payload }
+  );
 
-    orderPersisted = true;
-    payBtn.innerHTML = "Order placed \u2714";
-
-    console.log("Order persisted successfully. ID:", orderId);
-
-    // TODO: Stripe handoff — insert call here once Stripe is connected.
-
-    window.location.href = `order-confirmation.html?order_id=${encodeURIComponent(orderId)}`;
-
-  } catch (err) {
-    console.error(err);
-    const context = orderId
-      ? `Order was saved (ID: ${orderId}) but something went wrong after.`
-      : "Order could not be saved. Please try again.";
-    showCheckoutNotice(`${context} ${err.message || ""}`.trim(), "error");
-
-  } finally {
-    if (!orderPersisted) {
-      isSubmitting = false;
-      payBtn.disabled = false;
-      payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
-    }
+  if (error) {
+    showCheckoutNotice(error?.message || 'Could not place order \u2014 please try again.', 'error');
+    isSubmitting = false;
+    payBtn.disabled = false;
+    payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
+    return;
   }
+
+  if (data?.error) {
+    showCheckoutNotice(data.error, 'error');
+    isSubmitting = false;
+    payBtn.disabled = false;
+    payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
+    return;
+  }
+
+  console.log('Order created \u2014 redirecting to Stripe');
+  window.location.href = data.checkout_url;
 }
 
       function renderAll() {
@@ -3098,6 +2957,35 @@ async function handoffToPayment() {
 
           bindDynamicEvents();
           await loadDropContext();
+
+          const urlParams = new URLSearchParams(window.location.search);
+          const cancelled = urlParams.get('checkout_cancelled');
+          const returnedOrderId = urlParams.get('order_id');
+          const returnedSessionId = urlParams.get('session_id');
+          if (cancelled === '1' && returnedOrderId && returnedSessionId) {
+            try {
+              await supabase.functions.invoke('cancel-order', {
+                body: {
+                  order_id: returnedOrderId,
+                  session_id: returnedSessionId
+                }
+              });
+            } catch (err) {
+              console.warn('cancel-order on return failed:', err);
+            }
+            const url = new URL(window.location);
+            url.searchParams.delete('checkout_cancelled');
+            url.searchParams.delete('order_id');
+            url.searchParams.delete('session_id');
+            window.history.replaceState({}, '', url);
+            showNotice("Your previous order was cancelled. Add items to your basket and try again.", "warn");
+          } else if (cancelled === '1') {
+            const url = new URL(window.location);
+            url.searchParams.delete('checkout_cancelled');
+            url.searchParams.delete('order_id');
+            window.history.replaceState({}, '', url);
+            showNotice("Your previous order was cancelled. Add items to your basket and try again.", "warn");
+          }
 
           /* T4-15 — Multi-window selection step */
           if (state.drop && state.drop.window_group_id) {
