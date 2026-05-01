@@ -490,7 +490,10 @@ Deno.serve(async (req) => {
     try {
       session = await stripe.checkout.sessions.create({
         mode: "payment",
-        expires_at: Math.floor(Date.now() / 1000) + 600,
+        // Stripe's documented minimum for expires_at is 1800 seconds
+        // (30 minutes) from Checkout Session creation. Below 1800 the
+        // API rejects with an invalid_request_error.
+        expires_at: Math.floor(Date.now() / 1000) + 1800,
         customer_email: payload.customer.email || undefined,
         billing_address_collection: "auto",
         line_items: payload.basket.map((item) => ({
