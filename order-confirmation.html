@@ -453,7 +453,8 @@
       }
 
       if (status === 'pending_payment') {
-        renderPending();
+        renderPending(data);
+        setupPendingWatch(supabase, orderId, sessionId);
         return;
       }
 
@@ -623,14 +624,138 @@
       `;
     }
 
-    function renderPending() {
-      document.getElementById("confPage").innerHTML = `
+    function renderPending(payload) {
+      const page = document.getElementById("confPage");
+      const order = (payload && payload.order) || {};
+      const drop = (payload && payload.drop) || {};
+      const vendor = (payload && payload.vendor) || {};
+      const vendorName = vendor.display_name || vendor.name || "the vendor";
+      const dropName = stripWindowSuffix(drop.name) || "this drop";
+      const refDisplay = order.id ? shortId(order.id) : "—";
+      const totalPence = Number(order.total_pence || 0);
+
+      page.innerHTML = `
         <div class="confState">
           <div class="confStateIcon">⏳</div>
           <h2 class="confStateTitle">Confirming your payment…</h2>
-          <p class="confStateSub">This usually takes a few seconds. Please refresh in a moment if this persists.</p>
+          <p class="confStateSub" id="pendingSub">This usually takes a few seconds. Please don't refresh.</p>
+          <div id="pendingTimeoutAction"></div>
+        </div>
+
+        <div class="confCard">
+          <div class="confCardHead">
+            <span class="confCardHeadIcon">📦</span>
+            <h2 class="confCardHeadTitle">Order summary</h2>
+          </div>
+          <div class="confCardBody">
+            <div class="confDetailRow">
+              <span class="confDetailLabel">Vendor</span>
+              <span class="confDetailValue">${escapeHtml(vendorName)}</span>
+            </div>
+            <div class="confDetailRow">
+              <span class="confDetailLabel">Drop</span>
+              <span class="confDetailValue">${escapeHtml(dropName)}</span>
+            </div>
+            <div class="confDetailRow">
+              <span class="confDetailLabel">Total</span>
+              <span class="confDetailValue">${formatMoneyPence(totalPence)}</span>
+            </div>
+            <div class="confDetailRow">
+              <span class="confDetailLabel">Reference</span>
+              <span class="confDetailValue">${escapeHtml(refDisplay)}</span>
+            </div>
+          </div>
         </div>
       `;
+    }
+
+    function setupPendingWatch(supabase, orderId, sessionId) {
+      let channel = null;
+      let pollInterval = null;
+      let timeoutHandle = null;
+      let cleaned = false;
+
+      const onBeforeUnload = () => cleanup();
+
+      function cleanup() {
+        if (cleaned) return;
+        cleaned = true;
+        if (channel) {
+          try { supabase.removeChannel(channel); } catch (e) { /* ignore */ }
+          channel = null;
+        }
+        if (pollInterval !== null) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
+        if (timeoutHandle !== null) {
+          clearTimeout(timeoutHandle);
+          timeoutHandle = null;
+        }
+        window.removeEventListener('beforeunload', onBeforeUnload);
+      }
+
+      function handleStatus(newPayload) {
+        if (!newPayload || newPayload.error) return;
+        const newStatus = newPayload && newPayload.order && newPayload.order.status;
+        if (newStatus === 'pending_payment') return;
+        cleanup();
+        if (newStatus === 'placed') {
+          try {
+            renderConfirmation(newPayload);
+          } catch (renderErr) {
+            renderEmpty(
+              "Something went wrong displaying your order.",
+              renderErr.message || "Please try refreshing the page. If the problem persists, contact the vendor with your reference."
+            );
+          }
+        } else if (newStatus === 'cancelled') {
+          renderCancelled(newPayload);
+        } else {
+          renderEmpty(
+            "We couldn't display this order.",
+            "Please try refreshing the page. If the problem persists, contact the vendor with your reference."
+          );
+        }
+      }
+
+      async function refetch() {
+        try {
+          const { data, error } = await supabase.functions.invoke('fetch-order', {
+            body: { order_id: orderId, session_id: sessionId }
+          });
+          if (error) return;
+          handleStatus(data);
+        } catch (err) {
+          /* keep watching — transient errors are expected */
+        }
+      }
+
+      channel = supabase
+        .channel('order-' + orderId)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'orders', filter: 'id=eq.' + orderId },
+          () => { refetch(); }
+        )
+        .subscribe();
+
+      pollInterval = setInterval(refetch, 3000);
+
+      timeoutHandle = setTimeout(() => {
+        const subEl = document.getElementById('pendingSub');
+        const actionEl = document.getElementById('pendingTimeoutAction');
+        if (subEl) {
+          subEl.textContent = "This is taking longer than expected. Refresh to check the latest status.";
+        }
+        if (actionEl) {
+          actionEl.innerHTML = '<button type="button" class="confStateAction" id="pendingRefreshBtn">Refresh page</button>';
+          const btn = document.getElementById('pendingRefreshBtn');
+          if (btn) btn.addEventListener('click', () => window.location.reload());
+        }
+      }, 60000);
+
+      window.addEventListener('beforeunload', onBeforeUnload);
     }
 
     function renderEmpty(title, sub) {
