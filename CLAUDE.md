@@ -302,6 +302,19 @@ regeneration query is at the top of that file.
     has X", verify with grep/read first. (Learned from aborted
     branch 8609900 on 22 April 2026.)
 
+20. **Stripe checkout flow always returns customers to production, not
+    deploy previews.** The `success_url` and `cancel_url` in
+    `create-order/index.ts` are hardcoded to `https://lovehearth.co.uk`.
+    This means deploy preview testing of the post-Stripe flow
+    (order-confirmation.html in particular) cannot complete the success
+    path on the preview domain — Stripe will redirect to prod regardless.
+    To verify confirmation-page changes against a feature branch, either
+    (a) merge to main and test on prod, or (b) manually construct the
+    confirmation URL against the preview domain after a real prod
+    payment completes (substitute the order_id and session_id from the
+    prod URL into the preview domain's order-confirmation.html path).
+    See T5-B30 for the proper fix.
+
 ## Operational learnings
 
 Gotchas and patterns captured from real bugs. Treat these as hard rules
@@ -525,6 +538,55 @@ on top of the coding rules above.
     part of the same workstream. See session handover dated 27
     April 2026 for the full migration plan and priority order.
 
+17. **Claude Code CLI is materially more reliable than the desktop app
+    for multi-file or large-file edits.** The Claude desktop app's Code
+    mode hit stream-idle timeouts repeatedly during the T5-B22 Phase 3
+    session on order.html edits — three timeouts in succession on a
+    single function deletion. The Claude Code CLI (`npm install -g
+    @anthropic-ai/claude-code`, launched with
+    `claude --dangerously-skip-permissions` from the repo folder) ran
+    the same workload cleanly: order.html sessions A/B/C in
+    41s/13m/48s, order-confirmation.html session D in 2m46s, session E
+    in 1m56s. Same Opus 4.7 1M-context model underneath; different
+    runtime. Required Node 18+ (installed Node 24.15.0 fresh via
+    nodejs.org GUI; npm-global setup with `prefix=~/.npm-global` to
+    avoid sudo). Default to the CLI for any multi-file or large-file
+    order.html / order-confirmation.html / drop-manager.html work going
+    forward.
+
+18. **Claude Code worktree pattern.** Each Claude Code session creates
+    a worktree at `.claude/worktrees/<auto-name>/` that owns the branch
+    checkout. The main repo path cannot simultaneously check out a
+    worktree-owned branch. When switching context (e.g. starting a
+    fresh session against a branch a previous session was working on),
+    verify the worktree is clean (`git -C .claude/worktrees/<name>
+    status`) and remove it first (`git worktree remove
+    .claude/worktrees/<name>`). `supabase functions deploy` works from
+    either the main repo path OR the worktree path, but only after the
+    relevant branch is checked out and the function source is present.
+    Always verify with `git log origin/<branch> --oneline -10` after
+    Claude Code claims it has pushed — pushes can silently fail while
+    the CLI reports success.
+
+19. **Stripe Checkout `expires_at` minimum is 1800 seconds (30
+    minutes), not 600.** The original spec for the create-order
+    function specified 600s and Stripe rejected with a clear error at
+    deploy-test time. Corrected in commit 575b299. Always verify Stripe
+    API minima before specifying constants.
+
+20. **order.html uses literal `\u`-escape sequences for non-ASCII
+    characters** (`\u2014` em-dash, `\u2026` ellipsis, `\u2714` checkmark) rather than the actual Unicode characters. Edit tools
+    autoformat real Unicode chars to match this convention. Equivalent
+    at runtime — just don't grep for the literal `—` later when
+    looking for these markers.
+
+21. **Search past Claude chats before starting any RLS or auth
+    investigation on Hearth.** The supabase-js publishable-key
+    auth-attach bug (operational learnings #12, #13, #14, #16) is the
+    answer to almost all RLS-shaped errors on this platform.
+    Diagnosing it from scratch wastes hours. The 30 April session lost
+    time precisely this way.
+
 ## Stripe Connect Express (T3-8)
 
 - vendors schema: `stripe_account_id` TEXT (nullable),
@@ -644,30 +706,20 @@ collection — Hearth captures the full address at order time.
 
 ## Production mutation/read status
 
-Snapshot of which read/write paths are working in production and which
-are known broken. Update whenever a PR confirms or breaks a path. Last
-updated 2026-04-27 after PR #192 (get-host bundle).
+Snapshot of which read/write paths are working in production and which are known broken. Update whenever a PR confirms or breaks a path. Last updated 2026-05-01 after Phase 3 of the customer order flow rebuild (T5-B22).
 
+- Customer order placement (orders, order_items, order_item_selections, customers, customer_relationships) — WORKING via `create-order` Edge Function. Atomic write of all five tables, Stripe Connect destination charge created, order starts at `status='pending_payment'` and flips to `'placed'` on webhook receipt. Capacity is reserved during the pending_payment window (Stripe expires_at = 1800s).
+- Stripe webhook handling — WORKING via `stripe-webhook` Edge Function. Handles `checkout.session.completed` (→ placed/paid), `checkout.session.expired` (→ cancelled/expired), `checkout.session.async_payment_failed` (→ cancelled/failed). Endpoint configured at https://tvqhhjvumgumyetvpgid.supabase.co/functions/v1/stripe-webhook (Stripe Dashboard endpoint name: "brilliant-rhythm").
+- Order read on confirmation page — WORKING via `fetch-order` Edge Function. Anonymous, matched-pair authorization (order_id + session_id). Returns order, items (including bundle line selections), drop, vendor, host. Customer-visible fields only — no email, phone, customer_id, contact_opt_in, or platform_fee_pence in response.
+- Order cancel-on-return — WORKING via `cancel-order` Edge Function. Idempotent, only flips pending_payment → cancelled. Frees capacity immediately when the customer hits Cancel on Stripe Checkout rather than waiting for Stripe's 30-minute session expiry. Does NOT call Stripe — relies on Stripe's own session expiry to clean up the unused Checkout session.
 - Host listing — WORKING via `list-hosts` Edge Function.
-- Single-host fetch — WORKING via `get-host` Edge Function (added by
-  PR #192).
-- Host creation from `hosts.html` — WORKING via `create-host` Edge
-  Function (migrated by PR #192). Sends `terms_accepted: true` and
-  `terms_accepted_at` — host row is written with terms recorded.
-- Host creation from Drop Studio inline ("+ New Host" modal) —
-  WORKING via `create-host`, BUT does NOT capture terms acceptance.
-  Hosts created via this path land with `terms_accepted: false`. See
-  T4-37 backlog.
-- Brand Hearth preview-drop host fetch — WORKING via `get-host`
-  (migrated by PR #192).
-- Hosts UPDATE (host-profile.html save) — CONFIRMED BROKEN. Direct
-  PATCH to `/rest/v1/hosts?id=eq.<host-id>` returns 204 with empty
-  body — RLS rejects, UI shows success toast, nothing is written.
-  Operational learning #14 verified in production on 2026-04-27.
-  Blocking host editing entirely. Tracked as T5-B28 (Priority 6 —
-  update-host Edge Function).
-- Drops INSERT — BROKEN. Tracked as Priority 3 / pending Edge
-  Function migration. No change in PR #192.
+- Single-host fetch — WORKING via `get-host` Edge Function.
+- Host creation from `hosts.html` — WORKING via `create-host` Edge Function. Sends `terms_accepted: true` and `terms_accepted_at`.
+- Host creation from Drop Studio inline ("+ New Host" modal) — WORKING via `create-host`, BUT does NOT capture terms acceptance. Tracked as T4-37.
+- Brand Hearth preview-drop host fetch — WORKING via `get-host`.
+- Hosts UPDATE (host-profile.html save) — STILL BROKEN. Tracked as T5-B28 (Priority 6 — update-host Edge Function). Direct PATCH to `/rest/v1/hosts?id=eq.<host-id>` returns 204 with empty body — RLS rejects, UI shows success toast, nothing is written.
+- Drops INSERT — STILL BROKEN. Tracked as T5-B (drops Edge Function migration). No change in this session's work.
+- Categories INSERT (drop-menu.html) — STILL BROKEN. Tracked as T5-B16 / T5-B23. RLS rejects on fresh-vendor inserts.
 
 ## Development backlog
 
@@ -746,7 +798,10 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B18 — Stripe status visibility surface — open
 - T5-B19 — drop-menu.html: CSP eval-blocked warning — open
 - T5-B21 — Window cancellation with existing orders (refunds + audit trail) — open
-- T5-B22 — Customer-flow: order_items RLS insert fails (orphan orders rows) — open, blocks production
+- T5-B22 — Customer-flow: order_items RLS insert fails (orphan orders rows) — ✓ COMPLETE 2026-05-01. Resolved by full migration to Edge Functions across three phases: Phase 1 schema migration (pending_payment status, vendor.platform_fee_pct, orders.platform_fee_pence, view updates for capacity reservation); Phase 2 create-order + stripe-webhook with Stripe Connect destination charges (PR #204); Phase 3 fetch-order + cancel-order + order.html and order-confirmation.html rewire (merged 2026-05-01). End-to-end verified with real Stripe test card on production.
+- T5-B29 — Multi-window parent drop fulfilment.mode bug — open. When ordering against a drop with `window_group_id` set and `fulfilment_mode = null` (the multi-window parent pattern), `buildCheckoutPayload()` in order.html sends `fulfilment.mode: null` and create-order rejects with 400. Either: (a) order.html's window-selection step in init() should route customers to a child drop before allowing basket entry, or (b) `buildCheckoutPayload` should read `fulfilment_mode` from the selected child window rather than `state.drop`. Also: `validateCheckout()` should refuse to submit when `fulfilment.mode` is null, surfacing a user-friendly error instead of relying on the server's 400. Discovered during Phase 3 manual testing on 2026-05-01.
+- T5-B30 — Edge Function CORS allow-list excludes Netlify deploy previews — open. All current Edge Functions hardcode `ALLOWED_ORIGIN = 'https://lovehearth.co.uk'`, which means deploy previews on `*.netlify.app` cannot exercise the customer flow. Phase 3 testing had to be completed against production after merge rather than against the deploy preview. Widen the allow-list to include the Netlify preview domain pattern, or accept the limitation and document it in the PR template (deploy preview testing requires merge-to-prod for final visual confirmation).
+- T5-B31 — Legacy capacity columns cleanup — open. `orders.pizzas` (NOT NULL CHECK >= 1), `drops.capacity_pizzas`, `drops.max_orders` are still being populated as `Math.max(1, capacity_units)`. Audit all read sites for these columns; remove those reads; then drop the columns. Currently written-only by the create-order Edge Function (line marked with `// LEGACY: see SCHEMA.md — orders.pizzas column slated for removal`). Bounded one-session piece of work.
 - T5-B23 — categories RLS violation on fresh-vendor inserts — open, blocks production
 - T5-B24 — Password reset page: button stuck on "Sending..." — open (cosmetic)
 - T5-B25 — admin.html: vendor creation is not atomic — open
