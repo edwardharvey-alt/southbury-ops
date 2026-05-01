@@ -2733,3 +2733,29 @@ After T6 and Stripe, the recommended build sequence is:
 Going live before T6-2, T6-3, and T6-4 means any Claude Code mistake
 reaches live customers within 30 seconds — appropriate for solo
 development, dangerous when real vendors depend on the platform.
+
+## Future architecture
+
+### Frontend framework migration (post-validation)
+
+Priority: Low. Trigger: 5–10 vendors live and model proven.
+
+The current stack (static HTML/JS + Supabase + Netlify) is appropriate
+for the validation phase but has a natural ceiling. As platform
+complexity grows — more interactive UI, shared components, complex
+state, Stripe webhooks, notification flows — raw HTML/JS becomes harder
+to maintain and slower to build against.
+
+Migration target: Next.js + Supabase + Netlify (or Vercel).
+
+- Supabase layer (schema, RLS, views, Edge Functions) unchanged
+- Frontend rebuilt as a component-based React app
+- Netlify supports Next.js natively — no infrastructure change
+- Claude Code prompt quality improves significantly on React/Next.js
+
+Do not migrate prematurely — finish Stripe, SMTP, and first live drops
+first. When the trigger is met, a short freelance engagement (2–4 weeks)
+to scaffold the Next.js app and migrate core pages is the recommended
+approach. Resume Claude Code iteration on the new foundations.
+
+No code changes required at this stage. Documentation only.
