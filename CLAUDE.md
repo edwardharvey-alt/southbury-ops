@@ -77,6 +77,17 @@ Core belief: great local food should strengthen communities, not bypass them.
 - Test Vendor (slug: test-vendor) — clean test workspace with no drops
   or catalogue, used to verify first-drop guidance, vendor isolation,
   and empty-state rendering. onboarding_completed: false
+- Test 11 (slug: test-11, vendor_id 26e3721b-34d9-4b13-9dc3-e92c47d058a8,
+  email eddierenzo1@gmail.com) — primary verification fixture for
+  Edge Function PRs. Used to verify PR #192 (get-host bundle).
+  Currently has eight hosts attached, kept in place as test fixtures:
+  Large Balls, Massive Balls, Medium Balls, Small balls, The Bell,
+  Tiny balls (all pre-existing). Mini Balls (created via Drop Studio
+  inline → terms_accepted: false — see T4-37 backlog item) and
+  Blue Balls (created via hosts.html Add Host → terms_accepted: true)
+  were added during PR #192 verification and are deliberately
+  retained as test fixtures covering both terms-acceptance code
+  paths.
 - Test 12 (slug: test-12) — Stripe-incomplete fixture. vendor_id
   `32a6665a-7b68-428d-90b3-d9b11259c16e`, auth_user_id
   `40d17b2d-2960-4d06-afd4-d27d399becd9`, email `eddierenzo1+test12@gmail.com`. `stripe_account_id`
@@ -235,6 +246,61 @@ regeneration query is at the top of that file.
     actual question was different). The investigation is read-only,
     ~5–30 minutes, and locks in the build strategy before any code is
     written.
+
+15. **Edge Function changes follow the deploy-before-merge workflow.**
+    Claude Code drafts the function source, the `supabase/config.toml`
+    block, and any page changes on a feature branch and opens a PR.
+    Claude Code does NOT push to main and does NOT attempt to deploy.
+    Ed deploys the function from his linked Supabase CLI:
+    ```
+    git fetch origin
+    git checkout feature/<branch-name>
+    supabase functions deploy <function-name>
+    supabase functions list
+    ```
+    Then runs the smoke test:
+    ```
+    curl -i -X OPTIONS https://tvqhhjvumgumyetvpgid.supabase.co/functions/v1/<function-name> \
+      -H "Origin: https://lovehearth.co.uk" \
+      -H "Access-Control-Request-Method: POST"
+    ```
+    Expect HTTP 204 with `access-control-allow-origin:
+    https://lovehearth.co.uk`. Only after the smoke test passes is
+    the PR merged. Merging before deploy produces 404s on every
+    save in production until the Edge Function is deployed. T6-1
+    (auto-deploy via GitHub Actions) is outstanding — manual
+    deploy required for now.
+
+16. **Edge Functions protected only by the gateway `verify_jwt` flag
+    have no real server-side auth boundary.** Any privileged Edge
+    Function must include explicit in-function JWT verification via
+    `supabase.auth.getUser()` and an authorisation check against the
+    returned user claims. The frontend UID check is UX, not security.
+    (Learned from invite-vendor session, 22 April 2026.)
+
+17. **When admin.html or any authenticated page calls a Supabase Edge
+    Function, both `apikey` and `Authorization: Bearer <access_token>`
+    headers must be included,** matching the pattern used for direct
+    PostgREST calls. Missing headers produce
+    UNAUTHORIZED_NO_AUTH_HEADER / 401 errors that fail silently after
+    creating partial database state. (Learned from admin.html bug,
+    22 April 2026.)
+
+18. **Supabase has migrated all projects to asymmetric JWT signing
+    keys (ECC P-256 / ES256).** Edge Functions deployed before this
+    migration that relied on the gateway's HS256 verification will
+    fail with UNAUTHORIZED_UNSUPPORTED_TOKEN_ALGORITHM. Fix: set
+    `verify_jwt = false` in supabase/config.toml for the function and
+    use `supabase.auth.getUser()` in-function, which handles both
+    algorithms natively. (Learned from invite-vendor session, 22 April
+    2026.)
+
+19. **Challenge handover assertions before acting on them.** Session
+    handover notes sometimes describe deployed state rather than
+    source state, or describe an investigation result as a confirmed
+    fact. Before running any Claude Code prompt based on "the file
+    has X", verify with grep/read first. (Learned from aborted
+    branch 8609900 on 22 April 2026.)
 
 ## Operational learnings
 
@@ -422,6 +488,43 @@ on top of the coding rules above.
     chasing phantom bugs in code that's been silently changed by the
     other session.
 
+16. **Authenticated mutations migrate to Edge Functions following the
+    `update-vendor` and `create-host` pattern.** The supabase-js +
+    publishable-key auth-attach bug documented in learnings #12, #13,
+    #14 is a real, persistent issue and cannot be sidestepped at the
+    config level — the legacy anon JWT path was confirmed closed on
+    27 April. The proven fix is to invoke an Edge Function via
+    `client.functions.invoke()`, which uses a separate code path
+    that does correctly attach the user JWT, and have the function
+    verify ownership server-side and use a service-role client for
+    the actual write. Pattern reference:
+    `supabase/functions/update-vendor/index.ts` (UPDATE template
+    with whitelist) and `supabase/functions/create-host/index.ts`
+    (INSERT template). Each Edge Function:
+    - Sets `verify_jwt = false` in `supabase/config.toml`
+    - Verifies the JWT manually via `anonClient.auth.getUser()`
+    - Verifies the user owns the relevant vendor / parent resource
+    - Uses a service-role client (`SUPABASE_SERVICE_ROLE_KEY`) for
+      the actual database write, bypassing RLS
+    - Uses a tight `ALLOWED_ORIGIN` (currently
+      `https://lovehearth.co.uk`)
+    - Returns `{ error: "..." }` JSON for 4xx/5xx and the updated
+      row for 200
+    Page-side wiring uses `supabase.functions.invoke("<name>", { body })`
+    and checks BOTH `error` (transport) and `data.error` (function
+    error response). Migration is in progress: `update-vendor` and
+    `create-host` are done; `onboarding.html`, `drop-manager.html`
+    drops CRUD, `drop-menu.html` products/bundles/categories,
+    `customer-import.html`, and `update-host` are still on the
+    direct PostgREST path and silently fail. RLS reads on tables
+    without permissive `anon USING (true)` SELECT policies are also
+    broken silently (`hosts`, `customer_relationships`, `customers`,
+    `drop_series`, `drop_series_schedule`, `order_items`,
+    `order_item_selections`, `order_status_events`) — those need
+    either `list-X` Edge Functions or relaxed SELECT policies as
+    part of the same workstream. See session handover dated 27
+    April 2026 for the full migration plan and priority order.
+
 ## Stripe Connect Express (T3-8)
 
 - vendors schema: `stripe_account_id` TEXT (nullable),
@@ -538,6 +641,33 @@ Stripe integration is next. Order ID is generated, payload is structured,
 TODO comment marks exact insertion point in handoffToPayment().
 When configuring the Stripe Payment Element, set it to skip address
 collection — Hearth captures the full address at order time.
+
+## Production mutation/read status
+
+Snapshot of which read/write paths are working in production and which
+are known broken. Update whenever a PR confirms or breaks a path. Last
+updated 2026-04-27 after PR #192 (get-host bundle).
+
+- Host listing — WORKING via `list-hosts` Edge Function.
+- Single-host fetch — WORKING via `get-host` Edge Function (added by
+  PR #192).
+- Host creation from `hosts.html` — WORKING via `create-host` Edge
+  Function (migrated by PR #192). Sends `terms_accepted: true` and
+  `terms_accepted_at` — host row is written with terms recorded.
+- Host creation from Drop Studio inline ("+ New Host" modal) —
+  WORKING via `create-host`, BUT does NOT capture terms acceptance.
+  Hosts created via this path land with `terms_accepted: false`. See
+  T4-37 backlog.
+- Brand Hearth preview-drop host fetch — WORKING via `get-host`
+  (migrated by PR #192).
+- Hosts UPDATE (host-profile.html save) — CONFIRMED BROKEN. Direct
+  PATCH to `/rest/v1/hosts?id=eq.<host-id>` returns 204 with empty
+  body — RLS rejects, UI shows success toast, nothing is written.
+  Operational learning #14 verified in production on 2026-04-27.
+  Blocking host editing entirely. Tracked as T5-B28 (Priority 6 —
+  update-host Edge Function).
+- Drops INSERT — BROKEN. Tracked as Priority 3 / pending Edge
+  Function migration. No change in PR #192.
 
 ## Development backlog
 
@@ -1054,6 +1184,23 @@ auto-materialise windows on save (treat configured rows as committed),
 or strengthen Create windows button visual prominence (larger, primary
 colour, separator above).
 
+T4-37: Drop Studio inline host creation — capture terms acceptance
+The inline "+ New Host" modal in `drop-manager.html`
+(`createHostInline` around line 4464) calls `create-host` without
+`terms_accepted` or `terms_accepted_at`. Hosts created via this path
+land in the database with `terms_accepted: false` (confirmed on Test
+11 vendor — Mini Balls and Medium Balls both have
+`terms_accepted: false`). The `hosts.html` Add Host flow already
+captures terms; this is the only remaining path that bypasses it.
+Build needs: (a) UX decision on where the terms checkbox lives in
+the inline modal (the inline flow is intentionally minimal —
+name/type/postcode only — to keep drop creation fast), (b) payload
+update to send `terms_accepted: true` and
+`terms_accepted_at: new Date().toISOString()`. Once both paths
+capture terms, `terms_accepted` can be made required in
+`create-host` (currently optional for backwards compatibility — see
+the comment in `supabase/functions/create-host/index.ts`).
+
 ### Tier 5 — Strategic platform features
 
 T5-1: Delivery optimisation
@@ -1439,6 +1586,38 @@ vendor_id as a filter for correctness — the server enforces it.
 Frontend filters stay for clarity but become belt-and-braces rather
 than the only defence.
 
+[Extension — 2026-04-27 RLS audit] Today's RLS layer is incoherent.
+Most vendor-scoped tables have BOTH a strict authenticated-only
+policy AND one or more permissive `anon USING (true)` policies.
+Postgres RLS is additive, so the permissive anon path is what's
+actually keeping the platform functional under the auth-attach bug
+— but the same permissive policies allow any authenticated or anon
+user to read every other vendor's drops, products, orders, and
+customer data.
+
+Once the Edge Function migration covers the legitimate authenticated
+paths (see operational learning #16), this workstream:
+
+- Removes the permissive `anon USING (true)` SELECT policies on
+  tables that should be vendor-scoped (`drops`, `products`,
+  `bundles`, `categories`, `drop_menu_items`, `vendors`)
+- Removes the permissive `anon UPDATE/INSERT` policies on `orders`,
+  `order_items`, `order_item_selections`, `vendors`
+- Tightens vendor SELECT to expose only public-readable columns
+  via a dedicated view, removing direct public access to
+  contact_phone, address, social_handles, etc.
+- Consolidates duplicate policies (e.g. `drops` has six different
+  anon SELECT policies — one is enough)
+- Adds RLS to authenticated-only views where missing
+  (e.g. `v_drop_summary`)
+
+Do this strictly AFTER the Edge Function migration. Removing
+permissive policies before the Edge Functions are in place breaks
+the platform. The migration creates the legitimate auth paths;
+this ticket removes the illegitimate ones.
+
+Reference: full RLS audit performed in session dated 27 April 2026.
+
 T5-A4: Login page ✓ COMPLETE
 login.html created as a standalone page for returning vendors. Uses
 signInWithPassword (email + password) rather than magic link as
@@ -1817,6 +1996,53 @@ new vendors cannot create categories — which means they cannot create
 products, which means they cannot run drops. Cross-reference T5-B22;
 same root-cause hypothesis.
 
+T5-B24: Password reset page — button stuck on "Sending..."
+Low priority UX bug. On reset-password.html the submit button never
+resolves to a "Sent" / success state — it stays on "Sending..."
+indefinitely after submit. The "Check your inbox" confirmation block
+below the button renders correctly, so the flow functionally works and
+the user is not blocked. Fix is cosmetic: resolve the button state (or
+hide the button) once the confirmation block appears.
+
+T5-B25: admin.html — vendor creation is not atomic
+If the invite-vendor Edge Function call fails, the vendor row is still
+created, leaving orphan records in the database. Should either be
+wrapped in a transaction (both insert and invite succeed or neither
+does) or the invite should happen before the vendor row insert.
+Medium priority refactor.
+
+T5-B26: admin.html — ADMIN_UID hardcoded in two places
+ADMIN_UID is duplicated in admin.html and
+supabase/functions/invite-vendor/index.ts. Should be moved to a single
+source of truth — options include an environment variable, a config
+table, or an admins table with RLS. Low priority cleanup.
+
+T5-B27: Edge Function `.single()` vs `.maybeSingle()` consistency sweep
+PR #192 flipped `create-host` from `.single()` to `.maybeSingle()` on
+the ownership check. `.maybeSingle()` is the canonical default — it
+returns `null` when no row is found, where `.single()` throws a 406
+that bypasses the explicit `if (!vendor)` guard immediately
+following. Confirmed consistent after #192: `update-vendor`,
+`list-hosts`, `complete-onboarding`, `get-host`, `create-host`.
+Audit remaining functions and flip if needed:
+`check-stripe-connect-status`, `create-stripe-connect-link`,
+`invite-vendor`. Low priority — no known live failures, just
+hygiene.
+
+T5-B28: `update-host` Edge Function (Priority 6 — migration sequence)
+Migrate the direct `hosts` UPDATE at `host-profile.html:1007` to a
+new `update-host` Edge Function following the same pattern as
+`update-vendor`: auth via `supabase.auth.getUser()`, ownership check
+on `vendors`, service-role write, explicit field whitelist. Remove
+the TODO comment added by PR #192 once landed.
+
+Silent-204 behaviour confirmed in production on 2026-04-27. Host
+profile save shows the success toast but writes are RLS-rejected.
+Direct PATCH to `/rest/v1/hosts?id=eq.<host-id>` returns 204 with
+empty body. This is now blocking host editing entirely on
+production. Operational learning #14 verified in the wild — this is
+no longer theoretical.
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live
@@ -1825,7 +2051,7 @@ to live site, no staging, no local dev) is fine for solo development
 but dangerous the moment real vendors depend on the platform. A bug in
 order.html today would reach live customers within 30 seconds of commit.
 
-T6-1: Domain migration to lovehearth.co.uk
+T6-1: Domain migration to lovehearth.co.uk ✓ COMPLETE
 Move the production deployment from spiffy-tulumba-848684.netlify.app to
 lovehearth.co.uk. Scope includes: DNS configuration (registrar records
 pointing at Netlify), Netlify custom domain setup with HTTPS certificate
@@ -1836,6 +2062,23 @@ currently references the netlify.app subdomain — needs update and redeploy),
 admin.html Edge Function invoke URL, any other hardcoded URLs across the
 codebase. Also removes the "Dangerous" browser warning that appears on
 the netlify.app subdomain. Blocks T3-8 (Stripe).
+
+[Completion note — 22 April 2026] Production deployment moved from
+spiffy-tulumba-848684.netlify.app to lovehearth.co.uk. DNS configured
+at registrar, Netlify custom domain active with HTTPS certificate
+provisioned, Supabase Auth site URL and redirect URLs updated,
+Supabase Auth email templates updated (sender address and hardcoded
+links), invite-vendor Edge Function redirectTo URL updated and
+redeployed, admin.html Edge Function invoke URL updated, transactional
+email SMTP configured against the new domain. The "Dangerous" browser
+warning that previously appeared on the netlify.app subdomain is gone.
+Unblocks T3-8 (Stripe Connect Express integration) — Stripe now has a
+stable production domain for return URLs and webhook endpoints.
+
+Follow-up (manual dashboard task, not a code change): remove the two
+stale Supabase Auth allowlist entries for
+spiffy-tulumba-848684.netlify.app. They are no longer needed now that
+lovehearth.co.uk is the canonical domain.
 
 T6-2: Local development environment
 Set up Ed's Mac to run the Hearth site locally for testing changes
@@ -1887,6 +2130,29 @@ transactional sending), Supabase SMTP configuration updated, test
 the full auth flow end-to-end. Separate infrastructure from the
 Google Workspace account being set up 21 April — regular email
 providers aren't designed for programmatic bulk sending.
+
+T6-7: Edge Function CORS allowlist — support Netlify preview domains
+Every Edge Function currently hardcodes
+`ALLOWED_ORIGIN = "https://lovehearth.co.uk"`. Netlify deploy
+previews (`deploy-preview-*--spiffy-tulumba-848684.netlify.app` and
+the equivalent on the production custom domain) cannot talk to the
+functions, which blocks pre-merge browser verification of any PR
+that touches HTML → Edge Function wiring. Discovered while
+verifying PR #192 — the only verification path is post-merge
+against the live site, which is the wrong default once real vendors
+depend on the platform.
+Options:
+- Allow `*.netlify.app` (broad, simple, accepts any Netlify-hosted
+  caller — slightly looser than ideal).
+- Allow a specific preview pattern (e.g. exact match on the
+  production preview prefix). Tighter, but requires the production
+  URL to be stable and known.
+- Environment-aware CORS config: read allowed origins from a
+  function-level secret or runtime env var. Cleanest, most
+  flexible.
+Affects every current and future PR that touches HTML → Edge
+Function wiring. Should land before T6-3 (staging) so previews
+work end-to-end against deployed Edge Functions.
 
 ### Tier 7 — Platform oversight and administration
 
@@ -2096,6 +2362,208 @@ historical incidents. Builds trust by being transparent about
 outages rather than hiding them. Depends on T7-M1 and T7-M3 as data
 sources.
 
+### Tier 8 — Platform audit and design system consolidation
+
+Hearth has grown page by page, ticket by ticket. Each page is
+well-built in isolation, but the platform has never had a single
+pass of fresh eyes asking whether it feels coherent end to end.
+Tier 8 is that pass — an independent audit across visual design,
+vendor experience, and language, followed by the consolidation of
+findings into a single source of truth so the platform does not
+re-drift as it grows.
+
+Principle: the audit is run by fresh eyes (Claude Chat in a
+dedicated session), not by the original builder. Its purpose is
+to ensure Hearth feels like one coherent platform, not a series
+of well-built but inconsistent pages.
+
+Sequencing:
+- Do not start T8 until T3-8 (Stripe Connect Express) is complete.
+- T8-1 through T8-3 can be run in parallel as independent audits.
+- T8-4 depends on the outputs of T8-1 through T8-3.
+- Findings from T8 become individual backlog items that get picked
+  off alongside feature work — the audit itself does not stop
+  ongoing development.
+
+T8-1: Brand and visual consistency audit
+Independent review of every page in the platform for:
+- Consistent application of design tokens (colours, spacing, type,
+  shadows, radii) from hearth.css
+- Consistent component behaviour and styling (buttons, inputs, cards,
+  modals, empty states, error states, loading states)
+- Consistent iconography and imagery
+- Consistent wordmark usage
+Output: severity-ranked findings document with specific locations,
+recommendations, and fix complexity estimates.
+
+T8-2: Vendor journey experience audit
+End-to-end walkthrough of the vendor experience from invite to
+ongoing operation:
+- Invite and onboarding flow
+- First drop creation
+- Live drop operation via Service Board
+- Menu and brand setup
+- Post-drop insights and history
+- Navigation consistency
+- Mobile-first quality
+Output: journey map with friction points, confusion risks, and
+recommendations for each step.
+
+T8-3: Language, copy, and tone audit
+Platform-wide review for:
+- Vocabulary consistency against the Hearth brand playbook
+  (drop, capacity, host, menu, community — and forbidden terms like
+  campaign, listing, promotion, marketplace)
+- Tone consistency (warm, calm, considered)
+- Clarity (does every screen tell the user what, why, what next)
+- Conciseness
+- Empty and error state quality
+- Microcopy consistency (buttons, form hints, confirmations)
+Output: per-page copy recommendations plus a glossary/style guide
+checkpoint.
+
+T8-4: Design system consolidation
+After T8-1 through T8-3 are complete, codify a single source of
+truth for:
+- Design tokens
+- Component patterns
+- Language and vocabulary
+- Navigation patterns
+- Mobile behaviour standards
+This becomes the reference for all future pages and ensures the
+platform doesn't re-drift.
+
+Dependency: T8-1, T8-2, T8-3 complete.
+
+### Tier 9 — Agentic AI workstream
+
+The boundary between Tier 5 and Tier 9 is intent. Tier 5
+intelligence surfaces signals and recommendations as text. Tier 9
+agentic features propose, draft, and prepare — then wait for
+vendor approval before anything is committed. The vendor is always
+the decision-maker. The platform does the thinking.
+
+All Tier 9 features use the Anthropic API via Claude Sonnet.
+Prompts are constructed from structured vendor data — never from
+raw user input. Output is always presented as a draft for vendor
+review, never applied automatically.
+
+T9-1: Auto-draft drops from demand signals
+When the intelligence engine identifies a strong demand cluster —
+enough known customers in an area, a gap in the drop cadence, or a
+returning host window — Hearth drafts a drop automatically and
+surfaces it to the vendor as a suggestion. Draft includes: date and
+window (based on cadence patterns), host context if a match exists,
+suggested capacity (based on area customer count and historical
+fill rates), and a menu pre-selected from the vendor's catalogue.
+Vendor sees "We've drafted a drop for you" on the Home dashboard,
+reviews, edits if needed, and publishes with one click. Nothing is
+created without explicit vendor action.
+Dependency: T4-28, T5-9, meaningful drop history.
+
+T9-2: Brand configuration AI
+On Brand Hearth, a vendor can trigger an AI brand analysis. They
+provide their uploaded logo, hero image, a short free-text
+description of their food and ethos, and their vendor category.
+Claude analyses the inputs and returns: a suggested tagline (3
+options), a brand positioning statement (2–3 sentences), a target
+audience description, and an accent colour suggestion with
+rationale. All outputs are presented as editable drafts — vendor
+accepts, edits, or discards each independently. Nothing saves
+until the vendor explicitly confirms. Particularly high value for
+new vendors who arrive at Brand Hearth unsure how to describe
+themselves.
+Dependency: T2-7 (file upload for logo and hero image).
+
+T9-3: Proactive host identification
+Rather than vendors browsing the host directory manually, Hearth
+suggests hosts they haven't worked with yet based on fit signals.
+Matching logic: vendor category and audience tags cross-referenced
+with host host_type and audience_tags, weighted by proximity
+(vendor address vs host postcode), host estimated_audience_size,
+and whether the host has an active service window that aligns with
+the vendor's typical drop timing. Output: a ranked shortlist of
+3–5 suggested hosts surfaced on the Home dashboard and in the
+Hosts directory under "Suggested for you." Each suggestion shows
+the match rationale in plain English: "Local gym, 200+ members,
+Friday evening service window — strong fit for your health-focused
+menu." Vendor clicks to view the full host profile or express
+interest.
+Dependency: T4-16 (complete), T5-B3 (vendor address captured).
+
+T9-4: Drop optimisation strategy
+A single surface — accessible from Drop Studio when creating or
+editing a drop — that consolidates all available intelligence into
+a plain-English strategy brief for that specific drop. Covers:
+recommended timing based on cadence patterns, optimal capacity
+given demand signals and historical fill rates, menu
+recommendations based on what has performed in similar contexts,
+predicted fill rate with confidence level, and estimated customer
+reach in the target area. Presented as a collapsible "Strategy"
+panel alongside the drop form. Vendor can accept individual
+recommendations (which pre-populate the relevant fields) or ignore
+them entirely.
+Dependency: T4-28, T5-9, meaningful drop and customer history.
+
+T9-5: Promotion copy generation
+When a drop is published or moved to scheduled status, Hearth
+offers to generate promotion copy in one click. Output: a WhatsApp
+message (under 160 characters, conversational), a social caption
+(Instagram/Facebook tone, 2–3 sentences with relevant emoji), and
+a short descriptive paragraph suitable for email or a community
+newsletter. All copy is generated in the vendor's brand voice —
+informed by their tagline, category, and the specific drop context
+(host name, date, menu highlights, capacity). Presented as
+editable drafts in a modal. Vendor copies to clipboard or edits
+before sharing.
+Dependency: T2-7 (brand assets), T4-28 (intelligence engine for
+context).
+
+T9-6: At-risk customer flagging
+Before customers reach lapsed status (60+ days no order), flag
+them as at risk at 40 days. Surface a quiet alert on the Customers
+page and Home dashboard: "14 customers haven't ordered in 40 days.
+A drop in their area could re-engage them." Clicking through shows
+the at-risk segment on the Customers page with postcode
+clustering. The intelligence engine generates a plain-English
+recommended action: "Your strongest at-risk cluster is RG10 with 9
+customers. A Friday evening drop there could re-engage them before
+they lapse entirely."
+Dependency: T4-27 (complete), T4-28 (complete).
+
+T9-7: Capacity intelligence
+Upgrade the capacity signal from descriptive to predictive. Based
+on historical fill rate patterns — day of week, drop type, host
+context, time since opening — generate a prediction: "Based on
+your last 6 Friday drops at The Bell, you typically reach 80%
+capacity by Wednesday evening. At current trajectory this drop
+will sell out by Tuesday." Surface on the Service Board for live
+drops and in Drop Studio when setting capacity for a new drop. For
+new vendors without history, fall back to platform-wide benchmarks
+for similar drop types.
+Dependency: T4-28, minimum 5 drops of the same type.
+
+T9-8: Menu suggestion by context
+When a vendor assigns a menu to a drop, surface AI-powered menu
+suggestions based on context matching. Analyse item sales
+performance grouped by host type, drop type, day of week, and
+fulfilment mode. Present a ranked suggestion: "For a sports club
+Friday evening, your Margherita, Garlic Bread and Brownie Box have
+historically driven the strongest basket value. Consider featuring
+these." Vendor can add suggested items to the drop menu with one
+click.
+Dependency: T4-28, meaningful item sales history across varied
+contexts.
+
+Recommended build sequence for Tier 9:
+First: T9-6 (at-risk flagging) and T9-5 (promotion copy) —
+immediate vendor value, fewest dependencies.
+Second: T9-2 (brand AI) and T9-3 (host identification) —
+demo-compelling, no deep drop history needed.
+Third: T9-1, T9-4, T9-7, T9-8 — need real data to be credible,
+build once Southbury Farm has meaningful drop history and Healthy
+Habits is live.
+
 ## Recommended next session order
 
 All Tier 1 and Tier 2 items are complete. T3-1 is also complete.
@@ -2167,7 +2635,7 @@ T5-B4 — surface social handles and address in Brand Hearth
 
 Next priority: T6 workstream (production readiness) must complete before
 any real vendor captures live data. Order:
-  1. T6-1 — Domain migration to lovehearth.co.uk (in progress)
+  1. T6-1 ✓ — Domain migration to lovehearth.co.uk (complete 22 April 2026)
   2. T6-2 — Local development environment
   3. T6-3 — Staging environment
   4. T6-4 — Branch protection and PR review workflow
