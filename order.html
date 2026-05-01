@@ -2958,6 +2958,35 @@ async function handoffToPayment() {
           bindDynamicEvents();
           await loadDropContext();
 
+          const urlParams = new URLSearchParams(window.location.search);
+          const cancelled = urlParams.get('checkout_cancelled');
+          const returnedOrderId = urlParams.get('order_id');
+          const returnedSessionId = urlParams.get('session_id');
+          if (cancelled === '1' && returnedOrderId && returnedSessionId) {
+            try {
+              await supabase.functions.invoke('cancel-order', {
+                body: {
+                  order_id: returnedOrderId,
+                  session_id: returnedSessionId
+                }
+              });
+            } catch (err) {
+              console.warn('cancel-order on return failed:', err);
+            }
+            const url = new URL(window.location);
+            url.searchParams.delete('checkout_cancelled');
+            url.searchParams.delete('order_id');
+            url.searchParams.delete('session_id');
+            window.history.replaceState({}, '', url);
+            showNotice("Your previous order was cancelled. Add items to your basket and try again.", "warn");
+          } else if (cancelled === '1') {
+            const url = new URL(window.location);
+            url.searchParams.delete('checkout_cancelled');
+            url.searchParams.delete('order_id');
+            window.history.replaceState({}, '', url);
+            showNotice("Your previous order was cancelled. Add items to your basket and try again.", "warn");
+          }
+
           /* T4-15 — Multi-window selection step */
           if (state.drop && state.drop.window_group_id) {
             const shouldProceed = await handleWindowSelection();
