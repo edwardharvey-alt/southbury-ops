@@ -525,11 +525,17 @@ on top of the coding rules above.
       row for 200
     Page-side wiring uses `supabase.functions.invoke("<name>", { body })`
     and checks BOTH `error` (transport) and `data.error` (function
-    error response). Migration is in progress: `update-vendor` and
-    `create-host` are done; `onboarding.html`, `drop-manager.html`
-    drops CRUD, `drop-menu.html` products/bundles/categories,
-    `customer-import.html`, and `update-host` are still on the
-    direct PostgREST path and silently fail. RLS reads on tables
+    error response). Migration is in progress. Confirmed migrated as of 2 May 2026:
+    `update-vendor`, `create-host`, `update-host`, `create-drop`,
+    `update-drop`, `transition-drop-status`, `assign-menu-items`,
+    `remove-event-window`, `complete-onboarding` (covering Drop
+    Studio drop CRUD, host CRUD, and onboarding writes). Still on
+    the direct PostgREST path and silently failing in production:
+    `drop-menu.html` categories/products/bundles INSERT/UPDATE/DELETE
+    (the durable fix is the T5-B16 nine-function migration; the
+    captured 2 May Bearer-header evidence is recorded in the
+    production status snapshot). `customer-import.html` writes are
+    out of scope of the 2 May audit and remain unverified. RLS reads on tables
     without permissive `anon USING (true)` SELECT policies are also
     broken silently (`hosts`, `customer_relationships`, `customers`,
     `drop_series`, `drop_series_schedule`, `order_items`,
@@ -706,7 +712,7 @@ collection — Hearth captures the full address at order time.
 
 ## Production mutation/read status
 
-Snapshot of which read/write paths are working in production and which are known broken. Update whenever a PR confirms or breaks a path. Last updated 2026-05-02 after T5-B28 production verification.
+Snapshot of which read/write paths are working in production and which are known broken. Update whenever a PR confirms or breaks a path. Last updated 2026-05-02 after audit-findings doc-sync.
 
 - Customer order placement (orders, order_items, order_item_selections, customers, customer_relationships) — WORKING via `create-order` Edge Function. Atomic write of all five tables, Stripe Connect destination charge created, order starts at `status='pending_payment'` and flips to `'placed'` on webhook receipt. Capacity is reserved during the pending_payment window (Stripe expires_at = 1800s).
 - Stripe webhook handling — WORKING via `stripe-webhook` Edge Function. Handles `checkout.session.completed` (→ placed/paid), `checkout.session.expired` (→ cancelled/expired), `checkout.session.async_payment_failed` (→ cancelled/failed). Endpoint configured at https://tvqhhjvumgumyetvpgid.supabase.co/functions/v1/stripe-webhook (Stripe Dashboard endpoint name: "brilliant-rhythm").
@@ -718,8 +724,12 @@ Snapshot of which read/write paths are working in production and which are known
 - Host creation from Drop Studio inline ("+ New Host" modal) — WORKING via `create-host`, BUT does NOT capture terms acceptance. Tracked as T4-37.
 - Brand Hearth preview-drop host fetch — WORKING via `get-host`.
 - Hosts UPDATE (host-profile.html save) — WORKING via `update-host` Edge Function. Whitelisted field updates with vendor-scoped tenancy belt (id + vendor_id) and service-role write. Verified end-to-end in production 2 May 2026.
-- Drops INSERT — STILL BROKEN. Tracked as T5-B (drops Edge Function migration). No change in this session's work.
-- Categories INSERT (drop-menu.html) — STILL BROKEN. Tracked as T5-B16 / T5-B23. RLS rejects on fresh-vendor inserts.
+- Drops INSERT / UPDATE / status transitions — WORKING via `create-drop`, `update-drop`, `transition-drop-status`, `assign-menu-items`, `create-host`, and `remove-event-window` Edge Functions. Confirmed via source-level grep against drop-manager.html on 2 May 2026 — no remaining direct PostgREST writes against `drops`, `drop_menu_items`, `hosts` (insert path), or related tables on the Drop Studio page.
+- Onboarding writes (vendors, host context, terms acceptance) — WORKING via `update-vendor` and `complete-onboarding` Edge Functions. Confirmed via source-level grep against onboarding.html on 2 May 2026 — no remaining direct PostgREST writes.
+- Categories INSERT / UPDATE / DELETE (drop-menu.html) — STILL BROKEN. Tracked as T5-B16 / T5-B23. Production test 2 May 2026 against Test 12 (vendor_id 32a6665a-7b68-428d-90b3-d9b11259c16e): POST /rest/v1/categories returned 401 with PostgREST error code 42501 ("new row violates row-level security policy"). Captured request header: `Authorization: Bearer sb_publishable_GftZ3Mw1M2-jb2bStjv80Q_gRDC9FzD` — request evaluated as anon, not authenticated, so the "Categories: authenticated owner all" RLS policy did not apply. Same root cause as operational learnings #12, #13, #14.
+- Products INSERT / UPDATE / DELETE (drop-menu.html) — STILL BROKEN. Same page, same root cause as categories. Tracked as T5-B16.
+- Bundles INSERT / UPDATE / DELETE (drop-menu.html) — STILL BROKEN. Same page, same root cause as categories. Tracked as T5-B16. bundle_lines and bundle_line_choice_products writes likely affected — verify during T5-B16 build.
+- customer-import.html writes (customers, customer_relationships) — UNVERIFIED. Out of scope of 2 May 2026 audit. Investigate before any production-vendor onboarding that involves customer import.
 
 ## Development backlog
 
@@ -806,6 +816,8 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B24 — Password reset page: button stuck on "Sending..." — open (cosmetic)
 - T5-B25 — admin.html: vendor creation is not atomic — open
 - T5-B26 — ADMIN_UID hardcoded in two places — open
+- T5-B32 — Duplicate anon SELECT policies on products — open
+- T5-B33 — Restore missing T5-B29 / T5-B30 / T5-B31 ticket bodies in BACKLOG.md — open
 
 ### Tier 6 — Production readiness
 - T6-2 — Local development environment — open

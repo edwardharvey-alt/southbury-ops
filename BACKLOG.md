@@ -1289,21 +1289,93 @@ create-drop sibling generation, and the drop_menu_items writes
 Function. All residual direct-PostgREST writes on
 `drop-manager.html` are now retired.
 
-T5-B16: drop-menu.html category INSERT blocked by RLS — manifestation
-of the auth-not-attached pattern, third surface (after hosts SELECT
-in PR 4a verification and customers UPSERT in earlier work). Network
-inspection confirms supabase-js sends the publishable anon key as the
-Authorization Bearer token rather than a user JWT, so PostgREST
-evaluates the request as the anon role. The "Categories: authenticated
-owner all" policy doesn't apply to anon, no anon INSERT policy exists
-on categories, request fails with 401 and "new row violates row-level
-security policy". Fix: bundle into Priority 4 (Menu Library writes)
-via a create-category / update-category / delete-category Edge
-Function set, mirroring the create-host / update-host / create-drop
-/ update-drop pattern. Do NOT add an anon INSERT policy on categories
-as a workaround — would be a security regression (any anon request
-could insert categories for any vendor by passing vendor_id). Out of
-scope for PR 4b.
+T5-B16: drop-menu.html — full Edge Function migration for
+categories/products/bundles writes. Manifestation of the
+auth-not-attached pattern (operational learnings #12, #13, #14, #16),
+fourth surface across the platform after hosts SELECT, customers
+UPSERT, and host UPDATE — all now resolved via Edge Function
+migration. drop-menu.html is the remaining surface.
+
+**Production diagnosis (2 May 2026)**
+
+Live production test against Test 12 (vendor_id
+32a6665a-7b68-428d-90b3-d9b11259c16e, slug test-12) with Network tab
+open. Attempted to create a category via the drop-menu.html "Create
+Category" modal. POST /rest/v1/categories returned 401 with PostgREST
+error code 42501 ("new row violates row-level security policy for
+table categories"). Captured request header:
+
+  Authorization: Bearer sb_publishable_GftZ3Mw1M2-jb2bStjv80Q_gRDC9FzD
+
+This is the publishable anon key, not a user JWT. The request
+therefore evaluated as the anon role server-side. The "Categories:
+authenticated owner all" RLS policy is correctly scoped (authenticated
+role, vendor_id IN (SELECT id FROM vendors WHERE auth_user_id =
+auth.uid())) and does not apply to anon. No anon INSERT policy exists
+on categories (correctly — adding one would be a security regression
+allowing any anon caller to insert categories for any vendor by
+passing vendor_id in the body).
+
+drop-menu.html uses inline `window.supabase.createClient(SUPABASE_URL,
+SUPABASE_ANON_KEY)` rather than `window._getHearthClient()`. This is
+part of the failure mode (the inline client does not benefit from the
+manual Authorization header workaround in `assets/config.js` per
+operational learning #14) but is not the durable fix. Even with the
+singleton, the reliable platform pattern is Edge Function migration
+per operational learning #16.
+
+RLS policies on categories, products, and bundles were checked during
+the audit and are correct. They do not need changing — the request
+needs the right Bearer token, which the Edge Function path provides
+via `client.functions.invoke()`.
+
+**Migration scope — nine Edge Functions**
+
+Following the create-host / update-host pattern:
+
+- create-category, update-category, delete-category
+- create-product, update-product, delete-product
+- create-bundle, update-bundle, delete-bundle
+
+Plus likely (verify during build): bundle_lines and
+bundle_line_choice_products writes — same page, almost certainly same
+RLS surface and same bug. If confirmed broken during the bundle
+build, fold into the bundle batch rather than a separate ticket.
+
+Plus rewrites in drop-menu.html: replace direct PostgREST writes with
+`supabase.functions.invoke()` calls against the new functions. While
+rewiring, also switch from inline `window.supabase.createClient()` to
+`window._getHearthClient()` for read paths on the same page (read
+paths are not currently broken because of the permissive anon SELECT
+policies, but the singleton is the correct pattern).
+
+**Reference patterns**
+
+- INSERT shape: `supabase/functions/create-host/index.ts`. Manual JWT
+  verification via `anonClient.auth.getUser()`, ownership check via
+  service-role client against `vendors.auth_user_id`, service-role
+  write.
+- UPDATE shape: `supabase/functions/update-host/index.ts`. Adds
+  ALLOWED_FIELDS whitelist and tenancy belt with
+  `.eq("id", x).eq("vendor_id", y)`.
+
+Each Edge Function must follow CLAUDE.md rule #15 (deploy-before-merge)
+and operational learning #16 (verify_jwt = false in
+supabase/config.toml, in-function getUser, ALLOWED_ORIGIN, jsonResponse
+helper from _shared/cors.ts).
+
+**Estimated build effort**
+
+3–4 Claude Code build sessions due to the function count and
+deploy-before-merge cadence. Per operational learning #15, single-
+file-stop discipline applies — one logical chunk per session, fresh
+session per chunk. Recommended sequencing: categories first (no FK
+dependencies on products or bundles), products second, bundles last
+(most complex, plus bundle_lines / bundle_line_choice_products if
+confirmed in scope).
+
+Cross-reference T5-B23 (production-state ticket — categories blocked
+on fresh-vendor inserts). Once this migration lands, T5-B23 closes.
 
 T5-B17: underlying auth-not-attached client bug. The Edge Function
 migration treats symptoms; the underlying problem is that
@@ -1367,22 +1439,22 @@ not in scope for that work. Worth investigating before any
 production-vendor onboarding because no real customer order can
 complete on this platform until this is fixed.
 
-T5-B23: categories RLS violation on fresh-vendor inserts.
-On test-12 (no historical categories, no historical drops), attempting
-to create a category via drop-menu.html's "Create Category" modal fails
-with "new row violates row-level security policy for table categories".
-UI is reachable, modal opens, form submits, but the underlying direct
-PostgREST insert is rejected. Same pattern as T5-B22 (customer-flow
-order_items RLS): fresh-vendor table inserts via direct PostgREST hit
-RLS gaps. Likely root cause: categories table's RLS policy doesn't
-grant insert to authenticated role, OR the auth session isn't being
-attached to direct-from-client writes (T5-B17 territory). Pre-PR-4b
-platform bug. Test 12 vendor_id available via vendors slug = 'test-12'.
-Reproducible by signing in as Test 12 and attempting any new category.
-Worth investigating before any production-vendor onboarding because
-new vendors cannot create categories — which means they cannot create
-products, which means they cannot run drops. Cross-reference T5-B22;
-same root-cause hypothesis.
+T5-B23: categories RLS violation on fresh-vendor inserts —
+production-state ticket.
+
+Confirmed broken in production 2 May 2026 via captured-headers test
+against Test 12. Root cause is the publishable-key auth-attach bug
+(operational learnings #12, #13, #14, #16), not a missing RLS policy.
+See the production status snapshot in CLAUDE.md for the captured
+Bearer header and the PostgREST 42501 response.
+
+This ticket tracks the production state (categories INSERT blocked
+on fresh vendors, blocking the entire vendor activation path:
+categories → products → drops). T5-B16 tracks the migration work
+that resolves it.
+
+Closes when T5-B16 lands and a fresh-vendor category create succeeds
+end-to-end on Test 12.
 
 T5-B24: Password reset page — button stuck on "Sending..."
 Low priority UX bug. On reset-password.html the submit button never
@@ -1435,6 +1507,40 @@ Direct PATCH to `/rest/v1/hosts?id=eq.<host-id>` returns 204 with
 empty body. This is now blocking host editing entirely on
 production. Operational learning #14 verified in the wild — this is
 no longer theoretical.
+
+T5-B32: Duplicate anon SELECT policies on products.
+Surfaced during the 2 May 2026 audit while reviewing categories /
+products / bundles RLS in support of T5-B16. The products table has
+multiple anon SELECT policies that overlap (same pattern as the
+categories observation noted in T5-B14). Postgres RLS is additive,
+so this is functionally a no-op — but it adds editing surface and
+makes the policy set harder to reason about during the broader RLS
+hygiene workstream.
+
+Pulled forward from T5-A3 (full RLS rewrite) because today's audit
+surfaced it specifically. Low priority cleanup; can be folded into
+T5-A3 when that workstream runs, or picked off independently as a
+one-line policy DROP if convenient.
+
+Reference: full RLS audit performed in session dated 27 April 2026
+(covered categories/drops/products/bundles policy duplication). The
+2 May audit confirmed products specifically still has the duplicate.
+
+T5-B33: Restore missing T5-B29 / T5-B30 / T5-B31 ticket bodies in
+BACKLOG.md. CLAUDE.md's Tier 5-B index lists T5-B29 (multi-window
+parent drop fulfilment.mode bug), T5-B30 (Edge Function CORS
+allow-list excludes Netlify deploy previews), and T5-B31 (legacy
+capacity columns cleanup) as open tickets, but BACKLOG.md has no
+corresponding ticket bodies for any of the three. The two-file
+system relies on every CLAUDE.md index entry having a BACKLOG.md
+body — this drift was surfaced during the 2 May 2026 audit-findings
+doc-sync when attempting to add T5-B32 after T5-B31. Restore the
+three bodies from session memory: T5-B29 and T5-B30 were both
+surfaced during T5-B22 Phase 3 testing (1 May 2026), T5-B31 is the
+legacy capacity columns cleanup (orders.pizzas, drops.capacity_pizzas,
+drops.max_orders) flagged in earlier work. Each body should follow
+the existing T5-B ticket format: short title, paragraph of context,
+proposed fix, dependencies if any. Bounded one-session piece of work.
 
 ### Tier 6 — Production readiness
 
