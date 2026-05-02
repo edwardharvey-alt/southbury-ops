@@ -1594,6 +1594,22 @@ categories, products, and bundles all persist correctly on Test
 Cross-reference: T5-B16 (parent migration), PR #209 (category
 batch that surfaced this).
 
+T5-B35: drop-menu.html duplicateCurrentProduct drops suitability
+flags. Surfaced during the 2 May 2026 T5-B16 product batch (PR
+following #209). When a product is duplicated via Duplicate in the
+product editor, the constructed payload omits `travels_well`,
+`suitable_for_collection`, and `prep_complexity`. The original
+product carries those flags but the duplicate is created without
+them, so the copy silently loses suitability metadata that the
+operator just spent time configuring on the source. Fix is a
+one-liner — add the three fields to the `fields` object in
+`duplicateCurrentProduct` (drop-menu.html, near line 2390) sourced
+from the original `product`. Held back from the T5-B16 product
+batch PR to keep that PR scoped to the Edge Function migration
+only. Bounded one-session piece of work; pair with a manual check
+that `duplicateCurrentBundle` does not have the equivalent gap on
+bundle-level metadata.
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live
