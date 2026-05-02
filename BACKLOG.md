@@ -1290,11 +1290,33 @@ Function. All residual direct-PostgREST writes on
 `drop-manager.html` are now retired.
 
 T5-B16: drop-menu.html — full Edge Function migration for
-categories/products/bundles writes. Manifestation of the
-auth-not-attached pattern (operational learnings #12, #13, #14, #16),
-fourth surface across the platform after hosts SELECT, customers
-UPSERT, and host UPDATE — all now resolved via Edge Function
-migration. drop-menu.html is the remaining surface.
+categories/products/bundles writes ✓ COMPLETE 2026-05-02. Shipped
+across three PRs: PR #209 (categories batch — `create-category`,
+`update-category`, `delete-category`), PR #211 (products batch —
+`create-product`, `update-product`, `delete-product`), and PR #212
+(bundles batch — `create-bundle`, `update-bundle`, `delete-bundle`,
+`duplicate-bundle`, `save-bundle-line`, `delete-bundle-line`,
+covering bundle_lines and bundle_line_choice_products via the
+composite functions). All direct client-side PostgREST writes from
+drop-menu.html for the catalog tables (categories, products,
+bundles, bundle_lines, bundle_line_choice_products) now flow through
+Edge Functions following the canonical pattern: `verify_jwt = false`
+in `supabase/config.toml`, manual JWT verification via
+`anonClient.auth.getUser()`, vendor ownership check via
+service-role client, service-role write with tenancy belt and
+ALLOWED_FIELDS whitelist, CORS via `getCorsHeaders()` from
+`_shared/cors.ts`, top-level try/catch with `jsonResponse` inline
+closure. The shared `saveSortOrderBatch` upsert path is deliberately
+out of scope and tracked separately as T5-B34. Two follow-up
+hardening tickets surfaced during the bundles batch and are tracked
+as T5-B36 (duplicate-bundle rollback verification) and T5-B37
+(save-bundle-line update-path partial-failure note).
+
+Manifestation of the auth-not-attached pattern (operational
+learnings #12, #13, #14, #16), fourth surface across the platform
+after hosts SELECT, customers UPSERT, and host UPDATE — all now
+resolved via Edge Function migration. drop-menu.html is the
+remaining surface.
 
 **Production diagnosis (2 May 2026)**
 
@@ -1606,9 +1628,83 @@ one-liner — add the three fields to the `fields` object in
 `duplicateCurrentProduct` (drop-menu.html, near line 2390) sourced
 from the original `product`. Held back from the T5-B16 product
 batch PR to keep that PR scoped to the Edge Function migration
-only. Bounded one-session piece of work; pair with a manual check
-that `duplicateCurrentBundle` does not have the equivalent gap on
-bundle-level metadata.
+only. Bounded one-session piece of work.
+
+`duplicateCurrentBundle` was checked for an equivalent
+metadata-loss gap during T5-B16 batch 3 prerequisite investigation
+(2 May 2026). None was found — the duplicate copies every column
+the client knows about for `bundles`, `bundle_lines`, and
+`bundle_line_choice_products`. Future investigators do not need to
+repeat this check.
+
+T5-B36: duplicate-bundle rollback verification. The
+`duplicate-bundle` Edge Function (shipped in PR #212 as part of
+T5-B16 batch 3) clones a bundle by performing sequential
+service-role inserts: parent `bundles` row, then each
+`bundle_lines` row, then each `bundle_line_choice_products` row.
+On partial failure mid-clone, the function attempts a best-effort
+rollback by deleting the rows it inserted in reverse order. If the
+rollback itself fails (e.g. transient database error during the
+delete), the function logs the rollback failure and re-throws the
+original insert error. The failure mode this leaves behind: a
+half-cloned bundle remains visible to the operator on
+drop-menu.html, with no clear signal that it is half-cloned.
+
+**Risk profile:** identical to today's pre-migration client code,
+which also had no transactional guarantee across the multi-step
+clone. Not a regression.
+
+**Proposed fix:** add a final reconciliation step after rollback
+that verifies the new bundle was fully removed; if not, retry the
+deletion or surface a clearer error to the caller (e.g. include
+the orphan bundle id in the response so the operator can clean up
+manually). Better still: rewrap the entire clone in a Postgres
+function called via `rpc()` to get true transactional semantics.
+
+**Priority:** low — same risk profile as the pre-migration code,
+no known live failures, hardening rather than bug fix.
+
+**File:** `supabase/functions/duplicate-bundle/index.ts`.
+
+Cross-reference: T5-B16 (parent migration), T5-B37 (sibling
+partial-failure note for save-bundle-line).
+
+T5-B37: save-bundle-line update-path partial-failure note. The
+`save-bundle-line` Edge Function (shipped in PR #212 as part of
+T5-B16 batch 3) handles two code paths controlled by whether the
+client supplies an existing `bundle_line_id`:
+- INSERT path (no id): inserts a new `bundle_lines` row and then
+  inserts any `bundle_line_choice_products` children.
+- UPDATE path (id supplied): updates the existing `bundle_lines`
+  row first, then reconciles `bundle_line_choice_products`
+  (deletes children no longer in the payload, inserts new ones,
+  updates existing ones).
+
+**Failure mode:** on the UPDATE path, if the line update succeeds
+but the children reconcile fails, the line is already updated and
+the children are left inconsistent with the new line state. There
+is no rollback of the line update on children-reconcile failure.
+
+This matches today's pre-migration client-side behaviour
+(drop-menu.html performed the same line-then-children sequence
+with no transactional wrapper) and was deliberately preserved
+during T5-B16 batch 3 to keep the PR scoped to the migration
+itself. Not a regression — but worth fixing as part of the
+broader transactional-integrity workstream.
+
+**Proposed fix:** wrap the line update + children reconcile in a
+Postgres function called via `rpc()` for true transactional
+semantics, OR add explicit rollback logic that captures the
+pre-update line state and restores it if the children reconcile
+fails.
+
+**Priority:** low — known constraint, documented, no known live
+failures. Same risk profile as pre-migration.
+
+**File:** `supabase/functions/save-bundle-line/index.ts`.
+
+Cross-reference: T5-B16 (parent migration), T5-B36 (sibling
+rollback-verification ticket for duplicate-bundle).
 
 ### Tier 6 — Production readiness
 

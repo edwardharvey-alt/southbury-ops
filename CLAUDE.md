@@ -529,20 +529,27 @@ on top of the coding rules above.
     `update-vendor`, `create-host`, `update-host`, `create-drop`,
     `update-drop`, `transition-drop-status`, `assign-menu-items`,
     `remove-event-window`, `complete-onboarding` (covering Drop
-    Studio drop CRUD, host CRUD, and onboarding writes). Still on
-    the direct PostgREST path and silently failing in production:
-    `drop-menu.html` categories/products/bundles INSERT/UPDATE/DELETE
-    (the durable fix is the T5-B16 nine-function migration; the
-    captured 2 May Bearer-header evidence is recorded in the
-    production status snapshot). `customer-import.html` writes are
-    out of scope of the 2 May audit and remain unverified. RLS reads on tables
-    without permissive `anon USING (true)` SELECT policies are also
-    broken silently (`hosts`, `customer_relationships`, `customers`,
-    `drop_series`, `drop_series_schedule`, `order_items`,
-    `order_item_selections`, `order_status_events`) — those need
-    either `list-X` Edge Functions or relaxed SELECT policies as
-    part of the same workstream. See session handover dated 27
-    April 2026 for the full migration plan and priority order.
+    Studio drop CRUD, host CRUD, and onboarding writes), and the
+    T5-B16 catalog batch — `create-category`, `update-category`,
+    `delete-category`, `create-product`, `update-product`,
+    `delete-product`, `create-bundle`, `update-bundle`,
+    `delete-bundle`, `duplicate-bundle`, `save-bundle-line`,
+    `delete-bundle-line` (covering all drop-menu.html catalog
+    writes for categories, products, bundles, bundle_lines, and
+    bundle_line_choice_products). Still on the direct PostgREST
+    path: `drop-menu.html` shared `saveSortOrderBatch` upsert path
+    (tracked as T5-B34 — drag-reorder for categories, products,
+    and bundles is silently broken in production until that
+    migration ships). `customer-import.html` writes are out of
+    scope of the 2 May audit and remain unverified. RLS reads on
+    tables without permissive `anon USING (true)` SELECT policies
+    are also broken silently (`hosts`, `customer_relationships`,
+    `customers`, `drop_series`, `drop_series_schedule`,
+    `order_items`, `order_item_selections`, `order_status_events`)
+    — those need either `list-X` Edge Functions or relaxed SELECT
+    policies as part of the same workstream. See session handover
+    dated 27 April 2026 for the full migration plan and priority
+    order.
 
 17. **Claude Code CLI is materially more reliable than the desktop app
     for multi-file or large-file edits.** The Claude desktop app's Code
@@ -592,6 +599,36 @@ on top of the coding rules above.
     answer to almost all RLS-shaped errors on this platform.
     Diagnosing it from scratch wastes hours. The 30 April session lost
     time precisely this way.
+
+22. **Edge Function migration is now the canonical write pattern for
+    catalog tables.** All catalog writes from `drop-menu.html`
+    (categories, products, bundles, bundle_lines,
+    bundle_line_choice_products) flow through Edge Functions as of
+    2 May 2026 (T5-B16, PRs #209, #211, #212). When adding new write
+    paths for catalog tables, follow the same pattern:
+    `verify_jwt = false` in `supabase/config.toml`, manual JWT
+    verification via `anonClient.auth.getUser()`, vendor resolution
+    from JWT, body-mismatch check, service-role write, tenancy belt
+    (server sets `vendor_id` and any parent_id, never trusts client
+    body), `ALLOWED_FIELDS` whitelist on update paths, top-level
+    try/catch, CORS via `getCorsHeaders()` from `_shared/cors.ts`,
+    `jsonResponse` as inline closure inside the handler.
+    Reference functions:
+    - Flat (single-table writes): `create-category`, `update-category`,
+      `create-product`, `update-product`, `create-bundle`,
+      `update-bundle`, `delete-bundle-line`.
+    - Composite (multi-table operations with rollback):
+      `delete-category`, `delete-product`, `delete-bundle`,
+      `duplicate-bundle`, `save-bundle-line`. Pattern: sequential
+      service-role writes with explicit rollback on failure.
+      `duplicate-bundle` (clone + nested children) and
+      `save-bundle-line` (line + reconcile children) are the
+      references for rollback logic.
+    All T5-B16 functions use `getCorsHeaders()` from `_shared/cors.ts`
+    correctly, so they are already preview-domain-safe. Older
+    functions (e.g. `create-order`) still using bare
+    `Access-Control-Allow-Origin: "*"` headers are the cleanup target
+    for T5-B30 — not new debt introduced by T5-B16.
 
 ## Stripe Connect Express (T3-8)
 
@@ -712,7 +749,7 @@ collection — Hearth captures the full address at order time.
 
 ## Production mutation/read status
 
-Snapshot of which read/write paths are working in production and which are known broken. Update whenever a PR confirms or breaks a path. Last updated 2026-05-02 after audit-findings doc-sync.
+Snapshot of which read/write paths are working in production and which are known broken. Update whenever a PR confirms or breaks a path. Last updated 2026-05-02 after T5-B16 completion (drop-menu.html catalog writes migrated to Edge Functions across PRs #209, #211, #212).
 
 - Customer order placement (orders, order_items, order_item_selections, customers, customer_relationships) — WORKING via `create-order` Edge Function. Atomic write of all five tables, Stripe Connect destination charge created, order starts at `status='pending_payment'` and flips to `'placed'` on webhook receipt. Capacity is reserved during the pending_payment window (Stripe expires_at = 1800s).
 - Stripe webhook handling — WORKING via `stripe-webhook` Edge Function. Handles `checkout.session.completed` (→ placed/paid), `checkout.session.expired` (→ cancelled/expired), `checkout.session.async_payment_failed` (→ cancelled/failed). Endpoint configured at https://tvqhhjvumgumyetvpgid.supabase.co/functions/v1/stripe-webhook (Stripe Dashboard endpoint name: "brilliant-rhythm").
@@ -726,9 +763,9 @@ Snapshot of which read/write paths are working in production and which are known
 - Hosts UPDATE (host-profile.html save) — WORKING via `update-host` Edge Function. Whitelisted field updates with vendor-scoped tenancy belt (id + vendor_id) and service-role write. Verified end-to-end in production 2 May 2026.
 - Drops INSERT / UPDATE / status transitions — WORKING via `create-drop`, `update-drop`, `transition-drop-status`, `assign-menu-items`, `create-host`, and `remove-event-window` Edge Functions. Confirmed via source-level grep against drop-manager.html on 2 May 2026 — no remaining direct PostgREST writes against `drops`, `drop_menu_items`, `hosts` (insert path), or related tables on the Drop Studio page.
 - Onboarding writes (vendors, host context, terms acceptance) — WORKING via `update-vendor` and `complete-onboarding` Edge Functions. Confirmed via source-level grep against onboarding.html on 2 May 2026 — no remaining direct PostgREST writes.
-- Categories INSERT / UPDATE / DELETE (drop-menu.html) — STILL BROKEN. Tracked as T5-B16 / T5-B23. Production test 2 May 2026 against Test 12 (vendor_id 32a6665a-7b68-428d-90b3-d9b11259c16e): POST /rest/v1/categories returned 401 with PostgREST error code 42501 ("new row violates row-level security policy"). Captured request header: `Authorization: Bearer sb_publishable_GftZ3Mw1M2-jb2bStjv80Q_gRDC9FzD` — request evaluated as anon, not authenticated, so the "Categories: authenticated owner all" RLS policy did not apply. Same root cause as operational learnings #12, #13, #14.
-- Products INSERT / UPDATE / DELETE (drop-menu.html) — STILL BROKEN. Same page, same root cause as categories. Tracked as T5-B16.
-- Bundles INSERT / UPDATE / DELETE (drop-menu.html) — STILL BROKEN. Same page, same root cause as categories. Tracked as T5-B16. bundle_lines and bundle_line_choice_products writes likely affected — verify during T5-B16 build.
+- Categories INSERT / UPDATE / DELETE (drop-menu.html) — WORKING via `create-category`, `update-category`, `delete-category` Edge Functions. Shipped 2 May 2026 as T5-B16 batch 1 (PR #209).
+- Products INSERT / UPDATE / DELETE (drop-menu.html) — WORKING via `create-product`, `update-product`, `delete-product` Edge Functions. Shipped 2 May 2026 as T5-B16 batch 2 (PR #211).
+- Bundles INSERT / UPDATE / DELETE (drop-menu.html) — WORKING via `create-bundle`, `update-bundle`, `delete-bundle`, `duplicate-bundle`, `save-bundle-line`, `delete-bundle-line` Edge Functions. Shipped 2 May 2026 as T5-B16 batch 3 (PR #212). bundle_lines and bundle_line_choice_products writes are covered by the composite `save-bundle-line` and `duplicate-bundle` functions.
 - customer-import.html writes (customers, customer_relationships) — UNVERIFIED. Out of scope of 2 May 2026 audit. Investigate before any production-vendor onboarding that involves customer import.
 
 ## Development backlog
@@ -803,7 +840,6 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B10 — Server-side payload validation on create-drop / update-drop — partial (create-drop remaining)
 - T5-B11 — Drop Studio readiness checklist: surface capacity row explicitly — open
 - T5-B14 — Cross-vendor host-poisoning: defence-in-depth on RLS — partial (write-side closed; RLS-side outstanding)
-- T5-B16 — drop-menu.html: category INSERT blocked by RLS — open
 - T5-B17 — Underlying auth-not-attached client bug — partial (header workaround in place; root cause not resolved)
 - T5-B18 — Stripe status visibility surface — open
 - T5-B19 — drop-menu.html: CSP eval-blocked warning — open
@@ -820,6 +856,8 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B33 — Restore missing T5-B29 / T5-B30 / T5-B31 ticket bodies in BACKLOG.md — open
 - T5-B34 — drop-menu.html shared saveSortOrderBatch upsert path migration — open
 - T5-B35 — drop-menu.html duplicateCurrentProduct drops suitability flags — open
+- T5-B36 — duplicate-bundle rollback verification — open
+- T5-B37 — save-bundle-line update-path partial-failure note — open
 
 ### Tier 6 — Production readiness
 - T6-2 — Local development environment — open
