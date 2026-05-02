@@ -706,7 +706,7 @@ collection — Hearth captures the full address at order time.
 
 ## Production mutation/read status
 
-Snapshot of which read/write paths are working in production and which are known broken. Update whenever a PR confirms or breaks a path. Last updated 2026-05-01 after Phase 3 of the customer order flow rebuild (T5-B22).
+Snapshot of which read/write paths are working in production and which are known broken. Update whenever a PR confirms or breaks a path. Last updated 2026-05-02 after T5-B28 production verification.
 
 - Customer order placement (orders, order_items, order_item_selections, customers, customer_relationships) — WORKING via `create-order` Edge Function. Atomic write of all five tables, Stripe Connect destination charge created, order starts at `status='pending_payment'` and flips to `'placed'` on webhook receipt. Capacity is reserved during the pending_payment window (Stripe expires_at = 1800s).
 - Stripe webhook handling — WORKING via `stripe-webhook` Edge Function. Handles `checkout.session.completed` (→ placed/paid), `checkout.session.expired` (→ cancelled/expired), `checkout.session.async_payment_failed` (→ cancelled/failed). Endpoint configured at https://tvqhhjvumgumyetvpgid.supabase.co/functions/v1/stripe-webhook (Stripe Dashboard endpoint name: "brilliant-rhythm").
@@ -717,7 +717,7 @@ Snapshot of which read/write paths are working in production and which are known
 - Host creation from `hosts.html` — WORKING via `create-host` Edge Function. Sends `terms_accepted: true` and `terms_accepted_at`.
 - Host creation from Drop Studio inline ("+ New Host" modal) — WORKING via `create-host`, BUT does NOT capture terms acceptance. Tracked as T4-37.
 - Brand Hearth preview-drop host fetch — WORKING via `get-host`.
-- Hosts UPDATE (host-profile.html save) — STILL BROKEN. Tracked as T5-B28 (Priority 6 — update-host Edge Function). Direct PATCH to `/rest/v1/hosts?id=eq.<host-id>` returns 204 with empty body — RLS rejects, UI shows success toast, nothing is written.
+- Hosts UPDATE (host-profile.html save) — WORKING via `update-host` Edge Function. Whitelisted field updates with vendor-scoped tenancy belt (id + vendor_id) and service-role write. Verified end-to-end in production 2 May 2026.
 - Drops INSERT — STILL BROKEN. Tracked as T5-B (drops Edge Function migration). No change in this session's work.
 - Categories INSERT (drop-menu.html) — STILL BROKEN. Tracked as T5-B16 / T5-B23. RLS rejects on fresh-vendor inserts.
 
