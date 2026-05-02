@@ -1764,9 +1764,19 @@
       }
 
       async function saveSortOrderBatch(tableName, orderedIds) {
-        const rows = orderedIds.map((id, i) => ({ id, sort_order: (i + 1) * 10 }));
-        const { error } = await supabase.from(tableName).upsert(rows, { onConflict: "id" });
+        const functionName =
+          tableName === "categories" ? "update-category-sort-order" :
+          tableName === "products" ? "update-product-sort-order" :
+          tableName === "bundles" ? "update-bundle-sort-order" :
+          null;
+
+        if (!functionName) throw new Error(`Unknown table for sort order: ${tableName}`);
+
+        const { data, error } = await supabase.functions.invoke(functionName, {
+          body: { vendor_id: state.vendorId, ordered_ids: orderedIds }
+        });
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
       }
 
       function renderPrimaryActionState() {
