@@ -2262,8 +2262,7 @@
         const categoryId = byId("newBundleCategory").value || null;
         const itemsInCategory = state.bundles.filter((b) => (b.category_id || null) === categoryId);
 
-        const payload = {
-          vendor_id: state.vendorId,
+        const fields = {
           name,
           description: byId("newBundleDescription").value.trim() || null,
           category_id: categoryId,
@@ -2273,8 +2272,11 @@
           is_active: byId("newBundleActive").value === "true"
         };
 
-        const { data, error } = await supabase.from("bundles").insert(payload).select("*").single();
+        const { data, error } = await supabase.functions.invoke("create-bundle", {
+          body: { vendor_id: state.vendorId, fields }
+        });
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
 
         state.selectedBundleId = data.id;
         if (categoryId) state.orderingCategoryIdBundles = categoryId;
@@ -2364,7 +2366,7 @@
         setSaveState("saving");
 
         const categoryId = byId("bundleCategory").value || null;
-        const payload = {
+        const fields = {
           name: byId("bundleName").value.trim(),
           description: byId("bundleDescription").value.trim() || null,
           category_id: categoryId,
@@ -2374,12 +2376,18 @@
           is_active: byId("bundleIsActive").value === "true"
         };
 
-        if (!payload.name) throw new Error("Bundle Name is required.");
+        if (!fields.name) throw new Error("Bundle Name is required.");
 
-        const { error } = await supabase.from("bundles").update(payload).eq("id", bundle.id);
+        const { data, error } = await supabase.functions.invoke("update-bundle", {
+          body: { vendor_id: state.vendorId, bundle_id: bundle.id, fields }
+        });
         if (error) {
           setSaveState("error", error.message || "Save failed");
           throw error;
+        }
+        if (data?.error) {
+          setSaveState("error", data.error);
+          throw new Error(data.error);
         }
 
         if (categoryId) state.orderingCategoryIdBundles = categoryId;
@@ -2420,63 +2428,13 @@
         const bundle = state.bundles.find((b) => b.id === state.selectedBundleId);
         if (!bundle) throw new Error("No bundle selected.");
 
-        const itemsInCategory = state.bundles.filter((b) => (b.category_id || null) === (bundle.category_id || null));
+        const { data, error } = await supabase.functions.invoke("duplicate-bundle", {
+          body: { vendor_id: state.vendorId, bundle_id: bundle.id }
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
 
-        const { data: insertedBundle, error: bundleError } = await supabase
-          .from("bundles")
-          .insert({
-            vendor_id: state.vendorId,
-            name: `${bundle.name} Copy`,
-            description: bundle.description,
-            category_id: bundle.category_id,
-            price_pence: bundle.price_pence,
-            capacity_units: bundle.capacity_units,
-            sort_order: getNextSortOrder(itemsInCategory),
-            is_active: false
-          })
-          .select("*")
-          .single();
-
-        if (bundleError) throw bundleError;
-
-        const existingLines = getBundleLines(bundle.id);
-
-        for (const line of existingLines) {
-          const { data: insertedLine, error: lineError } = await supabase
-            .from("bundle_lines")
-            .insert({
-              bundle_id: insertedBundle.id,
-              label: line.label,
-              line_type: line.line_type,
-              product_id: line.product_id,
-              category_id: line.category_id,
-              quantity: line.quantity,
-              min_choices: line.min_choices,
-              max_choices: line.max_choices,
-              is_required: line.is_required,
-              drives_capacity: line.drives_capacity,
-              sort_order: line.sort_order
-            })
-            .select("*")
-            .single();
-
-          if (lineError) throw lineError;
-
-          if (line.line_type === "choice_set") {
-            const options = getChoiceSetOptions(line.id);
-            if (options.length) {
-              const rows = options.map((opt) => ({
-                bundle_line_id: insertedLine.id,
-                product_id: opt.product_id,
-                sort_order: opt.sort_order
-              }));
-              const { error: optionsError } = await supabase.from("bundle_line_choice_products").insert(rows);
-              if (optionsError) throw optionsError;
-            }
-          }
-        }
-
-        state.selectedBundleId = insertedBundle.id;
+        state.selectedBundleId = data.id;
         if (bundle.category_id) state.orderingCategoryIdBundles = bundle.category_id;
         await refreshAll();
         showInlineSuccess("Bundle duplicated");
@@ -2517,27 +2475,17 @@
       async function toggleBundleActive() {
         const bundle = state.bundles.find((b) => b.id === state.selectedBundleId);
         if (!bundle) throw new Error("No bundle selected.");
-        const { error } = await supabase.from("bundles").update({ is_active: !bundle.is_active }).eq("id", bundle.id);
+        const { data, error } = await supabase.functions.invoke("update-bundle", {
+          body: {
+            vendor_id: state.vendorId,
+            bundle_id: bundle.id,
+            fields: { is_active: !bundle.is_active }
+          }
+        });
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
         await refreshAll();
         showInlineSuccess(`Bundle ${bundle.is_active ? "deactivated" : "activated"}`);
-      }
-
-      async function syncChoiceSetOptions(bundleLineId) {
-        const selectedIds = Array.from(byId("bundleLineChoiceSetList").querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
-
-        await supabase.from("bundle_line_choice_products").delete().eq("bundle_line_id", bundleLineId);
-
-        if (!selectedIds.length) return;
-
-        const rows = selectedIds.map((productId, index) => ({
-          bundle_line_id: bundleLineId,
-          product_id: productId,
-          sort_order: (index + 1) * 10
-        }));
-
-        const { error } = await supabase.from("bundle_line_choice_products").insert(rows);
-        if (error) throw error;
       }
 
       async function saveBundleLine() {
@@ -2567,8 +2515,7 @@
         const existingLine = state.bundleLines.find((l) => l.id === state.selectedBundleLineId);
         const bundleLinesForCurrentBundle = getBundleLines(bundleId);
 
-        const payload = {
-          bundle_id: bundleId,
+        const fields = {
           label,
           line_type: lineType,
           product_id: productId,
@@ -2581,35 +2528,32 @@
           sort_order: existingLine?.sort_order ?? getNextSortOrder(bundleLinesForCurrentBundle)
         };
 
+        const choice_product_ids = lineType === "choice_set"
+          ? Array.from(byId("bundleLineChoiceSetList").querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value)
+          : [];
+
         setSaveState("saving");
 
-        let lineId = state.selectedBundleLineId;
-
-        if (lineId) {
-          const { error } = await supabase.from("bundle_lines").update(payload).eq("id", lineId);
-          if (error) {
-            setSaveState("error", error.message || "Save failed");
-            throw error;
+        const { data, error } = await supabase.functions.invoke("save-bundle-line", {
+          body: {
+            vendor_id: state.vendorId,
+            bundle_id: bundleId,
+            bundle_line_id: state.selectedBundleLineId || null,
+            fields,
+            choice_product_ids
           }
+        });
+        if (error) {
+          setSaveState("error", error.message || "Save failed");
+          throw error;
+        }
+        if (data?.error) {
+          setSaveState("error", data.error);
+          throw new Error(data.error);
+        }
 
-          if (lineType === "choice_set") {
-            await syncChoiceSetOptions(lineId);
-          } else {
-            await supabase.from("bundle_line_choice_products").delete().eq("bundle_line_id", lineId);
-          }
-        } else {
-          const { data, error } = await supabase.from("bundle_lines").insert(payload).select("*").single();
-          if (error) {
-            setSaveState("error", error.message || "Save failed");
-            throw error;
-          }
-
-          lineId = data.id;
-          state.selectedBundleLineId = lineId;
-
-          if (lineType === "choice_set") {
-            await syncChoiceSetOptions(lineId);
-          }
+        if (data?.id) {
+          state.selectedBundleLineId = data.id;
         }
 
         await refreshAll();
@@ -2618,8 +2562,15 @@
 
       async function deleteBundleLine() {
         if (!state.selectedBundleLineId) throw new Error("No included item selected.");
-        const { error } = await supabase.from("bundle_lines").delete().eq("id", state.selectedBundleLineId);
+        const { data, error } = await supabase.functions.invoke("delete-bundle-line", {
+          body: {
+            vendor_id: state.vendorId,
+            bundle_id: state.selectedBundleId,
+            bundle_line_id: state.selectedBundleLineId
+          }
+        });
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
         state.selectedBundleLineId = null;
         await refreshAll();
         showInlineSuccess("Included item deleted");
@@ -2692,13 +2643,11 @@
           showDeleteModal("Cannot delete bundle", bundle.name, listHtml, false);
         } else {
           pendingDeleteAction = async () => {
-            const lines = state.bundleLines.filter((l) => l.bundle_id === bundle.id);
-            for (const line of lines) {
-              await supabase.from("bundle_line_choice_products").delete().eq("bundle_line_id", line.id);
-              await supabase.from("bundle_lines").delete().eq("id", line.id);
-            }
-            const { error } = await supabase.from("bundles").delete().eq("id", bundle.id);
+            const { data, error } = await supabase.functions.invoke("delete-bundle", {
+              body: { vendor_id: state.vendorId, bundle_id: bundle.id }
+            });
             if (error) throw error;
+            if (data?.error) throw new Error(data.error);
             state.selectedBundleId = null;
             await refreshAll();
             showInlineSuccess("Bundle deleted");
