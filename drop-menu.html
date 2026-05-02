@@ -2201,16 +2201,18 @@
         if (!name) throw new Error("Category Name is required.");
         if (!slug) throw new Error("Category slug is required.");
 
-        const payload = {
-          vendor_id: state.vendorId,
+        const fields = {
           name,
           slug,
           sort_order: getNextSortOrder(state.categories),
           is_active: byId("newCategoryActive").value === "true"
         };
 
-        const { data, error } = await supabase.from("categories").insert(payload).select("*").single();
+        const { data, error } = await supabase.functions.invoke("create-category", {
+          body: { vendor_id: state.vendorId, fields }
+        });
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
 
         state.selectedCategoryId = data.id;
         closeModal("newCategoryModal");
@@ -2287,20 +2289,26 @@
 
         setSaveState("saving");
 
-        const payload = {
+        const fields = {
           name: byId("categoryName").value.trim(),
           slug: slugify(byId("categoryName").value.trim()),
           sort_order: category.sort_order ?? 10,
           is_active: byId("categoryIsActive").value === "true"
         };
 
-        if (!payload.name) throw new Error("Category Name is required.");
-        if (!payload.slug) throw new Error("Category slug is required.");
+        if (!fields.name) throw new Error("Category Name is required.");
+        if (!fields.slug) throw new Error("Category slug is required.");
 
-        const { error } = await supabase.from("categories").update(payload).eq("id", category.id);
+        const { data, error } = await supabase.functions.invoke("update-category", {
+          body: { vendor_id: state.vendorId, category_id: category.id, fields }
+        });
         if (error) {
           setSaveState("error", error.message || "Save failed");
           throw error;
+        }
+        if (data?.error) {
+          setSaveState("error", data.error);
+          throw new Error(data.error);
         }
 
         await refreshAll();
@@ -2467,8 +2475,15 @@
       async function toggleCategoryActive() {
         const category = state.categories.find((c) => c.id === state.selectedCategoryId);
         if (!category) throw new Error("No category selected.");
-        const { error } = await supabase.from("categories").update({ is_active: !category.is_active }).eq("id", category.id);
+        const { data, error } = await supabase.functions.invoke("update-category", {
+          body: {
+            vendor_id: state.vendorId,
+            category_id: category.id,
+            fields: { is_active: !category.is_active }
+          }
+        });
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
         await refreshAll();
         showInlineSuccess(`Category ${category.is_active ? "deactivated" : "activated"}`);
       }
@@ -2685,8 +2700,11 @@
           showDeleteModal("Cannot delete category", category.name, bodyHtml, false);
         } else {
           pendingDeleteAction = async () => {
-            const { error } = await supabase.from("categories").delete().eq("id", category.id);
+            const { data, error } = await supabase.functions.invoke("delete-category", {
+              body: { vendor_id: state.vendorId, category_id: category.id }
+            });
             if (error) throw error;
+            if (data?.error) throw new Error(data.error);
             state.selectedCategoryId = null;
             await refreshAll();
             showInlineSuccess("Category deleted");
