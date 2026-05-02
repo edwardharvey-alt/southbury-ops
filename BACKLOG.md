@@ -1542,6 +1542,58 @@ drops.max_orders) flagged in earlier work. Each body should follow
 the existing T5-B ticket format: short title, paragraph of context,
 proposed fix, dependencies if any. Bounded one-session piece of work.
 
+T5-B34: drop-menu.html shared saveSortOrderBatch upsert path
+migration to Edge Functions. Surfaced during the 2 May 2026 T5-B16
+category batch (PR #209). The category batch deliberately migrated
+only create/update/delete call sites and left the shared
+saveSortOrderBatch path on direct PostgREST. saveSortOrderBatch is
+shared infrastructure across categories, products, and bundles
+(drop-menu.html:1709) — a single function takes a table name
+parameter and runs an upsert. This means category drag-reorder is
+silently broken on production after PR #209 merged (same root cause
+as the rest of T5-B16: publishable-key auth-attach bug, operational
+learnings #12/#14/#16). Products and bundles drag-reorder will
+likewise be silently broken once their respective T5-B16 batches
+ship.
+
+**Proposed fix: three sibling Edge Functions, not a generic
+dispatcher.** update-category-sort-order, update-product-sort-order,
+update-bundle-sort-order. Each follows the canonical pattern
+established by the rest of T5-B16: verify_jwt = false, manual JWT
+verification via anonClient.auth.getUser(), ownership check via
+service-role client against vendors.auth_user_id, service-role
+upsert with tenancy belt (every row in the upsert payload must
+match the ownership-checked vendor_id; reject the request if any
+row's vendor_id mismatches). Reasoning: a generic
+update-sort-orders function taking a table name parameter would
+reimplement ownership-check logic and introduce an attack surface
+where a caller could attempt to update sort orders on tables that
+aren't categories/products/bundles. Three siblings keep the
+per-function blast radius tight and stay consistent with the rest
+of the T5-B16 migration.
+
+**Sequencing:** ship after all three T5-B16 batches
+(categories/products/bundles) land. Doing it earlier means the
+same shared path migrates while different batches are still on
+the old PostgREST path — confusing partial state. Doing it later
+is clean: by the time T5-B34 ships, drop-menu.html is fully off
+PostgREST writes for categories/products/bundles.
+
+**Page-side rewire:** saveSortOrderBatch in drop-menu.html
+becomes a dispatcher on the page side — given a table parameter,
+it invokes the matching Edge Function via
+supabase.functions.invoke(). Single page-side function, three
+page-side call sites unchanged.
+
+Bounded one-session piece of work. Estimated 1 Claude Code build
+session (three near-identical functions plus minor page-side
+wiring change). Closes when fresh-vendor drag-reorder for
+categories, products, and bundles all persist correctly on Test
+12 deploy preview.
+
+Cross-reference: T5-B16 (parent migration), PR #209 (category
+batch that surfaced this).
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live

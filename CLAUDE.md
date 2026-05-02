@@ -818,6 +818,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B26 — ADMIN_UID hardcoded in two places — open
 - T5-B32 — Duplicate anon SELECT policies on products — open
 - T5-B33 — Restore missing T5-B29 / T5-B30 / T5-B31 ticket bodies in BACKLOG.md — open
+- T5-B34 — drop-menu.html shared saveSortOrderBatch upsert path migration — open
 
 ### Tier 6 — Production readiness
 - T6-2 — Local development environment — open
