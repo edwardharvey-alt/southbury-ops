@@ -1443,23 +1443,37 @@ notifications, audit trail. Not a force flag on remove-event-window
 (per PR-4B-AUDIT.md Section 9.5). Out of scope until
 cancellation-with-refunds infrastructure exists.
 
-T5-B22: Customer-flow order placement fails on order_items RLS insert.
-Confirmed during PR 4b fixture provisioning on Test 11: customer order
-page successfully INSERTs the orders row (orders.id created, customer
-fields populated, total_pence set), but fails on the subsequent
-order_items insert with 'new row violates row-level security policy
-for table order_items'. Stripe Checkout is never invoked because the
-items insert dies first. Result: orphan orders rows in the database
-with no order_items, no Stripe session, status='placed' (default).
-Test 11 has zero historical order_items rows across all its drops.
-Test 11 vendor_id 26e3721b-34d9-4b13-9dc3-e92c47d058a8. Reproducible
-by attempting any order via the order.html customer flow on a Test 11
-drop. Likely root cause: order_items RLS policy missing public-insert
-grant, or the order-creation Edge Function isn't being invoked and
-the client is falling back to direct PostgREST writes. Pre-PR-4b bug;
-not in scope for that work. Worth investigating before any
-production-vendor onboarding because no real customer order can
-complete on this platform until this is fixed.
+T5-B22: Customer-flow order placement fails on order_items RLS insert
+✓ COMPLETE 2026-05-03.
+
+Resolved by test, not by build. Both `create-order` (v7) and
+`cancel-order` (v2) Edge Functions were already fully built and
+deployed by the time this ticket was formally investigated, alongside
+`stripe-webhook` and `fetch-order`. The original RLS failure on
+order_items was caused by the Edge Function not existing at the time
+of the PR 4b fixture test — the client was still falling back to
+direct PostgREST writes against `order_items`, which RLS correctly
+rejected. Once the Edge Function path was wired up (Phase 2 / PR
+#204) and order.html rewired to invoke it (Phase 3, merged
+2026-05-01), the orphan-row failure mode was structurally impossible:
+all five tables (orders, order_items, order_item_selections,
+customers, customer_relationships) are now written atomically by the
+service-role client inside `create-order`.
+
+End-to-end verification 2026-05-03: order placed against Test 11 via
+the production order.html flow. orders row created with
+`status='placed'` and `stripe_payment_status='paid'` confirmed in the
+database. order-confirmation.html rendered correctly via
+`fetch-order` with the matched-pair authorization (order_id +
+session_id). No orphan rows, no RLS errors, no client-side
+PostgREST writes against the affected tables.
+
+Lesson captured as operational learning #24 and #25: when a bug is
+logged against a missing function, check whether the function has
+since been built before scoping a build session. The audit-first
+opening sequence (ls supabase/functions/, cat the relevant function,
+check deployment, check schema) takes minutes and avoids planning a
+significant build that the codebase no longer needs.
 
 T5-B23: categories RLS violation on fresh-vendor inserts —
 production-state ticket.
@@ -1812,6 +1826,50 @@ Cross-reference: T5-B16 (parent migration), T5-B34 (sort-order
 shipping that surfaced this need consolidating), T5-B36
 (duplicate-bundle rollback), T5-B37 (save-bundle-line partial
 failure).
+
+**Note (2026-05-03):** `create-order` also performs sequential
+service-role writes across orders, order_items,
+order_item_selections, customers, and customer_relationships rather
+than wrapping the chain in an RPC. This is consistent with the rest
+of the platform's Edge Function pattern at this stage — the same
+risk profile as the bundles/sort-order functions listed above (no
+true atomic commit, best-effort handling on partial failure). Folds
+into T5-B38 as a sixth function to migrate when this sweep runs.
+Not a regression vs the pre-Edge-Function client-side path it
+replaced; hardening rather than bug fix.
+
+T5-B39: Orders RLS audit — remove permissive anon policies on
+orders. Two policies on the `orders` table need removing:
+- "Orders: anon select" (qual: `true`) — exposes every order on
+  the platform to any anonymous caller. This includes
+  customer_email, customer_phone, customer_postcode,
+  delivery_address, customer_notes, and total_pence across every
+  vendor.
+- "orders_update_public" — allows any anon or authenticated caller
+  to UPDATE any order with no restriction. Covers the same
+  customer-PII fields plus status, stripe_payment_status, and
+  capacity-affecting columns.
+
+Both predate the create-order / fetch-order / cancel-order Edge
+Function migration and are no longer needed by any legitimate
+client path. fetch-order uses the service-role client with a
+matched-pair (order_id + session_id) check; cancel-order uses the
+service-role client with the same matched-pair check.
+
+**Action:** Ed to remove both policies from the Supabase SQL
+editor. No code change required on the client or Edge Function
+side. Confirm via captured-headers test that order placement,
+confirmation page render, and cancel-on-return all still work end
+to end after the policies are dropped.
+
+**Priority:** high from a security standpoint — anon SELECT
+exposes all customer PII platform-wide, anon UPDATE allows tampering
+with order state. Low effort: two DROP POLICY statements.
+
+Surfaced during the 2026-05-03 RLS audit alongside the T5-B22
+investigation. Cross-reference: T5-A3 (broader RLS rewrite — this
+is one specific instance of the wider permissive-policy cleanup),
+T5-B32 (sibling cleanup on products SELECT policies).
 
 ### Tier 6 — Production readiness
 

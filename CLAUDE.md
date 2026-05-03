@@ -654,6 +654,36 @@ on top of the coding rules above.
     toggles). For frequent or unbounded N, use a Postgres function
     via `rpc()` for atomic semantics — see T5-B38.
 
+24. **T5-B22 resolution — the customer order flow was already
+    built.** The customer order flow (`create-order`, `cancel-order`,
+    `stripe-webhook`, `fetch-order`) was fully built and deployed
+    before the session that logged it as a bug. The original RLS
+    failure on `order_items` was caused by the Edge Function not
+    existing at the time of the PR 4b fixture test — at that point
+    the client was still falling back to direct PostgREST writes,
+    which RLS correctly rejected. By the time T5-B22 was formally
+    investigated (3 May 2026), all four functions were ACTIVE and
+    the schema (`pending_payment` status, `vendor.platform_fee_pct`,
+    `orders.platform_fee_pence`, capacity-reservation view updates)
+    was complete. Lesson: when a bug is logged against a missing
+    function, check whether the function has since been built before
+    scoping a build session.
+
+25. **Audit before building.** The T5-B22 session opened as an
+    architecture discussion for a significant build and resolved in
+    under an hour as a test session because the investigation step
+    revealed the code already existed. The correct opening sequence
+    for any ticket referencing a missing function or missing pattern:
+    (1) `ls supabase/functions/` to see what exists, (2) `cat` the
+    relevant function body if it exists, (3) check deployment status
+    with `supabase functions list`, (4) check schema (relevant
+    tables, columns, constraints, RLS policies), (5) only then
+    assess whether a build is actually needed. Five minutes of
+    investigation up front beats an hour of planning a build that
+    the codebase no longer needs. Especially relevant for tickets
+    logged days or weeks before they're picked up, when the platform
+    state may have moved underneath the ticket framing.
+
 ## Stripe Connect Express (T3-8)
 
 - vendors schema: `stripe_account_id` TEXT (nullable),
@@ -868,7 +898,6 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B18 — Stripe status visibility surface — open
 - T5-B19 — drop-menu.html: CSP eval-blocked warning — open
 - T5-B21 — Window cancellation with existing orders (refunds + audit trail) — open
-- T5-B22 — Customer-flow: order_items RLS insert fails (orphan orders rows) — ✓ COMPLETE 2026-05-01. Resolved by full migration to Edge Functions across three phases: Phase 1 schema migration (pending_payment status, vendor.platform_fee_pct, orders.platform_fee_pence, view updates for capacity reservation); Phase 2 create-order + stripe-webhook with Stripe Connect destination charges (PR #204); Phase 3 fetch-order + cancel-order + order.html and order-confirmation.html rewire (merged 2026-05-01). End-to-end verified with real Stripe test card on production.
 - T5-B29 — Multi-window parent drop fulfilment.mode bug — open. When ordering against a drop with `window_group_id` set and `fulfilment_mode = null` (the multi-window parent pattern), `buildCheckoutPayload()` in order.html sends `fulfilment.mode: null` and create-order rejects with 400. Either: (a) order.html's window-selection step in init() should route customers to a child drop before allowing basket entry, or (b) `buildCheckoutPayload` should read `fulfilment_mode` from the selected child window rather than `state.drop`. Also: `validateCheckout()` should refuse to submit when `fulfilment.mode` is null, surfacing a user-friendly error instead of relying on the server's 400. Discovered during Phase 3 manual testing on 2026-05-01.
 - T5-B30 — Edge Function CORS allow-list excludes Netlify deploy previews — open. All current Edge Functions hardcode `ALLOWED_ORIGIN = 'https://lovehearth.co.uk'`, which means deploy previews on `*.netlify.app` cannot exercise the customer flow. Phase 3 testing had to be completed against production after merge rather than against the deploy preview. Widen the allow-list to include the Netlify preview domain pattern, or accept the limitation and document it in the PR template (deploy preview testing requires merge-to-prod for final visual confirmation).
 - T5-B31 — Legacy capacity columns cleanup — open. `orders.pizzas` (NOT NULL CHECK >= 1), `drops.capacity_pizzas`, `drops.max_orders` are still being populated as `Math.max(1, capacity_units)`. Audit all read sites for these columns; remove those reads; then drop the columns. Currently written-only by the create-order Edge Function (line marked with `// LEGACY: see SCHEMA.md — orders.pizzas column slated for removal`). Bounded one-session piece of work.
@@ -882,6 +911,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B35 — drop-menu.html duplicateCurrentProduct drops suitability flags — open
 - T5-B36 — duplicate-bundle rollback verification — open
 - T5-B37 — save-bundle-line update-path partial-failure note — open
+- T5-B39 — Orders RLS audit: remove permissive anon SELECT and UPDATE policies — open (security)
 
 ### Tier 6 — Production readiness
 - T6-2 — Local development environment — open
