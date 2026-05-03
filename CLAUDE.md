@@ -684,6 +684,36 @@ on top of the coding rules above.
     logged days or weeks before they're picked up, when the platform
     state may have moved underneath the ticket framing.
 
+26. **When adding new columns, audit write-path Edge Functions for
+    ALLOWED_FIELDS whitelists.** If a column is referenced only by
+    client-side JavaScript and the database schema, but the write
+    goes through an Edge Function (e.g. `update-drop`) with an
+    explicit field whitelist, the new column will be silently
+    stripped on save. The bug only surfaces during manual testing
+    as "saves don't persist." When designing schema changes, list
+    every Edge Function that writes to the affected table and
+    verify the whitelist is widened. This came up in T3-12a where
+    `delivery_area_type` and `allowed_postcode_prefixes` needed to
+    be added to `update-drop`'s `ALLOWED_FIELDS` — the original
+    prompt missed it; Claude Code caught it during implementation.
+
+27. **Stuck "thinking" loops past ~10 minutes are stuck, not
+    progressing.** If Claude Code shows a long-running "thinking"
+    or "almost done thinking" state with retry attempts and no
+    token output for more than ~10 minutes, the model is not
+    making progress — it is in a degenerate retry loop. Don't wait
+    it out. Press esc to interrupt, then resume with an explicit
+    recovery prompt: "Continue from where the timeout interrupted
+    you. First check disk state with `git status` and `git diff`
+    to confirm what's already on disk — do not re-edit anything
+    that's already been written." Then list the remaining tasks
+    explicitly. The model picks up cleanly from disk state rather
+    than from its own confused internal state. If the recovery
+    prompt also stalls on the same step, the issue is likely
+    specific to that file or section — work around it by splitting
+    the task or providing more prescriptive instructions about
+    what to write.
+
 ## Stripe Connect Express (T3-8)
 
 - vendors schema: `stripe_account_id` TEXT (nullable),
@@ -842,7 +872,7 @@ index.
 
 ### Tier 3 — Should be done before regular use
 - T3-8 — Stripe integration: customer checkout Edge Function — partial (Connect Express scaffold complete; checkout not wired)
-- T3-12 — Order page: neighbourhood radius enforcement — open
+- T3-12b — Order page: neighbourhood delivery area enforcement (radius mode) — open. T3-12a (postcode prefix mode) closed 2026-05-03: schema discriminator added (`delivery_area_type`, `allowed_postcode_prefixes`); Drop Studio UI for prefix entry; client-side onBlur validation; server-side enforcement in `create-order`; widened `update-drop` ALLOWED_FIELDS with paired-field invariants. Radius mode reserved for T3-12b.
 
 ### Tier 4 — Enhancements that will impress
 - T4-29 — Series intelligence in Insights — open

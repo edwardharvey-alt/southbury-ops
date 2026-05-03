@@ -198,6 +198,90 @@ enforcement, vendors could receive orders from outside their intended
 area and feel obligated to fulfil them. Treat as Tier 3 priority once
 neighbourhood drops are in active use.
 
+### T3-12b — neighbourhood delivery area enforcement (radius mode)
+
+**Status:** Backlog. Pre-launch if a radius-thinking vendor is onboarded;
+otherwise post-launch.
+
+**Depends on:** T3-12a complete. The `delivery_area_type = 'radius'` branch
+in create-order currently returns 501 — this ticket replaces that with real
+validation. update-drop currently rejects writes with `delivery_area_type =
+'radius'` — this ticket relaxes that gate.
+
+**Scope:**
+Add radius-based delivery area enforcement as a second mode alongside postcode
+prefixes.
+
+- **Drop Studio:** add "Radius from a centre point" as a third radio option
+  in the existing "Delivery area restriction" section. Reveal `centrePostcode`
+  and `radiusKm` inputs (already exist, currently dormant — see T3-12a-fu2).
+  Save logic sets `delivery_area_type = 'radius'`, populates `centre_postcode`
+  and `radius_km`, and nulls `allowed_postcode_prefixes`.
+- **update-drop:** widen the `delivery_area_type` validation to accept
+  `'radius'`. Add a new pair invariant: when type is `'radius'`, both
+  `centre_postcode` and `radius_km` must be present.
+- **order.html:** add a radius branch in `checkDeliveryArea()`. On blur of
+  postcode, call postcodes.io to look up customer coordinates, compute
+  Haversine distance from `drop.centre_postcode` (looked up the same way),
+  compare against `drop.radius_km`. Show inline error if outside.
+- **create-order:** replace the current 501 stub with real validation. Same
+  lookup + distance pattern. Cache postcode lookups within a single request
+  to avoid duplicate API calls. Handle postcodes.io failures gracefully —
+  fail closed (reject with "couldn't verify delivery area, please try again")
+  rather than fail open.
+
+**Open questions for spec finalisation:**
+- Cache postcode → coordinates lookups in a Supabase table? Postcodes don't
+  move; one cache hit per UK postcode forever is cheap and removes most of
+  the postcodes.io load.
+- Should `centre_postcode` default to vendor address with per-drop override?
+  Current schema has it on `drops` only — vendor-level default would need a
+  `default_centre_postcode` on `vendors`. Decide before building.
+- postcodes.io rate limits: free tier is generous (no documented hard limit)
+  but worth verifying before launch.
+
+### T3-12a-fu1 — Drop Studio: clear postcode-prefix error on successful save
+
+**Status:** Backlog. Pre-launch polish.
+
+**Issue:** When a vendor saves a drop and the empty-prefix guard fires, the
+inline error banner persists at the top of the Basics pane even after a
+subsequent successful save. Confirmed cosmetic — saved data is correct.
+
+**Fix:** In drop-manager.html `saveDrop()`, clear the postcode prefix error
+after successful save (call `clearPostcodePrefixError()` in the success branch).
+
+### T3-12a-fu2 — Drop Studio: hide legacy centre postcode and radius inputs
+
+**Status:** Backlog. Pre-launch polish, before T3-12b.
+
+**Issue:** The legacy `CENTRE POSTCODE` and `RADIUS (KM)` inputs remain
+visible in Drop Studio's Basics pane even though they are not exposed by
+the new "Delivery area restriction" UI (T3-12a). Stale values can persist
+visually (e.g. RG10 0JP from a previous default) creating user confusion.
+Confirmed inert — mode hygiene correctly nulls these columns on save
+when `delivery_area_type` is set.
+
+**Fix:** In drop-manager.html, hide `#centrePostcodeField` and
+`#radiusKmField` (or wrap in a conditional render) so they are not displayed
+in the current build. T3-12b will reintroduce them as the reveal block of
+the "Radius" radio option in the "Delivery area restriction" section.
+
+### T3-12a-fu3 — Drop the dead `is_radius_restricted` column on `drops`
+
+**Status:** Backlog. Schema cleanup. Ship after T3-12b confirms it's not
+needed for radius mode (it isn't — `delivery_area_type` is the discriminator).
+
+**Issue:** `drops.is_radius_restricted` (boolean NOT NULL) was added
+pre-T3-12a but was never read or written by any UI or Edge Function.
+Confirmed dead by grep across the codebase during T3-12a investigation.
+
+**Fix:** SQL editor —
+```sql
+ALTER TABLE drops DROP COLUMN is_radius_restricted;
+```
+Verify no Edge Function or UI references it before running.
+
 ### Tier 4 — Enhancements that will impress
 
 T4-1: Recurring series — actually create drops ✓ COMPLETE
