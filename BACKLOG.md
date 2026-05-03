@@ -1513,13 +1513,24 @@ Status: PARTIAL. Manual Authorization header workaround implemented
 in assets/config.js via onAuthStateChange. Root-cause session
 hydration race not resolved.
 
-T5-B18: Stripe status visibility surface. No UI path to inspect,
-manage, or re-enter Stripe Connect onboarding from any vendor page.
-Vendor cannot self-serve "am I set up to get paid" status; operator
-(Edward) cannot diagnose vendor payment readiness without SQL.
-Surfaced when checking Test 11's Stripe state during Test 12 fixture
-setup. Likely belongs in a future Stripe-surface workstream of its
-own (no existing priority covers full lifecycle). Not blocking PR 4b.
+T5-B18: Stripe status visibility surface.
+✓ COMPLETE 2026-05-03. PR #221 merged. Payments workspace card
+added to home.html surfacing four Stripe Connect states (not
+started / checking / incomplete / ready). Deferred fast-path:
+stripe_onboarding_complete=true renders immediately with no API
+call; all other states call check-stripe-connect-status after first
+paint. Action buttons call create-stripe-connect-link (onboard
+states) or create-stripe-login-link (dashboard states) —
+vendor-specific Express dashboard, not platform owner account. New
+Edge Function create-stripe-login-link deployed.
+
+No UI path to inspect, manage, or re-enter Stripe Connect
+onboarding from any vendor page. Vendor cannot self-serve "am I set
+up to get paid" status; operator (Edward) cannot diagnose vendor
+payment readiness without SQL. Surfaced when checking Test 11's
+Stripe state during Test 12 fixture setup. Likely belongs in a
+future Stripe-surface workstream of its own (no existing priority
+covers full lifecycle). Not blocking PR 4b.
 
 T5-B19: drop-menu.html surfaces a CSP eval-blocked warning in the
 browser console — "Content Security Policy of your site blocks the
