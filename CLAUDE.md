@@ -630,6 +630,30 @@ on top of the coding rules above.
     `Access-Control-Allow-Origin: "*"` headers are the cleanup target
     for T5-B30 — not new debt introduced by T5-B16.
 
+23. **For multi-row writes against tables with NOT NULL constraints,
+    use sequential `.update()` calls, not `.upsert()`.** supabase-js's
+    `.upsert(rows, { onConflict: 'id' })` builds an `INSERT ... ON
+    CONFLICT DO UPDATE` SQL statement under the hood. Postgres
+    validates the INSERT half against table constraints (including
+    NOT NULL) before conflict resolution applies the UPDATE half —
+    so a payload of `{ id, sort_order }` against a table with
+    `name NOT NULL` (no default) fails with `null value in column
+    "name" violates not-null constraint`, even when every id matches
+    an existing primary key. The conflict resolver never gets to
+    run.
+    Surfaced T5-B34 first deploy (3 May 2026). The three sort-order
+    Edge Functions used `.upsert()` and failed immediately on first
+    drag in deploy preview. Fixed by replacing each upsert with a
+    sequential `.update().eq('id', row.id).eq('vendor_id',
+    vendor_id)` loop.
+    Rule: only use `.upsert()` when the row payload includes every
+    NOT NULL column on the target table. For partial-row updates
+    (e.g. just `sort_order`, just `is_active`), use `.update()`. The
+    N-round-trip cost of N sequential updates is acceptable for
+    bounded N and infrequent operations (sort-order, status
+    toggles). For frequent or unbounded N, use a Postgres function
+    via `rpc()` for atomic semantics — see T5-B38.
+
 ## Stripe Connect Express (T3-8)
 
 - vendors schema: `stripe_account_id` TEXT (nullable),
