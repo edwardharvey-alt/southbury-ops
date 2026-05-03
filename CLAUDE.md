@@ -649,7 +649,7 @@ on top of the coding rules above.
     Rule: only use `.upsert()` when the row payload includes every
     NOT NULL column on the target table. For partial-row updates
     (e.g. just `sort_order`, just `is_active`), use `.update()`. The
-    round-trip cost of N sequential updates is acceptable for
+    N-round-trip cost of N sequential updates is acceptable for
     bounded N and infrequent operations (sort-order, status
     toggles). For frequent or unbounded N, use a Postgres function
     via `rpc()` for atomic semantics — see T5-B38.

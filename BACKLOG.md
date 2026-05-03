@@ -1566,7 +1566,9 @@ proposed fix, dependencies if any. Bounded one-session piece of work.
 
 T5-B34: drop-menu.html shared saveSortOrderBatch upsert path
 migration to Edge Functions ✓ COMPLETE 2026-05-03. Shipped via PR
-#214. Three sibling Edge Functions (update-category-sort-order,
+#214 (commit 0e7137c, merged into b7ddb03).
+
+Three sibling Edge Functions (update-category-sort-order,
 update-product-sort-order, update-bundle-sort-order) replace
 the shared client-side saveSortOrderBatch upsert path on
 drop-menu.html. Each function follows the canonical T5-B16
