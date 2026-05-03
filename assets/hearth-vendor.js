@@ -55,5 +55,24 @@
     return null;
   }
 
-  window.HearthVendor = { resolveVendor };
+  // Postcode prefix helpers (T3-12a). Pure functions — used by Drop Studio
+  // chip-input normalisation and order.html delivery-area validation. The
+  // server-side equivalent lives inline in supabase/functions/create-order;
+  // keep both implementations byte-identical to avoid drift.
+
+  function normalisePostcodePrefix(input) {
+    return (input || '').toUpperCase().replace(/\s+/g, ' ').trim();
+  }
+
+  function matchesAllowedPrefix(customerPostcode, allowedPrefixes) {
+    if (!allowedPrefixes || allowedPrefixes.length === 0) return true;
+    var normalised = (customerPostcode || '').toUpperCase().replace(/\s+/g, '');
+    if (!normalised) return false;
+    return allowedPrefixes.some(function (p) {
+      var prefixNorm = (p || '').toUpperCase().replace(/\s+/g, '');
+      return prefixNorm && normalised.startsWith(prefixNorm);
+    });
+  }
+
+  window.HearthVendor = { resolveVendor: resolveVendor, normalisePostcodePrefix: normalisePostcodePrefix, matchesAllowedPrefix: matchesAllowedPrefix };
 })();

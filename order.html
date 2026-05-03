@@ -7,6 +7,7 @@
 
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
   <script src="./assets/config.js"></script>
+  <script src="./assets/hearth-vendor.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -1354,7 +1355,8 @@
         basket: [],
         selectedFulfilmentMode: null,
         bundleDraft: null,
-        openCategories: new Set()
+        openCategories: new Set(),
+        deliveryAreaBlocked: false /* T3-12a */
       };
 
       function byId(id) {
@@ -2242,7 +2244,12 @@
         if (getCapacityRemainingRaw() <= 0) {
           payBtn.disabled = true;
           payBtn.textContent = "Ordering closed — capacity reached";
+        } else if (state.deliveryAreaBlocked) {
+          /* T3-12a — soft-disable while postcode is outside the allowed area. */
+          payBtn.disabled = true;
+          payBtn.textContent = "Outside delivery area";
         } else {
+          payBtn.disabled = false;
           payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
         }
       }
@@ -2594,6 +2601,35 @@
         if (errorEl) errorEl.classList.add("hidden");
       }
 
+      /* T3-12a — Delivery area enforcement.
+         Returns "" when the postcode is allowed (or no restriction is in
+         play); otherwise returns the user-facing error message. The same
+         check runs on blur (inline error) and on submit (pre-flight guard).
+         Server-side validation in supabase/functions/create-order is the
+         security boundary; this is UX. */
+      function checkDeliveryArea(rawPostcode) {
+        const drop = state.drop;
+        if (!drop) return "";
+        const type = drop.delivery_area_type;
+        if (!type) return "";
+        if (type === "radius") {
+          return "This drop's delivery area can't be checked. Please contact the vendor.";
+        }
+        if (type === "postcode_prefix") {
+          const allowed = drop.allowed_postcode_prefixes;
+          if (!Array.isArray(allowed) || allowed.length === 0) return "";
+          const HV = window.HearthVendor;
+          const ok = HV && typeof HV.matchesAllowedPrefix === "function"
+            ? HV.matchesAllowedPrefix(rawPostcode, allowed)
+            : true;
+          if (!ok) {
+            const vendorName = (state.vendor && (state.vendor.display_name || state.vendor.name)) || "this vendor";
+            return `Sorry, ${vendorName} isn't delivering to this postcode for this drop.`;
+          }
+        }
+        return "";
+      }
+
       function buildCheckoutPayload() {
         const customerName = byId("customerName").value.trim();
         const customerPhone = byId("customerPhone").value.replace(/[\s-]/g, "").trim();
@@ -2708,6 +2744,14 @@
         } else if (!postcodeRegex.test(strippedPostcode)) {
           showFieldError("customerPostcode", "customerPostcodeError", "Please enter a valid UK postcode.");
           hasFieldError = true;
+        } else {
+          /* T3-12a — Delivery area pre-flight guard. Format is valid; check
+             whether the drop allows it before letting the customer submit. */
+          const deliveryAreaError = checkDeliveryArea(rawPostcode);
+          if (deliveryAreaError) {
+            showFieldError("customerPostcode", "customerPostcodeError", deliveryAreaError);
+            hasFieldError = true;
+          }
         }
 
         // Address fields — line 1 and town required; line 2 optional
@@ -2922,6 +2966,36 @@ async function handoffToPayment() {
           const el = byId(inputId);
           if (el) el.addEventListener("input", () => clearFieldError(errorId));
         });
+
+        /* T3-12a — Delivery-area validation on customer postcode.
+           input event lifts the soft-disable so the customer can keep
+           typing; blur runs the actual check and re-applies if needed. */
+        const postcodeEl = byId("customerPostcode");
+        if (postcodeEl) {
+          postcodeEl.addEventListener("input", () => {
+            if (state.deliveryAreaBlocked) {
+              state.deliveryAreaBlocked = false;
+              renderBasketBar();
+            }
+          });
+          postcodeEl.addEventListener("blur", () => {
+            const value = postcodeEl.value.trim();
+            if (!value) {
+              state.deliveryAreaBlocked = false;
+              renderBasketBar();
+              return;
+            }
+            const error = checkDeliveryArea(value);
+            if (error) {
+              showFieldError("customerPostcode", "customerPostcodeError", error);
+              state.deliveryAreaBlocked = true;
+            } else {
+              clearFieldError("customerPostcodeError");
+              state.deliveryAreaBlocked = false;
+            }
+            renderBasketBar();
+          });
+        }
 
         byId("openBasketBtn").addEventListener("click", openBasket);
         byId("closeBasketBtn").addEventListener("click", closeBasket);
