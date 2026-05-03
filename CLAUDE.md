@@ -821,6 +821,7 @@ Snapshot of which read/write paths are working in production and which are known
 - Products INSERT / UPDATE / DELETE (drop-menu.html) — WORKING via `create-product`, `update-product`, `delete-product` Edge Functions. Shipped 2 May 2026 as T5-B16 batch 2 (PR #211).
 - Bundles INSERT / UPDATE / DELETE (drop-menu.html) — WORKING via `create-bundle`, `update-bundle`, `delete-bundle`, `duplicate-bundle`, `save-bundle-line`, `delete-bundle-line` Edge Functions. Shipped 2 May 2026 as T5-B16 batch 3 (PR #212). bundle_lines and bundle_line_choice_products writes are covered by the composite `save-bundle-line` and `duplicate-bundle` functions.
 - customer-import.html writes (customers, customer_relationships) — UNVERIFIED. Out of scope of 2 May 2026 audit. Investigate before any production-vendor onboarding that involves customer import.
+- Category creation on a fresh vendor — WORKING end-to-end as of 2026-05-03 (closes T5-B23). Verified by logging in as Test 12 and successfully creating Test Category D via the Menu Library; "All changes saved" confirmed. The publishable-key auth-attach bug no longer affects category writes because `create-category`, `update-category`, and `delete-category` all route through Edge Functions (T5-B16 batch 1).
 
 ## Development backlog
 
@@ -901,17 +902,14 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B29 — Multi-window parent drop fulfilment.mode bug — open. When ordering against a drop with `window_group_id` set and `fulfilment_mode = null` (the multi-window parent pattern), `buildCheckoutPayload()` in order.html sends `fulfilment.mode: null` and create-order rejects with 400. Either: (a) order.html's window-selection step in init() should route customers to a child drop before allowing basket entry, or (b) `buildCheckoutPayload` should read `fulfilment_mode` from the selected child window rather than `state.drop`. Also: `validateCheckout()` should refuse to submit when `fulfilment.mode` is null, surfacing a user-friendly error instead of relying on the server's 400. Discovered during Phase 3 manual testing on 2026-05-01.
 - T5-B30 — Edge Function CORS allow-list excludes Netlify deploy previews — open. All current Edge Functions hardcode `ALLOWED_ORIGIN = 'https://lovehearth.co.uk'`, which means deploy previews on `*.netlify.app` cannot exercise the customer flow. Phase 3 testing had to be completed against production after merge rather than against the deploy preview. Widen the allow-list to include the Netlify preview domain pattern, or accept the limitation and document it in the PR template (deploy preview testing requires merge-to-prod for final visual confirmation).
 - T5-B31 — Legacy capacity columns cleanup — open. `orders.pizzas` (NOT NULL CHECK >= 1), `drops.capacity_pizzas`, `drops.max_orders` are still being populated as `Math.max(1, capacity_units)`. Audit all read sites for these columns; remove those reads; then drop the columns. Currently written-only by the create-order Edge Function (line marked with `// LEGACY: see SCHEMA.md — orders.pizzas column slated for removal`). Bounded one-session piece of work.
-- T5-B23 — categories RLS violation on fresh-vendor inserts — open, blocks production
 - T5-B24 — Password reset page: button stuck on "Sending..." — open (cosmetic)
 - T5-B25 — admin.html: vendor creation is not atomic — open
 - T5-B26 — ADMIN_UID hardcoded in two places — open
 - T5-B32 — Duplicate anon SELECT policies on products — open
 - T5-B33 — Restore missing T5-B29 / T5-B30 / T5-B31 ticket bodies in BACKLOG.md — open
-- T5-B34 — drop-menu.html shared saveSortOrderBatch upsert path migration — open
 - T5-B35 — drop-menu.html duplicateCurrentProduct drops suitability flags — open
 - T5-B36 — duplicate-bundle rollback verification — open
 - T5-B37 — save-bundle-line update-path partial-failure note — open
-- T5-B39 — Orders RLS audit: remove permissive anon SELECT and UPDATE policies — open (security)
 
 ### Tier 6 — Production readiness
 - T6-2 — Local development environment — open

@@ -1476,7 +1476,7 @@ check deployment, check schema) takes minutes and avoids planning a
 significant build that the codebase no longer needs.
 
 T5-B23: categories RLS violation on fresh-vendor inserts —
-production-state ticket.
+production-state ticket. ✓ COMPLETE 2026-05-03.
 
 Confirmed broken in production 2 May 2026 via captured-headers test
 against Test 12. Root cause is the publishable-key auth-attach bug
@@ -1491,6 +1491,14 @@ that resolves it.
 
 Closes when T5-B16 lands and a fresh-vendor category create succeeds
 end-to-end on Test 12.
+
+**Resolution (2026-05-03):** T5-B16 (Edge Function migration for
+categories) resolved the root cause. Verified 3 May 2026 by logging
+in as Test 12 and successfully creating Test Category D via the
+Menu Library. "All changes saved" confirmed. The publishable-key
+auth-attach bug no longer affects category writes because
+`create-category`, `update-category`, and `delete-category` all
+route through Edge Functions.
 
 T5-B24: Password reset page — button stuck on "Sending..."
 Low priority UX bug. On reset-password.html the submit button never
@@ -1839,7 +1847,7 @@ Not a regression vs the pre-Edge-Function client-side path it
 replaced; hardening rather than bug fix.
 
 T5-B39: Orders RLS audit — remove permissive anon policies on
-orders. Two policies on the `orders` table need removing:
+orders. ✓ COMPLETE 2026-05-03. Two policies on the `orders` table need removing:
 - "Orders: anon select" (qual: `true`) — exposes every order on
   the platform to any anonymous caller. This includes
   customer_email, customer_phone, customer_postcode,
@@ -1870,6 +1878,20 @@ Surfaced during the 2026-05-03 RLS audit alongside the T5-B22
 investigation. Cross-reference: T5-A3 (broader RLS rewrite — this
 is one specific instance of the wider permissive-policy cleanup),
 T5-B32 (sibling cleanup on products SELECT policies).
+
+**Resolution (2026-05-03):** the two dangerous policies ("Orders:
+anon select" and "orders_update_public") were already absent from
+the database when investigated — removed in an earlier session.
+Additionally removed "anon_update_order_status" (qual: `true`,
+allowing any anon caller to update any order by ID) and three
+redundant anon INSERT duplicates ("Allow anon to insert orders",
+"allow_anonymous_order_insert", "anon_insert_orders"), retaining
+only "Orders: anon insert" as the single anon INSERT policy.
+Verified end-to-end: test order placed on Test 11 post-cleanup
+returned `status=placed`, `stripe_payment_status=paid`. No
+legitimate client path uses anon role for order updates —
+`cancel-order`, `stripe-webhook`, and `fetch-order` all use the
+service-role client.
 
 ### Tier 6 — Production readiness
 
