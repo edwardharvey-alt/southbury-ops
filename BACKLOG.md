@@ -786,6 +786,19 @@ Infrastructure required before building: T6-1 (domain — lovehearth.co.uk must 
 
 Dependency: T3-9 (customer capture — complete), T6-1, T6-6.
 
+T5-C1: Pre-drop customer engagement — research brief
+Tier 5. Research ticket, not a build ticket. Should be completed before T5-11 (comms engine) is extended beyond its current transactional scope.
+
+The comms engine (T5-11) specifies what to send and when in a mechanical way: order confirmed, drop announced, drop reminder. That is the baseline. What it does not answer is the deeper question: what does the evidence say about optimal pre-event engagement strategies, and how does that apply to the Hearth context specifically?
+
+Hearth drops have a natural narrative arc that most food brands do not: announced → building → closing → live → fulfilled. Each stage is a legitimate engagement moment. But what is the right number of touchpoints? What channel mix performs best for different vendor archetypes? What creative approaches drive genuine anticipation rather than inbox fatigue? What can be learned from adjacent industries — ticketed events, subscription commerce, farmers market pre-orders, community commerce — about pre-purchase engagement that builds excitement rather than noise? The Domino's SMS model (high frequency, low relevance, broadly ignored) is the anti-pattern.
+
+Scope: review emerging evidence on pre-event engagement timing and sequencing; identify the channel mix most appropriate for Hearth's vendor archetypes (WhatsApp, email, SMS — and when each is appropriate); review personalisation techniques relevant to the Hearth data model (postcode clustering, recency, loyalty segment, host context); identify what Hearth's owned customer data enables that rented-list platforms cannot replicate; produce a design brief covering recommended touchpoint sequence, channel guidance, creative principles, and hard rules (e.g. maximum messages per customer per drop across all non-transactional channels).
+
+Output: a design brief document, not code. This is a Claude Chat research task, not a Claude Code build task. Conduct as a dedicated research session using web search and synthesis.
+
+Dependency: none. Can run in parallel with ongoing platform build work. Does not block any current Tier 1–6 priorities.
+
 T5-12: Vendor customer data import — advanced
 Extend T4-14 to support connections to existing vendor systems: email
 platforms, booking systems, POS exports. Two vendor pathways: data-rich
@@ -2433,6 +2446,19 @@ Platform-wide review for:
 Output: per-page copy recommendations plus a glossary/style guide
 checkpoint.
 
+T8-3-sub1: Operator pages — "menu" language consistency audit
+Tier 8. Open — pre-identified gap, does not wait for full T8 sweep.
+
+The landing page (index.html) was broadened to cover non-hot-food vendors and updated to use "offer" rather than "menu" throughout. Operator pages — Drop Studio, Menu Library, Service Board, Insights, Brand Hearth — still use "menu" as the default term throughout UI copy, labels, and microcopy.
+
+For a hot food vendor, "menu" is appropriate. For a butcher running a hamper drop, a bakery running a pre-order, or a farm shop running a weekly box, "menu" is the wrong word. The platform needs to be format-agnostic in its language.
+
+Proposed fix: audit every operator page for "menu" language in UI copy, labels, buttons, empty states, and microcopy. Determine which instances should become offer/items/selection/catalogue and which are correctly "menu" in context (the Menu Library itself may retain its name — that is a separate vocabulary decision). Produce a vocabulary decision before implementing changes. This feeds into T8-3 (language, copy, and tone audit) and T8-4 (design system consolidation).
+
+Note: the Menu Library page name and nav label is a separate decision. Do not change the page name as part of this ticket without a broader vocabulary decision first.
+
+Dependency: none. Can be picked off before T8-1 through T8-4 are formally run.
+
 T8-4: Design system consolidation
 After T8-1 through T8-3 are complete, codify a single source of
 truth for:
@@ -2565,6 +2591,32 @@ these." Vendor can add suggested items to the drop menu with one
 click.
 Dependency: T4-28, meaningful item sales history across varied
 contexts.
+
+T9-9: Drop success prediction — pre-publish confidence scoring
+Tier 9. Open — gated on real drop history across multiple vendors.
+
+When a vendor configures a drop in Drop Studio, Hearth scores the drop's predicted fill rate before it is published and surfaces specific actionable recommendations to improve it. The score is based on the vendor's own historical drop patterns and, once cross-vendor data is sufficient, platform-wide patterns for similar vendor archetypes.
+
+Scoring inputs (deterministic, SQL-computed): day of week and time window against the vendor's historical fill rates; capacity level relative to comparable past drops; host context — does this host have a strong track record for this vendor; offer composition — do the items enabled have strong sales history in this context; lead time — how many days between now and the drop opening; customer asset size in the relevant postcode area.
+
+Output: a plain-English confidence signal surfaced in the Drop Studio Review pane. "Based on your last six Friday drops at this host, an 80-unit capacity at this price point typically reaches 85% fill. Your current configuration looks strong." Or: "Your last two drops with this offer on a Wednesday averaged 52% fill. Consider shifting to a Friday or reducing capacity." Maximum three recommendations, each with a clear rationale.
+
+LLM role: SQL layer computes the scores and identifies the gap. Haiku 4.5 generates the plain-English framing only. Scores, counts, and percentages are always passed as structured data — never generated. See GenAI shared principles in BACKLOG.md for hard rules.
+
+Dependency: T5-9 (intelligence engine maturity), meaningful drop history across at least 10 drops per vendor. Do not build on synthetic test data — wait for real drop history from real vendors before evaluating signal quality.
+
+T9-10: Cross-vendor pattern intelligence — transferable archetype improvements
+Tier 9. Open — gated on vendor count reaching meaningful scale (~20+ active vendors across at least two archetypes).
+
+Once the vendor base reaches sufficient scale, Hearth can identify performance patterns that transfer across similar vendors and surface them as proactive improvement recommendations. Examples: food trucks that shift from Wednesday to Friday drops see an average fill rate lift in similar catchment areas; artisan producers who add a quantity-limited signal to their drop communication see higher early-order conversion; restaurants running community node drops with a fixed host for three or more consecutive months see higher customer return rates than ad-hoc host rotation.
+
+Architecture: vendors are segmented by archetype (from onboarding answers) and by drop format patterns (host vs neighbourhood, hot food vs artisan goods, etc.). For each archetype cluster, performance patterns are computed nightly and written to a materialised intelligence table. Vendors whose configuration diverges from the high-performing pattern for their archetype receive a plain-English suggestion surfaced on the Home dashboard and in Drop Studio.
+
+LLM role: same as T9-9 — SQL owns the signal computation, Haiku 4.5 owns the plain-English framing only. Patterns must be statistically significant before surfacing — minimum cluster size to be defined at build time.
+
+Privacy consideration: no vendor sees another vendor's data directly. Recommendations are framed as "vendors like you" patterns, never as named comparisons.
+
+Dependency: T9-9 (establishes the pattern computation infrastructure this ticket extends), minimum ~20 active vendors with meaningful drop history across at least two archetypes. Phase 3 roadmap item — do not build until the validation and early cohort stages are well established.
 
 Recommended build sequence for Tier 9:
 First: T9-6 (at-risk flagging) and T9-5 (promotion copy) —

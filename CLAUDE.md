@@ -929,6 +929,7 @@ index.
 - T5-8 — Interest registration: signals mechanic — open
 - T5-9 — Recommendation engine: matured intelligence — open
 - T5-11 — Comms engine V1 (transactional + demand generation email) — open
+- T5-C1 — Pre-drop customer engagement research brief — open
 - T5-12 — Vendor customer data import: advanced (POS / email / booking integrations) — open
 - T5-14 — Home page: demand orchestration dashboard — open
 - T5-15 — Insights: demand and audience intelligence layer — open
@@ -1023,6 +1024,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T8-1 — Brand and visual consistency audit — open
 - T8-2 — Vendor journey experience audit — open
 - T8-3 — Language, copy, and tone audit — open
+- T8-3-sub1 — Operator pages: "menu" vs "offer" language consistency audit — open
 - T8-4 — Design system consolidation — open (depends on T8-1 → T8-3)
 
 ### Tier 9 — Agentic AI workstream
@@ -1034,6 +1036,8 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T9-6 — At-risk customer flagging — open
 - T9-7 — Capacity intelligence (predictive) — open
 - T9-8 — Menu suggestion by context — open
+- T9-9 — Drop success prediction: pre-publish confidence scoring — open
+- T9-10 — Cross-vendor pattern intelligence: transferable archetype improvements — open
 
 ## Future architecture
 
