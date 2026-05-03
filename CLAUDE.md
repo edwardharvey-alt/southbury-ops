@@ -684,18 +684,26 @@ on top of the coding rules above.
     logged days or weeks before they're picked up, when the platform
     state may have moved underneath the ticket framing.
 
-26. **When adding new columns, audit write-path Edge Functions for
-    ALLOWED_FIELDS whitelists.** If a column is referenced only by
-    client-side JavaScript and the database schema, but the write
-    goes through an Edge Function (e.g. `update-drop`) with an
-    explicit field whitelist, the new column will be silently
-    stripped on save. The bug only surfaces during manual testing
-    as "saves don't persist." When designing schema changes, list
-    every Edge Function that writes to the affected table and
-    verify the whitelist is widened. This came up in T3-12a where
-    `delivery_area_type` and `allowed_postcode_prefixes` needed to
-    be added to `update-drop`'s `ALLOWED_FIELDS` — the original
-    prompt missed it; Claude Code caught it during implementation.
+26. **When adding new columns, audit the full read-write loop.**
+    Schema changes have two sides that need to be in lockstep:
+    - **Write path:** the `ALLOWED_FIELDS` whitelist in the matching
+      Edge Function (e.g. `update-product`, `update-drop`). A missing
+      whitelist entry means the new column is silently stripped on
+      save. Discovered during T3-12a where `delivery_area_type` and
+      `allowed_postcode_prefixes` needed adding to `update-drop`'s
+      whitelist.
+    - **Read path:** the matching `v_*_enriched` view that the UI
+      loads from. A missing column in the view returns `undefined`
+      to the client, which typically falls back to defaults — the
+      data is being saved correctly but the UI shows stale values,
+      indistinguishable from a save bug. Discovered during T5-B35
+      where `v_products_enriched` was missing `travels_well`,
+      `suitable_for_collection`, and `prep_complexity`.
+    When designing schema changes, list every Edge Function whitelist
+    AND every `v_*_enriched` view that needs widening. Either alone
+    is silently broken. Note that `CREATE OR REPLACE VIEW` cannot
+    reorder columns (error 42P16) — append new columns to the end of
+    the SELECT list.
 
 27. **Stuck "thinking" loops past ~10 minutes are stuck, not
     progressing.** If Claude Code shows a long-running "thinking"
@@ -713,6 +721,34 @@ on top of the coding rules above.
     specific to that file or section — work around it by splitting
     the task or providing more prescriptive instructions about
     what to write.
+
+28. **macOS Terminal.app auto-renders domain-like text as
+    `[text](http://text)` in `cat` output.** The underlying file
+    bytes are clean — Terminal's "Smart Selection" or similar
+    feature adds the markdown-link rendering at display time. When
+    in doubt, confirm with `xxd <file> | tail -N` to see the real
+    bytes. Surfaced during the .gitignore cleanup in this session:
+    `cat` displayed `*.[rtf.sb](http://rtf.sb)-*` while `xxd`
+    confirmed the file actually contained `*.rtf.sb-*`. Don't waste
+    cycles "fixing" a content problem that isn't there. If the
+    rendering itself is a nuisance during scripting work, Terminal →
+    Settings → Profiles → Advanced has options that reportedly affect
+    this.
+
+29. **Symptom "values won't stick after save" is ambiguous.** Two
+    distinct bug shapes can present identically: (a) save broken
+    (values not persisted to the database), or (b) read broken
+    (values persisted but not displayed). The first thing to do
+    when this symptom appears is a direct SELECT against the
+    underlying table — not the view, not the API — to disambiguate.
+    If the table holds the saved values, the bug is on the read
+    side, almost certainly a missing column in a `v_*_enriched`
+    view (see learning #26). If the table holds defaults, the bug
+    is on the write side — check the network payload first, then
+    the Edge Function whitelist. Surfaced during T5-B35 testing
+    where suitability flags appeared to revert on save. Direct
+    table SELECT showed the saved values were correct in
+    `products`; `v_products_enriched` was the gap.
 
 ## Stripe Connect Express (T3-8)
 
@@ -937,9 +973,9 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B26 — ADMIN_UID hardcoded in two places — open
 - T5-B32 — Duplicate anon SELECT policies on products — open
 - T5-B33 — Restore missing T5-B29 / T5-B30 / T5-B31 ticket bodies in BACKLOG.md — open
-- T5-B35 — drop-menu.html duplicateCurrentProduct drops suitability flags — open
 - T5-B36 — duplicate-bundle rollback verification — open
 - T5-B37 — save-bundle-line update-path partial-failure note — open
+- T5-B40 — Audit v_*_enriched views for missing columns — open
 
 ### Tier 6 — Production readiness
 - T6-2 — Local development environment — open
