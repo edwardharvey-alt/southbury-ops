@@ -61,6 +61,20 @@ function isUuid(v: unknown): v is string {
   return typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
 
+// T3-12a — Postcode prefix matcher. Kept byte-identical to the
+// hearth-vendor.js browser implementation (assets/hearth-vendor.js)
+// so server and client never disagree about what counts as "inside"
+// a delivery area.
+function matchesAllowedPrefix(customerPostcode: unknown, allowedPrefixes: unknown): boolean {
+  if (!allowedPrefixes || (allowedPrefixes as string[]).length === 0) return true;
+  var normalised = (customerPostcode as string || '').toUpperCase().replace(/\s+/g, '');
+  if (!normalised) return false;
+  return (allowedPrefixes as string[]).some(function (p) {
+    var prefixNorm = (p || '').toUpperCase().replace(/\s+/g, '');
+    return prefixNorm !== '' && normalised.startsWith(prefixNorm);
+  });
+}
+
 function isFiniteNumber(v: unknown): v is number {
   return typeof v === "number" && Number.isFinite(v);
 }
@@ -194,6 +208,35 @@ Deno.serve(async (req) => {
     }
     if (closesAt !== null && now > closesAt) {
       return jsonResponse({ error: "Ordering for this drop has closed" }, 400);
+    }
+
+    // Step 3.5 — T3-12a delivery area enforcement.
+    // v_drop_summary is not guaranteed to expose the new columns, so
+    // read them directly from the drops table. delivery_area_type IS
+    // NULL → no restriction (pass through). 'postcode_prefix' →
+    // validate the customer postcode against allowed_postcode_prefixes.
+    // 'radius' → reject 501 until T3-12b ships, so a half-built radius
+    // config can't accidentally let all orders through.
+    const { data: dropAreaRow, error: dropAreaErr } = await serviceClient
+      .from("drops")
+      .select("delivery_area_type, allowed_postcode_prefixes")
+      .eq("id", payload.drop_id)
+      .maybeSingle();
+    if (dropAreaErr) return jsonResponse({ error: "Drop area lookup failed" }, 500);
+    if (!dropAreaRow) return jsonResponse({ error: "Drop not found" }, 404);
+
+    const areaType = dropAreaRow.delivery_area_type;
+    if (areaType === "radius") {
+      return jsonResponse({ ok: false, reason: "delivery_area_radius_not_supported" }, 501);
+    }
+    if (areaType === "postcode_prefix") {
+      const allowed = dropAreaRow.allowed_postcode_prefixes;
+      if (!Array.isArray(allowed) || allowed.length === 0) {
+        return jsonResponse({ ok: false, reason: "delivery_area_misconfigured" }, 500);
+      }
+      if (!matchesAllowedPrefix(payload.customer.postcode, allowed)) {
+        return jsonResponse({ ok: false, reason: "delivery_area_excluded" }, 400);
+      }
     }
 
     const vendorId = String(dropSummary.vendor_id);

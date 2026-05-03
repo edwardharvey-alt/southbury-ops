@@ -28,6 +28,8 @@ const ALLOWED_FIELDS = new Set([
   "customer_notes_enabled",
   "centre_postcode",
   "radius_km",
+  "delivery_area_type",
+  "allowed_postcode_prefixes",
   "capacity_category_id",
   "capacity_category",
   "capacity_units_total",
@@ -158,6 +160,40 @@ Deno.serve(async (req) => {
       if (r !== null) {
         if (!isFiniteNumber(r) || r < 0) {
           return jsonResponse({ error: "radius_km must be >= 0" }, 400);
+        }
+      }
+    }
+
+    // T3-12a — Delivery area restriction.
+    // delivery_area_type: 'postcode_prefix' | null. 'radius' is reserved for
+    // T3-12b and not yet accepted on writes — reject so a half-built radius
+    // config can't bypass the prefix gate by being written here.
+    if (Object.prototype.hasOwnProperty.call(update, "delivery_area_type")) {
+      const t = update.delivery_area_type;
+      if (t !== null && t !== "postcode_prefix") {
+        return jsonResponse({ error: "delivery_area_type must be 'postcode_prefix' or null" }, 400);
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(update, "allowed_postcode_prefixes")) {
+      const arr = update.allowed_postcode_prefixes;
+      if (arr !== null) {
+        if (!Array.isArray(arr) || arr.length === 0 || !arr.every((x) => typeof x === "string" && x.trim().length > 0)) {
+          return jsonResponse({ error: "allowed_postcode_prefixes must be a non-empty array of strings or null" }, 400);
+        }
+      }
+    }
+    // Pair invariant: when delivery_area_type is set to 'postcode_prefix',
+    // allowed_postcode_prefixes must be a non-empty array. When it is null,
+    // allowed_postcode_prefixes must also be null.
+    {
+      const hasType = Object.prototype.hasOwnProperty.call(update, "delivery_area_type");
+      const hasArr = Object.prototype.hasOwnProperty.call(update, "allowed_postcode_prefixes");
+      if (hasType && hasArr) {
+        if (update.delivery_area_type === "postcode_prefix" && update.allowed_postcode_prefixes === null) {
+          return jsonResponse({ error: "allowed_postcode_prefixes is required when delivery_area_type is 'postcode_prefix'" }, 400);
+        }
+        if (update.delivery_area_type === null && update.allowed_postcode_prefixes !== null) {
+          return jsonResponse({ error: "allowed_postcode_prefixes must be null when delivery_area_type is null" }, 400);
         }
       }
     }

@@ -751,6 +751,68 @@
       flex-shrink:0;
       accent-color:var(--h-accent);
     }
+
+    /* T3-12a — Delivery area restriction (postcode prefix chip input) */
+    #deliveryAreaRestrictionField .restrictionRadios{
+      display:flex;
+      gap:16px;
+      flex-wrap:wrap;
+      margin-bottom:8px;
+    }
+    #deliveryAreaRestrictionField .restrictionRadios label{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-weight:500;
+      color:var(--h-text);
+      cursor:pointer;
+    }
+    #postcodePrefixWrap{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    #postcodePrefixChips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      min-height:0;
+    }
+    #postcodePrefixChips:empty{
+      display:none;
+    }
+    #postcodePrefixChips .prefixChip{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      background:rgba(196,81,26,0.12);
+      color:var(--h-accent-ink, var(--h-text));
+      border:1px solid rgba(196,81,26,0.3);
+      border-radius:999px;
+      padding:4px 10px;
+      font-size:13px;
+      font-weight:500;
+    }
+    #postcodePrefixChips .prefixChip button{
+      background:transparent;
+      border:0;
+      color:inherit;
+      font-size:14px;
+      line-height:1;
+      cursor:pointer;
+      padding:0;
+    }
+    #postcodePrefixChips .prefixChip button:hover{
+      opacity:0.7;
+    }
+    #postcodePrefixError{
+      color:#b3261e;
+      font-size:13px;
+      display:none;
+    }
+    #postcodePrefixError.show{
+      display:block;
+    }
   </style>
 </head>
 <body>
@@ -966,6 +1028,20 @@
                     <div class="field hidden" id="deliveryAreaDescriptionField" style="grid-column:1 / -1;">
                       <label for="deliveryAreaDescription">Delivery area</label>
                       <textarea id="deliveryAreaDescription" placeholder="e.g. Southbury Road and surrounding streets"></textarea>
+                    </div>
+
+                    <div class="field hidden" id="deliveryAreaRestrictionField" style="grid-column:1 / -1;">
+                      <label>Delivery area restriction</label>
+                      <div class="restrictionRadios">
+                        <label><input type="radio" name="deliveryAreaType" value="none" checked /> No restriction</label>
+                        <label><input type="radio" name="deliveryAreaType" value="postcode_prefix" /> Postcode prefixes</label>
+                      </div>
+                      <div id="postcodePrefixWrap" style="display:none;">
+                        <input id="postcodePrefixInput" type="text" placeholder="Type a prefix (e.g. BH18 or BH18 8) and press Enter" />
+                        <div id="postcodePrefixChips"></div>
+                        <div class="helperText">Enter outward codes (BH18) or sectors (BH18 8). Customers outside these areas won't be able to place orders. Press Enter or comma to add. Click a chip to remove.</div>
+                        <div id="postcodePrefixError"></div>
+                      </div>
                     </div>
 
                     <div class="field fieldInlineCheck" style="grid-column:1 / -1;">
@@ -2723,6 +2799,75 @@
       else helper.textContent = "Optional for neighbourhood drops.";
     }
 
+    /* T3-12a — Postcode prefix chip input.
+       state.postcodePrefixes is the source of truth for the chip set
+       while the form is open. populateForm() seeds it from drop columns;
+       readDropFromForm() reads it back into the save payload. */
+    function renderPostcodePrefixChips() {
+      const wrap = byId("postcodePrefixChips");
+      if (!wrap) return;
+      const list = state.postcodePrefixes || [];
+      if (!list.length) {
+        wrap.innerHTML = "";
+        return;
+      }
+      wrap.innerHTML = list.map((p, i) =>
+        `<span class="prefixChip" data-idx="${i}"><span>${escapeHtml(p)}</span><button type="button" aria-label="Remove ${escapeHtml(p)}">×</button></span>`
+      ).join("");
+    }
+
+    function clearPostcodePrefixError() {
+      const err = byId("postcodePrefixError");
+      if (err) {
+        err.textContent = "";
+        err.classList.remove("show");
+      }
+    }
+
+    function showPostcodePrefixError(msg) {
+      const err = byId("postcodePrefixError");
+      if (err) {
+        err.textContent = msg;
+        err.classList.add("show");
+      }
+    }
+
+    function addPostcodePrefix(raw) {
+      const norm = window.HearthVendor && window.HearthVendor.normalisePostcodePrefix
+        ? window.HearthVendor.normalisePostcodePrefix(raw)
+        : String(raw || "").toUpperCase().replace(/\s+/g, " ").trim();
+      if (!norm) return false;
+      state.postcodePrefixes = state.postcodePrefixes || [];
+      if (state.postcodePrefixes.includes(norm)) {
+        clearPostcodePrefixError();
+        return false;
+      }
+      state.postcodePrefixes.push(norm);
+      renderPostcodePrefixChips();
+      clearPostcodePrefixError();
+      markDirty();
+      return true;
+    }
+
+    function removePostcodePrefixAt(idx) {
+      if (!state.postcodePrefixes) return;
+      state.postcodePrefixes.splice(idx, 1);
+      renderPostcodePrefixChips();
+      markDirty();
+    }
+
+    function getSelectedDeliveryAreaType() {
+      const checked = document.querySelector('input[name="deliveryAreaType"]:checked');
+      return checked ? checked.value : "none";
+    }
+
+    function setSelectedDeliveryAreaType(value) {
+      const target = value === "postcode_prefix" ? "postcode_prefix" : "none";
+      document.querySelectorAll('input[name="deliveryAreaType"]').forEach((r) => {
+        r.checked = r.value === target;
+      });
+    }
+
     function populateForm() {
       const d = state.drop;
       if (!d) return;
@@ -2738,6 +2883,20 @@
       byId("customerNotesEnabled").checked = d.customer_notes_enabled !== false;
       byId("centrePostcode").value = d.centre_postcode || "";
       byId("radiusKm").value = d.radius_km ?? "";
+
+      /* T3-12a — Delivery area restriction */
+      if (d.delivery_area_type === "postcode_prefix") {
+        setSelectedDeliveryAreaType("postcode_prefix");
+        state.postcodePrefixes = Array.isArray(d.allowed_postcode_prefixes)
+          ? d.allowed_postcode_prefixes.slice()
+          : [];
+      } else {
+        setSelectedDeliveryAreaType("none");
+        state.postcodePrefixes = [];
+      }
+      renderPostcodePrefixChips();
+      clearPostcodePrefixError();
+
       populateCapacityCategoryOptions(d.capacity_category_id, d.capacity_category);
       byId("capacityTotal").value = Number(d.capacity_units_total || 0);
 
@@ -3002,6 +3161,17 @@
       byId("collectionPointDescriptionField").classList.toggle("hidden", fulfilmentMode !== "collection" && fulfilmentMode !== "mixed");
       byId("deliveryAreaDescriptionField").classList.toggle("hidden", fulfilmentMode !== "delivery" && fulfilmentMode !== "mixed");
 
+      /* T3-12a — restriction section is only meaningful when delivery is in scope. */
+      const restrictionField = byId("deliveryAreaRestrictionField");
+      if (restrictionField) {
+        const showRestriction = fulfilmentMode === "delivery" || fulfilmentMode === "mixed";
+        restrictionField.classList.toggle("hidden", !showRestriction);
+      }
+      const prefixWrap = byId("postcodePrefixWrap");
+      if (prefixWrap) {
+        prefixWrap.style.display = getSelectedDeliveryAreaType() === "postcode_prefix" ? "" : "none";
+      }
+
       const fundraisingEnabled = byId("fundraisingEnabled").checked;
       const fundraisingModel = byId("fundraisingModel").value;
       byId("fundraisingFields").classList.toggle("hidden", !fundraisingEnabled);
@@ -3256,6 +3426,17 @@
       const capacityCategoryId = byId("capacityCategory").value || null;
       const capacityCategorySlug = getCapacityCategorySlugFromId(capacityCategoryId);
 
+      /* T3-12a — Delivery area restriction. Mode hygiene: when "None" or
+         "Postcode prefixes" is selected, both legacy radius columns are
+         explicitly nulled so a half-built T3-12b config can't leak. */
+      const restrictionMode = getSelectedDeliveryAreaType();
+      let deliveryAreaType = null;
+      let allowedPostcodePrefixes = null;
+      if (restrictionMode === "postcode_prefix") {
+        deliveryAreaType = "postcode_prefix";
+        allowedPostcodePrefixes = (state.postcodePrefixes || []).slice();
+      }
+
       return {
         ...existing,
         name: byId("dropName").value.trim(),
@@ -3268,8 +3449,10 @@
         collection_point_description: byId("collectionPointDescription").value.trim() || null,
         delivery_area_description: byId("deliveryAreaDescription").value.trim() || null,
         customer_notes_enabled: byId("customerNotesEnabled").checked,
-        centre_postcode: byId("centrePostcode").value.trim() || null,
-        radius_km: byId("radiusKm").value === "" ? null : Number(byId("radiusKm").value),
+        centre_postcode: null,
+        radius_km: null,
+        delivery_area_type: deliveryAreaType,
+        allowed_postcode_prefixes: allowedPostcodePrefixes,
         capacity_category_id: capacityCategoryId,
         capacity_category: capacityCategorySlug,
         capacity_units_total: Number(byId("capacityTotal").value || 0),
@@ -3317,6 +3500,8 @@
         customer_notes_enabled: dropData.customer_notes_enabled,
         centre_postcode: dropData.centre_postcode,
         radius_km: dropData.radius_km,
+        delivery_area_type: dropData.delivery_area_type,
+        allowed_postcode_prefixes: dropData.allowed_postcode_prefixes,
         capacity_category_id: dropData.capacity_category_id,
         capacity_category: dropData.capacity_category,
         capacity_units_total: dropData.capacity_units_total,
@@ -3455,6 +3640,13 @@
 
       let dropData = readDropFromForm();
       if (!dropData.slug) throw new Error("Drop Link Name is required.");
+
+      /* T3-12a — Postcode prefix mode requires at least one prefix. */
+      if (dropData.delivery_area_type === "postcode_prefix" && (!dropData.allowed_postcode_prefixes || dropData.allowed_postcode_prefixes.length === 0)) {
+        showPostcodePrefixError("Add at least one postcode prefix, or switch to No restriction.");
+        throw new Error("Add at least one postcode prefix, or switch to No restriction.");
+      }
+      clearPostcodePrefixError();
 
       dropData.slug = buildUniqueSlug(dropData.slug, state.selectedDropId);
       byId("dropSlug").value = dropData.slug;
@@ -4387,6 +4579,51 @@
       if (centrePostcodeInput) {
         centrePostcodeInput.addEventListener("blur", () => {
           refreshDemandPreview();
+        });
+      }
+
+      /* T3-12a — Delivery area restriction wiring */
+      document.querySelectorAll('input[name="deliveryAreaType"]').forEach((radio) => {
+        radio.addEventListener("change", () => {
+          renderConditionalFields();
+          clearPostcodePrefixError();
+          markDirty();
+        });
+      });
+
+      const prefixInput = byId("postcodePrefixInput");
+      if (prefixInput) {
+        const commit = () => {
+          const value = prefixInput.value;
+          if (!value) return;
+          if (addPostcodePrefix(value)) {
+            prefixInput.value = "";
+          } else {
+            prefixInput.value = "";
+          }
+        };
+        prefixInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            commit();
+          } else if (e.key === "Backspace" && !prefixInput.value && state.postcodePrefixes && state.postcodePrefixes.length) {
+            removePostcodePrefixAt(state.postcodePrefixes.length - 1);
+          }
+        });
+        prefixInput.addEventListener("blur", () => {
+          if (prefixInput.value) commit();
+        });
+      }
+
+      const prefixChips = byId("postcodePrefixChips");
+      if (prefixChips) {
+        prefixChips.addEventListener("click", (e) => {
+          const btn = e.target.closest("button");
+          if (!btn) return;
+          const chip = btn.closest(".prefixChip");
+          if (!chip) return;
+          const idx = Number(chip.dataset.idx);
+          if (Number.isFinite(idx)) removePostcodePrefixAt(idx);
         });
       }
       const hostSelectEl = byId("hostSelect");
