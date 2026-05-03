@@ -1633,13 +1633,21 @@
             : 'This becomes more valuable as more drops run.',
           primaryLabel:'Open insights',
           primaryHref:HearthNav.withVendor('./insights.html')
+        }),
+        renderPaymentsCard({
+          status: state.vendor.stripe_onboarding_complete
+            ? 'ready'
+            : (state.vendor.stripe_account_id ? 'checking' : 'not_started')
         })
       ].join('');
+
+      bindStripeActionButtons();
     }
 
     function workspaceCard(card, spanFull = false){
+      const linkAttrs = card.extraLinkAttrs ? ' ' + card.extraLinkAttrs : '';
       return `
-        <div class="home-work" style="${spanFull ? 'grid-column:1 / -1;' : ''}">
+        <div class="home-work"${card.cardId ? ` id="${card.cardId}"` : ''} style="${spanFull ? 'grid-column:1 / -1;' : ''}">
           <div class="home-workTop">
             <div style="display:flex; gap:12px; align-items:flex-start;">
               <div class="home-workIcon">${escapeHtml(card.icon)}</div>
@@ -1652,10 +1660,259 @@
           </div>
           <div class="home-workMeta">${escapeHtml(card.meta || '')}</div>
           <div class="home-workActions">
-            <a class="home-workLink primary" href="${card.primaryHref}">${escapeHtml(card.primaryLabel)}</a>
+            <a class="home-workLink primary" href="${card.primaryHref}"${linkAttrs}>${escapeHtml(card.primaryLabel)}</a>
           </div>
         </div>
       `;
+    }
+
+    function renderPaymentsCard(stripeState){
+      const status = stripeState.status;
+      let card;
+
+      if (status === 'ready') {
+        card = {
+          cardId: 'paymentsWorkspaceCard',
+          icon: 'PY',
+          title: 'Payments',
+          status: pill('good', 'Ready to take payments'),
+          description: 'Card payments are live through Stripe Connect. Customers can pay at checkout.',
+          meta: 'Charges and payouts are both enabled. No action required.',
+          primaryLabel: 'View Stripe dashboard',
+          primaryHref: '#',
+          extraLinkAttrs: 'data-stripe-action="dashboard"'
+        };
+      } else if (status === 'action_required') {
+        card = {
+          cardId: 'paymentsWorkspaceCard',
+          icon: 'PY',
+          title: 'Payments',
+          status: pill('warn', 'Action required'),
+          description: 'Stripe has flagged an outstanding requirement on your connected account.',
+          meta: 'Your account may need additional verification before payments or payouts are fully active.',
+          primaryLabel: 'Review in Stripe',
+          primaryHref: '#',
+          extraLinkAttrs: 'data-stripe-action="dashboard"'
+        };
+      } else if (status === 'incomplete') {
+        card = {
+          cardId: 'paymentsWorkspaceCard',
+          icon: 'PY',
+          title: 'Payments',
+          status: pill('warn', 'Setup incomplete'),
+          description: 'Accept card payments through Stripe. Complete Stripe onboarding to finish enabling card payments.',
+          meta: 'Stripe account created but onboarding not fully completed — some details may still be required.',
+          primaryLabel: 'Resume setup',
+          primaryHref: '#',
+          extraLinkAttrs: 'data-stripe-action="onboard"'
+        };
+      } else if (status === 'checking') {
+        card = {
+          cardId: 'paymentsWorkspaceCard',
+          icon: 'PY',
+          title: 'Payments',
+          status: pill('neutral', 'Checking…'),
+          description: 'Accept card payments through Stripe. Set up your connected account to start taking orders.',
+          meta: 'Verifying your Stripe connection status…',
+          primaryLabel: 'Checking…',
+          primaryHref: '#',
+          extraLinkAttrs: 'data-stripe-action="none"'
+        };
+      } else {
+        card = {
+          cardId: 'paymentsWorkspaceCard',
+          icon: 'PY',
+          title: 'Payments',
+          status: pill('warn', 'Not set up'),
+          description: 'Accept card payments through Stripe. Set up your connected account to start taking orders.',
+          meta: 'Card payments are not yet enabled — vendors need a connected Stripe account before going live.',
+          primaryLabel: 'Set up card payments',
+          primaryHref: '#',
+          extraLinkAttrs: 'data-stripe-action="onboard"'
+        };
+      }
+
+      return workspaceCard(card, false);
+    }
+
+    function updatePaymentsCard(stripeState){
+      const el = document.getElementById('paymentsWorkspaceCard');
+      if (!el) return;
+      el.outerHTML = renderPaymentsCard(stripeState);
+      bindStripeActionButtons();
+    }
+
+    function bindStripeActionButtons(){
+      const grid = document.getElementById('workspaceGrid');
+      if (!grid) return;
+
+      const onboardBtns = grid.querySelectorAll('a[data-stripe-action="onboard"]');
+      onboardBtns.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          if (btn.dataset.busy === '1') return;
+          btn.dataset.busy = '1';
+          const originalLabel = btn.textContent;
+          btn.textContent = 'Redirecting to Stripe…';
+
+          try {
+            const vendor = state.vendor;
+            if (!vendor) throw new Error('Vendor not loaded');
+
+            const { data: { session } } = await sb.auth.getSession();
+            const token = session?.access_token;
+            if (!token) throw new Error('Not signed in');
+
+            const baseUrl = window.location.origin + window.location.pathname;
+            const slugParam = vendor.slug ? '?vendor=' + encodeURIComponent(vendor.slug) + '&' : '?';
+            const returnUrl = baseUrl + slugParam + 'stripe_setup=complete';
+            const refreshUrl = baseUrl + slugParam + 'stripe_setup=refresh';
+
+            const resp = await fetch(
+              `${window.HEARTH_CONFIG.SUPABASE_URL}/functions/v1/create-stripe-connect-link`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  vendor_id: vendor.id,
+                  return_url: returnUrl,
+                  refresh_url: refreshUrl
+                })
+              }
+            );
+
+            const result = await resp.json().catch(() => ({}));
+            if (!resp.ok || !result.url) {
+              throw new Error(result.error || 'No redirect URL received');
+            }
+
+            window.location.href = result.url;
+          } catch (err) {
+            console.error('create-stripe-connect-link error', err);
+            btn.textContent = 'Something went wrong — try again';
+            btn.dataset.busy = '';
+          }
+        });
+      });
+
+      const noneBtns = grid.querySelectorAll('a[data-stripe-action="none"]');
+      noneBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => { e.preventDefault(); });
+      });
+
+      const dashboardBtns = grid.querySelectorAll('a[data-stripe-action="dashboard"]');
+      dashboardBtns.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          if (btn.dataset.busy === '1') return;
+          btn.dataset.busy = '1';
+          const originalLabel = btn.textContent;
+          btn.textContent = 'Opening Stripe…';
+
+          try {
+            const { data: { session } } = await sb.auth.getSession();
+            const token = session?.access_token;
+            if (!token) throw new Error('Not signed in');
+
+            const resp = await fetch(
+              `${window.HEARTH_CONFIG.SUPABASE_URL}/functions/v1/create-stripe-login-link`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ vendor_id: state.vendor.id })
+              }
+            );
+
+            const result = await resp.json().catch(() => ({}));
+            if (!resp.ok || !result.url) {
+              throw new Error(result.error || 'No login link received');
+            }
+
+            window.open(result.url, '_blank', 'noopener,noreferrer');
+            btn.textContent = originalLabel;
+            btn.dataset.busy = '';
+
+          } catch (err) {
+            console.error('create-stripe-login-link error', err);
+            btn.textContent = 'Something went wrong — try again';
+            btn.dataset.busy = '';
+          }
+        });
+      });
+    }
+
+    async function checkStripeStatus(){
+      const vendor = state.vendor;
+      if (!vendor) return;
+
+      if (vendor.stripe_onboarding_complete === true) {
+        updatePaymentsCard({ status: 'ready' });
+        return;
+      }
+
+      if (!vendor.stripe_account_id) {
+        updatePaymentsCard({ status: 'not_started' });
+        return;
+      }
+
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        const token = session?.access_token;
+        if (!token) {
+          updatePaymentsCard({ status: 'incomplete' });
+          return;
+        }
+
+        const resp = await fetch(
+          `${window.HEARTH_CONFIG.SUPABASE_URL}/functions/v1/check-stripe-connect-status`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ vendor_id: vendor.id })
+          }
+        );
+
+        if (!resp.ok) {
+          updatePaymentsCard({ status: 'incomplete' });
+          return;
+        }
+
+        const result = await resp.json();
+
+        if (result.reason === 'not_started') {
+          updatePaymentsCard({ status: 'not_started' });
+          return;
+        }
+
+        if (result.complete) {
+          state.vendor.stripe_onboarding_complete = true;
+          updatePaymentsCard({ status: 'ready' });
+          return;
+        }
+
+        if (result.details_submitted && (!result.charges_enabled || !result.payouts_enabled)) {
+          updatePaymentsCard({
+            status: 'action_required',
+            charges_enabled: result.charges_enabled,
+            payouts_enabled: result.payouts_enabled
+          });
+        } else {
+          updatePaymentsCard({ status: 'incomplete' });
+        }
+
+      } catch (err) {
+        console.error('checkStripeStatus error', err);
+        updatePaymentsCard({ status: 'incomplete' });
+      }
     }
 
     function renderActions(){
@@ -1866,6 +2123,7 @@
       renderAssetSnapshot();
       renderWorkspaces();
       renderActions();
+      setTimeout(() => checkStripeStatus(), 0);
     }
 
     function renderSetupNotice(){
