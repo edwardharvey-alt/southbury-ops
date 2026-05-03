@@ -489,6 +489,22 @@ rows set both. Worth deciding whether `created_by_vendor_id` is
 still meaningful or whether `vendor_id` covers everything it needs
 to.
 
+**`v_*_enriched` views need manual maintenance when columns are
+added.** The CSV export only covers `information_schema.columns`
+for tables — view column lists are not included. When a new column
+is added to a table, its corresponding `v_*_enriched` view must be
+regenerated with `CREATE OR REPLACE VIEW` to expose it. Postgres
+does not allow column reordering or insertion in `CREATE OR REPLACE
+VIEW` (error 42P16) — new columns must be appended to the end of
+the SELECT. A missing view column is silent at the database level
+(the column is just absent from the view) but breaks the UI:
+clients reading via `select("*")` get `undefined` and fall back to
+defaults, indistinguishable from a save bug. Discovered during
+T5-B35 (3 May 2026) where `v_products_enriched` was missing
+`travels_well`, `suitable_for_collection`, and `prep_complexity`
+since the suitability fields were added to `products`. Audit ticket
+logged as T5-B40.
+
 ---
 
 ## Gotchas
@@ -575,6 +591,17 @@ SELECT conrelid::regclass AS table_name, conname, pg_get_constraintdef(oid) AS d
 FROM pg_constraint
 WHERE contype = 'c' AND connamespace = 'public'::regnamespace
 ORDER BY table_name, conname;
+```
+
+For view definitions (column lists exposed by each view), run:
+```sql
+-- View definitions (run when columns are added to a table to confirm
+-- the matching v_*_enriched view exposes them).
+SELECT viewname, pg_get_viewdef(viewname::regclass, true) AS definition
+FROM pg_views
+WHERE schemaname = 'public'
+  AND viewname LIKE 'v_%'
+ORDER BY viewname;
 ```
 
 These could be folded into a future expanded SCHEMA.md if RLS or

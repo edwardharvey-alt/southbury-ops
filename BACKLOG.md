@@ -1766,18 +1766,24 @@ Cross-reference: T5-B16 (parent migration), PR #209 (category
 batch that surfaced this).
 
 T5-B35: drop-menu.html duplicateCurrentProduct drops suitability
-flags. Surfaced during the 2 May 2026 T5-B16 product batch (PR
-following #209). When a product is duplicated via Duplicate in the
-product editor, the constructed payload omits `travels_well`,
-`suitable_for_collection`, and `prep_complexity`. The original
-product carries those flags but the duplicate is created without
-them, so the copy silently loses suitability metadata that the
-operator just spent time configuring on the source. Fix is a
-one-liner — add the three fields to the `fields` object in
-`duplicateCurrentProduct` (drop-menu.html, near line 2390) sourced
-from the original `product`. Held back from the T5-B16 product
-batch PR to keep that PR scoped to the Edge Function migration
-only. Bounded one-session piece of work.
+flags ✓ COMPLETE 2026-05-03 (PR #218).
+
+Three-line fix to `duplicateCurrentProduct()` in drop-menu.html
+adding `travels_well`, `suitable_for_collection`, and
+`prep_complexity` to the duplicate payload sourced from the
+original product. Resolved the silent loss of suitability
+metadata when a vendor used Duplicate in the product editor.
+
+During testing, `v_products_enriched` was discovered to be missing
+these three columns — the underlying `products` table held the
+saved values correctly, but the view returned `undefined` to the
+client which fell back to defaults, making correctly-saved data
+look like a save bug. View fixed in production via SQL editor
+(`CREATE OR REPLACE VIEW` with the three columns appended; column
+reorder rejected with error 42P16 so append-only). View-audit
+ticket logged as T5-B40 to confirm no other `v_*_enriched` view
+has the same gap. Lessons captured as operational learnings #26
+(read-write loop audit) and #29 (symptom ambiguity).
 
 `duplicateCurrentBundle` was checked for an equivalent
 metadata-loss gap during T5-B16 batch 3 prerequisite investigation
@@ -1854,6 +1860,44 @@ failures. Same risk profile as pre-migration.
 
 Cross-reference: T5-B16 (parent migration), T5-B36 (sibling
 rollback-verification ticket for duplicate-bundle).
+
+T5-B40: Audit v_*_enriched views for missing columns.
+
+**Status:** Backlog. Pre-launch hygiene.
+
+**Issue:** During T5-B35 testing (3 May 2026), `v_products_enriched`
+was discovered to be missing the `travels_well`,
+`suitable_for_collection`, and `prep_complexity` columns. The
+product editor form was reading from this view and falling back to
+defaults when the columns came back undefined, making it appear
+that saves weren't sticking. The underlying `products` table held
+correct data throughout — the view was the silent gap. View fix
+applied in production via SQL editor (`CREATE OR REPLACE VIEW` with
+columns appended).
+
+**Fix:** Audit every `v_*_enriched` view in the schema and confirm
+each exposes every column its corresponding write-path Edge
+Function whitelists. Specifically verify against the matching
+`update-*` / `create-*` ALLOWED_FIELDS sets:
+- `v_products_enriched` ↔ `update-product` / `create-product`
+- `v_bundles_enriched` ↔ `update-bundle` / `create-bundle`
+- `v_bundle_lines_enriched` ↔ `save-bundle-line`
+- `v_bundle_line_choice_products_enriched` ↔ `save-bundle-line`
+  (choice_product_ids)
+- `v_drop_summary` ↔ `update-drop` / `create-drop`
+- `v_drop_menu_items_enriched` ↔ `assign-menu-items` and related
+- `v_menu_library_items` ↔ `update-product` / `update-bundle`
+- Any other `v_*_enriched` view discovered during the audit.
+
+For each mismatch, append missing columns to the view definition
+(`CREATE OR REPLACE VIEW` only allows append, not reorder/insert —
+Postgres rejects column reordering with error 42P16). Update
+SCHEMA.md views section to note any column-level detail worth
+recording.
+
+Cross-reference: T5-B35 (surfacing fix), operational learning #26
+(read-write loop audit), operational learning #29 (symptom
+ambiguity).
 
 T5-B38: T5-B16 bulk-write Edge Functions — migrate to Postgres
 RPC for true atomic transactions. Sweep ticket grouping T5-B34's
