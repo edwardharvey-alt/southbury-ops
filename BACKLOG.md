@@ -1565,7 +1565,48 @@ the existing T5-B ticket format: short title, paragraph of context,
 proposed fix, dependencies if any. Bounded one-session piece of work.
 
 T5-B34: drop-menu.html shared saveSortOrderBatch upsert path
-migration to Edge Functions. Surfaced during the 2 May 2026 T5-B16
+migration to Edge Functions ✓ COMPLETE 2026-05-03. Shipped via PR
+#214. Three sibling Edge Functions (update-category-sort-order,
+update-product-sort-order, update-bundle-sort-order) replace
+the shared client-side saveSortOrderBatch upsert path on
+drop-menu.html. Each function follows the canonical T5-B16
+pattern (verify_jwt = false, manual JWT verification via
+anonClient.auth.getUser(), vendor ownership check via
+service-role client, top-level try/catch with jsonResponse
+inline closure, CORS via getCorsHeaders() from _shared/cors.ts)
+plus a new bulk-ownership-check pattern for the multi-row write
+case: .in('id', ordered_ids).eq('vendor_id', vendor_id) followed
+by length-equality assertion against ordered_ids.length. This
+is the reference pattern for any future bulk-write Edge Functions.
+Server controls the sort_order gap value ((i + 1) * 10) — clients
+send IDs only, server builds the row payload. Tightens the attack
+surface and keeps the gap value as a single-source-of-truth platform
+invariant.
+
+Page-side: saveSortOrderBatch in drop-menu.html retained its name
+and signature, body swapped for a tableName → functionName
+dispatcher invoking the new functions. Three call sites in
+persistCurrentVisibleOrder unchanged.
+
+Verified end-to-end on Test 12 deploy preview across all three
+reorder paths (categories, products, bundles) with 200 responses,
+order persisting through hard refresh, and no console errors.
+
+T5-B16 (parent migration) closes with this. drop-menu.html has zero
+direct client-side writes for any catalog table.
+
+Surfaced during build: an initial upsert pattern (.upsert(rows,
+{ onConflict: 'id' })) was deployed and immediately failed on the
+first drag with `null value in column "name" of relation
+"categories" violates not-null constraint`. supabase-js's
+.upsert() builds an INSERT...ON CONFLICT statement, and Postgres
+validates the whole INSERT against table constraints before
+conflict resolution applies the UPDATE half — so a payload
+missing required columns fails even when every row matches an
+existing primary key. Fixed by replacing the upsert with a
+sequential .update() loop. Captured as operational learning #23.
+
+Surfaced during the 2 May 2026 T5-B16
 category batch (PR #209). The category batch deliberately migrated
 only create/update/delete call sites and left the shared
 saveSortOrderBatch path on direct PostgREST. saveSortOrderBatch is
@@ -1705,6 +1746,70 @@ failures. Same risk profile as pre-migration.
 
 Cross-reference: T5-B16 (parent migration), T5-B36 (sibling
 rollback-verification ticket for duplicate-bundle).
+
+T5-B38: T5-B16 bulk-write Edge Functions — migrate to Postgres
+RPC for true atomic transactions. Sweep ticket grouping T5-B34's
+new sort-order functions with the existing partial-failure
+hardening tickets T5-B36 and T5-B37.
+
+The T5-B16 migration shipped 12 Edge Functions covering all
+catalog write paths from drop-menu.html. Of those, several
+perform multi-step writes with no transactional guarantee:
+
+- `duplicate-bundle` clones a bundle via sequential service-role
+  inserts across `bundles`, `bundle_lines`, and
+  `bundle_line_choice_products` with best-effort rollback on
+  partial failure (T5-B36).
+- `save-bundle-line` UPDATE path updates the line row first, then
+  reconciles `bundle_line_choice_products` children — line update
+  succeeds but children-reconcile fails leaves inconsistent state
+  (T5-B37).
+- `update-category-sort-order`, `update-product-sort-order`,
+  `update-bundle-sort-order` perform a sequential `.update()` loop
+  across N rows; partial failure mid-loop produces visibly weird
+  ordering on the page but no orphans (T5-B34).
+
+The proper hardening for all three patterns is the same: rewrap
+the multi-step writes in Postgres functions invoked via `rpc()`
+to get true transactional semantics. One database round-trip,
+atomic commit or atomic rollback, no half-states.
+
+**Scope of this sweep:**
+
+- `duplicate-bundle` → `rpc('duplicate_bundle_atomic', ...)`
+- `save-bundle-line` → `rpc('save_bundle_line_atomic', ...)`
+- `update-category-sort-order` → `rpc('reorder_categories', ...)`
+- `update-product-sort-order` → `rpc('reorder_products', ...)`
+- `update-bundle-sort-order` → `rpc('reorder_bundles', ...)`
+
+Each requires: a Postgres function (created via SQL editor by ed,
+matching the existing pattern of all schema work), an Edge
+Function rewrite to call `rpc()` instead of the current sequential
+service-role writes, and verification that the existing JWT
+verification + vendor ownership check + bulk ownership check
+pattern is preserved (the RPC body itself runs as the calling
+role, but the Edge Function still verifies auth before dispatching
+to the RPC).
+
+**Priority:** low. Risk profile across all five functions is
+identical to today's pre-RPC behaviour (no regression, no known
+live failures, hardening rather than bug fix). Cost-of-failure for
+all five is bounded (visible UI weirdness, recovery is "try
+again," no data loss).
+
+**Sequencing:** can be done as one PR or split per function. One
+PR is cleaner — establishes the RPC pattern once, applies
+consistently across all five — but is larger. Split-per-function
+is safer for incremental testing. Architectural decision at start
+of the build session.
+
+**Closes:** T5-B36, T5-B37 (folded in). Itself once the five
+functions are migrated and verified.
+
+Cross-reference: T5-B16 (parent migration), T5-B34 (sort-order
+shipping that surfaced this need consolidating), T5-B36
+(duplicate-bundle rollback), T5-B37 (save-bundle-line partial
+failure).
 
 ### Tier 6 — Production readiness
 
