@@ -278,9 +278,9 @@ prefixes.
 - postcodes.io rate limits: free tier is generous (no documented hard limit)
   but worth verifying before launch.
 
-### T3-12a-fu1 — Drop Studio: clear postcode-prefix error on successful save
+### T3-12a-fu1 — ✓ COMPLETE 2026-05-04 — Drop Studio: clear postcode-prefix error on successful save
 
-**Status:** Backlog. Pre-launch polish.
+**Status:** ✓ COMPLETE 2026-05-04. Pre-launch polish.
 
 **Issue:** When a vendor saves a drop and the empty-prefix guard fires, the
 inline error banner persists at the top of the Basics pane even after a
@@ -289,9 +289,24 @@ subsequent successful save. Confirmed cosmetic — saved data is correct.
 **Fix:** In drop-manager.html `saveDrop()`, clear the postcode prefix error
 after successful save (call `clearPostcodePrefixError()` in the success branch).
 
-### T3-12a-fu2 — Drop Studio: hide legacy centre postcode and radius inputs
+**Closure note (4 May 2026):** Fixed in PR #223 across two commits.
+The original spec correctly identified the symptom — error banner
+persisting after successful save — but prescribed
+clearPostcodePrefixError() which targets #postcodePrefixError (the
+inline error under the prefix chip input). Deploy-preview verification
+surfaced that the user-visible persistent banner is actually
+#errorBox at the top of the Basics pane, set by saveDraftBtn's catch
+handler via showError() when saveDrop throws and never cleared on a
+subsequent success — only refreshAll() clears it, and the
+saveDraftBtn flow never calls refreshAll. Both errors now clear on
+successful save: clearPostcodePrefixError() and showError("") run
+after saveDrop's try/catch (catch re-throws, so success-only
+execution). Side benefit: errorBox now also clears on success after
+any prior failed-save error (slug validation, network errors, etc.).
 
-**Status:** Backlog. Pre-launch polish, before T3-12b.
+### T3-12a-fu2 — ✓ COMPLETE 2026-05-04 — Drop Studio: hide legacy centre postcode and radius inputs
+
+**Status:** ✓ COMPLETE 2026-05-04. Pre-launch polish, before T3-12b.
 
 **Issue:** The legacy `CENTRE POSTCODE` and `RADIUS (KM)` inputs remain
 visible in Drop Studio's Basics pane even though they are not exposed by
@@ -304,6 +319,16 @@ when `delivery_area_type` is set.
 `#radiusKmField` (or wrap in a conditional render) so they are not displayed
 in the current build. T3-12b will reintroduce them as the reveal block of
 the "Radius" radio option in the "Delivery area restriction" section.
+
+**Closure note (4 May 2026):** Fixed in PR #223. The spec referenced
+#centrePostcodeField and #radiusKmField IDs that did not exist on
+disk — wrappers were bare .field divs. Added the IDs and inline
+style="display:none;" to both wrapper divs in drop-manager.html.
+Input IDs (centrePostcode, radiusKm) untouched, so JS references in
+populateForm and resolveDemandPreviewOutwardCode continue to resolve.
+T3-12b will reintroduce these as the radius reveal block of the
+Delivery area restriction radio group, with the IDs now in place
+for it to reference.
 
 ### T3-12a-fu3 — Drop the dead `is_radius_restricted` column on `drops`
 
