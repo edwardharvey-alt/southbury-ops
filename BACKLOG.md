@@ -144,7 +144,7 @@ subscribeToCapacityUpdates() watching INSERT events on orders filtered
 by drop_id. refreshCapacity() re-fetches v_drop_summary and re-renders
 on each event. Channel cleaned up on beforeunload.
 
-T3-8: Stripe integration — DEFERRED
+T3-8: Stripe integration ✓ COMPLETE 2026-05-03
 Intentionally parked until the production domain migration is complete.
 Stripe Connect Express requires a stable production domain for return URLs
 and webhook endpoints. Setting up Stripe against spiffy-tulumba-848684.netlify.app
@@ -156,6 +156,44 @@ Status: PARTIAL. Connect Express scaffold complete (Edge Functions,
 schema, publish gate in drop-manager.html). Customer checkout not
 wired — order.html:2894 still has TODO comment; no create-order Edge
 Function exists yet.
+
+Closure note (2026-05-03): Customer checkout wired end-to-end via
+four Edge Functions:
+
+- create-order — atomic write of orders, order_items,
+  order_item_selections, customers, customer_relationships under a
+  service-role client; creates a Stripe Connect destination charge
+  with the vendor's stripe_account_id as destination; returns a
+  Checkout Session URL with 1800s expiry. Order starts at
+  status='pending_payment' and reserves capacity during the pending
+  window.
+- stripe-webhook — handles checkout.session.completed (→ placed/
+  paid), checkout.session.expired (→ cancelled/expired),
+  checkout.session.async_payment_failed (→ cancelled/failed). Stripe
+  Dashboard endpoint name: "brilliant-rhythm".
+- fetch-order — anonymous matched-pair authorization (order_id +
+  session_id) powering order-confirmation.html. Returns
+  customer-visible fields only.
+- cancel-order — idempotent flip of pending_payment → cancelled on
+  customer return from Stripe cancel. Frees capacity immediately
+  rather than waiting for session expiry. Does not call Stripe.
+
+Verified end-to-end 2026-05-03 against Test 11 in production. Order
+placed via order.html, status='placed' and stripe_payment_status=
+'paid' confirmed in DB, order-confirmation.html rendered correctly
+via fetch-order. No orphan rows, no RLS errors, no client-side
+PostgREST writes against the order tables.
+
+Connect Express scaffold (schema, Edge Functions for
+create-stripe-connect-link / check-stripe-connect-status /
+create-stripe-login-link, drop publish gate in drop-manager.html)
+remains intact and described in the "Stripe Connect Express (T3-8)"
+section of CLAUDE.md.
+
+Cross-reference: T5-B22 (closed 2026-05-03 — captured this same
+resolution but did not update T3-8), T6-1 (production domain
+migration completed 2026-04-22, unblocked Stripe integration),
+T5-B18 (Stripe status visibility surface, closed via PR #221).
 
 T3-9: Order page — customer data capture and consent ✓ COMPLETE
 At checkout capture customer name, email, and postcode. Write to a new

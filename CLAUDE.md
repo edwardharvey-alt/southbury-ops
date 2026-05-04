@@ -862,10 +862,20 @@ delivery_address. Postcode is also stored separately in customer_postcode
 (reformatted with a single canonical space). Phone is stored normalised
 (spaces and hyphens stripped).
 
-Stripe integration is next. Order ID is generated, payload is structured,
-TODO comment marks exact insertion point in handoffToPayment().
-When configuring the Stripe Payment Element, set it to skip address
-collection — Hearth captures the full address at order time.
+Customer checkout is wired via the create-order Edge Function:
+order.html invokes it on Pay, the function atomically writes orders +
+order_items + order_item_selections + customers +
+customer_relationships under a service-role client, creates a Stripe
+Connect destination charge with the vendor's stripe_account_id as
+destination, and returns a Checkout Session URL. Order starts at
+status='pending_payment' and capacity is reserved during the
+1800-second pending window. stripe-webhook handles session lifecycle
+events (completed/expired/async_payment_failed); fetch-order powers
+order-confirmation.html via matched-pair authorization (order_id +
+session_id); cancel-order frees capacity on customer return from
+Stripe cancel. See the "Production mutation/read status" section for
+current state of every read/write path, and the "Stripe Connect
+Express (T3-8)" section for the vendor onboarding scaffold.
 
 ## Production mutation/read status
 
@@ -907,7 +917,6 @@ index.
 - T2-8 — Replace hardcoded vendor slug across operator pages — open
 
 ### Tier 3 — Should be done before regular use
-- T3-8 — Stripe integration: customer checkout Edge Function — partial (Connect Express scaffold complete; checkout not wired)
 - T3-12b — Order page: neighbourhood delivery area enforcement (radius mode) — open. T3-12a (postcode prefix mode) closed 2026-05-03: schema discriminator added (`delivery_area_type`, `allowed_postcode_prefixes`); Drop Studio UI for prefix entry; client-side onBlur validation; server-side enforcement in `create-order`; widened `update-drop` ALLOWED_FIELDS with paired-field invariants. Radius mode reserved for T3-12b.
 
 ### Tier 4 — Enhancements that will impress
