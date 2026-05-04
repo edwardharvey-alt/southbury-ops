@@ -918,7 +918,7 @@ index.
 - T4-34 — Multiple windows: windowCount race condition on sibling naming — open
 - T4-35 — Multiple windows + Close Orders: duplicative timing UX — open
 - T4-36 — Multiple windows: discoverability of Create windows action — open
-- T4-37 — Drop Studio inline host creation: capture terms acceptance — open
+- T4-37b — Host-direct terms acceptance via email confirmation — open
 
 ### Tier 5 — Strategic platform features
 - T5-1 — Delivery optimisation (route planning) — open
@@ -977,6 +977,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B36 — duplicate-bundle rollback verification — open
 - T5-B37 — save-bundle-line update-path partial-failure note — open
 - T5-B40 — Audit v_*_enriched views for missing columns — open
+- T5-B41 — drop-manager.html enrichHostPreview appends rather than replaces (cosmetic) — open
 
 ### Tier 6 — Production readiness
 - T6-2 — Local development environment — open

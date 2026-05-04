@@ -642,22 +642,185 @@ auto-materialise windows on save (treat configured rows as committed),
 or strengthen Create windows button visual prominence (larger, primary
 colour, separator above).
 
-T4-37: Drop Studio inline host creation — capture terms acceptance
-The inline "+ New Host" modal in `drop-manager.html`
-(`createHostInline` around line 4464) calls `create-host` without
-`terms_accepted` or `terms_accepted_at`. Hosts created via this path
-land in the database with `terms_accepted: false` (confirmed on Test
-11 vendor — Mini Balls and Medium Balls both have
-`terms_accepted: false`). The `hosts.html` Add Host flow already
-captures terms; this is the only remaining path that bypasses it.
-Build needs: (a) UX decision on where the terms checkbox lives in
-the inline modal (the inline flow is intentionally minimal —
-name/type/postcode only — to keep drop creation fast), (b) payload
-update to send `terms_accepted: true` and
-`terms_accepted_at: new Date().toISOString()`. Once both paths
-capture terms, `terms_accepted` can be made required in
-`create-host` (currently optional for backwards compatibility — see
-the comment in `supabase/functions/create-host/index.ts`).
+T4-37: Drop Studio inline host creation — capture terms acceptance ✓ COMPLETE
+The inline "+ Create Host" modal in `drop-manager.html` now captures
+host participation terms acceptance before invoking `create-host`.
+Vendor-attestation pattern: a single checkbox in the modal reading
+"I have explained the host participation terms to [host name] and
+they have agreed", with the host name interpolated live from the
+Host Name field as the vendor types and falling back to "this host"
+when empty. The phrase "host participation terms" within the
+attestation sentence links to `host-terms.html` opening in a new tab.
+
+The `create-host` Edge Function already accepted `terms_accepted`
+and `terms_accepted_at` in its payload — see the explicit comment
+in the function body. Client-side change only; no Edge Function
+deploy and no schema change required (columns existed on the
+`hosts` table from T4-26).
+
+Three additions to drop-manager.html:
+(a) New checkbox field in the inline modal markup, between the
+    existing studioGrid2 (name/type/postcode) and the modalMessage
+    div, styled as a bordered box matching hosts.html's terms step.
+(b) `createHost()` validates the checkbox before invoking the
+    Edge Function (matching hosts.html line 711 wording exactly:
+    "Please confirm the host participation terms before creating
+    this host."), and the payload now sends `terms_accepted: true`
+    and `terms_accepted_at: new Date().toISOString()`.
+(c) New `openHostModal()` wrapper resets all fields, the checkbox
+    state, the host-name fallback in the label, and the disabled
+    state of the Create Host button before opening the modal.
+    Replaces the `openHostModalBtn` click handler's previous
+    direct call to `openModal('hostModal')`.
+
+Once both host creation paths capture terms (hosts.html via T4-26
+and drop-manager.html inline via T4-37), `terms_accepted` can be
+made required in `create-host` rather than optional. Tracked as a
+post-T4-37 follow-up; the optional-for-backwards-compatibility
+comment in the Edge Function remains in place until both paths
+are confirmed live and stable in production.
+
+T4-37b (host-direct terms acceptance via email confirmation) is
+the natural progression of this work and is now in the backlog
+as a separate ticket — see below.
+
+Shipped on PR #222 (commit eb18d37). Verified end-to-end on Test
+11 production: host "T4-37 Prod Verify" created with
+`terms_accepted: true`.
+
+T4-37b: Host-direct terms acceptance via email confirmation
+Tier 4. Open — gated on T5-11 transactional email plumbing maturity
+and on real evidence from Healthy Habits Cafe of vendor pull for
+host-direct consent.
+
+T4-37 captured host terms acceptance via vendor attestation — the
+vendor confirms on the host's behalf that the host has read and
+agreed. That is correct for a pre-launch platform with one vendor
+and a handful of hosts, but it is structurally weaker than
+host-direct consent. The host themselves never sees the terms in
+the T4-37 flow.
+
+This ticket adds host-direct consent as a second path that vendors
+can choose at host-creation time, alongside the existing
+attestation path. The vendor picks the path appropriate to the
+relationship context: attestation for hosts they already have a
+working arrangement with; host-email for hosts they are bringing
+onto the platform fresh or for whom direct consent is preferable.
+The choice puts the integrity judgement where it belongs — with
+the vendor, who knows whether the conversation has genuinely
+happened.
+
+**Path A (existing) — Vendor attestation.** Unchanged from T4-37.
+Single checkbox, vendor confirms on the host's behalf. Stores
+`terms_accepted: true`, `terms_accepted_at: now()`,
+`terms_acceptance_method: 'vendor_attestation'`.
+
+**Path B (new) — Host-direct via email confirmation.** Vendor
+captures the host's email at host creation time. A new
+`send-host-invite` Edge Function generates a single-use
+confirmation token, stores it on the host record with an expiry,
+and sends the host an email. The email contains a summary of the
+terms, a link to the full `host-terms.html` page, and a "Confirm
+and view your drop" CTA. Clicking the CTA lands on a new
+`host-confirm.html?token=<uuid>` page that validates the token
+via a `confirm-host-terms` Edge Function, writes
+`terms_accepted: true` and the matching timestamp, then redirects
+to the existing `host-view.html?drop=<slug>` for their first drop
+— giving the host an immediate concrete view of what they're
+hosting rather than a blank confirmation page.
+
+No host login required at this stage. Token-based one-shot
+confirmation, structurally similar to a magic link but
+single-purpose (accepts terms for one specific host record, then
+expires). This is deliberately not T5-27 Phase 1 (host platform
+participation with auth) — it is a smaller consent-capture step
+that builds toward Phase 1 without requiring it.
+
+**Publish gate.** Drops at hosts where `terms_accepted` is
+`false` cannot transition to live until either the host confirms
+via the email link or the vendor switches that host to
+attestation. Soft block, not hard — vendors can build the drop,
+configure the menu, prepare everything; they just cannot publish.
+Reuses the existing `transition-drop-status` server-side gate
+pattern.
+
+**Pending-state UX.** Hosts in `terms_acceptance_pending` state
+appear in the host dropdown with an "Awaiting host confirmation"
+pill. Vendor can re-send the confirmation email or switch the
+host to attestation if direct confirmation is taking too long.
+
+**Schema additions required before build (Edward to run via
+Supabase SQL editor):**
+
+```sql
+ALTER TABLE hosts
+  ADD COLUMN terms_acceptance_method text
+    CHECK (terms_acceptance_method IN ('vendor_attestation', 'host_email')),
+  ADD COLUMN terms_acceptance_pending_at timestamptz,
+  ADD COLUMN host_contact_email text,
+  ADD COLUMN terms_confirmation_token uuid,
+  ADD COLUMN terms_confirmation_token_expires_at timestamptz;
+```
+
+Existing host records (where `terms_accepted: true` is already
+set via T4-37 or T4-26) get `terms_acceptance_method =
+'vendor_attestation'` backfilled at deploy time.
+
+**Build scope (estimated 2–3 Claude Code sessions):**
+
+- Modal redesign in drop-manager.html and hosts.html — two-path
+  selector ("Vendor confirms" vs "Send to host"), conditional
+  email field, conditional checkbox
+- New Edge Function: `send-host-invite` — generates UUID token,
+  stores on host record, sends Resend email with confirmation
+  link
+- New Edge Function: `confirm-host-terms` — token validation,
+  service-role write of `terms_accepted: true`, single-use
+  enforcement
+- New page: `host-confirm.html` — single CTA, calls
+  `confirm-host-terms`, redirects to host-view.html on success,
+  handles expired/invalid token states
+- Schema migration (Edward runs)
+- Publish gate update in `transition-drop-status` to check
+  `terms_accepted` before allowing live transitions
+- Pending-state pill in host dropdown / host directory in both
+  drop-manager.html and hosts.html
+
+**Token security:** UUID v4, single-use (cleared on successful
+confirmation), 30-day expiry. Stored on the host row as
+`terms_confirmation_token` and
+`terms_confirmation_token_expires_at`. Standard pattern, no
+novel risk.
+
+**Sequencing rationale:** Path A (T4-37) shipped first to close
+the immediate integrity gap (drop-manager.html bypassed terms
+entirely). Path B waits until (1) T5-11 transactional email
+plumbing is mature enough that adding a new send is a small
+addition rather than building infrastructure, and (2) Healthy
+Habits Cafe has run several real drops and we have evidence of
+whether vendors actually want host-direct consent or whether
+attestation is sufficient in practice. Designing Path B from
+imagination rather than from real friction risks building
+something vendors do not pick.
+
+**Relationship to T5-27:** T4-37b is a stepping stone toward
+T5-27 Phase 1 (host platform participation with auth). When
+T5-27 Phase 1 ships, the email sent in T4-37b is the natural
+place to add "or create a host account to manage this and
+future drops." The consent already captured by T4-37b carries
+forward — hosts who confirmed via T4-37b's flow do not need to
+re-accept terms on T5-27 signup. T4-37b builds toward T5-27,
+T5-27 does not replace T4-37b.
+
+Dependency: T5-11 transactional email plumbing matures beyond
+its current PARTIAL state (auth and onboarding emails wired,
+application-level send pattern not yet established). T4-37b
+needs one new send template; doable as a small addition once
+T5-11's pattern is in place.
+
+Cross-reference: T4-37 (parent ticket, closed), T5-11 (email
+infrastructure dependency), T5-27 (host platform participation
+follow-on workstream).
 
 ### Tier 5 — Strategic platform features
 
@@ -2044,6 +2207,54 @@ returned `status=placed`, `stripe_payment_status=paid`. No
 legitimate client path uses anon role for order updates —
 `cancel-order`, `stripe-webhook`, and `fetch-order` all use the
 service-role client.
+
+T5-B41: drop-manager.html `enrichHostPreview` appends rather than
+replaces — Complete host profile link rendered multiple times.
+
+**Status:** Backlog. Pre-launch hygiene. Cosmetic, no data
+impact.
+
+**Issue:** Surfaced during T4-37 production verification on 4
+May 2026. The "Complete host profile →" link in the Selected
+Host preview block on drop-manager.html (Operating Setup pane)
+renders 2–3 times when a host is selected. Confirmed on Test 11
+with newly-created host "Eddie's Play Pen" — the link appeared
+three times. Pre-existing bug; T4-37 work did not introduce it
+but did surface it.
+
+**Root cause:** `enrichHostPreview()` (around
+drop-manager.html:2350) appends enrichment HTML to the
+preview's existing `innerHTML` rather than replacing the
+enrichment block. The function is called from three places:
+`populateForm()`, `markDirty()`, and the inline `createHost()`
+flow. A single host selection that triggers any combination of
+these three call paths produces N "Complete host profile →"
+links where N is the number of triggers fired.
+
+**Fix:** Restructure `enrichHostPreview()` to either (a) build
+the enrichment block as a single string and replace a dedicated
+enrichment container's innerHTML, or (b) clear any existing
+enrichment block before appending. Approach (a) is cleaner —
+introduce a `<div id="hostPreviewEnrichment">` inside the
+preview container, render the enrichment into that container
+each time, and let the basic name/type/postcode line stay
+outside it.
+
+**Verification:** select a host with an incomplete profile,
+confirm only one "Complete host profile →" link renders;
+trigger `markDirty()` (e.g. type into another field), confirm
+still only one; switch hosts, confirm only one; create a new
+host inline, confirm only one.
+
+**Out of scope:** the `state._fullHosts` enrichment cache. That
+caching pattern is correct and should not be changed by this
+ticket.
+
+**Priority:** low — purely visual, does not affect host data,
+host selection, or drop creation. Bounded one-session piece of
+work.
+
+Cross-reference: T4-37 (parent verification surfaced this).
 
 ### Tier 6 — Production readiness
 
