@@ -1048,12 +1048,12 @@
                       <label class="inlineCheckLabel" for="customerNotesEnabled"><input id="customerNotesEnabled" type="checkbox" checked /> Allow customer notes</label>
                     </div>
 
-                    <div class="field">
+                    <div class="field" id="centrePostcodeField" style="display:none;">
                       <label for="centrePostcode">Centre Postcode</label>
                       <input id="centrePostcode" type="text" placeholder="RG10 0JP" />
                     </div>
 
-                    <div class="field">
+                    <div class="field" id="radiusKmField" style="display:none;">
                       <label for="radiusKm">Radius (km)</label>
                       <input id="radiusKm" type="number" min="0" step="0.1" />
                     </div>
@@ -3791,6 +3791,9 @@
         setSaveState("error", err.message || "Unable to save changes");
         throw err;
       }
+
+      clearPostcodePrefixError();
+      showError("");
     }
 
     async function createNewDrop() {
