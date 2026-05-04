@@ -985,6 +985,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T6-4 — Branch protection and PR review workflow — open
 - T6-5 — Supabase Pro upgrade for point-in-time recovery — open
 - T6-6 — Transactional email via Resend / Postmark — partial (auth/onboarding wired; transactional triggers not built)
+- T6-8 — Dev workflow tooling — Claude Code skills, MCP integrations, knowledge base — open
 
 ### Tier 7 — Platform oversight (Phase 1, before ~10 vendors)
 - T7-1 — Platform health cockpit — open

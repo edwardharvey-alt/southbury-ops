@@ -2303,6 +2303,44 @@ site connects to the dev Supabase instance when running locally. This
 is the first line of defence against shipping broken code — changes
 can be verified end-to-end before any commit.
 
+[Extension — 2026-05-04 dev workflow scope additions]
+
+Two scope additions surfaced during a Claude Chat dev workflow review on
+4 May 2026:
+
+(1) Supabase MCP server integration. Wire the official Supabase MCP server
+(https://mcp.supabase.com/mcp) to Claude Code, scoped to the dev Supabase
+project with full read/write access via the project_ref query parameter.
+Lets Claude Code execute SQL, inspect schema, query data, and deploy Edge
+Functions directly during development — replacing the manual SQL editor
+and `supabase functions deploy` handoffs. OAuth-based, no PAT required.
+
+Security note: full-write MCP must never connect to the production
+project. The primary risk is prompt injection — an attacker could embed
+instructions in user-submitted content (vendor description, customer
+order notes) that Claude Code later reads via MCP and interprets as
+commands to execute destructive SQL. Production gets read-only +
+project-scoped access only; see the T6-3 extension for the production
+configuration.
+
+(2) supabase/migrations/ directory in the repo. Dump the current
+production schema as the initial migration file. Future schema changes
+flow as migration files: Claude Code writes the SQL, tests on dev via
+MCP, ed reviews the diff in PR, and ports to production via the existing
+SQL editor flow until CI promotion is in place. Versioned migration
+files provide the rollback path direct SQL editor work currently lacks
+and align with Supabase CLI conventions for future automation.
+
+Sequencing note: T5-A3's RLS hardening (the 27 April 2026 audit
+extension — removing permissive anon policies) should land before
+production-facing MCP read access. The same permissive policies that
+keep the platform functional under the auth-attach bug also expose the
+prompt-injection surface to MCP. Treat T5-A3 as a soft prerequisite for
+the production read-only MCP configuration in T6-3.
+
+Cross-reference: T6-3 extension (production read-only MCP), T6-8 (dev
+workflow tooling).
+
 T6-3: Staging environment
 Set up a second Netlify site deployed from a separate branch (e.g.
 "staging"), pointing at a separate Supabase staging project. Accessible
@@ -2313,6 +2351,24 @@ Supabase staging project, DNS record for staging subdomain, separate
 environment variables in Netlify for staging vs production, documented
 promotion workflow.
 
+[Extension — 2026-05-04 production Supabase MCP read-only scope]
+
+Add to T6-3 scope: configure a second Supabase MCP server connection
+for the production project in read-only + project-scoped mode
+(read_only=true&project_ref=<prod-ref>). Lets Claude Code inspect
+production schema, query data for diagnosis, and read logs without any
+write capability. Full-write MCP remains scoped to dev (T6-2 extension)
+and staging.
+
+Migration promotion path becomes: migration written and tested on dev
+via Claude Code + Supabase MCP → PR opened (T6-4) → merged to staging
+branch → CI applies migration to staging Supabase → manual smoke test
+on staging.lovehearth.co.uk → merged to main → CI applies migration to
+production.
+
+Cross-reference: T6-2 extension (dev MCP scope), T5-A3 (RLS hardening
+soft prerequisite), T6-4 extension (PR review as MCP safety net).
+
 T6-4: Branch protection and PR review workflow
 GitHub branch protection rules on main: require pull requests, require
 at least one review before merge, require status checks to pass.
@@ -2322,6 +2378,16 @@ merges. Catches the category of Claude Code mistakes where the commit
 does the wrong thing subtly. Slower per-change, but appropriate once
 real vendors are on the platform. Needs to be agreed in a session with
 CLAUDE.md updated so the new workflow is written down.
+
+[Extension — 2026-05-04 sequencing relative to MCP write access]
+
+T6-4 becomes meaningfully more important once Claude Code has Supabase
+MCP write access on dev (T6-2 extension). Today, Claude Code mistakes on
+schema or Edge Functions are caught by the manual SQL editor and
+`supabase functions deploy` checkpoints. With MCP write access, those
+manual gates disappear — PR review becomes the primary safety net before
+any change reaches main and auto-deploys to production. Land T6-4 before
+enabling any production-facing MCP read access in T6-3.
 
 T6-5: Supabase backup strategy
 The production Supabase project needs point-in-time recovery enabled,
@@ -2374,6 +2440,85 @@ Options:
 Affects every current and future PR that touches HTML → Edge
 Function wiring. Should land before T6-3 (staging) so previews
 work end-to-end against deployed Edge Functions.
+
+T6-8: Dev workflow tooling — Claude Code skills, MCP integrations,
+knowledge base
+
+Tier 6. Open. Post-launch dev hygiene; not a go-live inhibitor.
+
+Captures forward-looking improvements to ed's Claude Code workflow
+surfaced during a 4 May 2026 Chat session. The aim is to reduce friction
+in the architecture-to-build loop and the existing copy-paste handoff
+between Claude Chat and Claude Code. Three parts plus an optional
+fourth.
+
+**Part 1 — Codify repeating Hearth patterns as Claude Code skills**
+
+Claude Code (post-merger of skills and custom slash commands) loads
+markdown files from .claude/skills/ as auto-triggering or
+explicitly-invoked workflows. Three Hearth-specific skills are clear
+candidates based on patterns already captured as operational learnings:
+
+- hearth-edge-function-migration. Codifies operational learning #16 —
+  the canonical Edge Function pattern (verify_jwt = false in
+  supabase/config.toml, manual JWT verification via
+  anonClient.auth.getUser(), vendor ownership check via service-role
+  client, ALLOWED_FIELDS whitelist, top-level try/catch with
+  jsonResponse helper from _shared/cors.ts). Auto-triggers when Claude
+  Code is migrating a write path from direct PostgREST to an Edge
+  Function. Removes the need to re-paste the pattern from prior PRs
+  each time.
+
+- hearth-ticket-investigation. Codifies operational learnings #24 and
+  #25 — the audit-first opening sequence (ls supabase/functions/, cat
+  the relevant function, check deployment status, check schema) before
+  scoping any build against a logged ticket. T5-B22 ("Resolved by test,
+  not by build") is the reference example: a significant build session
+  was avoided once the audit-first opening confirmed the function
+  already existed.
+
+- hearth-schema-change. Codifies the migration-file workflow from the
+  T6-2 extension. Auto-triggers when Claude Code is asked to modify the
+  schema. Produces a migration file, applies it on dev via Supabase
+  MCP, prompts ed to review the SQL diff before any production
+  application.
+
+**Part 2 — GitHub MCP integration**
+
+Wire the official GitHub MCP server to Claude Code, scoped to the
+github.com/edwardharvey-alt/southbury-ops repo. Lets Claude Code read
+commit history, manage PR descriptions, and reference tickets directly.
+Particularly useful given Hearth's disciplined T-ticket numbering and
+PR cross-referencing conventions — Claude Code can update BACKLOG.md
+status markers (✓ COMPLETE, ✓ PARTIAL) referencing the merging PR
+without ed pasting it in.
+
+**Part 3 — Claude Project knowledge base on claude.ai**
+
+For the architecture-side work that genuinely benefits from the Chat
+surface (strategic exploration, research, brainstorming where Code's
+editing tools aren't wanted), set up a Hearth project on claude.ai
+with CLAUDE.md, BACKLOG.md, and SCHEMA.md pinned as project knowledge.
+Each Chat session inherits standing context without copy-paste. Reduces
+the architecture-to-build handoff to one copy-paste of the polished
+prompt rather than fifteen of context, rules, and reminders.
+
+**Part 4 (optional) — Netlify MCP**
+
+If a Netlify MCP server is available and adds value (deploy logs, env
+var inspection, build status), wire it up alongside GitHub. Lower
+priority than Parts 1–3.
+
+**Sequencing within T6-8**
+
+Recommended order once picked up post-launch: Part 1 first (skills are
+local-only, no service auth needed), then Part 3 (knowledge base is a
+one-off claude.ai configuration), then Part 2 (GitHub MCP, OAuth flow
+required). Part 4 if and when convenient.
+
+Cross-reference: T6-2 extension (Supabase MCP scope), T6-3 extension
+(production read-only MCP), T6-4 extension (PR review as safety net),
+operational learnings #16, #24, #25.
 
 ### Tier 7 — Platform oversight and administration
 
