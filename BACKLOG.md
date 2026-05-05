@@ -622,16 +622,45 @@ recommendation about building direct customer relationships independent
 of aggregator platforms. The aggregator reduction pathway is prominent
 in onboarding Q3 and Q5.
 
-T4-31: Order page and ordering experience — visual polish pass
-Review and improve the visual quality of the customer-facing ordering
-experience. Known opportunity: per-item menu photography. Allow vendors
-to upload an image per product, stored in Supabase Storage and rendered
-on the order page alongside the item name and description. Schema change
-required: add image_url (text, nullable) to products table. Order page
-renders image when present, degrades gracefully when absent.
-Broader brief: assess what else would make the ordering page feel more
-premium, more locally specific, and more vendor-led. This is about making
-vendors proud to share their order link.
+T4-31: Order page polish (photography excluded)
+Polish pass on the customer-facing ordering experience to make it
+feel more premium, more locally specific, and more vendor-led. This
+is about making vendors proud to share their order link.
+
+Scope covers: hero proportions and signal hierarchy (timing chip
+primary, capacity chip honest framing, lighter vendor identity);
+host-context copy line replacing any host crest/logo; a new "Drop
+Story" card (vendor-written occasion copy read from a `drop_intro`
+field, hidden gracefully when absent); replacing the menu accordion
+with a sticky horizontal category pill-nav; two designed item-card
+states (with-photo and without-photo, both first-class); minor
+basket bar and checkout sheet language and ordering changes;
+designed edge states for closed / pre-open / capacity-low.
+
+Per-item photography is explicitly out of scope for T4-31 and lives
+in T4-31b. Item cards include both with-photo and without-photo
+states so the with-photo path Just Works once T4-31b lands.
+
+T4-31b: Per-item photography asset workflow (storage, upload UX,
+format constraints, phone capture guidance for vendors).
+Scope covers the full asset workflow that T4-31 explicitly carved
+out: schema migration to add `image_url` (text, nullable) to the
+products table; Supabase Storage layout under
+`assets/vendors/{vendor-slug}/products/`; upload UX inside Menu
+Library (likely on the product edit drawer, mirroring the Brand
+Hearth file-upload pattern from T2-7); format constraints (JPEG /
+WebP, max dimensions, max file size); guidance copy for vendors on
+phone capture (lighting, angle, framing) so the resulting library
+feels coherent rather than a mix of stock photos and bad lit-from-
+above kitchen shots. Does not require any further order page
+changes — the order page item-card with-photo state shipped in
+T4-31 already reads `image_url` and renders correctly when
+present.
+
+Backlogged. Schedule after vendor onboarding friction confirms
+photography is the next-most-valuable polish lever (i.e. when
+the order page polish from T4-31 is live and vendors are asking
+for the photo path).
 
 T4-32: Order page — map display for collection point and delivery area
 Add a toggleable map to the order page, controlled per-drop in Drop Studio.
