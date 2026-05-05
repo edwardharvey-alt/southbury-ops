@@ -1886,6 +1886,40 @@ empty body. This is now blocking host editing entirely on
 production. Operational learning #14 verified in the wild — this is
 no longer theoretical.
 
+T5-B29: Multi-window parent drop fulfilment.mode bug.
+Surfaced during T5-B22 Phase 3 manual testing on 2026-05-01. When
+a customer orders against a drop with `window_group_id` set and
+`fulfilment_mode = null` (the multi-window parent pattern), the
+`buildCheckoutPayload()` helper in order.html sends
+`fulfilment.mode: null`. The `create-order` Edge Function rejects
+this with a 400 because fulfilment mode is a required server-side
+field. The root cause is that the parent drop intentionally has no
+fulfilment mode of its own — fulfilment is a property of each
+child window. The customer must be steered to a specific child
+window before the basket and checkout pane are reachable.
+
+Two viable fixes:
+- (a) order.html's window-selection step in `init()` routes
+  customers to a child drop (by id or slug) before the basket
+  pane is allowed to render. Cleanest customer-flow story:
+  customers never see a parent drop URL with an active basket.
+- (b) `buildCheckoutPayload()` reads `fulfilment_mode` from the
+  selected child window in state rather than from `state.drop`,
+  and `validateCheckout()` refuses to submit when
+  `fulfilment.mode` is null with a user-friendly error rather
+  than relying on the server's 400.
+
+Either fix is sufficient. Option (a) is the architecturally
+cleaner choice — option (b) is a defensive belt that's worth
+adding regardless. The 400 is currently invisible to the customer:
+they see a generic checkout error rather than a clear instruction
+to pick a window. Whatever ships, the user-visible fallback path
+must surface a readable message.
+
+Discovered alongside T5-B30 during the same Phase 3 session.
+Distinct enough to track separately because the fix lives in
+order.html state-machine logic rather than in CORS configuration.
+
 T5-B32: Duplicate anon SELECT policies on products.
 Surfaced during the 2 May 2026 audit while reviewing categories /
 products / bundles RLS in support of T5-B16. The products table has
