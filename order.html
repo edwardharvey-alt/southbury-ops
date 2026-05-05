@@ -2516,7 +2516,8 @@
         const bar = byId("basketBar");
         bar.classList.toggle("show", hasItems);
 
-        byId("basketSummaryTop").textContent = `${getBasketItemCount()} item${getBasketItemCount() === 1 ? "" : "s"}`;
+        const itemCount = getBasketItemCount();
+        byId("basketSummaryTop").textContent = `Your order · ${itemCount} item${itemCount === 1 ? "" : "s"}`;
         byId("basketSummarySub").textContent = "View basket";
         byId("basketSummaryPrice").textContent = formatMoneyPence(getGrandTotalPence());
 
