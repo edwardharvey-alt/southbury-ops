@@ -46,7 +46,7 @@
 
     .heroMedia{
       position:relative;
-      min-height:360px;
+      min-height:300px;
       background:var(--order-hero-fallback);
       color:var(--order-brand-text, #fff);
     }
@@ -69,7 +69,7 @@
     .heroInner{
       position:relative;
       z-index:2;
-      min-height:360px;
+      min-height:300px;
       padding:22px 22px 20px;
       display:flex;
       flex-direction:column;
@@ -109,11 +109,11 @@
     }
 
     .heroVendorEyebrow{
-      font-size:11px;
+      font-size:10px;
       text-transform:uppercase;
-      letter-spacing:.08em;
-      font-weight:900;
-      color:color-mix(in srgb, var(--order-brand-text, #fff) 82%, transparent);
+      letter-spacing:.10em;
+      font-weight:700;
+      color:color-mix(in srgb, var(--order-brand-text, #fff) 58%, transparent);
       margin-bottom:6px;
     }
 
@@ -127,12 +127,12 @@
     }
 
     .heroTagline{
-      font-size:14px;
+      font-size:13px;
       line-height:1.45;
-      color:color-mix(in srgb, var(--order-brand-text, #fff) 88%, transparent);
-      margin:7px 0 0;
+      color:color-mix(in srgb, var(--order-brand-text, #fff) 72%, transparent);
+      margin:6px 0 0;
       max-width:540px;
-      font-weight:600;
+      font-weight:500;
     }
 
     .heroVisitBtn{
@@ -185,6 +185,20 @@
       font-weight:600;
     }
 
+    .heroHostLine{
+      font-size:13px;
+      line-height:1.4;
+      color:color-mix(in srgb, var(--order-brand-text, #fff) 82%, transparent);
+      margin:0;
+      max-width:680px;
+      font-weight:600;
+      letter-spacing:.005em;
+    }
+
+    .heroHostLine.hidden{
+      display:none;
+    }
+
     .heroChips{
       display:flex;
       flex-wrap:nowrap;
@@ -204,27 +218,41 @@
       display:inline-flex;
       align-items:center;
       gap:6px;
-      min-height:34px;
+      min-height:32px;
       padding:0 11px;
       border-radius:999px;
-      background:rgba(255,255,255,0.14);
-      border:1px solid rgba(255,255,255,0.16);
+      background:rgba(255,255,255,0.10);
+      border:1px solid rgba(255,255,255,0.14);
       backdrop-filter:blur(6px);
       -webkit-backdrop-filter:blur(6px);
-      color:var(--order-brand-text, #fff);
+      color:color-mix(in srgb, var(--order-brand-text, #fff) 86%, transparent);
       font-size:11px;
-      font-weight:800;
+      font-weight:700;
       white-space:nowrap;
     }
 
-    .heroChip.urgent{
-      background:rgba(255,255,255,0.20);
-      border-color:rgba(255,255,255,0.28);
+    .heroChip.primary{
+      min-height:40px;
+      padding:0 16px;
+      font-size:13px;
+      font-weight:900;
+      letter-spacing:.005em;
+      background:rgba(255,255,255,0.22);
+      border-color:rgba(255,255,255,0.30);
+      color:var(--order-brand-text, #fff);
+      box-shadow:0 6px 18px rgba(15,23,42,0.16);
+    }
+
+    .heroChip.tonal{
+      background:rgba(255,255,255,0.16);
+      border-color:rgba(255,255,255,0.20);
+      color:var(--order-brand-text, #fff);
     }
 
     .heroChip.low{
-      background:rgba(127, 29, 29, 0.28);
-      border-color:rgba(254, 202, 202, 0.30);
+      background:rgba(255,255,255,0.16);
+      border-color:rgba(255,255,255,0.20);
+      color:var(--order-brand-text, #fff);
     }
 
     .heroBodyCard{
@@ -1014,9 +1042,14 @@
         margin-top:14px;
       }
 
+      .heroMedia{
+        min-height:240px;
+      }
+
       .heroInner{
-        min-height:320px;
-        padding:18px 16px 18px;
+        min-height:240px;
+        padding:16px 14px 16px;
+        gap:16px;
       }
 
       .heroTopRow{
@@ -1028,15 +1061,25 @@
       }
 
       .heroVendorName{
-        font-size:24px;
+        font-size:22px;
       }
 
       .heroDropTitle{
-        font-size:29px;
+        font-size:27px;
       }
 
       .heroDropSub{
-        font-size:14px;
+        font-size:13px;
+      }
+
+      .heroHostLine{
+        font-size:12px;
+      }
+
+      .heroChip.primary{
+        min-height:36px;
+        font-size:12px;
+        padding:0 13px;
       }
 
       .sectionCard,
@@ -1123,9 +1166,10 @@
               <div class="heroDropEyebrow" id="heroDropEyebrow">Available now</div>
               <h2 class="heroDropTitle" id="heroDropTitle">Loading…</h2>
               <p class="heroDropSub" id="heroDropSub">Please wait</p>
+              <p class="heroHostLine hidden" id="heroHostLine"></p>
 
               <div class="heroChips">
-                <div class="heroChip" id="chipOrderWindow">Loading…</div>
+                <div class="heroChip primary" id="chipOrderWindow">Loading…</div>
                 <div class="heroChip" id="chipCapacityLeft">Loading…</div>
                 <div class="heroChip hidden" id="chipFulfilment">—</div>
               </div>
@@ -1954,29 +1998,55 @@
           });
       }
 
+      function renderHostLine() {
+        const el = byId("heroHostLine");
+        if (!el) return;
+
+        const hostName = state.host?.name || state.dropSummary?.host_name || "";
+        const hostType = String(state.host?.host_type || "").toLowerCase();
+
+        if (!hostName) {
+          el.textContent = "";
+          el.classList.add("hidden");
+          return;
+        }
+
+        let copy = "";
+        if (hostType === "neighbourhood") {
+          copy = `Neighbourhood drop · ${hostName}`;
+        } else {
+          copy = `Hosted by ${hostName}`;
+        }
+
+        el.textContent = copy;
+        el.classList.remove("hidden");
+      }
+
       function renderHero() {
         applyVendorBranding();
 
         const dropTitle = stripWindowSuffix(state.drop?.name || state.dropSummary?.drop_name || "Available now");
-        const hostName = state.host?.name || state.dropSummary?.host_name || "";
         const timingLabel = formatDateTimeRange(state.drop?.delivery_start, state.drop?.delivery_end);
         const fulfilmentLabel = getFulfilmentLabel(state.drop?.fulfilment_mode);
 
         byId("heroDropEyebrow").textContent = "Available now";
         byId("heroDropTitle").textContent = dropTitle;
-        byId("heroDropSub").textContent = [fulfilmentLabel, hostName, timingLabel].filter(Boolean).join(" • ");
+        byId("heroDropSub").textContent = [fulfilmentLabel, timingLabel].filter(Boolean).join(" • ");
+
+        renderHostLine();
 
         const orderState = getOrderWindowState();
         const closesAt = orderState.closesAt;
         const opensAt = orderState.opensAt;
         const windowChip = byId("chipOrderWindow");
-        windowChip.className = "heroChip";
+        windowChip.className = "heroChip primary";
 
         if (orderState.state === "preopen") {
           windowChip.textContent = opensAt ? `Orders open ${formatShortDateTime(opensAt)}` : "Not open yet";
         } else if (orderState.state === "closed") {
           windowChip.textContent = "Ordering closed";
-          windowChip.classList.add("low");
+          windowChip.classList.remove("primary");
+          windowChip.classList.add("tonal");
         } else {
           const hoursUntilClose = closesAt ? ((closesAt.getTime() - Date.now()) / (1000 * 60 * 60)) : null;
           if (closesAt && hoursUntilClose !== null && hoursUntilClose > 48) {
@@ -1985,23 +2055,22 @@
             const timeLeft = closesAt ? formatTimeLeft(closesAt) : "";
             windowChip.textContent = timeLeft ? `Orders close in ${timeLeft}` : "Ordering open";
           }
-
-          if (closesAt && (closesAt.getTime() - Date.now()) <= 2 * 60 * 60 * 1000) {
-            windowChip.classList.add("urgent");
-          }
         }
 
-        const capacityLabel = getCategoryDisplayName();
         const remaining = Math.max(0, getCapacityRemainingAfterBasket());
         const rawRemaining = Math.max(0, getCapacityRemainingRaw());
+        const total = Math.max(0, Number(state.drop?.capacity_units_total ?? 0));
+        const lowThreshold = Math.max(5, Math.ceil(total * 0.1));
         const capacityChip = byId("chipCapacityLeft");
         capacityChip.className = "heroChip";
-        capacityChip.textContent = formatCapacityLeft(remaining, capacityLabel);
 
-        if (rawRemaining <= 5) {
+        if (total > 0 && rawRemaining > 0 && rawRemaining <= lowThreshold) {
           capacityChip.classList.add("low");
-        } else if (rawRemaining <= 12) {
-          capacityChip.classList.add("urgent");
+          capacityChip.textContent = "Last few places";
+        } else {
+          capacityChip.textContent = total > 0
+            ? `${remaining} of ${total} places remaining`
+            : `Places available · ${remaining}`;
         }
 
         byId("chipFulfilment").classList.add("hidden");
@@ -2011,7 +2080,7 @@
         } else if (isDropPreOpen()) {
           showNotice("This service is scheduled. You’ll be able to order once the ordering window opens.", "warn");
         } else if (remaining <= 0) {
-          showNotice(`${pluralizeLabel(capacityLabel)} capacity has been reached for this service.`, "warn");
+          showNotice("This service is fully booked.", "warn");
         } else {
           showNotice("");
         }
@@ -3141,9 +3210,9 @@ async function handoffToPayment() {
           const startTime = earliest.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
           const endTime   = latest.toLocaleTimeString("en-GB",   { hour: "2-digit", minute: "2-digit" });
           const fulfilmentLabel = getFulfilmentLabel(state.drop?.fulfilment_mode);
-          const hostName = state.host?.name || state.dropSummary?.host_name || "";
           const datePart = earliest.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
-          byId("heroDropSub").textContent = [fulfilmentLabel, hostName, `${datePart} • ${startTime}–${endTime}`].filter(Boolean).join(" • ");
+          byId("heroDropSub").textContent = [fulfilmentLabel, `${datePart} • ${startTime}–${endTime}`].filter(Boolean).join(" • ");
+          renderHostLine();
         }
 
         /* Build the selection UI in the menu card area */
