@@ -70,6 +70,15 @@
       pointer-events:none;
     }
 
+    .heroMedia.dimmed::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      z-index:1;
+      background:rgba(15,23,42,0.42);
+      pointer-events:none;
+    }
+
     .heroInner{
       position:relative;
       z-index:2;
@@ -211,6 +220,45 @@
       overflow-x:auto;
       -webkit-overflow-scrolling:touch;
       scrollbar-width:none;
+    }
+
+    .heroChips.hidden{
+      display:none;
+    }
+
+    .heroLockup{
+      display:grid;
+      gap:6px;
+      padding:14px 16px;
+      border-radius:18px;
+      background:rgba(255,255,255,0.14);
+      border:1px solid rgba(255,255,255,0.22);
+      backdrop-filter:blur(8px);
+      -webkit-backdrop-filter:blur(8px);
+      max-width:max-content;
+    }
+
+    .heroLockup.hidden{
+      display:none;
+    }
+
+    .heroLockupPrimary{
+      font-size:18px;
+      line-height:1.2;
+      font-weight:900;
+      letter-spacing:-0.01em;
+      color:var(--order-brand-text, #fff);
+    }
+
+    .heroLockupSecondary{
+      font-size:13px;
+      line-height:1.4;
+      font-weight:600;
+      color:color-mix(in srgb, var(--order-brand-text, #fff) 80%, transparent);
+    }
+
+    .heroLockupSecondary.hidden{
+      display:none;
     }
 
     .heroChips::-webkit-scrollbar{
@@ -1252,6 +1300,18 @@
         padding:0 13px;
       }
 
+      .heroLockup{
+        padding:12px 14px;
+      }
+
+      .heroLockupPrimary{
+        font-size:16px;
+      }
+
+      .heroLockupSecondary{
+        font-size:12px;
+      }
+
       .sectionCard,
       .heroBodyCard{
         padding:12px;
@@ -1349,10 +1409,15 @@
               <p class="heroDropSub" id="heroDropSub">Please wait</p>
               <p class="heroHostLine hidden" id="heroHostLine"></p>
 
-              <div class="heroChips">
+              <div class="heroChips" id="heroChips">
                 <div class="heroChip primary" id="chipOrderWindow">Loading…</div>
                 <div class="heroChip" id="chipCapacityLeft">Loading…</div>
                 <div class="heroChip hidden" id="chipFulfilment">—</div>
+              </div>
+
+              <div class="heroLockup hidden" id="heroLockup">
+                <div class="heroLockupPrimary" id="heroLockupPrimary"></div>
+                <div class="heroLockupSecondary hidden" id="heroLockupSecondary"></div>
               </div>
             </div>
           </div>
@@ -1585,6 +1650,7 @@
         selectedFulfilmentMode: null,
         bundleDraft: null,
         menuScrollObserver: null,
+        nextDrop: null,
         deliveryAreaBlocked: false /* T3-12a */
       };
 
@@ -2115,6 +2181,22 @@
         }
 
         state.selectedFulfilmentMode = getDefaultSelectedFulfilmentMode();
+
+        if (getOrderWindowState().state === "closed" && state.drop?.vendor_id) {
+          const nextRes = await supabase
+            .from("drops")
+            .select("id, slug, name, opens_at, delivery_start")
+            .eq("vendor_id", state.drop.vendor_id)
+            .eq("status", "live")
+            .gt("opens_at", new Date().toISOString())
+            .order("opens_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+          if (!nextRes.error) {
+            state.nextDrop = nextRes.data || null;
+          }
+        }
       }
 
       function getDefaultSelectedFulfilmentMode() {
@@ -2227,16 +2309,38 @@
         const orderState = getOrderWindowState();
         const closesAt = orderState.closesAt;
         const opensAt = orderState.opensAt;
-        const windowChip = byId("chipOrderWindow");
-        windowChip.className = "heroChip primary";
+        const heroMedia = byId("heroMedia");
+        const heroChips = byId("heroChips");
+        const heroLockup = byId("heroLockup");
+        const lockupPrimary = byId("heroLockupPrimary");
+        const lockupSecondary = byId("heroLockupSecondary");
 
-        if (orderState.state === "preopen") {
-          windowChip.textContent = opensAt ? `Orders open ${formatShortDateTime(opensAt)}` : "Not open yet";
-        } else if (orderState.state === "closed") {
-          windowChip.textContent = "Ordering closed";
-          windowChip.classList.remove("primary");
-          windowChip.classList.add("tonal");
+        heroMedia.classList.toggle("dimmed", orderState.state === "closed");
+
+        if (orderState.state === "closed") {
+          heroChips.classList.add("hidden");
+          heroLockup.classList.remove("hidden");
+          lockupPrimary.textContent = "Ordering closed";
+          if (state.nextDrop?.opens_at) {
+            lockupSecondary.textContent = `Next drop: ${formatShortDateTime(new Date(state.nextDrop.opens_at))}`;
+            lockupSecondary.classList.remove("hidden");
+          } else {
+            lockupSecondary.textContent = "";
+            lockupSecondary.classList.add("hidden");
+          }
+        } else if (orderState.state === "preopen") {
+          heroChips.classList.add("hidden");
+          heroLockup.classList.remove("hidden");
+          lockupPrimary.textContent = opensAt ? `Orders open ${formatShortDateTime(opensAt)}` : "Orders open soon";
+          lockupSecondary.textContent = "";
+          lockupSecondary.classList.add("hidden");
         } else {
+          heroChips.classList.remove("hidden");
+          heroLockup.classList.add("hidden");
+
+          const windowChip = byId("chipOrderWindow");
+          windowChip.className = "heroChip primary";
+
           const hoursUntilClose = closesAt ? ((closesAt.getTime() - Date.now()) / (1000 * 60 * 60)) : null;
           if (closesAt && hoursUntilClose !== null && hoursUntilClose > 48) {
             windowChip.textContent = `Orders close ${formatShortCloseDate(closesAt)}`;
@@ -2244,30 +2348,31 @@
             const timeLeft = closesAt ? formatTimeLeft(closesAt) : "";
             windowChip.textContent = timeLeft ? `Orders close in ${timeLeft}` : "Ordering open";
           }
+
+          const remaining = Math.max(0, getCapacityRemainingAfterBasket());
+          const rawRemaining = Math.max(0, getCapacityRemainingRaw());
+          const total = Math.max(0, Number(state.drop?.capacity_units_total ?? 0));
+          const lowThreshold = Math.max(5, Math.ceil(total * 0.1));
+          const capacityChip = byId("chipCapacityLeft");
+          capacityChip.className = "heroChip";
+
+          if (total > 0 && rawRemaining > 0 && rawRemaining <= lowThreshold) {
+            capacityChip.classList.add("low");
+            capacityChip.textContent = "Last few places";
+          } else {
+            capacityChip.textContent = total > 0
+              ? `${remaining} of ${total} places remaining`
+              : `Places available · ${remaining}`;
+          }
+
+          byId("chipFulfilment").classList.add("hidden");
         }
 
         const remaining = Math.max(0, getCapacityRemainingAfterBasket());
-        const rawRemaining = Math.max(0, getCapacityRemainingRaw());
-        const total = Math.max(0, Number(state.drop?.capacity_units_total ?? 0));
-        const lowThreshold = Math.max(5, Math.ceil(total * 0.1));
-        const capacityChip = byId("chipCapacityLeft");
-        capacityChip.className = "heroChip";
-
-        if (total > 0 && rawRemaining > 0 && rawRemaining <= lowThreshold) {
-          capacityChip.classList.add("low");
-          capacityChip.textContent = "Last few places";
-        } else {
-          capacityChip.textContent = total > 0
-            ? `${remaining} of ${total} places remaining`
-            : `Places available · ${remaining}`;
-        }
-
-        byId("chipFulfilment").classList.add("hidden");
-
-        if (isDropClosed()) {
-          showNotice("Ordering for this service is now closed.", "warn");
-        } else if (isDropPreOpen()) {
-          showNotice("This service is scheduled. You’ll be able to order once the ordering window opens.", "warn");
+        if (orderState.state === "closed") {
+          showNotice("");
+        } else if (orderState.state === "preopen") {
+          showNotice("");
         } else if (remaining <= 0) {
           showNotice("This service is fully booked.", "warn");
         } else {
@@ -2327,6 +2432,8 @@
             return String(a.name).localeCompare(String(b.name));
           });
 
+          const ordersHidden = isDropClosed() || isDropPreOpen();
+
           const cards = sortedItems.map((item) => {
             const mediaHtml = item.image_url
               ? `<div class="menuItemMedia image" style="background-image:url('${escapeHtml(item.image_url)}');" role="img" aria-label="${escapeHtml(item.name)}">${item.is_sold_out ? `<div class="menuItemSoldOutBadge">Sold out</div>` : ""}</div>`
@@ -2352,20 +2459,22 @@
                       </div>
                     </div>
 
-                    <div class="menuControls">
-                      ${qty > 0 ? `
-                        <div class="menuControlsRow">
-                          <div class="stepper">
-                            <button type="button" class="js-product-minus" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>−</button>
-                            <div class="stepperValue">${qty}</div>
-                            <button type="button" class="js-product-plus" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>+</button>
+                    ${ordersHidden ? "" : `
+                      <div class="menuControls">
+                        ${qty > 0 ? `
+                          <div class="menuControlsRow">
+                            <div class="stepper">
+                              <button type="button" class="js-product-minus" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>−</button>
+                              <div class="stepperValue">${qty}</div>
+                              <button type="button" class="js-product-plus" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>+</button>
+                            </div>
                           </div>
-                        </div>
-                      ` : ""}
-                      <button class="brandBtn ${qty > 0 ? "secondary" : ""} js-product-add" type="button" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>
-                        ${item.is_sold_out ? "Sold out" : (qty > 0 ? "View basket" : "Add to order")}
-                      </button>
-                    </div>
+                        ` : ""}
+                        <button class="brandBtn ${qty > 0 ? "secondary" : ""} js-product-add" type="button" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>
+                          ${item.is_sold_out ? "Sold out" : (qty > 0 ? "View basket" : "Add to order")}
+                        </button>
+                      </div>
+                    `}
                   </div>
                 </div>
               `;
@@ -2388,12 +2497,13 @@
                     </div>
                   </div>
 
-                  <div class="menuControls">
-                    <button class="brandBtn js-open-bundle" type="button" data-bundle-id="${item.id}" ${bundleDisabled ? "disabled" : ""}>
-                      ${item.is_sold_out ? "Sold out" : "Customize"}
-                    </button>
-                  </div>
-                </div>
+                  ${ordersHidden ? "" : `
+                    <div class="menuControls">
+                      <button class="brandBtn js-open-bundle" type="button" data-bundle-id="${item.id}" ${bundleDisabled ? "disabled" : ""}>
+                        ${item.is_sold_out ? "Sold out" : "Customize"}
+                      </button>
+                    </div>
+                  `}
               </div>
             `;
           }).join("");
