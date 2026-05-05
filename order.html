@@ -504,12 +504,6 @@
       background-repeat:no-repeat;
     }
 
-    .menuItemMedia.tonal{
-      background:linear-gradient(135deg,
-        color-mix(in srgb, var(--order-brand-primary) 22%, #fff) 0%,
-        color-mix(in srgb, var(--order-brand-secondary) 18%, #fff) 100%);
-    }
-
     .menuItemSoldOutBadge{
       position:absolute;
       top:12px;
@@ -558,8 +552,14 @@
       letter-spacing:-0.005em;
     }
 
-    .menuItemCard:not(:has(.menuItemMedia.image)) .menuItemName{
-      font-size:26px;
+    .menuItemCard:not(:has(.menuItemMedia)) .menuItemBody{
+      padding:26px 20px 20px;
+      gap:16px;
+    }
+
+    .menuItemCard:not(:has(.menuItemMedia)) .menuItemName{
+      font-size:30px;
+      line-height:1.05;
     }
 
     .menuItemDesc{
@@ -624,12 +624,6 @@
     .menuItemCard.soldOut{
       filter:grayscale(0.75);
       opacity:0.78;
-    }
-
-    .menuItemCard.soldOut .menuItemMedia.tonal{
-      background:linear-gradient(135deg,
-        rgba(15,23,42,0.06),
-        rgba(15,23,42,0.03));
     }
 
     .stepper{
@@ -1330,12 +1324,17 @@
         gap:12px;
       }
 
+      .menuItemCard:not(:has(.menuItemMedia)) .menuItemBody{
+        padding:22px 16px 18px;
+        gap:14px;
+      }
+
       .menuItemName{
         font-size:22px;
       }
 
-      .menuItemCard:not(:has(.menuItemMedia.image)) .menuItemName{
-        font-size:24px;
+      .menuItemCard:not(:has(.menuItemMedia)) .menuItemName{
+        font-size:26px;
       }
 
       .menuItemDesc{
@@ -2437,7 +2436,7 @@
           const cards = sortedItems.map((item) => {
             const mediaHtml = item.image_url
               ? `<div class="menuItemMedia image" style="background-image:url('${escapeHtml(item.image_url)}');" role="img" aria-label="${escapeHtml(item.name)}">${item.is_sold_out ? `<div class="menuItemSoldOutBadge">Sold out</div>` : ""}</div>`
-              : `<div class="menuItemMedia tonal" aria-hidden="true">${item.is_sold_out ? `<div class="menuItemSoldOutBadge">Sold out</div>` : ""}</div>`;
+              : "";
 
             if (item.menu_item_type === "product") {
               const qty = getProductBasketQuantity(item.id);
