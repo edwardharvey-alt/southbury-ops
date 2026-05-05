@@ -21,6 +21,8 @@
       --order-brand-text: #ffffff;
       --order-brand-soft: rgba(139,107,63,0.10);
       --order-brand-soft-2: rgba(203,184,157,0.08);
+      --hearthfire: #c4511a;
+      --hearthfire-dark: #a8431a;
       --order-hero-overlay: linear-gradient(180deg, rgba(15,23,42,0.08), rgba(15,23,42,0.34));
       --order-hero-fallback:
         linear-gradient(135deg, rgba(32,26,18,0.22), rgba(32,26,18,0.42)),
@@ -119,15 +121,6 @@
 
     .heroVendorBlock{
       min-width:0;
-    }
-
-    .heroVendorEyebrow{
-      font-size:10px;
-      text-transform:uppercase;
-      letter-spacing:.10em;
-      font-weight:700;
-      color:color-mix(in srgb, var(--order-brand-text, #fff) 58%, transparent);
-      margin-bottom:6px;
     }
 
     .heroVendorName{
@@ -428,21 +421,27 @@
 
     .menuCategorySectionList{
       display:grid;
-      gap:28px;
+      gap:40px;
     }
 
     .menuCategorySection{
       scroll-margin-top:72px;
       display:grid;
-      gap:14px;
+      gap:18px;
     }
 
     .menuCategoryHeading{
-      margin:0;
-      font-size:18px;
-      font-weight:950;
-      letter-spacing:-0.02em;
+      margin:14px 0 0;
+      font-family:'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+      font-size:30px;
+      line-height:1.05;
+      font-weight:600;
+      letter-spacing:-0.005em;
       color:var(--h-text);
+    }
+
+    .menuCategorySection:first-child .menuCategoryHeading{
+      margin-top:4px;
     }
 
     @media (max-width:720px){
@@ -466,7 +465,8 @@
       }
 
       .menuCategoryHeading{
-        font-size:16px;
+        font-size:26px;
+        margin-top:10px;
       }
     }
 
@@ -477,11 +477,9 @@
     }
 
     .menuItemCard{
-      border:1px solid color-mix(in srgb, var(--order-brand-primary) 12%, var(--h-border-2));
+      border:1px solid rgba(15,23,42,0.06);
       border-radius:22px;
-      background:linear-gradient(180deg,
-        color-mix(in srgb, var(--order-brand-primary) 4%, #fff) 0%,
-        #fff 60%);
+      background:#faf7f4;
       padding:0;
       display:grid;
       gap:0;
@@ -525,9 +523,9 @@
     }
 
     .menuItemBody{
-      padding:16px 18px 18px;
+      padding:20px 22px 22px;
       display:grid;
-      gap:14px;
+      gap:16px;
     }
 
     .menuItemHeader{
@@ -553,8 +551,8 @@
     }
 
     .menuItemCard:not(:has(.menuItemMedia)) .menuItemBody{
-      padding:26px 20px 20px;
-      gap:16px;
+      padding:34px 24px 24px;
+      gap:18px;
     }
 
     .menuItemCard:not(:has(.menuItemMedia)) .menuItemName{
@@ -668,7 +666,7 @@
       padding:0 14px;
       border-radius:14px;
       border:1px solid transparent;
-      background:linear-gradient(135deg, var(--order-brand-primary), var(--order-brand-secondary));
+      background:linear-gradient(135deg, var(--hearthfire), var(--hearthfire-dark));
       color:#fff;
       font-family:var(--sans);
       font-size:13px;
@@ -679,7 +677,7 @@
       justify-content:center;
       text-align:center;
       white-space:nowrap;
-      box-shadow:0 10px 18px color-mix(in srgb, var(--order-brand-primary) 24%, transparent);
+      box-shadow:0 10px 18px color-mix(in srgb, var(--hearthfire) 26%, transparent);
     }
 
     .brandBtn.secondary{
@@ -1041,13 +1039,13 @@
       min-height:56px;
       border-radius:18px;
       border:1px solid transparent;
-      background:linear-gradient(135deg, var(--order-brand-primary), var(--order-brand-secondary));
+      background:linear-gradient(135deg, var(--hearthfire), var(--hearthfire-dark));
       color:#fff;
       font-family:var(--sans);
       font-size:16px;
       font-weight:950;
       cursor:pointer;
-      box-shadow:0 12px 22px color-mix(in srgb, var(--order-brand-primary) 26%, transparent);
+      box-shadow:0 12px 22px color-mix(in srgb, var(--hearthfire) 28%, transparent);
       transition:opacity 0.2s, box-shadow 0.2s;
     }
     .payButton:disabled{
@@ -1320,13 +1318,13 @@
       }
 
       .menuItemBody{
-        padding:14px 14px 16px;
-        gap:12px;
+        padding:18px 18px 20px;
+        gap:14px;
       }
 
       .menuItemCard:not(:has(.menuItemMedia)) .menuItemBody{
-        padding:22px 16px 18px;
-        gap:14px;
+        padding:30px 20px 22px;
+        gap:16px;
       }
 
       .menuItemName{
@@ -1393,7 +1391,6 @@
               <div class="heroTopLeft">
                 <img id="vendorLogoHero" class="heroLogo hidden" alt="Vendor logo" />
                 <div class="heroVendorBlock">
-                  <div class="heroVendorEyebrow" id="vendorEyebrow">ORDER DIRECT</div>
                   <h1 class="heroVendorName" id="heroVendorName">Loading vendor…</h1>
                   <p class="heroTagline" id="heroTagline">Preparing today’s menu…</p>
                 </div>
@@ -1985,7 +1982,6 @@
         const logoUrl = vendor.logo_url || "";
         const vendorDisplayName = vendor.display_name || vendor.name || "Vendor";
         const tagline = vendor.tagline || "Freshly made and ready to order";
-        const orderLabel = (vendor.order_label || "Order direct").toUpperCase();
         const textOnPrimary = vendor.brand_text_on_primary || "#ffffff";
 
         document.documentElement.style.setProperty("--order-brand-primary", primary);
@@ -1994,7 +1990,6 @@
         document.documentElement.style.setProperty("--order-brand-soft-2", hexToRgba(secondary, 0.08));
         document.documentElement.style.setProperty("--order-brand-text", textOnPrimary);
 
-        byId("vendorEyebrow").textContent = orderLabel;
         byId("heroVendorName").textContent = vendorDisplayName;
         byId("heroTagline").textContent = tagline;
 
@@ -2355,7 +2350,10 @@
           const capacityChip = byId("chipCapacityLeft");
           capacityChip.className = "heroChip";
 
-          if (total > 0 && rawRemaining > 0 && rawRemaining <= lowThreshold) {
+          if (total > 0 && rawRemaining >= total) {
+            capacityChip.classList.add("hidden");
+            capacityChip.textContent = "";
+          } else if (total > 0 && rawRemaining > 0 && rawRemaining <= lowThreshold) {
             capacityChip.classList.add("low");
             capacityChip.textContent = "Last few places";
           } else {
