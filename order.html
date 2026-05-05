@@ -951,6 +951,42 @@
       margin-top:3px;
     }
 
+    .optInBlock{
+      margin:18px 0 4px;
+      padding:14px 0 0;
+      border-top:1px solid rgba(15,23,42,0.06);
+    }
+
+    .optInRow{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      cursor:pointer;
+      padding:0;
+      background:transparent;
+      border:none;
+    }
+
+    .optInRow input[type="checkbox"]{
+      width:16px;
+      height:16px;
+      margin:3px 0 0;
+      accent-color:var(--order-brand-primary);
+      flex:0 0 auto;
+      border-radius:4px;
+    }
+
+    .optInBody{
+      min-width:0;
+    }
+
+    .optInLabel{
+      font-size:13px;
+      line-height:1.45;
+      font-weight:500;
+      color:var(--h-muted);
+    }
+
     .checkoutFooter{
       position:sticky;
       bottom:0;
@@ -1401,6 +1437,11 @@
           <p class="sectionSub">A few final details before payment</p>
         </div>
 
+        <div class="field hidden" id="fulfilmentChoiceWrap">
+          <label>How would you like to receive this order?</label>
+          <div class="checkoutChoice" id="fulfilmentChoice"></div>
+        </div>
+
         <div class="checkoutGrid">
           <div class="field">
             <label for="customerName">Name</label>
@@ -1417,11 +1458,6 @@
         <div class="field">
           <label for="customerEmail">Email (optional)</label>
           <input id="customerEmail" type="email" placeholder="you@example.com" autocomplete="email" />
-        </div>
-
-        <div class="field hidden" id="fulfilmentChoiceWrap">
-          <label>How would you like to receive this order?</label>
-          <div class="checkoutChoice" id="fulfilmentChoice"></div>
         </div>
 
         <div id="addressWrap">
@@ -1473,11 +1509,11 @@
 
         <div class="statusNotice hidden" id="checkoutNotice"></div>
 
-        <div class="field" id="marketingOptInWrap">
-          <label class="choiceCard" for="contactOptIn">
+        <div class="optInBlock" id="marketingOptInWrap">
+          <label class="optInRow" for="contactOptIn">
             <input type="checkbox" id="contactOptIn" />
-            <div>
-              <div class="choiceCardTitle" id="marketingOptInLabel">Yes — keep me informed about future drops. No spam, ever.</div>
+            <div class="optInBody">
+              <div class="optInLabel" id="marketingOptInLabel">Yes — keep me informed about future drops. No spam, ever.</div>
               <a href="privacy.html" class="privacyFootnote" target="_blank" rel="noopener noreferrer">Privacy policy</a>
             </div>
           </label>
