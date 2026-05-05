@@ -318,86 +318,104 @@
       font-weight:700;
     }
 
-    .menuAccordionList{
-      display:grid;
-      gap:10px;
+    .menuPillNav{
+      position:sticky;
+      top:0;
+      z-index:8;
+      margin:0 -18px 14px;
+      padding:10px 18px 10px;
+      background:rgba(255,255,255,0.92);
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      border-bottom:1px solid rgba(15,23,42,0.06);
     }
 
-    .menuCategoryBlock{
-      border:1px solid var(--h-border-2);
-      border-radius:20px;
-      background:#fff;
-      overflow:hidden;
-      box-shadow:0 2px 10px rgba(15,23,42,0.03);
-    }
-
-    .menuCategoryToggle{
-      width:100%;
-      border:none;
-      background:#fff;
-      cursor:pointer;
+    .menuPillNavInner{
       display:flex;
+      gap:8px;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+      scroll-padding:0 18px;
+    }
+
+    .menuPillNavInner::-webkit-scrollbar{
+      display:none;
+    }
+
+    .menuPill{
+      flex:0 0 auto;
+      display:inline-flex;
       align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      padding:16px 16px;
-      text-align:left;
+      min-height:34px;
+      padding:0 14px;
+      border-radius:999px;
+      border:1px solid var(--h-border-2);
+      background:#fff;
+      color:var(--h-text);
       font-family:var(--sans);
+      font-size:13px;
+      font-weight:800;
+      letter-spacing:.005em;
+      text-decoration:none;
+      white-space:nowrap;
+      cursor:pointer;
+      transition:background .15s ease, border-color .15s ease, color .15s ease;
     }
 
-    .menuCategoryToggle:hover{
-      background:rgba(15,23,42,0.015);
+    .menuPill:hover{
+      border-color:var(--h-border);
+      background:rgba(15,23,42,0.02);
     }
 
-    .menuCategoryTitleWrap{
-      min-width:0;
+    .menuPill.active{
+      background:var(--order-brand-primary);
+      border-color:var(--order-brand-primary);
+      color:#fff;
     }
 
-    .menuCategoryTitle{
+    .menuCategorySectionList{
+      display:grid;
+      gap:28px;
+    }
+
+    .menuCategorySection{
+      scroll-margin-top:72px;
+      display:grid;
+      gap:14px;
+    }
+
+    .menuCategoryHeading{
       margin:0;
-      font-size:17px;
+      font-size:18px;
       font-weight:950;
       letter-spacing:-0.02em;
       color:var(--h-text);
     }
 
-    .menuCategoryHint{
-      margin-top:4px;
-      font-size:11px;
-      color:var(--h-muted);
-      font-weight:700;
-      line-height:1.3;
-    }
+    @media (max-width:720px){
+      .menuPillNav{
+        margin:0 -12px 10px;
+        padding:8px 12px 8px;
+      }
 
-    .menuCategoryChevron{
-      flex:0 0 auto;
-      width:24px;
-      height:24px;
-      border-radius:999px;
-      border:1px solid var(--h-border);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color:var(--h-text);
-      font-size:12px;
-      font-weight:900;
-      background:#fff;
-      transition:transform .18s ease;
-    }
+      .menuPillNavInner{
+        scroll-padding:0 12px;
+      }
 
-    .menuCategoryBlock.open .menuCategoryChevron{
-      transform:rotate(180deg);
-    }
+      .menuPill{
+        font-size:12px;
+        min-height:32px;
+        padding:0 12px;
+      }
 
-    .menuCategoryContent{
-      display:none;
-      padding:0 14px 14px;
-      border-top:1px solid rgba(15,23,42,0.05);
-      background:linear-gradient(to bottom, rgba(15,23,42,0.015), rgba(15,23,42,0));
-    }
+      .menuCategorySection{
+        scroll-margin-top:64px;
+      }
 
-    .menuCategoryBlock.open .menuCategoryContent{
-      display:block;
+      .menuCategoryHeading{
+        font-size:16px;
+      }
     }
 
     .menuCardGrid{
@@ -1438,7 +1456,7 @@
         basket: [],
         selectedFulfilmentMode: null,
         bundleDraft: null,
-        openCategories: new Set(),
+        menuScrollObserver: null,
         deliveryAreaBlocked: false /* T3-12a */
       };
 
@@ -2151,60 +2169,35 @@
           groupsMap.get(key).items.push(item);
         });
 
-        wrap.innerHTML = `<div class="menuAccordionList">${[...groupsMap.values()]
-          .sort((a, b) => {
-            const sortCompare = Number(a.sort ?? 9999) - Number(b.sort ?? 9999);
+        const groups = [...groupsMap.values()].sort((a, b) => {
+          const sortCompare = Number(a.sort ?? 9999) - Number(b.sort ?? 9999);
+          if (sortCompare !== 0) return sortCompare;
+          return String(a.name).localeCompare(String(b.name));
+        });
+
+        const pills = groups.map((group, idx) => `
+          <a class="menuPill js-menu-pill ${idx === 0 ? "active" : ""}"
+             href="#cat-${escapeHtml(group.key)}"
+             data-category-key="${escapeHtml(group.key)}">
+            ${escapeHtml(group.name)}
+          </a>
+        `).join("");
+
+        const sections = groups.map((group) => {
+          const sortedItems = group.items.slice().sort((a, b) => {
+            const sortCompare = Number(a.sort_order ?? 9999) - Number(b.sort_order ?? 9999);
             if (sortCompare !== 0) return sortCompare;
+
+            if (a.menu_item_type !== b.menu_item_type) {
+              return String(a.menu_item_type).localeCompare(String(b.menu_item_type));
+            }
+
             return String(a.name).localeCompare(String(b.name));
-          })
-          .map((group) => {
-            const isOpen = state.openCategories.has(group.key);
+          });
 
-            const sortedItems = group.items.slice().sort((a, b) => {
-              const sortCompare = Number(a.sort_order ?? 9999) - Number(b.sort_order ?? 9999);
-              if (sortCompare !== 0) return sortCompare;
-
-              if (a.menu_item_type !== b.menu_item_type) {
-                return String(a.menu_item_type).localeCompare(String(b.menu_item_type));
-              }
-
-              return String(a.name).localeCompare(String(b.name));
-            });
-
-            const cards = sortedItems.map((item) => {
-              if (item.menu_item_type === "product") {
-                const qty = getProductBasketQuantity(item.id);
-
-                return `
-                  <div class="menuItemCard">
-                    <div class="menuItemTop">
-                      <div class="menuItemCopy">
-                        <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
-                        ${item.description ? `<p class="menuItemDesc">${escapeHtml(item.description)}</p>` : ""}
-                      </div>
-
-                      <div class="menuPriceBlock">
-                        <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
-                        <div class="menuPriceHint">each</div>
-                      </div>
-                    </div>
-
-                    <div class="menuControls">
-                      <div class="menuControlsRight">
-                        <div class="stepper">
-                          <button type="button" class="js-product-minus" data-product-id="${item.id}" ${qty <= 0 || isDropClosed() ? "disabled" : ""}>−</button>
-                          <div class="stepperValue">${qty}</div>
-                          <button type="button" class="js-product-plus" data-product-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>+</button>
-                        </div>
-
-                        <button class="brandBtn ${qty > 0 ? "secondary" : ""} js-product-add" type="button" data-product-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>
-                          ${qty > 0 ? "View basket" : "Add to order"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                `;
-              }
+          const cards = sortedItems.map((item) => {
+            if (item.menu_item_type === "product") {
+              const qty = getProductBasketQuantity(item.id);
 
               return `
                 <div class="menuItemCard">
@@ -2216,35 +2209,106 @@
 
                     <div class="menuPriceBlock">
                       <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
-                      <div class="menuPriceHint">bundle</div>
+                      <div class="menuPriceHint">each</div>
                     </div>
                   </div>
 
                   <div class="menuControls">
-                    <div class="menuLeadNote">Choose what goes inside before adding it to your order.</div>
-                    <button class="brandBtn js-open-bundle" type="button" data-bundle-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>
-                      Customize
-                    </button>
+                    <div class="menuControlsRight">
+                      <div class="stepper">
+                        <button type="button" class="js-product-minus" data-product-id="${item.id}" ${qty <= 0 || isDropClosed() ? "disabled" : ""}>−</button>
+                        <div class="stepperValue">${qty}</div>
+                        <button type="button" class="js-product-plus" data-product-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>+</button>
+                      </div>
+
+                      <button class="brandBtn ${qty > 0 ? "secondary" : ""} js-product-add" type="button" data-product-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>
+                        ${qty > 0 ? "View basket" : "Add to order"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               `;
-            }).join("");
+            }
 
             return `
-              <div class="menuCategoryBlock ${isOpen ? "open" : ""}" data-category-key="${escapeHtml(group.key)}">
-                <button class="menuCategoryToggle js-category-toggle" type="button" data-category-key="${escapeHtml(group.key)}" aria-expanded="${isOpen ? "true" : "false"}">
-                  <div class="menuCategoryTitleWrap">
-                    <h4 class="menuCategoryTitle">${escapeHtml(group.name)}</h4>
-                    <div class="menuCategoryHint">Tap to ${isOpen ? "hide" : "view"} items</div>
+              <div class="menuItemCard">
+                <div class="menuItemTop">
+                  <div class="menuItemCopy">
+                    <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
+                    ${item.description ? `<p class="menuItemDesc">${escapeHtml(item.description)}</p>` : ""}
                   </div>
-                  <div class="menuCategoryChevron">⌄</div>
-                </button>
-                <div class="menuCategoryContent">
-                  <div class="menuCardGrid">${cards}</div>
+
+                  <div class="menuPriceBlock">
+                    <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
+                    <div class="menuPriceHint">bundle</div>
+                  </div>
+                </div>
+
+                <div class="menuControls">
+                  <div class="menuLeadNote">Choose what goes inside before adding it to your order.</div>
+                  <button class="brandBtn js-open-bundle" type="button" data-bundle-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>
+                    Customize
+                  </button>
                 </div>
               </div>
             `;
-          }).join("")}</div>`;
+          }).join("");
+
+          return `
+            <section class="menuCategorySection" id="cat-${escapeHtml(group.key)}" data-category-key="${escapeHtml(group.key)}">
+              <h4 class="menuCategoryHeading">${escapeHtml(group.name)}</h4>
+              <div class="menuCardGrid">${cards}</div>
+            </section>
+          `;
+        }).join("");
+
+        wrap.innerHTML = `
+          <nav class="menuPillNav" id="menuPillNav" aria-label="Menu categories">
+            <div class="menuPillNavInner">${pills}</div>
+          </nav>
+          <div class="menuCategorySectionList">${sections}</div>
+        `;
+
+        setupMenuScrollSpy();
+      }
+
+      function setupMenuScrollSpy() {
+        if (state.menuScrollObserver) {
+          state.menuScrollObserver.disconnect();
+          state.menuScrollObserver = null;
+        }
+
+        const sections = Array.from(document.querySelectorAll(".menuCategorySection"));
+        if (!sections.length) return;
+
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const key = entry.target.dataset.categoryKey;
+            if (!key) return;
+            document.querySelectorAll(".js-menu-pill").forEach((pill) => {
+              pill.classList.toggle("active", pill.dataset.categoryKey === key);
+            });
+            scrollPillIntoView(key);
+          });
+        }, {
+          rootMargin: "-72px 0px -55% 0px",
+          threshold: 0
+        });
+
+        sections.forEach((section) => observer.observe(section));
+        state.menuScrollObserver = observer;
+      }
+
+      function scrollPillIntoView(key) {
+        const pill = document.querySelector(`.js-menu-pill[data-category-key="${CSS.escape(key)}"]`);
+        const inner = document.querySelector(".menuPillNavInner");
+        if (!pill || !inner) return;
+        const pillRect = pill.getBoundingClientRect();
+        const innerRect = inner.getBoundingClientRect();
+        if (pillRect.left < innerRect.left + 8 || pillRect.right > innerRect.right - 8) {
+          pill.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        }
       }
 
       function getProductBasketQuantity(productId) {
@@ -3009,13 +3073,16 @@ async function handoffToPayment() {
           const basketMinus = e.target.closest(".js-basket-minus");
           const basketPlus = e.target.closest(".js-basket-plus");
           const basketRemove = e.target.closest(".js-basket-remove");
-          const categoryToggle = e.target.closest(".js-category-toggle");
+          const menuPill = e.target.closest(".js-menu-pill");
 
-          if (categoryToggle) {
-            const key = categoryToggle.dataset.categoryKey;
-            if (state.openCategories.has(key)) state.openCategories.delete(key);
-            else state.openCategories.add(key);
-            renderMenu();
+          if (menuPill) {
+            e.preventDefault();
+            const key = menuPill.dataset.categoryKey;
+            const target = document.getElementById(`cat-${key}`);
+            if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+            document.querySelectorAll(".js-menu-pill").forEach((p) => {
+              p.classList.toggle("active", p.dataset.categoryKey === key);
+            });
             return;
           }
 
