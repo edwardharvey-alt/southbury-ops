@@ -268,6 +268,41 @@
       gap:14px;
     }
 
+    .dropStoryCard{
+      padding:20px 22px;
+      border-radius:22px;
+      background:linear-gradient(180deg,
+        color-mix(in srgb, var(--order-brand-primary) 8%, #fff) 0%,
+        color-mix(in srgb, var(--order-brand-secondary) 6%, #fff) 100%);
+      border:1px solid color-mix(in srgb, var(--order-brand-primary) 14%, transparent);
+      box-shadow:0 2px 10px rgba(15,23,42,0.04);
+    }
+
+    .dropStoryCard.hidden{
+      display:none;
+    }
+
+    .dropStoryBody{
+      font-family:'Figtree', system-ui, -apple-system, sans-serif;
+      font-size:15px;
+      line-height:1.55;
+      color:var(--h-text);
+      margin:0;
+      font-weight:500;
+      white-space:pre-wrap;
+    }
+
+    @media (max-width:720px){
+      .dropStoryCard{
+        padding:16px 16px;
+      }
+
+      .dropStoryBody{
+        font-size:14px;
+        line-height:1.5;
+      }
+    }
+
     .sectionCardHead{
       display:flex;
       align-items:flex-start;
@@ -1181,6 +1216,10 @@
           <div class="statusNotice hidden" id="pageStatusNotice"></div>
           <div class="errorBox" id="errorBox"></div>
         </div>
+      </div>
+
+      <div class="dropStoryCard hidden" id="dropStoryCard">
+        <p class="dropStoryBody" id="dropStoryBody"></p>
       </div>
 
       <div class="card sectionCard">
@@ -2885,9 +2924,27 @@ async function handoffToPayment() {
 
       function renderAll() {
         renderHero();
+        renderDropStory();
         renderMenu();
         renderBasketBar();
         renderBasketSheet();
+      }
+
+      function renderDropStory() {
+        const card = byId("dropStoryCard");
+        const body = byId("dropStoryBody");
+        if (!card || !body) return;
+
+        const intro = String(state.drop?.drop_intro || "").trim();
+
+        if (!intro) {
+          body.textContent = "";
+          card.classList.add("hidden");
+          return;
+        }
+
+        body.textContent = intro;
+        card.classList.remove("hidden");
       }
 
       async function refreshCapacity() {
