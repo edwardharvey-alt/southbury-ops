@@ -20,6 +20,7 @@ const ALLOWED_FIELDS = new Set([
   "slug",
   "drop_type",
   "status",
+  "drop_intro",
   "fulfilment_mode",
   "centre_postcode",
   "radius_km",

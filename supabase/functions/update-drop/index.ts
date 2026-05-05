@@ -22,6 +22,7 @@ const ALLOWED_FIELDS = new Set([
   "drop_type",
   "host_id",
   "notes_internal",
+  "drop_intro",
   "fulfilment_mode",
   "collection_point_description",
   "delivery_area_description",
@@ -143,6 +144,18 @@ Deno.serve(async (req) => {
       const dt = update.drop_type;
       if (dt !== null && (typeof dt !== "string" || !VALID_DROP_TYPES.has(dt))) {
         return jsonResponse({ error: "Invalid drop_type" }, 400);
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(update, "drop_intro")) {
+      const intro = update.drop_intro;
+      if (intro !== null) {
+        if (typeof intro !== "string") {
+          return jsonResponse({ error: "drop_intro must be a string" }, 400);
+        }
+        if (intro.length > 280) {
+          return jsonResponse({ error: "drop_intro must be 280 characters or fewer" }, 400);
+        }
       }
     }
 

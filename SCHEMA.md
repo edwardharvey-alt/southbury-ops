@@ -224,6 +224,9 @@ and for capacity categorisation on drops. `vendor_id` (FK), `name`,
   `series_id` — it should reference `drop_series.id`).
 - **Multi-window events** — `window_group_id` (no FK declared,
   groups drops created from the same event window UI).
+- **Customer-facing copy** — `drop_intro` (text, nullable; ≤ 280 char
+  enforced by update-drop Edge Function). Short "this week's story"
+  shown above the menu on order.html.
 - **Misc** — `notes_internal`, `customer_notes_enabled` (default true).
 
 **drop_menu_items** — current menu-item table. `drop_id` (FK),
