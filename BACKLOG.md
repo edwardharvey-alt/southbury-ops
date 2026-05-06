@@ -622,7 +622,7 @@ recommendation about building direct customer relationships independent
 of aggregator platforms. The aggregator reduction pathway is prominent
 in onboarding Q3 and Q5.
 
-T4-31: Order page polish (photography excluded)
+T4-31: Order page polish (photography excluded) ✓ COMPLETE
 Polish pass on the customer-facing ordering experience to make it
 feel more premium, more locally specific, and more vendor-led. This
 is about making vendors proud to share their order link.
@@ -640,6 +640,22 @@ designed edge states for closed / pre-open / capacity-low.
 Per-item photography is explicitly out of scope for T4-31 and lives
 in T4-31b. Item cards include both with-photo and without-photo
 states so the with-photo path Just Works once T4-31b lands.
+
+Shipped in PR #224 (merged 6 May 2026). 24 commits on
+feature/t4-31-order-page-polish. Scope: hero proportions and chip
+hierarchy (timing primary, capacity honest framing); host-context
+copy line replacing any host crest; Drop Story card reading
+drops.drop_intro (hidden gracefully when absent); accordion replaced
+with sticky horizontal category pill-nav; two designed item card
+states (with-photo path ready, no-image path typography-led); warm
+card backgrounds (#faf7f4); category headings in Cormorant Garamond;
+vendor primary_color on CTAs (not Hearthfire); basket bar language
+("Your order · N items · £X"); checkout sheet fulfilment-first
+sequencing and opt-in visually distinct; designed edge states for
+closed / pre-open / capacity-low. Drop Studio Basics: "Drop Story"
+section with "About this drop" textarea, 280-char hint, saves via
+update-drop Edge Function (redeployed v11 same day). Per-item
+photography deferred to T4-31b.
 
 T4-31b: Per-item photography asset workflow (storage, upload UX,
 format constraints, phone capture guidance for vendors).
@@ -661,6 +677,28 @@ Backlogged. Schedule after vendor onboarding friction confirms
 photography is the next-most-valuable polish lever (i.e. when
 the order page polish from T4-31 is live and vendors are asking
 for the photo path).
+
+T4-31-BH: Brand Hearth — guidance updates required following T4-31
+order page redesign
+
+Three pieces of vendor-facing guidance need adding to Brand Hearth
+as a result of the T4-31 design review:
+
+(1) Drop Story tone guidance — vendors need to understand this
+field is occasion-level copy ("why this drop, this week") not
+brand-level copy. Suggested prompt: "This week's story, not your
+brand story." With a 280-character limit and a worked example.
+
+(2) Hero image guidance — food-led photography performs significantly
+better than logo-led imagery in the hero. Guidance should set
+expectations on framing, lighting, and subject.
+
+(3) Tagline guidance — clarify that the vendor tagline (e.g.
+"Wood-fired pizza. Simply done.") is brand-level copy that appears
+on every drop, and is distinct from the drop-specific intro copy in
+the Drop Story field.
+
+Backlogged pending first vendor onboarding.
 
 T4-32: Order page — map display for collection point and delivery area
 Add a toggleable map to the order page, controlled per-drop in Drop Studio.

@@ -750,6 +750,54 @@ on top of the coding rules above.
     table SELECT showed the saved values were correct in
     `products`; `v_products_enriched` was the gap.
 
+30. **Large file sessions — targeted greps, not full reads.**
+    `order.html` is 3,287 lines. Any session that reads the full
+    file at once risks stream-idle timeouts (experienced three
+    times during T4-31). Always grep for specific function names,
+    class names, or IDs before reading. Pattern:
+    `grep -n "functionName\|className" order.html | head -30`
+    then read only the relevant line ranges. If a session stalls
+    past 10 minutes without output, interrupt with Escape, run
+    `/clear`, and restart with a scoped grep-first instruction.
+    The Claude Code CLI (learning #17) is more reliable than the
+    desktop app for large file work.
+
+31. **Modal sheet architecture — fixed header/body/footer, not
+    sticky.** `position: sticky` for modal headers failed
+    repeatedly during T4-31 because sticky only works when the
+    element's parent is the scroll container. The reliable
+    pattern for any slide-up sheet (bundle modal, checkout sheet)
+    is a three-part flex column: fixed-height header
+    (`flex-shrink: 0`), scrolling body (`flex: 1; overflow-y:
+    auto; -webkit-overflow-scrolling: touch`), fixed-height
+    footer (`flex-shrink: 0`). The modal container is `position:
+    fixed; inset: 0; display: flex; flex-direction: column`.
+    Reset `scrollTop = 0` on open. No sticky required.
+
+32. **iOS Safari mobile overflow — html not body.**
+    `overflow-x: hidden` must be set on the `html` element, not
+    `body`. Setting it on `body` alone does not prevent
+    horizontal overflow on iOS Safari. Both `html` and `body`
+    should also carry `max-width: 100%`.
+
+33. **Vendor colour vs Hearthfire on customer-facing pages.**
+    `order.html` is the vendor's customer surface, not a Hearth
+    operator page. Primary CTAs ("Add to order", "Customize",
+    "Pay") use the vendor's `primary_color` from the loaded
+    vendor record — not the Hearthfire constant `#c4511a`.
+    Hearthfire belongs on Hearth operator pages only. The only
+    Hearth signal on the order page is the "Powered by Hearth"
+    footer attribution.
+
+34. **Southbury Farm as visual test fixture.** During T4-31,
+    `stripe_onboarding_complete` was temporarily set to true
+    with a dummy `stripe_account_id` to enable order page visual
+    review with real branding. Reverted to false / null after
+    the session. If needed again:
+    `UPDATE vendors SET stripe_onboarding_complete = true,
+    stripe_account_id = 'acct_test_southbury' WHERE slug =
+    'southbury-farm-pizza';`. Remember to revert.
+
 ## Stripe Connect Express (T3-8)
 
 - vendors schema: `stripe_account_id` TEXT (nullable),
@@ -921,7 +969,6 @@ index.
 
 ### Tier 4 — Enhancements that will impress
 - T4-29 — Series intelligence in Insights — open
-- T4-31 — Order page visual polish pass (per-item photography, premium feel) — open
 - T4-32 — Order page: map display for collection point and delivery area — open
 - T4-33 — Brand Hearth: GenAI copy generation + customisation review — open
 - T4-34 — Multiple windows: windowCount race condition on sibling naming — open
