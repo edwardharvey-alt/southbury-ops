@@ -1143,6 +1143,41 @@
       gap:12px;
     }
 
+    .bundleSheetHeader{
+      position:sticky;
+      top:0;
+      z-index:8;
+      margin:0 -14px;
+      padding:10px 18px 10px 14px;
+      background:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      border-bottom:1px solid rgba(15,23,42,0.06);
+    }
+
+    .bundleSheetHeader .btnGhost{
+      flex:0 0 auto;
+      min-height:42px;
+      padding:0 18px;
+      border-radius:12px;
+      background:#fff;
+      color:var(--h-text);
+      border:1px solid var(--h-border);
+      box-shadow:0 2px 8px rgba(15,23,42,0.04);
+      font-family:'Figtree', system-ui, -apple-system, sans-serif;
+      font-size:14px;
+      font-weight:500;
+      letter-spacing:0.02em;
+      cursor:pointer;
+    }
+
+    .bundleSheetTitle{
+      display:grid;
+      gap:4px;
+      padding-top:4px;
+    }
+
     .bundleLineBlock{
       border:1px solid var(--h-border-2);
       border-radius:16px;
@@ -1644,12 +1679,13 @@
     <div class="bundleModal" role="dialog" aria-modal="true" aria-label="Customize bundle">
       <div class="sheetHandle"></div>
 
-      <div class="basketHead">
-        <div>
-          <h3 class="sectionTitle" id="bundleModalTitle">Customize bundle</h3>
-          <p class="sectionSub" id="bundleModalSub">Choose what goes inside this bundle</p>
-        </div>
+      <div class="bundleSheetHeader">
         <button class="btnGhost" id="closeBundleModalBtn" type="button">Done</button>
+      </div>
+
+      <div class="bundleSheetTitle">
+        <h3 class="sectionTitle" id="bundleModalTitle">Customize bundle</h3>
+        <p class="sectionSub" id="bundleModalSub">Choose what goes inside this bundle</p>
       </div>
 
       <div id="bundleModalContent">
