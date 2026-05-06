@@ -987,6 +987,17 @@
                 </div>
 
                 <div class="stageSection">
+                  <h4 class="stageSectionTitle">Drop Story</h4>
+                  <p class="stageSectionSub">Optional. Shows above the menu on the order page.</p>
+
+                  <div class="field">
+                    <label for="dropIntro">About this drop</label>
+                    <textarea id="dropIntro" maxlength="280" rows="3" placeholder="e.g. Half-term means a quieter Friday — perfect time for a longer service window so families can grab dinner without the rush."></textarea>
+                    <div class="helperText">What makes this drop worth joining — the occasion, not your brand story. ~280 characters. <span id="dropIntroCount" style="opacity:.7;"></span></div>
+                  </div>
+                </div>
+
+                <div class="stageSection">
                   <h4 class="stageSectionTitle">Operating Setup</h4>
                   <p class="stageSectionSub">Set host, geography, fulfilment mode and capacity.</p>
 
@@ -2877,6 +2888,14 @@
       });
     }
 
+    function updateDropIntroCount() {
+      const el = byId("dropIntro");
+      const count = byId("dropIntroCount");
+      if (!el || !count) return;
+      const len = (el.value || "").length;
+      count.textContent = `${len} / 280`;
+    }
+
     function populateForm() {
       const d = state.drop;
       if (!d) return;
@@ -2884,6 +2903,8 @@
       byId("dropName").value = d.name || "";
       byId("dropSlug").value = d.slug || "";
       byId("dropType").value = d.drop_type || "neighbourhood";
+      byId("dropIntro").value = d.drop_intro || "";
+      updateDropIntroCount();
       byId("notesInternal").value = d.notes_internal || "";
 
       byId("fulfilmentMode").value = d.fulfilment_mode || "";
@@ -3452,6 +3473,7 @@
         slug: slugify(byId("dropSlug").value.trim()),
         drop_type: byId("dropType").value,
         host_id: byId("hostSelect").value || null,
+        drop_intro: byId("dropIntro").value.trim() || null,
         notes_internal: byId("notesInternal").value.trim() || null,
 
         fulfilment_mode: byId("fulfilmentMode").value || null,
@@ -3518,6 +3540,7 @@
         closes_at: dropData.closes_at,
         delivery_start: dropData.delivery_start,
         delivery_end: dropData.delivery_end,
+        drop_intro: dropData.drop_intro,
         notes_internal: dropData.notes_internal,
 
         fundraising_enabled: dropData.fundraising_enabled,
@@ -4828,6 +4851,11 @@
         if (!manualSlugEdited) {
           byId("dropSlug").value = slugify(byId("dropName").value);
         }
+        markDirty();
+      });
+
+      byId("dropIntro").addEventListener("input", () => {
+        updateDropIntroCount();
         markDirty();
       });
 

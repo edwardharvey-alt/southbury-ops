@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hearth — Order</title>
 
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Figtree:wght@400;500;700&display=swap" />
   <script src="./assets/config.js"></script>
   <script src="./assets/hearth-vendor.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -23,7 +27,14 @@
         linear-gradient(135deg, var(--order-brand-primary), var(--order-brand-secondary));
     }
 
+    html{
+      max-width:100%;
+      overflow-x:hidden;
+    }
+
     body.orderBody{
+      max-width:100%;
+      overflow-x:hidden;
       background:
         radial-gradient(1200px 600px at 15% -10%, var(--order-brand-soft), rgba(249,115,22,0) 60%),
         radial-gradient(900px 450px at 90% 0%, var(--order-brand-soft-2), rgba(251,146,60,0) 55%),
@@ -32,12 +43,17 @@
 
     .orderPage{
       max-width:860px;
+      width:100%;
       margin:20px auto 120px;
       display:grid;
       gap:16px;
+      min-width:0;
     }
 
     .heroOrderCard{
+      box-sizing:border-box;
+      width:100%;
+      max-width:100%;
       overflow:hidden;
       position:relative;
       padding:0;
@@ -46,7 +62,7 @@
 
     .heroMedia{
       position:relative;
-      min-height:360px;
+      min-height:300px;
       background:var(--order-hero-fallback);
       color:var(--order-brand-text, #fff);
     }
@@ -66,10 +82,19 @@
       pointer-events:none;
     }
 
+    .heroMedia.dimmed::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      z-index:1;
+      background:rgba(15,23,42,0.42);
+      pointer-events:none;
+    }
+
     .heroInner{
       position:relative;
       z-index:2;
-      min-height:360px;
+      min-height:300px;
       padding:22px 22px 20px;
       display:flex;
       flex-direction:column;
@@ -108,15 +133,6 @@
       min-width:0;
     }
 
-    .heroVendorEyebrow{
-      font-size:11px;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-      font-weight:900;
-      color:color-mix(in srgb, var(--order-brand-text, #fff) 82%, transparent);
-      margin-bottom:6px;
-    }
-
     .heroVendorName{
       font-size:30px;
       line-height:1.02;
@@ -124,15 +140,17 @@
       letter-spacing:-0.035em;
       margin:0;
       text-wrap:balance;
+      max-width:100%;
+      overflow-wrap:anywhere;
     }
 
     .heroTagline{
-      font-size:14px;
+      font-size:13px;
       line-height:1.45;
-      color:color-mix(in srgb, var(--order-brand-text, #fff) 88%, transparent);
-      margin:7px 0 0;
+      color:color-mix(in srgb, var(--order-brand-text, #fff) 72%, transparent);
+      margin:6px 0 0;
       max-width:540px;
-      font-weight:600;
+      font-weight:500;
     }
 
     .heroVisitBtn{
@@ -156,6 +174,7 @@
       display:grid;
       gap:12px;
       max-width:660px;
+      min-width:0;
     }
 
     .heroDropEyebrow{
@@ -173,7 +192,8 @@
       letter-spacing:-0.045em;
       margin:0;
       text-wrap:balance;
-      max-width:680px;
+      max-width:100%;
+      overflow-wrap:anywhere;
     }
 
     .heroDropSub{
@@ -181,8 +201,23 @@
       line-height:1.45;
       color:color-mix(in srgb, var(--order-brand-text, #fff) 89%, transparent);
       margin:0;
+      max-width:100%;
+      font-weight:600;
+      overflow-wrap:anywhere;
+    }
+
+    .heroHostLine{
+      font-size:13px;
+      line-height:1.4;
+      color:color-mix(in srgb, var(--order-brand-text, #fff) 82%, transparent);
+      margin:0;
       max-width:680px;
       font-weight:600;
+      letter-spacing:.005em;
+    }
+
+    .heroHostLine.hidden{
+      display:none;
     }
 
     .heroChips{
@@ -190,9 +225,52 @@
       flex-wrap:nowrap;
       gap:8px;
       padding-top:2px;
+      width:100%;
+      max-width:100%;
+      min-width:0;
       overflow-x:auto;
       -webkit-overflow-scrolling:touch;
       scrollbar-width:none;
+    }
+
+    .heroChips.hidden{
+      display:none;
+    }
+
+    .heroLockup{
+      display:grid;
+      gap:6px;
+      padding:14px 16px;
+      border-radius:18px;
+      background:rgba(255,255,255,0.14);
+      border:1px solid rgba(255,255,255,0.22);
+      backdrop-filter:blur(8px);
+      -webkit-backdrop-filter:blur(8px);
+      max-width:100%;
+      justify-self:start;
+    }
+
+    .heroLockup.hidden{
+      display:none;
+    }
+
+    .heroLockupPrimary{
+      font-size:18px;
+      line-height:1.2;
+      font-weight:900;
+      letter-spacing:-0.01em;
+      color:var(--order-brand-text, #fff);
+    }
+
+    .heroLockupSecondary{
+      font-size:13px;
+      line-height:1.4;
+      font-weight:600;
+      color:color-mix(in srgb, var(--order-brand-text, #fff) 80%, transparent);
+    }
+
+    .heroLockupSecondary.hidden{
+      display:none;
     }
 
     .heroChips::-webkit-scrollbar{
@@ -204,27 +282,41 @@
       display:inline-flex;
       align-items:center;
       gap:6px;
-      min-height:34px;
+      min-height:32px;
       padding:0 11px;
       border-radius:999px;
-      background:rgba(255,255,255,0.14);
-      border:1px solid rgba(255,255,255,0.16);
+      background:rgba(255,255,255,0.10);
+      border:1px solid rgba(255,255,255,0.14);
       backdrop-filter:blur(6px);
       -webkit-backdrop-filter:blur(6px);
-      color:var(--order-brand-text, #fff);
+      color:color-mix(in srgb, var(--order-brand-text, #fff) 86%, transparent);
       font-size:11px;
-      font-weight:800;
+      font-weight:700;
       white-space:nowrap;
     }
 
-    .heroChip.urgent{
-      background:rgba(255,255,255,0.20);
-      border-color:rgba(255,255,255,0.28);
+    .heroChip.primary{
+      min-height:40px;
+      padding:0 16px;
+      font-size:13px;
+      font-weight:900;
+      letter-spacing:.005em;
+      background:rgba(255,255,255,0.22);
+      border-color:rgba(255,255,255,0.30);
+      color:var(--order-brand-text, #fff);
+      box-shadow:0 6px 18px rgba(15,23,42,0.16);
+    }
+
+    .heroChip.tonal{
+      background:rgba(255,255,255,0.16);
+      border-color:rgba(255,255,255,0.20);
+      color:var(--order-brand-text, #fff);
     }
 
     .heroChip.low{
-      background:rgba(127, 29, 29, 0.28);
-      border-color:rgba(254, 202, 202, 0.30);
+      background:rgba(255,255,255,0.16);
+      border-color:rgba(255,255,255,0.20);
+      color:var(--order-brand-text, #fff);
     }
 
     .heroBodyCard{
@@ -235,9 +327,49 @@
     }
 
     .sectionCard{
+      box-sizing:border-box;
+      width:100%;
+      max-width:100%;
+      min-width:0;
       padding:18px;
       display:grid;
+      grid-template-columns:minmax(0, 1fr);
       gap:14px;
+    }
+
+    .dropStoryCard{
+      padding:20px 22px;
+      border-radius:22px;
+      background:linear-gradient(180deg,
+        color-mix(in srgb, var(--order-brand-primary) 8%, #fff) 0%,
+        color-mix(in srgb, var(--order-brand-secondary) 6%, #fff) 100%);
+      border:1px solid color-mix(in srgb, var(--order-brand-primary) 14%, transparent);
+      box-shadow:0 2px 10px rgba(15,23,42,0.04);
+    }
+
+    .dropStoryCard.hidden{
+      display:none;
+    }
+
+    .dropStoryBody{
+      font-family:'Figtree', system-ui, -apple-system, sans-serif;
+      font-size:15px;
+      line-height:1.55;
+      color:var(--h-text);
+      margin:0;
+      font-weight:500;
+      white-space:pre-wrap;
+    }
+
+    @media (max-width:720px){
+      .dropStoryCard{
+        padding:16px 16px;
+      }
+
+      .dropStoryBody{
+        font-size:14px;
+        line-height:1.5;
+      }
     }
 
     .sectionCardHead{
@@ -255,109 +387,192 @@
       font-weight:700;
     }
 
-    .menuAccordionList{
-      display:grid;
-      gap:10px;
-    }
-
-    .menuCategoryBlock{
-      border:1px solid var(--h-border-2);
-      border-radius:20px;
-      background:#fff;
-      overflow:hidden;
-      box-shadow:0 2px 10px rgba(15,23,42,0.03);
-    }
-
-    .menuCategoryToggle{
+    .menuPillNav{
+      position:sticky;
+      top:0;
+      z-index:8;
       width:100%;
-      border:none;
-      background:#fff;
-      cursor:pointer;
+      max-width:100%;
+      box-sizing:border-box;
+      margin:0 0 14px;
+      padding:10px 0 10px;
+      background:rgba(255,255,255,0.92);
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      border-bottom:1px solid rgba(15,23,42,0.06);
+      overflow:hidden;
+    }
+
+    .menuPillNavInner{
       display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      padding:16px 16px;
-      text-align:left;
-      font-family:var(--sans);
-    }
-
-    .menuCategoryToggle:hover{
-      background:rgba(15,23,42,0.015);
-    }
-
-    .menuCategoryTitleWrap{
+      gap:8px;
+      width:100%;
+      max-width:100%;
       min-width:0;
+      white-space:nowrap;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+      scroll-padding:0 0;
     }
 
-    .menuCategoryTitle{
-      margin:0;
-      font-size:17px;
-      font-weight:950;
-      letter-spacing:-0.02em;
-      color:var(--h-text);
-    }
-
-    .menuCategoryHint{
-      margin-top:4px;
-      font-size:11px;
-      color:var(--h-muted);
-      font-weight:700;
-      line-height:1.3;
-    }
-
-    .menuCategoryChevron{
-      flex:0 0 auto;
-      width:24px;
-      height:24px;
-      border-radius:999px;
-      border:1px solid var(--h-border);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color:var(--h-text);
-      font-size:12px;
-      font-weight:900;
-      background:#fff;
-      transition:transform .18s ease;
-    }
-
-    .menuCategoryBlock.open .menuCategoryChevron{
-      transform:rotate(180deg);
-    }
-
-    .menuCategoryContent{
+    .menuPillNavInner::-webkit-scrollbar{
       display:none;
-      padding:0 14px 14px;
-      border-top:1px solid rgba(15,23,42,0.05);
-      background:linear-gradient(to bottom, rgba(15,23,42,0.015), rgba(15,23,42,0));
     }
 
-    .menuCategoryBlock.open .menuCategoryContent{
-      display:block;
+    .menuPill{
+      flex:0 0 auto;
+      display:inline-flex;
+      align-items:center;
+      min-height:34px;
+      padding:0 14px;
+      border-radius:999px;
+      border:1px solid var(--h-border-2);
+      background:#fff;
+      color:var(--h-text);
+      font-family:var(--sans);
+      font-size:13px;
+      font-weight:800;
+      letter-spacing:.005em;
+      text-decoration:none;
+      white-space:nowrap;
+      cursor:pointer;
+      transition:background .15s ease, border-color .15s ease, color .15s ease;
+    }
+
+    .menuPill:hover{
+      border-color:var(--h-border);
+      background:rgba(15,23,42,0.02);
+    }
+
+    .menuPill.active{
+      background:var(--order-brand-primary);
+      border-color:var(--order-brand-primary);
+      color:#fff;
+    }
+
+    .menuCategorySectionList{
+      display:grid;
+      grid-template-columns:minmax(0, 1fr);
+      gap:40px;
+    }
+
+    .menuCategorySection{
+      scroll-margin-top:72px;
+      display:grid;
+      grid-template-columns:minmax(0, 1fr);
+      gap:18px;
+    }
+
+    .menuCategoryHeading{
+      margin:14px 0 0;
+      font-family:'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+      font-size:30px;
+      line-height:1.05;
+      font-weight:600;
+      letter-spacing:-0.005em;
+      color:var(--h-text);
+    }
+
+    .menuCategorySection:first-child .menuCategoryHeading{
+      margin-top:4px;
+    }
+
+    @media (max-width:720px){
+      .menuPillNav{
+        margin:0 0 10px;
+        padding:8px 0 8px;
+      }
+
+      .menuPillNavInner{
+        scroll-padding:0 0;
+      }
+
+      .menuPill{
+        font-size:12px;
+        min-height:32px;
+        padding:0 12px;
+      }
+
+      .menuCategorySection{
+        scroll-margin-top:64px;
+      }
+
+      .menuCategoryHeading{
+        font-size:26px;
+        margin-top:10px;
+      }
     }
 
     .menuCardGrid{
       display:grid;
+      grid-template-columns:minmax(0, 1fr);
       gap:10px;
       padding-top:12px;
     }
 
     .menuItemCard{
-      border:1px solid var(--h-border-2);
-      border-radius:20px;
-      background:#fff;
-      padding:16px;
+      box-sizing:border-box;
+      width:100%;
+      max-width:100%;
+      min-width:0;
+      border:1px solid rgba(15,23,42,0.06);
+      border-radius:22px;
+      background:#faf7f4;
+      padding:0;
       display:grid;
-      gap:12px;
-      box-shadow:0 2px 10px rgba(15,23,42,0.03);
+      gap:0;
+      box-shadow:0 4px 14px rgba(15,23,42,0.04);
+      overflow:hidden;
+      position:relative;
     }
 
-    .menuItemTop{
+    .menuItemMedia{
+      position:relative;
+      width:100%;
+      aspect-ratio:16 / 9;
+      background:var(--h-border-2);
+      overflow:hidden;
+    }
+
+    .menuItemMedia.image{
+      background-size:cover;
+      background-position:center;
+      background-repeat:no-repeat;
+    }
+
+    .menuItemSoldOutBadge{
+      position:absolute;
+      top:12px;
+      left:12px;
+      display:inline-flex;
+      align-items:center;
+      min-height:26px;
+      padding:0 10px;
+      border-radius:999px;
+      background:rgba(15,23,42,0.78);
+      color:#fff;
+      font-family:var(--sans);
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.02em;
+      text-transform:uppercase;
+      backdrop-filter:blur(4px);
+      -webkit-backdrop-filter:blur(4px);
+    }
+
+    .menuItemBody{
+      padding:14px 22px 14px;
+      display:grid;
+      gap:10px;
+    }
+
+    .menuItemHeader{
       display:flex;
       align-items:flex-start;
       justify-content:space-between;
       gap:14px;
+      min-width:0;
     }
 
     .menuItemCopy{
@@ -366,20 +581,33 @@
     }
 
     .menuItemName{
-      font-size:19px;
-      line-height:1.12;
-      font-weight:950;
+      font-family:'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+      font-size:22px;
+      line-height:1.1;
+      font-weight:600;
       margin:0;
       color:var(--h-text);
-      letter-spacing:-0.02em;
+      letter-spacing:-0.005em;
+    }
+
+    .menuItemCard:not(:has(.menuItemMedia)) .menuItemBody{
+      padding:24px 24px 18px;
+      gap:12px;
+    }
+
+    .menuItemCard:not(:has(.menuItemMedia)) .menuItemName{
+      font-size:28px;
+      line-height:1.05;
     }
 
     .menuItemDesc{
-      margin:7px 0 0;
-      font-size:13px;
+      margin:6px 0 0;
+      font-family:'Figtree', system-ui, -apple-system, sans-serif;
+      font-size:13.5px;
       line-height:1.5;
       color:var(--h-muted);
       max-width:52ch;
+      font-weight:400;
     }
 
     .menuPriceBlock{
@@ -390,7 +618,7 @@
 
     .menuPrice{
       min-width:max-content;
-      font-size:24px;
+      font-size:22px;
       line-height:1;
       font-weight:950;
       color:var(--h-text);
@@ -407,31 +635,41 @@
     }
 
     .menuControls{
+      display:grid;
+      gap:10px;
+    }
+
+    .menuControlsRow{
       display:flex;
       align-items:center;
-      justify-content:space-between;
       gap:10px;
       flex-wrap:wrap;
     }
 
-    .menuControlsRight{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      margin-left:auto;
-      flex-wrap:nowrap;
+    .menuControls .brandBtn{
+      width:100%;
+      min-height:40px;
+      height:40px;
+      font-size:13px;
+      border-radius:12px;
+    }
+
+    .menuItemCard.soldOut{
+      filter:grayscale(0.75);
+      opacity:0.78;
     }
 
     .stepper{
-      display:inline-flex;
+      display:flex;
       align-items:center;
+      justify-content:space-between;
       gap:4px;
       border:1px solid var(--h-border);
       border-radius:999px;
       padding:3px;
       background:#fff;
       min-height:40px;
-      flex:0 0 auto;
+      width:100%;
     }
 
     .stepper button{
@@ -451,6 +689,7 @@
     }
 
     .stepperValue{
+      flex:1;
       min-width:26px;
       text-align:center;
       font-size:15px;
@@ -459,23 +698,24 @@
     }
 
     .brandBtn{
-      min-height:40px;
-      height:40px;
+      min-height:36px;
+      height:36px;
       padding:0 14px;
-      border-radius:14px;
+      border-radius:12px;
       border:1px solid transparent;
       background:linear-gradient(135deg, var(--order-brand-primary), var(--order-brand-secondary));
-      color:#fff;
-      font-family:var(--sans);
+      color:var(--order-brand-text, #fff);
+      font-family:'Figtree', system-ui, -apple-system, sans-serif;
       font-size:13px;
-      font-weight:900;
+      font-weight:500;
+      letter-spacing:0.02em;
       cursor:pointer;
       display:inline-flex;
       align-items:center;
       justify-content:center;
       text-align:center;
       white-space:nowrap;
-      box-shadow:0 10px 18px color-mix(in srgb, var(--order-brand-primary) 24%, transparent);
+      box-shadow:0 8px 16px color-mix(in srgb, var(--order-brand-primary) 22%, transparent);
     }
 
     .brandBtn.secondary{
@@ -789,6 +1029,42 @@
       margin-top:3px;
     }
 
+    .optInBlock{
+      margin:18px 0 4px;
+      padding:14px 0 0;
+      border-top:1px solid rgba(15,23,42,0.06);
+    }
+
+    .optInRow{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      cursor:pointer;
+      padding:0;
+      background:transparent;
+      border:none;
+    }
+
+    .optInRow input[type="checkbox"]{
+      width:16px;
+      height:16px;
+      margin:3px 0 0;
+      accent-color:var(--order-brand-primary);
+      flex:0 0 auto;
+      border-radius:4px;
+    }
+
+    .optInBody{
+      min-width:0;
+    }
+
+    .optInLabel{
+      font-size:13px;
+      line-height:1.45;
+      font-weight:500;
+      color:var(--h-muted);
+    }
+
     .checkoutFooter{
       position:sticky;
       bottom:0;
@@ -798,16 +1074,17 @@
 
     .payButton{
       width:100%;
-      min-height:56px;
-      border-radius:18px;
+      min-height:48px;
+      border-radius:14px;
       border:1px solid transparent;
       background:linear-gradient(135deg, var(--order-brand-primary), var(--order-brand-secondary));
-      color:#fff;
-      font-family:var(--sans);
-      font-size:16px;
-      font-weight:950;
+      color:var(--order-brand-text, #fff);
+      font-family:'Figtree', system-ui, -apple-system, sans-serif;
+      font-size:15px;
+      font-weight:500;
+      letter-spacing:0.02em;
       cursor:pointer;
-      box-shadow:0 12px 22px color-mix(in srgb, var(--order-brand-primary) 26%, transparent);
+      box-shadow:0 10px 20px color-mix(in srgb, var(--order-brand-primary) 24%, transparent);
       transition:opacity 0.2s, box-shadow 0.2s;
     }
     .payButton:disabled{
@@ -837,30 +1114,57 @@
       font-weight:700;
     }
 
-    .bundleModalBackdrop{
+    .bundleModal{
       position:fixed;
       inset:0;
-      background:rgba(15,23,42,0.46);
       z-index:95;
       display:none;
-      align-items:flex-end;
-      justify-content:center;
+      flex-direction:column;
+      background:#fff;
     }
 
-    .bundleModalBackdrop.open{
+    .bundleModal.open{
       display:flex;
     }
 
-    .bundleModal{
-      width:min(860px, 100%);
-      max-height:90vh;
-      overflow:auto;
+    .bundleModalHeader{
+      flex-shrink:0;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      padding:14px 16px 10px;
       background:#fff;
-      border-radius:24px 24px 0 0;
-      box-shadow:0 -8px 24px rgba(15,23,42,0.18);
-      padding:12px 14px calc(20px + env(safe-area-inset-bottom));
+      border-bottom:1px solid rgba(15,23,42,0.06);
+    }
+
+    .bundleModalHeader .btnGhost{
+      flex:0 0 auto;
+      min-height:40px;
+      padding:0 14px;
+      border-radius:12px;
+      background:#fff;
+      border:1px solid var(--h-border);
+      box-shadow:0 2px 8px rgba(15,23,42,0.04);
+    }
+
+    .bundleModalBody{
+      flex:1;
+      overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+      padding:16px;
       display:grid;
-      gap:12px;
+      gap:14px;
+      align-content:start;
+    }
+
+    .bundleModalFooter{
+      flex-shrink:0;
+      background:#fff;
+      border-top:1px solid #eee;
+      padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+      display:grid;
+      gap:10px;
     }
 
     .bundleLineBlock{
@@ -925,8 +1229,10 @@
     }
 
     .bundleOptionName{
-      font-size:13px;
-      font-weight:900;
+      font-family:'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+      font-size:18px;
+      font-weight:600;
+      letter-spacing:-0.005em;
       line-height:1.15;
       color:var(--h-text);
     }
@@ -937,15 +1243,6 @@
       line-height:1.3;
       color:var(--h-muted);
       font-weight:700;
-    }
-
-    .bundleFooter{
-      position:sticky;
-      bottom:0;
-      background:linear-gradient(to top, #fff 75%, rgba(255,255,255,0));
-      padding-top:10px;
-      display:grid;
-      gap:10px;
     }
 
     .statusNotice{
@@ -1014,9 +1311,14 @@
         margin-top:14px;
       }
 
+      .heroMedia{
+        min-height:240px;
+      }
+
       .heroInner{
-        min-height:320px;
-        padding:18px 16px 18px;
+        min-height:240px;
+        padding:16px 14px 16px;
+        gap:16px;
       }
 
       .heroTopRow{
@@ -1028,15 +1330,37 @@
       }
 
       .heroVendorName{
-        font-size:24px;
+        font-size:22px;
       }
 
       .heroDropTitle{
-        font-size:29px;
+        font-size:27px;
       }
 
       .heroDropSub{
-        font-size:14px;
+        font-size:13px;
+      }
+
+      .heroHostLine{
+        font-size:12px;
+      }
+
+      .heroChip.primary{
+        min-height:36px;
+        font-size:12px;
+        padding:0 13px;
+      }
+
+      .heroLockup{
+        padding:12px 14px;
+      }
+
+      .heroLockupPrimary{
+        font-size:16px;
+      }
+
+      .heroLockupSecondary{
+        font-size:12px;
       }
 
       .sectionCard,
@@ -1048,22 +1372,38 @@
         grid-template-columns:1fr;
       }
 
-      .menuItemTop{
+      .menuItemHeader{
         align-items:flex-start;
+      }
+
+      .menuItemBody{
+        padding:12px 18px 12px;
+        gap:8px;
+      }
+
+      .menuItemCard:not(:has(.menuItemMedia)) .menuItemBody{
+        padding:20px 20px 16px;
+        gap:10px;
+      }
+
+      .menuItemName{
+        font-size:20px;
+      }
+
+      .menuItemCard:not(:has(.menuItemMedia)) .menuItemName{
+        font-size:24px;
+      }
+
+      .menuItemDesc{
+        font-size:13px;
       }
 
       .menuPrice{
         font-size:20px;
       }
 
-      .menuControls{
-        align-items:center;
-      }
-
-      .menuControlsRight{
-        width:100%;
-        justify-content:space-between;
-        margin-left:0;
+      .menuControlsRow{
+        flex-wrap:nowrap;
       }
 
       .stepper{
@@ -1077,10 +1417,16 @@
       }
 
       .brandBtn{
-        min-height:38px;
-        height:38px;
+        min-height:34px;
+        height:34px;
         padding:0 12px;
         font-size:12px;
+      }
+
+      .menuControls .brandBtn{
+        min-height:38px;
+        height:38px;
+        font-size:13px;
       }
 
       .basketSheet{
@@ -1110,7 +1456,6 @@
               <div class="heroTopLeft">
                 <img id="vendorLogoHero" class="heroLogo hidden" alt="Vendor logo" />
                 <div class="heroVendorBlock">
-                  <div class="heroVendorEyebrow" id="vendorEyebrow">ORDER DIRECT</div>
                   <h1 class="heroVendorName" id="heroVendorName">Loading vendor…</h1>
                   <p class="heroTagline" id="heroTagline">Preparing today’s menu…</p>
                 </div>
@@ -1123,11 +1468,17 @@
               <div class="heroDropEyebrow" id="heroDropEyebrow">Available now</div>
               <h2 class="heroDropTitle" id="heroDropTitle">Loading…</h2>
               <p class="heroDropSub" id="heroDropSub">Please wait</p>
+              <p class="heroHostLine hidden" id="heroHostLine"></p>
 
-              <div class="heroChips">
-                <div class="heroChip" id="chipOrderWindow">Loading…</div>
+              <div class="heroChips" id="heroChips">
+                <div class="heroChip primary" id="chipOrderWindow">Loading…</div>
                 <div class="heroChip" id="chipCapacityLeft">Loading…</div>
                 <div class="heroChip hidden" id="chipFulfilment">—</div>
+              </div>
+
+              <div class="heroLockup hidden" id="heroLockup">
+                <div class="heroLockupPrimary" id="heroLockupPrimary"></div>
+                <div class="heroLockupSecondary hidden" id="heroLockupSecondary"></div>
               </div>
             </div>
           </div>
@@ -1137,6 +1488,10 @@
           <div class="statusNotice hidden" id="pageStatusNotice"></div>
           <div class="errorBox" id="errorBox"></div>
         </div>
+      </div>
+
+      <div class="dropStoryCard hidden" id="dropStoryCard">
+        <p class="dropStoryBody" id="dropStoryBody"></p>
       </div>
 
       <div class="card sectionCard">
@@ -1208,6 +1563,11 @@
           <p class="sectionSub">A few final details before payment</p>
         </div>
 
+        <div class="field hidden" id="fulfilmentChoiceWrap">
+          <label>How would you like to receive this order?</label>
+          <div class="checkoutChoice" id="fulfilmentChoice"></div>
+        </div>
+
         <div class="checkoutGrid">
           <div class="field">
             <label for="customerName">Name</label>
@@ -1224,11 +1584,6 @@
         <div class="field">
           <label for="customerEmail">Email (optional)</label>
           <input id="customerEmail" type="email" placeholder="you@example.com" autocomplete="email" />
-        </div>
-
-        <div class="field hidden" id="fulfilmentChoiceWrap">
-          <label>How would you like to receive this order?</label>
-          <div class="checkoutChoice" id="fulfilmentChoice"></div>
         </div>
 
         <div id="addressWrap">
@@ -1280,11 +1635,11 @@
 
         <div class="statusNotice hidden" id="checkoutNotice"></div>
 
-        <div class="field" id="marketingOptInWrap">
-          <label class="choiceCard" for="contactOptIn">
+        <div class="optInBlock" id="marketingOptInWrap">
+          <label class="optInRow" for="contactOptIn">
             <input type="checkbox" id="contactOptIn" />
-            <div>
-              <div class="choiceCardTitle" id="marketingOptInLabel">Yes — keep me informed about future drops. No spam, ever.</div>
+            <div class="optInBody">
+              <div class="optInLabel" id="marketingOptInLabel">Yes — keep me informed about future drops. No spam, ever.</div>
               <a href="privacy.html" class="privacyFootnote" target="_blank" rel="noopener noreferrer">Privacy policy</a>
             </div>
           </label>
@@ -1300,31 +1655,29 @@
     </div>
   </div>
 
-  <div class="bundleModalBackdrop" id="bundleModalBackdrop">
-    <div class="bundleModal" role="dialog" aria-modal="true" aria-label="Customize bundle">
-      <div class="sheetHandle"></div>
-
-      <div class="basketHead" style="position:static; border-bottom:none; padding:0;">
-        <div>
-          <h3 class="sectionTitle" id="bundleModalTitle">Customize bundle</h3>
-          <p class="sectionSub" id="bundleModalSub">Choose what goes inside this bundle</p>
-        </div>
-        <button class="btnGhost" id="closeBundleModalBtn" type="button">Done</button>
+  <div class="bundleModal" id="bundleModalBackdrop" role="dialog" aria-modal="true" aria-label="Customize bundle">
+    <div class="bundleModalHeader">
+      <div>
+        <h3 class="sectionTitle" id="bundleModalTitle">Customize bundle</h3>
+        <p class="sectionSub" id="bundleModalSub">Choose what goes inside this bundle</p>
       </div>
+      <button class="btnGhost" id="closeBundleModalBtn" type="button">Done</button>
+    </div>
 
+    <div class="bundleModalBody" id="bundleModalBody">
       <div id="bundleModalContent">
         <div class="emptyState">Loading bundle…</div>
       </div>
+    </div>
 
-      <div class="bundleFooter">
-        <div class="basketTotals" style="padding:10px 12px;">
-          <div class="basketTotalLine">
-            <span>Bundle price</span>
-            <strong id="bundleModalPrice">£0.00</strong>
-          </div>
+    <div class="bundleModalFooter">
+      <div class="basketTotals" style="padding:10px 12px;">
+        <div class="basketTotalLine">
+          <span>Bundle price</span>
+          <strong id="bundleModalPrice">£0.00</strong>
         </div>
-        <button class="payButton" id="addBundleBtn" type="button">Add bundle</button>
       </div>
+      <button class="payButton" id="addBundleBtn" type="button">Add bundle</button>
     </div>
   </div>
 
@@ -1355,7 +1708,8 @@
         basket: [],
         selectedFulfilmentMode: null,
         bundleDraft: null,
-        openCategories: new Set(),
+        menuScrollObserver: null,
+        nextDrop: null,
         deliveryAreaBlocked: false /* T3-12a */
       };
 
@@ -1691,7 +2045,6 @@
         const logoUrl = vendor.logo_url || "";
         const vendorDisplayName = vendor.display_name || vendor.name || "Vendor";
         const tagline = vendor.tagline || "Freshly made and ready to order";
-        const orderLabel = (vendor.order_label || "Order direct").toUpperCase();
         const textOnPrimary = vendor.brand_text_on_primary || "#ffffff";
 
         document.documentElement.style.setProperty("--order-brand-primary", primary);
@@ -1700,7 +2053,6 @@
         document.documentElement.style.setProperty("--order-brand-soft-2", hexToRgba(secondary, 0.08));
         document.documentElement.style.setProperty("--order-brand-text", textOnPrimary);
 
-        byId("vendorEyebrow").textContent = orderLabel;
         byId("heroVendorName").textContent = vendorDisplayName;
         byId("heroTagline").textContent = tagline;
 
@@ -1886,6 +2238,22 @@
         }
 
         state.selectedFulfilmentMode = getDefaultSelectedFulfilmentMode();
+
+        if (getOrderWindowState().state === "closed" && state.drop?.vendor_id) {
+          const nextRes = await supabase
+            .from("drops")
+            .select("id, slug, name, opens_at, delivery_start")
+            .eq("vendor_id", state.drop.vendor_id)
+            .eq("status", "live")
+            .gt("opens_at", new Date().toISOString())
+            .order("opens_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+          if (!nextRes.error) {
+            state.nextDrop = nextRes.data || null;
+          }
+        }
       }
 
       function getDefaultSelectedFulfilmentMode() {
@@ -1909,10 +2277,12 @@
                 id: product.id,
                 name: product.name,
                 description: product.description || "",
+                image_url: product.image_url || row.image_url || "",
                 category_id: product.category_id || null,
                 category_name: getCategoryNameForItem(product),
                 base_price_pence: row.price_override_pence ?? product.price_pence ?? 0,
                 capacity_units: Number(product.capacity_units || 0),
+                is_sold_out: false,
                 sort_order: row.sort_order ?? product.sort_order ?? 9999,
                 category_sort_order: getCategorySortForItem(product)
               };
@@ -1928,10 +2298,12 @@
                 id: bundle.id,
                 name: bundle.name,
                 description: bundle.description || "",
+                image_url: bundle.image_url || row.image_url || "",
                 category_id: bundle.category_id || null,
                 category_name: getCategoryNameForItem(bundle),
                 base_price_pence: row.price_override_pence ?? bundle.price_pence ?? 0,
                 capacity_units: Number(bundle.capacity_units || 0),
+                is_sold_out: false,
                 sort_order: row.sort_order ?? bundle.sort_order ?? 9999,
                 category_sort_order: getCategorySortForItem(bundle)
               };
@@ -1954,30 +2326,78 @@
           });
       }
 
+      function renderHostLine() {
+        const el = byId("heroHostLine");
+        if (!el) return;
+
+        const hostName = state.host?.name || state.dropSummary?.host_name || "";
+        const hostType = String(state.host?.host_type || "").toLowerCase();
+
+        if (!hostName) {
+          el.textContent = "";
+          el.classList.add("hidden");
+          return;
+        }
+
+        let copy = "";
+        if (hostType === "neighbourhood") {
+          copy = `Neighbourhood drop · ${hostName}`;
+        } else {
+          copy = `Hosted by ${hostName}`;
+        }
+
+        el.textContent = copy;
+        el.classList.remove("hidden");
+      }
+
       function renderHero() {
         applyVendorBranding();
 
         const dropTitle = stripWindowSuffix(state.drop?.name || state.dropSummary?.drop_name || "Available now");
-        const hostName = state.host?.name || state.dropSummary?.host_name || "";
         const timingLabel = formatDateTimeRange(state.drop?.delivery_start, state.drop?.delivery_end);
         const fulfilmentLabel = getFulfilmentLabel(state.drop?.fulfilment_mode);
 
         byId("heroDropEyebrow").textContent = "Available now";
         byId("heroDropTitle").textContent = dropTitle;
-        byId("heroDropSub").textContent = [fulfilmentLabel, hostName, timingLabel].filter(Boolean).join(" • ");
+        byId("heroDropSub").textContent = [fulfilmentLabel, timingLabel].filter(Boolean).join(" • ");
+
+        renderHostLine();
 
         const orderState = getOrderWindowState();
         const closesAt = orderState.closesAt;
         const opensAt = orderState.opensAt;
-        const windowChip = byId("chipOrderWindow");
-        windowChip.className = "heroChip";
+        const heroMedia = byId("heroMedia");
+        const heroChips = byId("heroChips");
+        const heroLockup = byId("heroLockup");
+        const lockupPrimary = byId("heroLockupPrimary");
+        const lockupSecondary = byId("heroLockupSecondary");
 
-        if (orderState.state === "preopen") {
-          windowChip.textContent = opensAt ? `Orders open ${formatShortDateTime(opensAt)}` : "Not open yet";
-        } else if (orderState.state === "closed") {
-          windowChip.textContent = "Ordering closed";
-          windowChip.classList.add("low");
+        heroMedia.classList.toggle("dimmed", orderState.state === "closed");
+
+        if (orderState.state === "closed") {
+          heroChips.classList.add("hidden");
+          heroLockup.classList.remove("hidden");
+          lockupPrimary.textContent = "Ordering closed";
+          if (state.nextDrop?.opens_at) {
+            lockupSecondary.textContent = `Next drop: ${formatShortDateTime(new Date(state.nextDrop.opens_at))}`;
+            lockupSecondary.classList.remove("hidden");
+          } else {
+            lockupSecondary.textContent = "";
+            lockupSecondary.classList.add("hidden");
+          }
+        } else if (orderState.state === "preopen") {
+          heroChips.classList.add("hidden");
+          heroLockup.classList.remove("hidden");
+          lockupPrimary.textContent = opensAt ? `Orders open ${formatShortDateTime(opensAt)}` : "Orders open soon";
+          lockupSecondary.textContent = "";
+          lockupSecondary.classList.add("hidden");
         } else {
+          heroChips.classList.remove("hidden");
+          heroLockup.classList.add("hidden");
+
+          const windowChip = byId("chipOrderWindow");
+          windowChip.className = "heroChip primary";
+
           const hoursUntilClose = closesAt ? ((closesAt.getTime() - Date.now()) / (1000 * 60 * 60)) : null;
           if (closesAt && hoursUntilClose !== null && hoursUntilClose > 48) {
             windowChip.textContent = `Orders close ${formatShortCloseDate(closesAt)}`;
@@ -1986,32 +2406,35 @@
             windowChip.textContent = timeLeft ? `Orders close in ${timeLeft}` : "Ordering open";
           }
 
-          if (closesAt && (closesAt.getTime() - Date.now()) <= 2 * 60 * 60 * 1000) {
-            windowChip.classList.add("urgent");
+          const remaining = Math.max(0, getCapacityRemainingAfterBasket());
+          const rawRemaining = Math.max(0, getCapacityRemainingRaw());
+          const total = Math.max(0, Number(state.drop?.capacity_units_total ?? 0));
+          const lowThreshold = Math.max(5, Math.ceil(total * 0.1));
+          const capacityChip = byId("chipCapacityLeft");
+          capacityChip.className = "heroChip";
+
+          if (total > 0 && rawRemaining >= total) {
+            capacityChip.classList.add("hidden");
+            capacityChip.textContent = "";
+          } else if (total > 0 && rawRemaining > 0 && rawRemaining <= lowThreshold) {
+            capacityChip.classList.add("low");
+            capacityChip.textContent = "Last few places";
+          } else {
+            capacityChip.textContent = total > 0
+              ? `${remaining} of ${total} places remaining`
+              : `Places available · ${remaining}`;
           }
+
+          byId("chipFulfilment").classList.add("hidden");
         }
 
-        const capacityLabel = getCategoryDisplayName();
         const remaining = Math.max(0, getCapacityRemainingAfterBasket());
-        const rawRemaining = Math.max(0, getCapacityRemainingRaw());
-        const capacityChip = byId("chipCapacityLeft");
-        capacityChip.className = "heroChip";
-        capacityChip.textContent = formatCapacityLeft(remaining, capacityLabel);
-
-        if (rawRemaining <= 5) {
-          capacityChip.classList.add("low");
-        } else if (rawRemaining <= 12) {
-          capacityChip.classList.add("urgent");
-        }
-
-        byId("chipFulfilment").classList.add("hidden");
-
-        if (isDropClosed()) {
-          showNotice("Ordering for this service is now closed.", "warn");
-        } else if (isDropPreOpen()) {
-          showNotice("This service is scheduled. You’ll be able to order once the ordering window opens.", "warn");
+        if (orderState.state === "closed") {
+          showNotice("");
+        } else if (orderState.state === "preopen") {
+          showNotice("");
         } else if (remaining <= 0) {
-          showNotice(`${pluralizeLabel(capacityLabel)} capacity has been reached for this service.`, "warn");
+          showNotice("This service is fully booked.", "warn");
         } else {
           showNotice("");
         }
@@ -2043,33 +2466,48 @@
           groupsMap.get(key).items.push(item);
         });
 
-        wrap.innerHTML = `<div class="menuAccordionList">${[...groupsMap.values()]
-          .sort((a, b) => {
-            const sortCompare = Number(a.sort ?? 9999) - Number(b.sort ?? 9999);
+        const groups = [...groupsMap.values()].sort((a, b) => {
+          const sortCompare = Number(a.sort ?? 9999) - Number(b.sort ?? 9999);
+          if (sortCompare !== 0) return sortCompare;
+          return String(a.name).localeCompare(String(b.name));
+        });
+
+        const pills = groups.map((group, idx) => `
+          <a class="menuPill js-menu-pill ${idx === 0 ? "active" : ""}"
+             href="#cat-${escapeHtml(group.key)}"
+             data-category-key="${escapeHtml(group.key)}">
+            ${escapeHtml(group.name)}
+          </a>
+        `).join("");
+
+        const sections = groups.map((group) => {
+          const sortedItems = group.items.slice().sort((a, b) => {
+            const sortCompare = Number(a.sort_order ?? 9999) - Number(b.sort_order ?? 9999);
             if (sortCompare !== 0) return sortCompare;
+
+            if (a.menu_item_type !== b.menu_item_type) {
+              return String(a.menu_item_type).localeCompare(String(b.menu_item_type));
+            }
+
             return String(a.name).localeCompare(String(b.name));
-          })
-          .map((group) => {
-            const isOpen = state.openCategories.has(group.key);
+          });
 
-            const sortedItems = group.items.slice().sort((a, b) => {
-              const sortCompare = Number(a.sort_order ?? 9999) - Number(b.sort_order ?? 9999);
-              if (sortCompare !== 0) return sortCompare;
+          const ordersHidden = isDropClosed() || isDropPreOpen();
 
-              if (a.menu_item_type !== b.menu_item_type) {
-                return String(a.menu_item_type).localeCompare(String(b.menu_item_type));
-              }
+          const cards = sortedItems.map((item) => {
+            const mediaHtml = item.image_url
+              ? `<div class="menuItemMedia image" style="background-image:url('${escapeHtml(item.image_url)}');" role="img" aria-label="${escapeHtml(item.name)}">${item.is_sold_out ? `<div class="menuItemSoldOutBadge">Sold out</div>` : ""}</div>`
+              : "";
 
-              return String(a.name).localeCompare(String(b.name));
-            });
+            if (item.menu_item_type === "product") {
+              const qty = getProductBasketQuantity(item.id);
+              const disabled = item.is_sold_out || isDropClosed();
 
-            const cards = sortedItems.map((item) => {
-              if (item.menu_item_type === "product") {
-                const qty = getProductBasketQuantity(item.id);
-
-                return `
-                  <div class="menuItemCard">
-                    <div class="menuItemTop">
+              return `
+                <div class="menuItemCard ${item.is_sold_out ? "soldOut" : ""}">
+                  ${mediaHtml}
+                  <div class="menuItemBody">
+                    <div class="menuItemHeader">
                       <div class="menuItemCopy">
                         <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
                         ${item.description ? `<p class="menuItemDesc">${escapeHtml(item.description)}</p>` : ""}
@@ -2081,26 +2519,33 @@
                       </div>
                     </div>
 
-                    <div class="menuControls">
-                      <div class="menuControlsRight">
-                        <div class="stepper">
-                          <button type="button" class="js-product-minus" data-product-id="${item.id}" ${qty <= 0 || isDropClosed() ? "disabled" : ""}>−</button>
-                          <div class="stepperValue">${qty}</div>
-                          <button type="button" class="js-product-plus" data-product-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>+</button>
-                        </div>
-
-                        <button class="brandBtn ${qty > 0 ? "secondary" : ""} js-product-add" type="button" data-product-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>
-                          ${qty > 0 ? "View basket" : "Add to order"}
+                    ${ordersHidden ? "" : `
+                      <div class="menuControls">
+                        ${qty > 0 ? `
+                          <div class="menuControlsRow">
+                            <div class="stepper">
+                              <button type="button" class="js-product-minus" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>−</button>
+                              <div class="stepperValue">${qty}</div>
+                              <button type="button" class="js-product-plus" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>+</button>
+                            </div>
+                          </div>
+                        ` : ""}
+                        <button class="brandBtn ${qty > 0 ? "secondary" : ""} js-product-add" type="button" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>
+                          ${item.is_sold_out ? "Sold out" : (qty > 0 ? "View basket" : "Add to order")}
                         </button>
                       </div>
-                    </div>
+                    `}
                   </div>
-                `;
-              }
+                </div>
+              `;
+            }
 
-              return `
-                <div class="menuItemCard">
-                  <div class="menuItemTop">
+            const bundleDisabled = item.is_sold_out || isDropClosed();
+            return `
+              <div class="menuItemCard ${item.is_sold_out ? "soldOut" : ""}">
+                ${mediaHtml}
+                <div class="menuItemBody">
+                  <div class="menuItemHeader">
                     <div class="menuItemCopy">
                       <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
                       ${item.description ? `<p class="menuItemDesc">${escapeHtml(item.description)}</p>` : ""}
@@ -2112,31 +2557,72 @@
                     </div>
                   </div>
 
-                  <div class="menuControls">
-                    <div class="menuLeadNote">Choose what goes inside before adding it to your order.</div>
-                    <button class="brandBtn js-open-bundle" type="button" data-bundle-id="${item.id}" ${isDropClosed() ? "disabled" : ""}>
-                      Customize
-                    </button>
-                  </div>
-                </div>
-              `;
-            }).join("");
-
-            return `
-              <div class="menuCategoryBlock ${isOpen ? "open" : ""}" data-category-key="${escapeHtml(group.key)}">
-                <button class="menuCategoryToggle js-category-toggle" type="button" data-category-key="${escapeHtml(group.key)}" aria-expanded="${isOpen ? "true" : "false"}">
-                  <div class="menuCategoryTitleWrap">
-                    <h4 class="menuCategoryTitle">${escapeHtml(group.name)}</h4>
-                    <div class="menuCategoryHint">Tap to ${isOpen ? "hide" : "view"} items</div>
-                  </div>
-                  <div class="menuCategoryChevron">⌄</div>
-                </button>
-                <div class="menuCategoryContent">
-                  <div class="menuCardGrid">${cards}</div>
-                </div>
+                  ${ordersHidden ? "" : `
+                    <div class="menuControls">
+                      <button class="brandBtn js-open-bundle" type="button" data-bundle-id="${item.id}" ${bundleDisabled ? "disabled" : ""}>
+                        ${item.is_sold_out ? "Sold out" : "Customize"}
+                      </button>
+                    </div>
+                  `}
               </div>
             `;
-          }).join("")}</div>`;
+          }).join("");
+
+          return `
+            <section class="menuCategorySection" id="cat-${escapeHtml(group.key)}" data-category-key="${escapeHtml(group.key)}">
+              <h4 class="menuCategoryHeading">${escapeHtml(group.name)}</h4>
+              <div class="menuCardGrid">${cards}</div>
+            </section>
+          `;
+        }).join("");
+
+        wrap.innerHTML = `
+          <nav class="menuPillNav" id="menuPillNav" aria-label="Menu categories">
+            <div class="menuPillNavInner">${pills}</div>
+          </nav>
+          <div class="menuCategorySectionList">${sections}</div>
+        `;
+
+        setupMenuScrollSpy();
+      }
+
+      function setupMenuScrollSpy() {
+        if (state.menuScrollObserver) {
+          state.menuScrollObserver.disconnect();
+          state.menuScrollObserver = null;
+        }
+
+        const sections = Array.from(document.querySelectorAll(".menuCategorySection"));
+        if (!sections.length) return;
+
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const key = entry.target.dataset.categoryKey;
+            if (!key) return;
+            document.querySelectorAll(".js-menu-pill").forEach((pill) => {
+              pill.classList.toggle("active", pill.dataset.categoryKey === key);
+            });
+            scrollPillIntoView(key);
+          });
+        }, {
+          rootMargin: "-72px 0px -55% 0px",
+          threshold: 0
+        });
+
+        sections.forEach((section) => observer.observe(section));
+        state.menuScrollObserver = observer;
+      }
+
+      function scrollPillIntoView(key) {
+        const pill = document.querySelector(`.js-menu-pill[data-category-key="${CSS.escape(key)}"]`);
+        const inner = document.querySelector(".menuPillNavInner");
+        if (!pill || !inner) return;
+        const pillRect = pill.getBoundingClientRect();
+        const innerRect = inner.getBoundingClientRect();
+        if (pillRect.left < innerRect.left + 8 || pillRect.right > innerRect.right - 8) {
+          pill.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        }
       }
 
       function getProductBasketQuantity(productId) {
@@ -2236,7 +2722,8 @@
         const bar = byId("basketBar");
         bar.classList.toggle("show", hasItems);
 
-        byId("basketSummaryTop").textContent = `${getBasketItemCount()} item${getBasketItemCount() === 1 ? "" : "s"}`;
+        const itemCount = getBasketItemCount();
+        byId("basketSummaryTop").textContent = `Your order · ${itemCount} item${itemCount === 1 ? "" : "s"}`;
         byId("basketSummarySub").textContent = "View basket";
         byId("basketSummaryPrice").textContent = formatMoneyPence(getGrandTotalPence());
 
@@ -2409,6 +2896,7 @@
         }
 
         byId("bundleModalBackdrop").classList.add("open");
+        byId("bundleModalBody").scrollTop = 0;
         document.body.style.overflow = "hidden";
       }
 
@@ -2816,9 +3304,27 @@ async function handoffToPayment() {
 
       function renderAll() {
         renderHero();
+        renderDropStory();
         renderMenu();
         renderBasketBar();
         renderBasketSheet();
+      }
+
+      function renderDropStory() {
+        const card = byId("dropStoryCard");
+        const body = byId("dropStoryBody");
+        if (!card || !body) return;
+
+        const intro = String(state.drop?.drop_intro || "").trim();
+
+        if (!intro) {
+          body.textContent = "";
+          card.classList.add("hidden");
+          return;
+        }
+
+        body.textContent = intro;
+        card.classList.remove("hidden");
       }
 
       async function refreshCapacity() {
@@ -2883,13 +3389,16 @@ async function handoffToPayment() {
           const basketMinus = e.target.closest(".js-basket-minus");
           const basketPlus = e.target.closest(".js-basket-plus");
           const basketRemove = e.target.closest(".js-basket-remove");
-          const categoryToggle = e.target.closest(".js-category-toggle");
+          const menuPill = e.target.closest(".js-menu-pill");
 
-          if (categoryToggle) {
-            const key = categoryToggle.dataset.categoryKey;
-            if (state.openCategories.has(key)) state.openCategories.delete(key);
-            else state.openCategories.add(key);
-            renderMenu();
+          if (menuPill) {
+            e.preventDefault();
+            const key = menuPill.dataset.categoryKey;
+            const target = document.getElementById(`cat-${key}`);
+            if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+            document.querySelectorAll(".js-menu-pill").forEach((p) => {
+              p.classList.toggle("active", p.dataset.categoryKey === key);
+            });
             return;
           }
 
@@ -3141,9 +3650,9 @@ async function handoffToPayment() {
           const startTime = earliest.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
           const endTime   = latest.toLocaleTimeString("en-GB",   { hour: "2-digit", minute: "2-digit" });
           const fulfilmentLabel = getFulfilmentLabel(state.drop?.fulfilment_mode);
-          const hostName = state.host?.name || state.dropSummary?.host_name || "";
           const datePart = earliest.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
-          byId("heroDropSub").textContent = [fulfilmentLabel, hostName, `${datePart} • ${startTime}–${endTime}`].filter(Boolean).join(" • ");
+          byId("heroDropSub").textContent = [fulfilmentLabel, `${datePart} • ${startTime}–${endTime}`].filter(Boolean).join(" • ");
+          renderHostLine();
         }
 
         /* Build the selection UI in the menu card area */
