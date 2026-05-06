@@ -28,10 +28,13 @@
     }
 
     html{
+      max-width:100%;
       overflow-x:hidden;
     }
 
     body.orderBody{
+      max-width:100%;
+      overflow-x:hidden;
       background:
         radial-gradient(1200px 600px at 15% -10%, var(--order-brand-soft), rgba(249,115,22,0) 60%),
         radial-gradient(900px 450px at 90% 0%, var(--order-brand-soft-2), rgba(251,146,60,0) 55%),
@@ -48,6 +51,9 @@
     }
 
     .heroOrderCard{
+      box-sizing:border-box;
+      width:100%;
+      max-width:100%;
       overflow:hidden;
       position:relative;
       padding:0;
@@ -219,6 +225,9 @@
       flex-wrap:nowrap;
       gap:8px;
       padding-top:2px;
+      width:100%;
+      max-width:100%;
+      min-width:0;
       overflow-x:auto;
       -webkit-overflow-scrolling:touch;
       scrollbar-width:none;
@@ -318,8 +327,13 @@
     }
 
     .sectionCard{
+      box-sizing:border-box;
+      width:100%;
+      max-width:100%;
+      min-width:0;
       padding:18px;
       display:grid;
+      grid-template-columns:minmax(0, 1fr);
       gap:14px;
     }
 
@@ -377,21 +391,29 @@
       position:sticky;
       top:0;
       z-index:8;
-      margin:0 -18px 14px;
-      padding:10px 18px 10px;
+      width:100%;
+      max-width:100%;
+      box-sizing:border-box;
+      margin:0 0 14px;
+      padding:10px 0 10px;
       background:rgba(255,255,255,0.92);
       backdrop-filter:blur(10px);
       -webkit-backdrop-filter:blur(10px);
       border-bottom:1px solid rgba(15,23,42,0.06);
+      overflow:hidden;
     }
 
     .menuPillNavInner{
       display:flex;
       gap:8px;
+      width:100%;
+      max-width:100%;
+      min-width:0;
+      white-space:nowrap;
       overflow-x:auto;
       -webkit-overflow-scrolling:touch;
       scrollbar-width:none;
-      scroll-padding:0 18px;
+      scroll-padding:0 0;
     }
 
     .menuPillNavInner::-webkit-scrollbar{
@@ -458,12 +480,12 @@
 
     @media (max-width:720px){
       .menuPillNav{
-        margin:0 -12px 10px;
-        padding:8px 12px 8px;
+        margin:0 0 10px;
+        padding:8px 0 8px;
       }
 
       .menuPillNavInner{
-        scroll-padding:0 12px;
+        scroll-padding:0 0;
       }
 
       .menuPill{
@@ -490,6 +512,10 @@
     }
 
     .menuItemCard{
+      box-sizing:border-box;
+      width:100%;
+      max-width:100%;
+      min-width:0;
       border:1px solid rgba(15,23,42,0.06);
       border-radius:22px;
       background:#faf7f4;
