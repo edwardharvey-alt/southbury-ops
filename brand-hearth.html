@@ -10,6 +10,7 @@
   <script src="./assets/config.js"></script>
   <script src="./assets/hearth-vendor.js?v=1"></script>
   <script src="./assets/vendor-nav.js?v=2"></script>
+  <script src="./assets/hearth-photo-upload.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.74.0"></script>
 
   <style>
@@ -489,12 +490,6 @@
       display:flex;
       align-items:center;
       justify-content:center;
-    }
-
-    .assetUploadPreview.heroPreview{
-      width:100%;
-      height:100px;
-      border-radius:12px;
     }
 
     .assetUploadPreview img{
@@ -985,16 +980,7 @@
 
               <div class="field">
                 <label>Hero Image</label>
-                <div class="assetUploadWidget">
-                  <div class="assetUploadPreview heroPreview" id="heroPreview">
-                    <span class="assetUploadPlaceholder">No hero image set</span>
-                  </div>
-                  <div class="assetUploadControls">
-                    <button class="btnGhost" type="button" id="heroUploadBtn">Choose file</button>
-                    <span class="assetUploadStatus" id="heroUploadStatus"></span>
-                  </div>
-                  <input type="file" id="heroFileInput" accept="image/*" style="display:none;" />
-                </div>
+                <div id="heroUploadContainer"></div>
                 <div class="helperText">Wide, atmospheric image for the top of the order page.</div>
               </div>
             </div>
@@ -1143,7 +1129,8 @@
       previewHost: null,
       saveState: "saved",
       logoDisplayUrl: null,
-      heroDisplayUrl: null
+      heroDisplayUrl: null,
+      heroUpload: null
     };
 
     function byId(id) {
@@ -1323,7 +1310,32 @@
       byId("brandTextOnPrimary").value = vendor.brand_text_on_primary || "#FFFFFF";
       syncColourLabels();
       updateAssetPreview("logoPreview", vendor.logo_url || "");
-      updateAssetPreview("heroPreview", vendor.hero_image_url || "");
+      mountHeroUploadIfNeeded(vendor);
+    }
+
+    function mountHeroUploadIfNeeded(vendor) {
+      if (state.heroUpload) return;
+      const container = byId("heroUploadContainer");
+      if (!container || typeof window.HearthPhotoUpload !== "function") return;
+
+      state.heroUpload = new HearthPhotoUpload(container, {
+        aspectRatio: 16 / 9,
+        storagePath: () => `vendors/${vendor.slug}/hero-${Date.now()}.jpg`,
+        initialUrl: vendor.hero_image_url || null,
+        guidanceCopy: "hero",
+        onUpload: (publicUrl) => {
+          byId("vendorHeroImageUrl").value = publicUrl;
+          state.heroDisplayUrl = `${publicUrl}?t=${Date.now()}`;
+          applyPreview();
+          markDirty();
+        },
+        onRemove: () => {
+          byId("vendorHeroImageUrl").value = "";
+          state.heroDisplayUrl = null;
+          applyPreview();
+          markDirty();
+        }
+      });
     }
 
     // T4-19: Show a quiet confirmation when vendor arrives from onboarding
@@ -1370,10 +1382,8 @@
     }
 
     async function handleAssetUpload(file, assetType) {
-      const statusId = assetType === "logo" ? "logoUploadStatus" : "heroUploadStatus";
-      const previewId = assetType === "logo" ? "logoPreview" : "heroPreview";
-      const hiddenId = assetType === "logo" ? "vendorLogoUrl" : "vendorHeroImageUrl";
-      const statusEl = byId(statusId);
+      // Hero now uses HearthPhotoUpload (T4-31b). This handler is logo-only.
+      const statusEl = byId("logoUploadStatus");
 
       statusEl.textContent = "Uploading…";
       statusEl.className = "assetUploadStatus uploading";
@@ -1381,25 +1391,18 @@
       try {
         const { cleanUrl, displayUrl } = await uploadAsset(file, assetType);
 
-        // Save the clean URL to the DB and to state — no cache-buster suffix
-        byId(hiddenId).value = cleanUrl;
+        byId("vendorLogoUrl").value = cleanUrl;
+        state.logoDisplayUrl = displayUrl;
+        updateAssetPreview("logoPreview", displayUrl);
 
-        if (assetType === "logo") state.logoDisplayUrl = displayUrl;
-        if (assetType === "hero") state.heroDisplayUrl = displayUrl;
-
-        // Use the cache-busted URL only for the local preview so the new
-        // image is shown immediately without the browser serving the old one
-        updateAssetPreview(previewId, displayUrl);
-
-        const dbField = assetType === "logo" ? "logo_url" : "hero_image_url";
         const { data: updateData, error: dbError } = await supabase.functions.invoke("update-vendor", {
-          body: { vendor_id: state.vendor.id, fields: { [dbField]: cleanUrl } }
+          body: { vendor_id: state.vendor.id, fields: { logo_url: cleanUrl } }
         });
 
         if (dbError) throw dbError;
         if (!updateData || updateData.error) throw new Error(updateData?.error || "Save failed");
 
-        state.vendor = { ...state.vendor, [dbField]: cleanUrl };
+        state.vendor = { ...state.vendor, logo_url: cleanUrl };
 
         statusEl.textContent = "Uploaded";
         statusEl.className = "assetUploadStatus done";
@@ -1766,21 +1769,10 @@
         byId("logoFileInput").click();
       });
 
-      byId("heroUploadBtn").addEventListener("click", () => {
-        byId("heroFileInput").click();
-      });
-
       byId("logoFileInput").addEventListener("change", (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
         handleAssetUpload(file, "logo");
-        e.target.value = "";
-      });
-
-      byId("heroFileInput").addEventListener("change", (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        handleAssetUpload(file, "hero");
         e.target.value = "";
       });
 
