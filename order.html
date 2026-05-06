@@ -646,6 +646,7 @@
     .menuControlsRow{
       display:flex;
       align-items:center;
+      justify-content:center;
       gap:10px;
       flex-wrap:wrap;
     }
@@ -656,11 +657,6 @@
       height:40px;
       font-size:13px;
       border-radius:12px;
-    }
-
-    .menuControlsRow .stepper{
-      flex:1;
-      justify-content:center;
     }
 
     .menuItemCard.soldOut{
@@ -1137,11 +1133,22 @@
     .bundleModalHeader{
       flex-shrink:0;
       display:flex;
-      justify-content:flex-end;
-      align-items:center;
-      padding:12px 16px;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      padding:14px 16px 10px;
       background:#fff;
-      border-bottom:1px solid #eee;
+      border-bottom:1px solid rgba(15,23,42,0.06);
+    }
+
+    .bundleModalHeader .btnGhost{
+      flex:0 0 auto;
+      min-height:40px;
+      padding:0 14px;
+      border-radius:12px;
+      background:#fff;
+      border:1px solid var(--h-border);
+      box-shadow:0 2px 8px rgba(15,23,42,0.04);
     }
 
     .bundleModalBody{
@@ -1653,13 +1660,14 @@
 
   <div class="bundleModal" id="bundleModalBackdrop" role="dialog" aria-modal="true" aria-label="Customize bundle">
     <div class="bundleModalHeader">
-      <button id="closeBundleModalBtn" style="font-family:'Figtree',sans-serif; font-size:15px; font-weight:500; background:none; border:none; padding:4px 8px; cursor:pointer; color:#1a1a1a;">Done</button>
+      <div>
+        <h3 class="sectionTitle" id="bundleModalTitle">Customize bundle</h3>
+        <p class="sectionSub" id="bundleModalSub">Choose what goes inside this bundle</p>
+      </div>
+      <button class="btnGhost" id="closeBundleModalBtn" type="button">Done</button>
     </div>
 
     <div class="bundleModalBody" id="bundleModalBody">
-      <h3 class="sectionTitle" id="bundleModalTitle">Customize bundle</h3>
-      <p class="sectionSub" id="bundleModalSub">Choose what goes inside this bundle</p>
-
       <div id="bundleModalContent">
         <div class="emptyState">Loading bundle…</div>
       </div>
