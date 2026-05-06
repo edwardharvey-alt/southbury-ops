@@ -86,6 +86,53 @@
   }
 
   // ------------------------------------------------------------------
+  // heic2any singleton loader
+  // ------------------------------------------------------------------
+  const HEIC2ANY_JS_URL =
+    "https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js";
+
+  let heic2anyPromise = null;
+
+  function loadHeic2anyOnce() {
+    if (heic2anyPromise) return heic2anyPromise;
+    heic2anyPromise = new Promise((resolve, reject) => {
+      if (typeof window.heic2any === "function") {
+        resolve(window.heic2any);
+        return;
+      }
+      try {
+        const existing = document.querySelector(
+          'script[data-hpu-heic2any]'
+        );
+        if (existing) {
+          existing.addEventListener("load", () =>
+            resolve(window.heic2any)
+          );
+          existing.addEventListener("error", () => {
+            heic2anyPromise = null;
+            reject(new Error("heic2any-load-failed"));
+          });
+          return;
+        }
+        const script = document.createElement("script");
+        script.src = HEIC2ANY_JS_URL;
+        script.async = true;
+        script.setAttribute("data-hpu-heic2any", "");
+        script.onload = () => resolve(window.heic2any);
+        script.onerror = () => {
+          heic2anyPromise = null;
+          reject(new Error("heic2any-load-failed"));
+        };
+        document.head.appendChild(script);
+      } catch (err) {
+        heic2anyPromise = null;
+        reject(err);
+      }
+    });
+    return heic2anyPromise;
+  }
+
+  // ------------------------------------------------------------------
   // Component CSS (injected once)
   // ------------------------------------------------------------------
   const STYLE_ID = "hpu-styles";
@@ -371,10 +418,12 @@
 
   const ERROR_COPY = {
     tooLarge: "That file's a bit big. Please choose one under 10MB.",
-    wrongFormat: "Please upload a JPEG, PNG, or WebP image.",
+    wrongFormat: "Please upload a JPEG, PNG, WebP, or HEIC image.",
     uploadFailed: "We couldn't save that. Please try again.",
     cropperLoad:
       "Something went wrong loading the photo editor. Please refresh and try again.",
+    heicConvert:
+      "We couldn't read that photo. Please try a JPEG or PNG.",
   };
 
   function escapeHTML(s) {
@@ -405,11 +454,20 @@
     if (!file) return false;
     if (file.size > MAX_BYTES) return "tooLarge";
     if (file.type && !ACCEPTED_MIME.includes(file.type)) {
-      // Some iOS HEIC files come through with empty type — let those pass
-      // here and rely on Image decode failure further down.
-      return "wrongFormat";
+      // Some iOS HEIC files come through with empty MIME — fall back to
+      // the file extension before deciding it's wrong.
+      if (!/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name || "")) {
+        return "wrongFormat";
+      }
     }
     return true;
+  }
+
+  function isHeicFile(file) {
+    if (!file) return false;
+    const t = file.type || "";
+    if (t === "image/heic" || t === "image/heif") return true;
+    return /\.(heic|heif)$/i.test(file.name || "");
   }
 
   // ------------------------------------------------------------------
@@ -480,6 +538,19 @@
               data-hpu-cancel>Cancel</button>
             <button type="button" class="hpu-btn hpu-btn-primary"
               data-hpu-save>Save</button>
+          </div>
+        </div>
+
+        <!-- Converting (HEIC → JPEG) -->
+        <div class="hpu-state-converting hpu-hidden">
+          <div class="hpu-frame" style="padding-top:${padTopPct.toFixed(
+            4
+          )}%;">
+            <div class="hpu-uploading-inner"
+              style="position:absolute;inset:0;">
+              <div class="hpu-spinner"></div>
+              <div class="hpu-status">Converting photo…</div>
+            </div>
           </div>
         </div>
 
@@ -577,6 +648,7 @@
     if (
       state === "empty" ||
       state === "selected" ||
+      state === "converting" ||
       state === "uploading" ||
       state === "has-image" ||
       state === "error"
@@ -585,6 +657,7 @@
       const map = {
         empty: ".hpu-state-empty",
         selected: ".hpu-state-selected",
+        converting: ".hpu-state-converting",
         uploading: ".hpu-state-uploading",
         "has-image": ".hpu-state-has-image",
         error: ".hpu-state-error",
@@ -608,7 +681,7 @@
     this._setState("error");
   };
 
-  HearthPhotoUpload.prototype._handleFile = function (file) {
+  HearthPhotoUpload.prototype._handleFile = async function (file) {
     const check = isAcceptableFile(file);
     if (check === "tooLarge") {
       this._showError("tooLarge");
@@ -619,8 +692,29 @@
       return;
     }
 
+    let processedFile = file;
+    if (isHeicFile(file)) {
+      this._setState("converting");
+      try {
+        const heic2any = await loadHeic2anyOnce();
+        const result = await heic2any({
+          blob: file,
+          toType: "image/jpeg",
+          quality: 0.9,
+        });
+        const blob = Array.isArray(result) ? result[0] : result;
+        const newName =
+          (file.name || "photo.heic").replace(/\.(heic|heif)$/i, ".jpg") ||
+          "photo.jpg";
+        processedFile = new File([blob], newName, { type: "image/jpeg" });
+      } catch (err) {
+        this._showError("heicConvert");
+        return;
+      }
+    }
+
     loadCropperOnce()
-      .then((Cropper) => this._beginCrop(file, Cropper))
+      .then((Cropper) => this._beginCrop(processedFile, Cropper))
       .catch(() => this._showError("cropperLoad"));
   };
 
