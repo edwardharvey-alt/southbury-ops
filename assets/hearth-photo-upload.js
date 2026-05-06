@@ -90,7 +90,7 @@
   // heic2any singleton loader
   // ------------------------------------------------------------------
   const HEIC2ANY_JS_URL =
-    "https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js";
+    "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
 
   let heic2anyPromise = null;
 
