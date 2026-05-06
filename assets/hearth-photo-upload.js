@@ -87,50 +87,86 @@
   }
 
   // ------------------------------------------------------------------
-  // heic2any singleton loader
+  // libheif-js singleton loader (self-hosted)
   // ------------------------------------------------------------------
-  const HEIC2ANY_JS_URL =
-    "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
+  const LIBHEIF_JS_URL = "assets/libheif.js";
 
-  let heic2anyPromise = null;
+  let libheifPromise = null;
 
-  function loadHeic2anyOnce() {
-    if (heic2anyPromise) return heic2anyPromise;
-    heic2anyPromise = new Promise((resolve, reject) => {
-      if (typeof window.heic2any === "function") {
-        resolve(window.heic2any);
+  function loadLibheifOnce() {
+    if (libheifPromise) return libheifPromise;
+    libheifPromise = new Promise((resolve, reject) => {
+      if (window.libheif) {
+        resolve(window.libheif);
         return;
       }
       try {
         const existing = document.querySelector(
-          'script[data-hpu-heic2any]'
+          'script[data-hpu-libheif]'
         );
         if (existing) {
           existing.addEventListener("load", () =>
-            resolve(window.heic2any)
+            resolve(window.libheif)
           );
           existing.addEventListener("error", () => {
-            heic2anyPromise = null;
-            reject(new Error("heic2any-load-failed"));
+            libheifPromise = null;
+            reject(new Error("libheif-load-failed"));
           });
           return;
         }
         const script = document.createElement("script");
-        script.src = HEIC2ANY_JS_URL;
+        script.src = LIBHEIF_JS_URL;
         script.async = true;
-        script.setAttribute("data-hpu-heic2any", "");
-        script.onload = () => resolve(window.heic2any);
+        script.setAttribute("data-hpu-libheif", "");
+        script.onload = () => resolve(window.libheif);
         script.onerror = () => {
-          heic2anyPromise = null;
-          reject(new Error("heic2any-load-failed"));
+          libheifPromise = null;
+          reject(new Error("libheif-load-failed"));
         };
         document.head.appendChild(script);
       } catch (err) {
-        heic2anyPromise = null;
+        libheifPromise = null;
         reject(err);
       }
     });
-    return heic2anyPromise;
+    return libheifPromise;
+  }
+
+  async function decodeHeicToJpeg(file) {
+    const libheifEntry = await loadLibheifOnce();
+    const libheifModule =
+      typeof libheifEntry === "function"
+        ? await libheifEntry()
+        : libheifEntry;
+    const arrayBuffer = await file.arrayBuffer();
+    const decoder = new libheifModule.HeifDecoder();
+    const images = decoder.decode(arrayBuffer);
+    if (!images || images.length === 0) {
+      throw new Error("No images in HEIF");
+    }
+    const image = images[0];
+    const width = image.get_width();
+    const height = image.get_height();
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    const imageData = ctx.createImageData(width, height);
+    await new Promise((resolve, reject) => {
+      image.display(imageData, (displayed) => {
+        if (!displayed) return reject(new Error("HEIF display failed"));
+        ctx.putImageData(displayed, 0, 0);
+        resolve();
+      });
+    });
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) =>
+          blob ? resolve(blob) : reject(new Error("toBlob failed")),
+        "image/jpeg",
+        0.9
+      );
+    });
   }
 
   // ------------------------------------------------------------------
@@ -424,7 +460,7 @@
     cropperLoad:
       "Something went wrong loading the photo editor. Please refresh and try again.",
     heicConvert:
-      "We couldn't read that photo. Please try a JPEG or PNG.",
+      "We couldn't decode this HEIC photo. Try uploading from your phone, or convert to JPEG first using Preview (File → Export As).",
   };
 
   function escapeHTML(s) {
@@ -697,13 +733,7 @@
     if (isHeicFile(file)) {
       this._setState("converting");
       try {
-        const heic2any = await loadHeic2anyOnce();
-        const result = await heic2any({
-          blob: file,
-          toType: "image/jpeg",
-          quality: 0.9,
-        });
-        const blob = Array.isArray(result) ? result[0] : result;
+        const blob = await decodeHeicToJpeg(file);
         const newName =
           (file.name || "photo.heic").replace(/\.(heic|heif)$/i, ".jpg") ||
           "photo.jpg";
