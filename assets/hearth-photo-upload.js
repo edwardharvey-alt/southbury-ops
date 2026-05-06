@@ -18,7 +18,8 @@
  * Notes:
  * - Cropper.js is loaded lazily from CDN (singleton across the page).
  * - Output is always JPEG at quality 0.85, max edge 1600px.
- * - Upload uses window._getHearthClient().storage.from('assets').
+ * - Upload uses window._getHearthClient().storage.from('vendor-assets')
+ *   (matches the existing T2-7 logo upload pattern).
  * - The caller is responsible for persisting the returned public URL
  *   via the appropriate Edge Function (e.g. update-vendor,
  *   update-product) and clearing it via the same path on remove.
@@ -859,11 +860,11 @@
     this._setState("uploading");
 
     client.storage
-      .from("assets")
+      .from("vendor-assets")
       .upload(path, blob, { upsert: true, contentType: "image/jpeg" })
       .then((res) => {
         if (res && res.error) throw res.error;
-        const pub = client.storage.from("assets").getPublicUrl(path);
+        const pub = client.storage.from("vendor-assets").getPublicUrl(path);
         const publicUrl =
           (pub && pub.data && pub.data.publicUrl) || null;
         if (!publicUrl) throw new Error("no-public-url");
