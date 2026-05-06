@@ -136,9 +136,7 @@
     const libheifEntry = await loadLibheifOnce();
     const libheifModule =
       typeof libheifEntry === "function"
-        ? await libheifEntry({
-            locateFile: (path) => `assets/${path}`,
-          })
+        ? await libheifEntry()
         : libheifEntry;
     const arrayBuffer = await file.arrayBuffer();
     const decoder = new libheifModule.HeifDecoder();
