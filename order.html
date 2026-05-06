@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hearth — Order</title>
 
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
@@ -32,7 +32,6 @@
     }
 
     body.orderBody{
-      overflow-x:visible;
       background:
         radial-gradient(1200px 600px at 15% -10%, var(--order-brand-soft), rgba(249,115,22,0) 60%),
         radial-gradient(900px 450px at 90% 0%, var(--order-brand-soft-2), rgba(251,146,60,0) 55%),
@@ -432,12 +431,14 @@
 
     .menuCategorySectionList{
       display:grid;
+      grid-template-columns:minmax(0, 1fr);
       gap:40px;
     }
 
     .menuCategorySection{
       scroll-margin-top:72px;
       display:grid;
+      grid-template-columns:minmax(0, 1fr);
       gap:18px;
     }
 
@@ -483,6 +484,7 @@
 
     .menuCardGrid{
       display:grid;
+      grid-template-columns:minmax(0, 1fr);
       gap:10px;
       padding-top:12px;
     }
@@ -544,6 +546,7 @@
       align-items:flex-start;
       justify-content:space-between;
       gap:14px;
+      min-width:0;
     }
 
     .menuItemCopy{
@@ -679,9 +682,10 @@
       border:1px solid transparent;
       background:linear-gradient(135deg, var(--order-brand-primary), var(--order-brand-secondary));
       color:var(--order-brand-text, #fff);
-      font-family:var(--sans);
+      font-family:'Figtree', system-ui, -apple-system, sans-serif;
       font-size:13px;
-      font-weight:900;
+      font-weight:500;
+      letter-spacing:0.02em;
       cursor:pointer;
       display:inline-flex;
       align-items:center;
@@ -1052,9 +1056,10 @@
       border:1px solid transparent;
       background:linear-gradient(135deg, var(--order-brand-primary), var(--order-brand-secondary));
       color:var(--order-brand-text, #fff);
-      font-family:var(--sans);
+      font-family:'Figtree', system-ui, -apple-system, sans-serif;
       font-size:15px;
-      font-weight:950;
+      font-weight:500;
+      letter-spacing:0.02em;
       cursor:pointer;
       box-shadow:0 10px 20px color-mix(in srgb, var(--order-brand-primary) 24%, transparent);
       transition:opacity 0.2s, box-shadow 0.2s;
@@ -1174,8 +1179,10 @@
     }
 
     .bundleOptionName{
-      font-size:13px;
-      font-weight:900;
+      font-family:'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+      font-size:18px;
+      font-weight:600;
+      letter-spacing:-0.005em;
       line-height:1.15;
       color:var(--h-text);
     }
