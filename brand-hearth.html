@@ -6,6 +6,10 @@
   <title>Hearth — Brand Hearth</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
   <script src="./assets/config.js"></script>
   <script src="./assets/hearth-vendor.js?v=1"></script>
@@ -19,6 +23,15 @@
       --brand-preview-text:#ffffff;
       --brand-preview-soft:rgba(139,107,63,0.12);
       --brand-preview-soft-2:rgba(203,184,157,0.10);
+    }
+
+    body{
+      font-family: 'Figtree', system-ui, sans-serif;
+    }
+
+    .sectionTitle{
+      font-family:'Cormorant Garamond', Georgia, serif;
+      font-weight:400;
     }
 
     .brandPage{
@@ -40,9 +53,9 @@
 
     .brandSummaryMain,
     .brandSummaryMeta{
-      border:1px solid var(--h-border-2);
+      border:1px solid var(--h-cinder);
       border-radius:20px;
-      background:#fff;
+      background:var(--h-chalk);
       padding:16px;
       min-width:0;
     }
@@ -77,11 +90,12 @@
     }
 
     .brandSummaryTitle{
-      font-size:24px;
+      font-family:'Cormorant Garamond', Georgia, serif;
+      font-size:28px;
       line-height:1.02;
-      font-weight:950;
-      letter-spacing:-0.03em;
-      color:var(--h-text);
+      font-weight:400;
+      letter-spacing:-0.02em;
+      color:var(--h-slate);
       margin:0;
     }
 
@@ -89,7 +103,7 @@
       margin:6px 0 0;
       font-size:13px;
       line-height:1.45;
-      color:var(--h-muted);
+      color:var(--h-stone);
       font-weight:700;
       max-width:56ch;
     }
@@ -102,7 +116,7 @@
       border-radius:999px;
       background:rgba(15,23,42,0.05);
       border:1px solid rgba(15,23,42,0.08);
-      color:var(--h-text);
+      color:var(--h-slate);
       font-size:11px;
       font-weight:900;
       text-transform:uppercase;
@@ -125,12 +139,12 @@
     }
 
     .brandMetaRow .label{
-      color:var(--h-muted);
+      color:var(--h-stone);
       font-weight:700;
     }
 
     .brandMetaRow .value{
-      color:var(--h-text);
+      color:var(--h-slate);
       font-weight:800;
       text-align:right;
     }
@@ -149,10 +163,10 @@
       padding:4px 10px 4px 4px;
       border-radius:999px;
       background:#fff;
-      border:1px solid var(--h-border);
+      border:1px solid var(--h-cinder);
       font-size:11px;
       font-weight:800;
-      color:var(--h-text);
+      color:var(--h-slate);
     }
 
     .brandSwatchDot{
@@ -184,13 +198,13 @@
     }
 
     .brandSection{
-      border:1px solid var(--h-border-2);
+      border:1px solid var(--h-cinder);
       border-radius:22px;
-      background:#fff;
+      background:var(--h-chalk);
       padding:18px;
       display:grid;
       gap:14px;
-      box-shadow:0 2px 10px rgba(15,23,42,0.03);
+      box-shadow:var(--h-shadow-sm);
     }
 
     .brandSectionHead{
@@ -203,31 +217,32 @@
 
     .brandSectionTitle{
       margin:0;
-      font-size:16px;
+      font-family:'Cormorant Garamond', Georgia, serif;
+      font-size:20px;
       line-height:1.05;
-      font-weight:950;
+      font-weight:400;
       letter-spacing:-0.02em;
-      color:var(--h-text);
+      color:var(--h-slate);
     }
 
     .brandSectionSub{
       margin:4px 0 0;
       font-size:12px;
       line-height:1.45;
-      color:var(--h-muted);
+      color:var(--h-stone);
       font-weight:700;
       max-width:58ch;
     }
 
     .brandPreviewCard{
-      border:1px solid var(--h-border-2);
+      border:1px solid var(--h-cinder);
       border-radius:24px;
       background:
         radial-gradient(900px 420px at 18% -10%, var(--brand-preview-soft), rgba(249,115,22,0) 60%),
         radial-gradient(700px 300px at 90% 0%, var(--brand-preview-soft-2), rgba(251,146,60,0) 55%),
         #fff;
       overflow:hidden;
-      box-shadow:0 10px 24px rgba(15,23,42,0.08);
+      box-shadow:var(--h-shadow-md);
     }
 
     .brandPreviewHero{
@@ -402,17 +417,17 @@
       padding:14px 16px 16px;
       display:grid;
       gap:12px;
-      background:#fff;
+      background:var(--h-chalk);
     }
 
     .brandPreviewNotice{
-      border:1px solid var(--h-border-2);
+      border:1px solid var(--h-cinder);
       border-radius:14px;
       background:rgba(15,23,42,0.02);
       padding:11px 12px;
       font-size:12px;
       line-height:1.35;
-      color:var(--h-text);
+      color:var(--h-slate);
       font-weight:800;
     }
 
@@ -420,15 +435,15 @@
       text-align:center;
       font-size:11px;
       line-height:1.35;
-      color:var(--h-muted);
+      color:var(--h-stone);
       font-weight:700;
       padding-top:2px;
     }
 
     .brandPreviewMetaCard{
-      border:1px solid var(--h-border-2);
+      border:1px solid var(--h-cinder);
       border-radius:18px;
-      background:#fff;
+      background:var(--h-chalk);
       padding:14px;
       display:grid;
       gap:10px;
@@ -437,14 +452,14 @@
     .brandPreviewMetaTitle{
       font-size:13px;
       font-weight:900;
-      color:var(--h-text);
+      color:var(--h-slate);
       margin:0;
     }
 
     .brandPreviewMetaText{
       font-size:12px;
       line-height:1.45;
-      color:var(--h-muted);
+      color:var(--h-stone);
       font-weight:700;
       margin:0;
     }
@@ -466,7 +481,7 @@
     .brandMiniLink{
       font-size:12px;
       font-weight:800;
-      color:var(--h-accent);
+      color:var(--h-fire);
       text-decoration:none;
     }
 
@@ -483,7 +498,7 @@
       width:80px;
       height:80px;
       border-radius:16px;
-      border:1px solid var(--h-border-2);
+      border:1px solid var(--h-cinder);
       background:rgba(15,23,42,0.03);
       overflow:hidden;
       display:flex;
@@ -507,7 +522,7 @@
     .assetUploadPlaceholder{
       font-size:11px;
       font-weight:700;
-      color:var(--h-muted);
+      color:var(--h-stone);
       text-align:center;
       padding:0 8px;
     }
@@ -522,11 +537,11 @@
     .assetUploadStatus{
       font-size:12px;
       font-weight:700;
-      color:var(--h-muted);
+      color:var(--h-stone);
     }
 
     .assetUploadStatus.uploading{
-      color:var(--h-accent);
+      color:var(--h-fire);
     }
 
     .assetUploadStatus.done{
@@ -695,14 +710,14 @@
       gap: 8px;
       padding: 10px 14px;
       border-radius: 12px;
-      background: color-mix(in srgb, var(--h-accent) 6%, white);
-      border: 1px solid color-mix(in srgb, var(--h-accent) 18%, transparent);
+      background: color-mix(in srgb, var(--h-fire) 6%, white);
+      border: 1px solid color-mix(in srgb, var(--h-fire) 18%, transparent);
       font-size: 12px;
       font-weight: 700;
-      color: var(--h-text);
+      color: var(--h-slate);
     }
     .obContinuityIcon {
-      color: var(--h-accent);
+      color: var(--h-fire);
       font-size: 13px;
       font-weight: 900;
       flex: 0 0 auto;
@@ -716,7 +731,7 @@
       margin-left: auto;
       font-size: 11px;
       font-weight: 800;
-      color: var(--h-accent);
+      color: var(--h-fire);
       text-decoration: none;
       white-space: nowrap;
       flex: 0 0 auto;
@@ -733,20 +748,20 @@
       display: none;
       padding: 16px 18px;
       border-radius: 16px;
-      background: color-mix(in srgb, var(--h-accent) 5%, white);
-      border: 1px solid color-mix(in srgb, var(--h-accent) 16%, transparent);
+      background: color-mix(in srgb, var(--h-fire) 5%, white);
+      border: 1px solid color-mix(in srgb, var(--h-fire) 16%, transparent);
       text-align: center;
     }
     .firstDropNudgeTitle {
       font-size: 13px;
       font-weight: 800;
-      color: var(--h-text);
+      color: var(--h-slate);
       margin: 0 0 4px;
     }
     .firstDropNudgeContext {
       font-size: 12px;
       font-weight: 700;
-      color: var(--h-muted);
+      color: var(--h-stone);
       margin: 0 0 12px;
       line-height: 1.5;
     }
@@ -778,14 +793,12 @@
         <div class="row space" style="margin-bottom:2px;">
           <div>
             <h3 class="sectionTitle">Brand Hearth</h3>
-            <p class="sectionSub">Define the identity customers see on your ordering page</p>
-            <a href="onboarding.html" class="brandMiniLink" style="display:inline-block; margin-top:4px;">← Update your setup preferences</a>
+            <p class="sectionSub">Shape how customers see your brand</p>
           </div>
 
           <div class="brandActions">
-            <button class="btnGhost" id="refreshBrandBtn" type="button">Refresh</button>
-            <button class="btnGhost" id="previewOrderPageBtn" type="button">Preview Ordering Page</button>
-            <button class="btnAccent" id="saveBrandBtnTop" type="button">Save Brand</button>
+            <button class="btnGhost" id="previewOrderPageBtn" type="button">Preview ordering page</button>
+            <button class="btnAccent" id="saveBrandBtnTop" type="button">Save brand</button>
           </div>
         </div>
 
@@ -838,7 +851,7 @@
             </div>
 
             <div>
-              <div class="label" style="font-size:12px; color:var(--h-muted); font-weight:700; margin-bottom:8px;">Brand colours</div>
+              <div class="label" style="font-size:12px; color:var(--h-stone); font-weight:700; margin-bottom:8px;">Brand colours</div>
               <div class="brandColourSwatches">
                 <div class="brandSwatch">
                   <span class="brandSwatchDot" id="swatchPrimary"></span>
@@ -863,8 +876,8 @@
           <div class="brandSection">
             <div class="brandSectionHead">
               <div>
-                <h4 class="brandSectionTitle">Brand Identity</h4>
-                <p class="brandSectionSub">Define the name, voice and customer-facing label for your brand.</p>
+                <h4 class="brandSectionTitle">Your identity</h4>
+                <p class="brandSectionSub">How your business appears to customers.</p>
               </div>
             </div>
 
@@ -877,81 +890,80 @@
               </div>
             </div>
 
-            <div class="studioGrid2">
-              <div class="field">
-                <label for="vendorName">Vendor Name</label>
-                <input id="vendorName" type="text" placeholder="Southbury Farm Pizza" />
-                <div class="helperText">Internal / base vendor name.</div>
-              </div>
+            <input id="vendorName" type="hidden" />
+            <input id="vendorOrderLabel" type="hidden" value="Order direct" />
+            <input id="vendorAddress" type="hidden" />
 
-              <div class="field">
-                <label for="vendorDisplayName">Display Name</label>
-                <input id="vendorDisplayName" type="text" placeholder="Southbury Farm Pizza" />
-                <div class="helperText">Used as the main customer-facing brand name.</div>
-              </div>
-
-              <div class="field" style="grid-column:1 / -1;">
-                <label for="vendorTagline">Tagline</label>
-                <input id="vendorTagline" type="text" placeholder="Wood-fired drops from the farmhouse oven" />
-                <div class="helperText">Shown beneath the vendor name on the ordering page.</div>
-              </div>
-
-              <div class="field">
-                <label for="vendorOrderLabel">Order Label</label>
-                <input id="vendorOrderLabel" type="text" placeholder="Order direct" />
-                <div class="helperText">The small uppercase eyebrow above the vendor name.</div>
-              </div>
-
-              <div class="field">
-                <label for="vendorContactPhone">Contact Phone</label>
-                <input id="vendorContactPhone" type="tel" placeholder="01234 567890" />
-                <div class="helperText">Contact phone number for customers and hosts.</div>
-              </div>
-
-              <div class="field" style="grid-column:1 / -1;">
-                <label for="vendorWebsiteUrl">Website URL</label>
-                <input id="vendorWebsiteUrl" type="url" placeholder="https://example.com" />
-                <div class="helperText">Used for the "Visit site" button on the ordering page.</div>
-              </div>
-
-              <!-- T5-B4: Primary address -->
-              <div class="field" style="grid-column:1 / -1;">
-                <label for="vendorAddress">Primary address</label>
-                <input id="vendorAddress" type="text" placeholder="e.g. 14 High Street, Henley-on-Thames, RG9 2LU" />
-                <div class="helperText">Your main operating address.</div>
-              </div>
+            <div class="field">
+              <label for="vendorDisplayName">Business name</label>
+              <input id="vendorDisplayName" type="text" placeholder="Southbury Farm Pizza" />
+              <div class="helperText">The name customers see on your ordering page.</div>
             </div>
 
-            <!-- T5-B4: Social channels -->
-            <div class="brandSectionHead" style="margin-top:20px;">
-              <div>
-                <p class="brandSectionSub" style="font-weight:950;color:var(--h-text);font-size:13px;">Social channels</p>
-              </div>
+            <div class="field">
+              <label for="vendorTagline">Tagline</label>
+              <input id="vendorTagline" type="text" placeholder="Wood-fired drops from the farmhouse oven" />
+              <div class="helperText">Shown beneath the vendor name on the ordering page.</div>
             </div>
 
-            <div class="studioGrid2">
-              <div class="field">
-                <label for="vendorSocialInstagram">Instagram</label>
-                <input id="vendorSocialInstagram" type="text" placeholder="yourhandle" />
-                <div class="helperText">Instagram handle (without the @).</div>
-              </div>
+            <div class="field">
+              <label for="vendorContactPhone">Phone number</label>
+              <input id="vendorContactPhone" type="tel" placeholder="01234 567890" />
+              <div class="helperText">Shown to customers if they need to reach you.</div>
+            </div>
 
-              <div class="field">
-                <label for="vendorSocialFacebook">Facebook</label>
-                <input id="vendorSocialFacebook" type="text" placeholder="yourpage" />
-                <div class="helperText">Facebook page name or URL slug.</div>
-              </div>
+            <div class="field">
+              <label for="vendorWebsiteUrl">Website URL</label>
+              <input id="vendorWebsiteUrl" type="url" placeholder="https://example.com" />
+              <div class="helperText">Shown as a link on your ordering page.</div>
+            </div>
 
-              <div class="field">
-                <label for="vendorSocialTiktok">TikTok</label>
-                <input id="vendorSocialTiktok" type="text" placeholder="yourhandle" />
-                <div class="helperText">TikTok handle (without the @).</div>
-              </div>
+            <!-- T5-B4: Social channels (collapsible) -->
+            <div style="border-top:1px solid var(--h-cinder, var(--h-cinder)); margin-top:16px;"></div>
+            <button type="button" id="socialToggleBtn" style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              background: none;
+              border: none;
+              padding: 10px 0;
+              font-size: 13px;
+              font-weight: 700;
+              color: var(--h-slate, var(--h-slate));
+              cursor: pointer;
+              width: 100%;
+              text-align: left;
+            ">
+              <span id="socialToggleLabel">Social channels</span>
+              <span id="socialToggleChevron" style="margin-left: auto; font-size: 11px;
+                color: var(--h-stone, var(--h-stone)); transition: transform 0.2s;">▸</span>
+            </button>
 
-              <div class="field">
-                <label for="vendorSocialWhatsapp">WhatsApp Business</label>
-                <input id="vendorSocialWhatsapp" type="text" placeholder="+44 7700 900123" />
-                <div class="helperText">WhatsApp Business contact number.</div>
+            <div id="socialChannelsGrid" style="display: none;">
+              <div class="studioGrid2">
+                <div class="field">
+                  <label for="vendorSocialInstagram">Instagram</label>
+                  <input id="vendorSocialInstagram" type="text" placeholder="yourhandle" />
+                  <div class="helperText">Instagram handle (without the @).</div>
+                </div>
+
+                <div class="field">
+                  <label for="vendorSocialFacebook">Facebook</label>
+                  <input id="vendorSocialFacebook" type="text" placeholder="yourpage" />
+                  <div class="helperText">Facebook page name or URL slug.</div>
+                </div>
+
+                <div class="field">
+                  <label for="vendorSocialTiktok">TikTok</label>
+                  <input id="vendorSocialTiktok" type="text" placeholder="yourhandle" />
+                  <div class="helperText">TikTok handle (without the @).</div>
+                </div>
+
+                <div class="field">
+                  <label for="vendorSocialWhatsapp">WhatsApp Business</label>
+                  <input id="vendorSocialWhatsapp" type="text" placeholder="+44 7700 900123" />
+                  <div class="helperText">WhatsApp Business contact number.</div>
+                </div>
               </div>
             </div>
           </div>
@@ -959,8 +971,8 @@
           <div class="brandSection">
             <div class="brandSectionHead">
               <div>
-                <h4 class="brandSectionTitle">Brand Assets</h4>
-                <p class="brandSectionSub">Upload the images that shape your storefront.</p>
+                <h4 class="brandSectionTitle">Your images</h4>
+                <p class="brandSectionSub">Your logo and hero image appear on every ordering page.</p>
               </div>
             </div>
 
@@ -1003,8 +1015,8 @@
           <div class="brandSection">
             <div class="brandSectionHead">
               <div>
-                <h4 class="brandSectionTitle">Brand Colours</h4>
-                <p class="brandSectionSub">Control the tones used across your ordering experience.</p>
+                <h4 class="brandSectionTitle">Your colours</h4>
+                <p class="brandSectionSub">Set the colours used across your ordering page.</p>
               </div>
             </div>
 
@@ -1022,41 +1034,22 @@
               </div>
 
               <div class="field">
-                <label for="brandTextOnPrimary">Text on Brand</label>
+                <label for="brandTextOnPrimary">Text colour</label>
                 <input id="brandTextOnPrimary" type="color" value="#FFFFFF" style="height:44px;" />
+                <div class="helperText">The text colour used on your brand colour backgrounds.</div>
                 <div class="helperText" id="brandTextOnPrimaryText">#FFFFFF</div>
               </div>
             </div>
           </div>
 
-          <div class="brandSection">
-            <div class="brandSectionHead">
-              <div>
-                <h4 class="brandSectionTitle">Platform Signature</h4>
-                <p class="brandSectionSub">Every drop is powered by Hearth, giving customers a consistent, high-quality ordering experience.</p>
-              </div>
-            </div>
-
-            <div class="summaryBlock">
-              <div class="summaryItem">
-                <span class="label">Footer treatment</span>
-                <span class="value">Powered by Hearth</span>
-              </div>
-              <div class="summaryItem">
-                <span class="label">Placement</span>
-                <span class="value">Standard across all vendors</span>
-              </div>
-              <div class="summaryItem">
-                <span class="label">Vendor control</span>
-                <span class="value">Not editable</span>
-              </div>
-            </div>
-          </div>
-
           <div class="brandActions">
-            <button class="btnGhost" id="resetDefaultsBtn" type="button">Reset Colour Defaults</button>
+            <button class="btnGhost" id="resetDefaultsBtn" type="button">Reset to defaults</button>
             <button class="btnAccent" id="saveBrandBtnBottom" type="button">Save Brand</button>
           </div>
+
+          <p style="font-size: 12px; font-weight: 500; color: var(--h-stone, var(--h-stone)); text-align: center; margin: 0; padding: 8px 0;">
+            Every ordering page carries "Powered by Hearth" in the footer.
+          </p>
 
           <!-- T4-20: First drop nudge — revealed after brand is saved -->
           <div id="firstDropNudge">
@@ -1119,9 +1112,8 @@
           </div>
 
           <div class="brandPreviewMetaCard">
-            <h4 class="brandPreviewMetaTitle">Preview Notes</h4>
             <p class="brandPreviewMetaText">Logo, hero image, colours, display name, tagline and order label update live here as you edit.</p>
-            <p class="brandPreviewMetaText">Preview drop selection uses live first, then scheduled, then draft.</p>
+            <p class="brandPreviewMetaText">Colours, logo, and text update live. Drop preview uses the most recent live, scheduled, or draft drop.</p>
           </div>
         </div>
       </div>
@@ -1276,7 +1268,7 @@
         if (socialInputs[k]) social_handles[k] = socialInputs[k];
       });
       return {
-        name: byId("vendorName").value.trim(),
+        name: byId("vendorDisplayName").value.trim(),
         display_name: byId("vendorDisplayName").value.trim(),
         tagline: byId("vendorTagline").value.trim(),
         order_label: byId("vendorOrderLabel").value.trim(),
@@ -1620,6 +1612,9 @@
       await loadVendor();
       await loadPreviewDrop();
       populateForm(state.vendor);
+      if (typeof window._setSocialOpenAfterPopulate === 'function') {
+        window._setSocialOpenAfterPopulate();
+      }
       applyPreview();
       applyOnboardingContinuity(); // T4-19
       setSaveState("saved");
@@ -1802,15 +1797,6 @@
         }
       });
 
-      byId("refreshBrandBtn").addEventListener("click", async () => {
-        try {
-          await refreshAll();
-        } catch (err) {
-          console.error(err);
-          showError(err.message || "Unable to refresh brand settings.");
-        }
-      });
-
       byId("resetDefaultsBtn").addEventListener("click", resetColourDefaults);
 
       byId("previewOrderPageBtn").addEventListener("click", () => {
@@ -1835,6 +1821,34 @@
 
         supabase = window._getHearthClient();
         attachEvents();
+
+        // Social channels toggle
+        const socialToggleBtn = byId('socialToggleBtn');
+        const socialGrid = byId('socialChannelsGrid');
+        const socialChevron = byId('socialToggleChevron');
+
+        function setSocialOpen(open) {
+          socialGrid.style.display = open ? '' : 'none';
+          socialChevron.style.transform = open ? 'rotate(90deg)' : '';
+        }
+
+        socialToggleBtn.addEventListener('click', function() {
+          const isOpen = socialGrid.style.display !== 'none';
+          setSocialOpen(!isOpen);
+        });
+
+        // Auto-open if any social handles are already set
+        function checkSocialValues() {
+          const ids = ['vendorSocialInstagram','vendorSocialFacebook',
+                       'vendorSocialTiktok','vendorSocialWhatsapp'];
+          return ids.some(id => (byId(id)?.value || '').trim().length > 0);
+        }
+
+        // Expose so refreshAll can re-check after populateForm
+        window._setSocialOpenAfterPopulate = function() {
+          setSocialOpen(checkSocialValues());
+        };
+
         await refreshAll();
       } catch (err) {
         console.error(err);
