@@ -42,7 +42,12 @@
 
     *, *::before, *::after { box-sizing: border-box; }
 
-    html, body { margin: 0; padding: 0; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
 
     body {
       background: var(--h-bg);
@@ -122,8 +127,8 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      height: 36px;
-      padding: 0 16px;
+      min-height: 40px;
+      padding: 0 18px;
       border: 1.5px solid var(--h-fire);
       border-radius: var(--h-radius-md);
       background: transparent;
@@ -174,6 +179,7 @@
       line-height: 1.1;
       letter-spacing: -0.01em;
       margin: 0 0 28px;
+      overflow-wrap: break-word;
     }
 
     .ldHeroHeadline .ldLine1 {
@@ -626,12 +632,230 @@
 
     .ldStatSubAccent { color: var(--h-fire); }
 
+    @media (max-width: 480px) {
+      .ldFeature { padding: 48px 16px; }
+      .ldDropCard, .ldCustomerCard, .ldStatCard { padding: 20px; }
+      .ldFeedCard { padding: 18px; }
+      .ldStatNumber { font-size: 34px; }
+      .ldStatCell { padding: 14px; }
+      .ldFeedAmount, .ldFeedTime { white-space: nowrap; }
+    }
+
+    /* ===========================================================
+       WHO IT'S FOR
+       =========================================================== */
+    .ldAudience {
+      background: var(--h-chalk);
+      padding: 80px 24px;
+    }
+
+    @media (max-width: 768px) {
+      .ldAudience { padding: 56px 24px; }
+    }
+
+    .ldAudienceInner {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .ldAudienceHead {
+      text-align: center;
+      margin: 0 0 40px;
+    }
+
+    .ldAudienceHeadline {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: 40px;
+      line-height: 1.15;
+      letter-spacing: -0.005em;
+      color: var(--h-slate);
+      margin: 0 0 12px;
+    }
+
+    @media (max-width: 768px) {
+      .ldAudienceHeadline { font-size: 30px; }
+    }
+
+    .ldAudienceSub {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 16px;
+      color: var(--h-stone);
+      margin: 0;
+    }
+
+    .ldAudienceGrid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .ldAudienceGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 560px) {
+      .ldAudienceGrid { grid-template-columns: 1fr; }
+    }
+
+    .ldAudienceTile {
+      background: var(--h-ash);
+      border: var(--h-border);
+      border-radius: var(--h-radius-lg);
+      padding: 24px;
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .ldAudienceTitle {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--h-slate);
+      line-height: 1.3;
+      margin: 0;
+    }
+
+    .ldAudienceBody {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--h-stone);
+      margin: 0;
+    }
+
+    /* ===========================================================
+       PROOF
+       =========================================================== */
+    .ldProof {
+      background: var(--h-ash);
+      padding: 80px 24px;
+    }
+
+    @media (max-width: 768px) {
+      .ldProof { padding: 56px 24px; }
+    }
+
+    .ldProofCard {
+      max-width: 600px;
+      margin: 0 auto;
+      background: var(--h-chalk);
+      border: var(--h-border);
+      border-radius: var(--h-radius-xl);
+      box-shadow: var(--h-shadow-md);
+      padding: 48px;
+      text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      .ldProofCard { padding: 32px; }
+    }
+
+    .ldProofMark {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-style: italic;
+      font-weight: 400;
+      font-size: 64px;
+      line-height: 1;
+      color: var(--h-fire);
+      opacity: 0.4;
+      margin: 0 0 8px;
+      display: block;
+    }
+
+    .ldProofQuote {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-style: italic;
+      font-weight: 400;
+      font-size: 22px;
+      line-height: 1.5;
+      color: var(--h-slate);
+      margin: 0 0 24px;
+    }
+
+    @media (max-width: 768px) {
+      .ldProofQuote { font-size: 18px; }
+    }
+
+    .ldProofAttr {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--h-stone);
+      margin: 0;
+    }
+
+    /* ===========================================================
+       FINAL CTA
+       =========================================================== */
+    .ldFinal {
+      background: var(--h-coal);
+      padding: 100px 24px;
+      text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      .ldFinal { padding: 72px 24px; }
+    }
+
+    .ldFinalInner {
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    .ldFinalHeadline {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: 48px;
+      line-height: 1.1;
+      letter-spacing: -0.005em;
+      margin: 0 0 16px;
+      overflow-wrap: break-word;
+    }
+
+    .ldFinalHeadline .ldLine1 {
+      display: block;
+      color: var(--h-chalk);
+    }
+
+    .ldFinalHeadline .ldLine2 {
+      display: block;
+      font-style: italic;
+      font-weight: 400;
+      color: var(--h-fire);
+    }
+
+    @media (max-width: 768px) {
+      .ldFinalHeadline { font-size: 36px; }
+    }
+
+    .ldFinalSub {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 16px;
+      color: var(--h-stone);
+      margin: 16px 0 32px;
+    }
+
+    .ldFinalCta {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
     /* ===========================================================
        FOOTER
        =========================================================== */
     .ldFooter {
       background: var(--h-coal);
-      padding: 28px 24px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 32px;
     }
 
     .ldFooterInner {
@@ -644,22 +868,39 @@
       flex-wrap: wrap;
     }
 
-    .ldFooterWordmark .ldWordmarkText { color: var(--h-chalk); }
+    .ldFooterWordmark .ldWordmarkText {
+      color: var(--h-chalk);
+      font-weight: 700;
+    }
 
     .ldFooterLinks {
       display: flex;
-      gap: 20px;
+      gap: 24px;
       flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
     .ldFooterLinks a {
       font-family: 'Figtree', system-ui, sans-serif;
-      font-weight: 500;
+      font-weight: 400;
       font-size: 13px;
       color: var(--h-stone);
     }
 
     .ldFooterLinks a:hover { color: var(--h-chalk); }
+
+    @media (max-width: 560px) {
+      .ldFooter { padding: 24px; }
+      .ldFooterInner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+      .ldFooterLinks {
+        justify-content: flex-start;
+        gap: 20px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -896,6 +1137,73 @@
             <p class="ldStatSub ldStatSubAccent">Revenue: &pound;4,820</p>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================= -->
+  <!-- WHO IT'S FOR                                                   -->
+  <!-- ============================================================= -->
+  <section class="ldAudience">
+    <div class="ldAudienceInner">
+      <div class="ldAudienceHead">
+        <h2 class="ldAudienceHeadline">Made for independent food businesses.</h2>
+        <p class="ldAudienceSub">Any food business that sells before it serves.</p>
+      </div>
+
+      <div class="ldAudienceGrid">
+        <div class="ldAudienceTile">
+          <h3 class="ldAudienceTitle">Takeaways and restaurants</h3>
+          <p class="ldAudienceBody">Reduce aggregator dependency. Build a customer base that&rsquo;s yours to keep.</p>
+        </div>
+        <div class="ldAudienceTile">
+          <h3 class="ldAudienceTitle">Food trucks and street food traders</h3>
+          <p class="ldAudienceBody">Formalise the pre-order model you&rsquo;re already running informally. Make every night predictable.</p>
+        </div>
+        <div class="ldAudienceTile">
+          <h3 class="ldAudienceTitle">Market and events vendors</h3>
+          <p class="ldAudienceBody">Turn one-off market customers into a direct audience for your next drop.</p>
+        </div>
+        <div class="ldAudienceTile">
+          <h3 class="ldAudienceTitle">Independent chefs and supper clubs</h3>
+          <p class="ldAudienceBody">Run planned, capacity-controlled services with a compounding customer base.</p>
+        </div>
+        <div class="ldAudienceTile">
+          <h3 class="ldAudienceTitle">Butchers, bakers and artisan producers</h3>
+          <p class="ldAudienceBody">Sell direct through weekly or seasonal drops. Committed buyers, no marketplace fees.</p>
+        </div>
+        <div class="ldAudienceTile">
+          <h3 class="ldAudienceTitle">Farm shops, delis and local specialists</h3>
+          <p class="ldAudienceBody">Pre-order drops for produce, hampers, and seasonal selections. Make exactly what&rsquo;s needed.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================= -->
+  <!-- PROOF                                                          -->
+  <!-- ============================================================= -->
+  <section class="ldProof">
+    <div class="ldProofCard">
+      <span class="ldProofMark" aria-hidden="true">&ldquo;</span>
+      <p class="ldProofQuote">Hearth gave us a way to run our pizza drops properly &mdash; pre-orders, capacity, and a customer list we actually own.</p>
+      <p class="ldProofAttr">Southbury Farm Pizza Company</p>
+    </div>
+  </section>
+
+  <!-- ============================================================= -->
+  <!-- FINAL CTA                                                      -->
+  <!-- ============================================================= -->
+  <section class="ldFinal">
+    <div class="ldFinalInner">
+      <h2 class="ldFinalHeadline">
+        <span class="ldLine1">Start building</span>
+        <span class="ldLine2">something that&rsquo;s yours.</span>
+      </h2>
+      <p class="ldFinalSub">Free to get started. Your first drop is yours to own.</p>
+      <div class="ldFinalCta">
+        <a href="./signup.html" class="ldPrimaryBtn">Start your Hearth</a>
+        <a href="./login.html" class="ldHeroSecondary">Already have an account? Sign in &rarr;</a>
       </div>
     </div>
   </section>
