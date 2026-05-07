@@ -603,6 +603,11 @@
         min-width:0 !important;
         box-sizing:border-box !important;
         display:block !important;
+        text-align: center;
+        height: 44px;
+        line-height: 44px;
+        padding-top: 0;
+        padding-bottom: 0;
       }
       .studioGrid2 > *,
       .studioGrid3 > *{
@@ -616,6 +621,17 @@
       }
       .stageSection{
         overflow:hidden;
+      }
+
+      .productGroupHeadMeta{
+        width: 100%;
+        margin-top: 2px;
+        margin-bottom: 10px;
+        font-size: 12px;
+      }
+
+      .workspaceHeaderActions{
+        display: none !important;
       }
     }
 
@@ -1579,6 +1595,11 @@
     const SUPABASE_URL = CONFIG.SUPABASE_URL;
     const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
     const STAGES = ["basics", "timing", "menu", "commercials", "review"];
+    const TYPE_DISPLAY_LABELS = {
+      neighbourhood: 'Neighbourhood',
+      community: 'Hosted',
+      event: 'Event'
+    };
     const ACTIVE_DEFAULT_STATUSES = ["live", "scheduled", "draft"];
     const DEFAULT_TYPE_FILTERS = ["neighbourhood", "community", "event"];
 
@@ -2112,7 +2133,7 @@
       const capacityLabel = getCapacityCategoryLabel(liveDrop);
 
       meta.textContent = [
-        liveDrop.drop_type || "drop",
+        TYPE_DISPLAY_LABELS[liveDrop.drop_type] || liveDrop.drop_type || "drop",
         host ? host.name : "No host",
         liveDrop.delivery_start ? `${formatDateShort(liveDrop.delivery_start)} ${formatTimeOnly(liveDrop.delivery_start)}–${formatTimeOnly(liveDrop.delivery_end)}` : "No fulfilment window"
       ].filter(Boolean).join(" • ");
@@ -3471,7 +3492,7 @@
 
       summary.innerHTML = [
         ["Drop", liveDrop.name || "—"],
-        ["Type", liveDrop.drop_type || "—"],
+        ["Type", TYPE_DISPLAY_LABELS[liveDrop.drop_type] || titleCase(liveDrop.drop_type || "—")],
         ["Host", host ? host.name : "No host"],
         ["Status", liveDrop.status || "draft"],
         ["Order Window", liveDrop.opens_at && liveDrop.closes_at ? `${formatDateShort(liveDrop.opens_at)} ${formatTimeOnly(liveDrop.opens_at)} → ${formatDateShort(liveDrop.closes_at)} ${formatTimeOnly(liveDrop.closes_at)}` : (liveDrop.closes_at ? `Open immediately → ${formatDateShort(liveDrop.closes_at)} ${formatTimeOnly(liveDrop.closes_at)}` : "Not set")],
