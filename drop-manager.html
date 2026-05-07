@@ -211,6 +211,72 @@
       color:#1f2937;
     }
 
+    input[type="radio"]{
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--h-cinder, var(--h-border));
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      flex-shrink: 0;
+      position: relative;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    input[type="radio"]:checked{
+      background: var(--h-fire, var(--h-accent));
+      border-color: var(--h-fire, var(--h-accent));
+    }
+    input[type="radio"]:checked::after{
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #fff;
+      transform: translate(-50%, -50%);
+    }
+    input[type="radio"]:focus{
+      outline: 2px solid var(--h-glow, #fff3ec);
+      outline-offset: 2px;
+    }
+
+    input[type="checkbox"]{
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--h-cinder, var(--h-border));
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      flex-shrink: 0;
+      position: relative;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    input[type="checkbox"]:checked{
+      background: var(--h-fire, var(--h-accent));
+      border-color: var(--h-fire, var(--h-accent));
+    }
+    input[type="checkbox"]:checked::after{
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 8px;
+      height: 5px;
+      border-left: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      transform: translate(-50%, -65%) rotate(-45deg);
+    }
+    input[type="checkbox"]:focus{
+      outline: 2px solid var(--h-glow, #fff3ec);
+      outline-offset: 2px;
+    }
+
     @media (max-width:1180px){
       .browserToolbar{
         grid-template-columns:1fr 1fr !important;
@@ -503,13 +569,12 @@
         white-space:normal;
       }
 
-      /* --- toggleRow checkbox: consistent size and accent colour --- */
+      /* --- toggleRow checkbox: consistent size --- */
       .toggleRow input[type="checkbox"]{
         width:20px;
         height:20px;
         min-height:0;
         flex-shrink:0;
-        accent-color:var(--h-accent);
       }
 
       /* --- Date and time inputs: strip iOS native appearance --- */
@@ -749,7 +814,6 @@
       height:16px;
       margin:0;
       flex-shrink:0;
-      accent-color:var(--h-accent);
     }
 
     /* T3-12a — Delivery area restriction (postcode prefix chip input) */
