@@ -778,14 +778,12 @@
         <div class="row space" style="margin-bottom:2px;">
           <div>
             <h3 class="sectionTitle">Brand Hearth</h3>
-            <p class="sectionSub">Define the identity customers see on your ordering page</p>
-            <a href="onboarding.html" class="brandMiniLink" style="display:inline-block; margin-top:4px;">← Update your setup preferences</a>
+            <p class="sectionSub">Shape how customers see your brand</p>
           </div>
 
           <div class="brandActions">
-            <button class="btnGhost" id="refreshBrandBtn" type="button">Refresh</button>
-            <button class="btnGhost" id="previewOrderPageBtn" type="button">Preview Ordering Page</button>
-            <button class="btnAccent" id="saveBrandBtnTop" type="button">Save Brand</button>
+            <button class="btnGhost" id="previewOrderPageBtn" type="button">Preview ordering page</button>
+            <button class="btnAccent" id="saveBrandBtnTop" type="button">Save brand</button>
           </div>
         </div>
 
@@ -863,8 +861,8 @@
           <div class="brandSection">
             <div class="brandSectionHead">
               <div>
-                <h4 class="brandSectionTitle">Brand Identity</h4>
-                <p class="brandSectionSub">Define the name, voice and customer-facing label for your brand.</p>
+                <h4 class="brandSectionTitle">Your identity</h4>
+                <p class="brandSectionSub">How your business appears to customers.</p>
               </div>
             </div>
 
@@ -877,81 +875,80 @@
               </div>
             </div>
 
-            <div class="studioGrid2">
-              <div class="field">
-                <label for="vendorName">Vendor Name</label>
-                <input id="vendorName" type="text" placeholder="Southbury Farm Pizza" />
-                <div class="helperText">Internal / base vendor name.</div>
-              </div>
+            <input id="vendorName" type="hidden" />
+            <input id="vendorOrderLabel" type="hidden" value="Order direct" />
+            <input id="vendorAddress" type="hidden" />
 
-              <div class="field">
-                <label for="vendorDisplayName">Display Name</label>
-                <input id="vendorDisplayName" type="text" placeholder="Southbury Farm Pizza" />
-                <div class="helperText">Used as the main customer-facing brand name.</div>
-              </div>
-
-              <div class="field" style="grid-column:1 / -1;">
-                <label for="vendorTagline">Tagline</label>
-                <input id="vendorTagline" type="text" placeholder="Wood-fired drops from the farmhouse oven" />
-                <div class="helperText">Shown beneath the vendor name on the ordering page.</div>
-              </div>
-
-              <div class="field">
-                <label for="vendorOrderLabel">Order Label</label>
-                <input id="vendorOrderLabel" type="text" placeholder="Order direct" />
-                <div class="helperText">The small uppercase eyebrow above the vendor name.</div>
-              </div>
-
-              <div class="field">
-                <label for="vendorContactPhone">Contact Phone</label>
-                <input id="vendorContactPhone" type="tel" placeholder="01234 567890" />
-                <div class="helperText">Contact phone number for customers and hosts.</div>
-              </div>
-
-              <div class="field" style="grid-column:1 / -1;">
-                <label for="vendorWebsiteUrl">Website URL</label>
-                <input id="vendorWebsiteUrl" type="url" placeholder="https://example.com" />
-                <div class="helperText">Used for the "Visit site" button on the ordering page.</div>
-              </div>
-
-              <!-- T5-B4: Primary address -->
-              <div class="field" style="grid-column:1 / -1;">
-                <label for="vendorAddress">Primary address</label>
-                <input id="vendorAddress" type="text" placeholder="e.g. 14 High Street, Henley-on-Thames, RG9 2LU" />
-                <div class="helperText">Your main operating address.</div>
-              </div>
+            <div class="field">
+              <label for="vendorDisplayName">Business name</label>
+              <input id="vendorDisplayName" type="text" placeholder="Southbury Farm Pizza" />
+              <div class="helperText">The name customers see on your ordering page.</div>
             </div>
 
-            <!-- T5-B4: Social channels -->
-            <div class="brandSectionHead" style="margin-top:20px;">
-              <div>
-                <p class="brandSectionSub" style="font-weight:950;color:var(--h-text);font-size:13px;">Social channels</p>
-              </div>
+            <div class="field">
+              <label for="vendorTagline">Tagline</label>
+              <input id="vendorTagline" type="text" placeholder="Wood-fired drops from the farmhouse oven" />
+              <div class="helperText">Shown beneath the vendor name on the ordering page.</div>
             </div>
 
-            <div class="studioGrid2">
-              <div class="field">
-                <label for="vendorSocialInstagram">Instagram</label>
-                <input id="vendorSocialInstagram" type="text" placeholder="yourhandle" />
-                <div class="helperText">Instagram handle (without the @).</div>
-              </div>
+            <div class="field">
+              <label for="vendorContactPhone">Phone number</label>
+              <input id="vendorContactPhone" type="tel" placeholder="01234 567890" />
+              <div class="helperText">Shown to customers if they need to reach you.</div>
+            </div>
 
-              <div class="field">
-                <label for="vendorSocialFacebook">Facebook</label>
-                <input id="vendorSocialFacebook" type="text" placeholder="yourpage" />
-                <div class="helperText">Facebook page name or URL slug.</div>
-              </div>
+            <div class="field">
+              <label for="vendorWebsiteUrl">Website URL</label>
+              <input id="vendorWebsiteUrl" type="url" placeholder="https://example.com" />
+              <div class="helperText">Shown as a link on your ordering page.</div>
+            </div>
 
-              <div class="field">
-                <label for="vendorSocialTiktok">TikTok</label>
-                <input id="vendorSocialTiktok" type="text" placeholder="yourhandle" />
-                <div class="helperText">TikTok handle (without the @).</div>
-              </div>
+            <!-- T5-B4: Social channels (collapsible) -->
+            <div style="border-top:1px solid var(--h-cinder, var(--h-border)); margin-top:16px;"></div>
+            <button type="button" id="socialToggleBtn" style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              background: none;
+              border: none;
+              padding: 10px 0;
+              font-size: 13px;
+              font-weight: 700;
+              color: var(--h-slate, var(--h-text));
+              cursor: pointer;
+              width: 100%;
+              text-align: left;
+            ">
+              <span id="socialToggleLabel">Social channels</span>
+              <span id="socialToggleChevron" style="margin-left: auto; font-size: 11px;
+                color: var(--h-stone, var(--h-muted)); transition: transform 0.2s;">▸</span>
+            </button>
 
-              <div class="field">
-                <label for="vendorSocialWhatsapp">WhatsApp Business</label>
-                <input id="vendorSocialWhatsapp" type="text" placeholder="+44 7700 900123" />
-                <div class="helperText">WhatsApp Business contact number.</div>
+            <div id="socialChannelsGrid" style="display: none;">
+              <div class="studioGrid2">
+                <div class="field">
+                  <label for="vendorSocialInstagram">Instagram</label>
+                  <input id="vendorSocialInstagram" type="text" placeholder="yourhandle" />
+                  <div class="helperText">Instagram handle (without the @).</div>
+                </div>
+
+                <div class="field">
+                  <label for="vendorSocialFacebook">Facebook</label>
+                  <input id="vendorSocialFacebook" type="text" placeholder="yourpage" />
+                  <div class="helperText">Facebook page name or URL slug.</div>
+                </div>
+
+                <div class="field">
+                  <label for="vendorSocialTiktok">TikTok</label>
+                  <input id="vendorSocialTiktok" type="text" placeholder="yourhandle" />
+                  <div class="helperText">TikTok handle (without the @).</div>
+                </div>
+
+                <div class="field">
+                  <label for="vendorSocialWhatsapp">WhatsApp Business</label>
+                  <input id="vendorSocialWhatsapp" type="text" placeholder="+44 7700 900123" />
+                  <div class="helperText">WhatsApp Business contact number.</div>
+                </div>
               </div>
             </div>
           </div>
@@ -959,8 +956,8 @@
           <div class="brandSection">
             <div class="brandSectionHead">
               <div>
-                <h4 class="brandSectionTitle">Brand Assets</h4>
-                <p class="brandSectionSub">Upload the images that shape your storefront.</p>
+                <h4 class="brandSectionTitle">Your images</h4>
+                <p class="brandSectionSub">Your logo and hero image appear on every ordering page.</p>
               </div>
             </div>
 
@@ -1003,8 +1000,8 @@
           <div class="brandSection">
             <div class="brandSectionHead">
               <div>
-                <h4 class="brandSectionTitle">Brand Colours</h4>
-                <p class="brandSectionSub">Control the tones used across your ordering experience.</p>
+                <h4 class="brandSectionTitle">Your colours</h4>
+                <p class="brandSectionSub">Set the colours used across your ordering page.</p>
               </div>
             </div>
 
@@ -1022,41 +1019,22 @@
               </div>
 
               <div class="field">
-                <label for="brandTextOnPrimary">Text on Brand</label>
+                <label for="brandTextOnPrimary">Text colour</label>
                 <input id="brandTextOnPrimary" type="color" value="#FFFFFF" style="height:44px;" />
+                <div class="helperText">The text colour used on your brand colour backgrounds.</div>
                 <div class="helperText" id="brandTextOnPrimaryText">#FFFFFF</div>
               </div>
             </div>
           </div>
 
-          <div class="brandSection">
-            <div class="brandSectionHead">
-              <div>
-                <h4 class="brandSectionTitle">Platform Signature</h4>
-                <p class="brandSectionSub">Every drop is powered by Hearth, giving customers a consistent, high-quality ordering experience.</p>
-              </div>
-            </div>
-
-            <div class="summaryBlock">
-              <div class="summaryItem">
-                <span class="label">Footer treatment</span>
-                <span class="value">Powered by Hearth</span>
-              </div>
-              <div class="summaryItem">
-                <span class="label">Placement</span>
-                <span class="value">Standard across all vendors</span>
-              </div>
-              <div class="summaryItem">
-                <span class="label">Vendor control</span>
-                <span class="value">Not editable</span>
-              </div>
-            </div>
-          </div>
-
           <div class="brandActions">
-            <button class="btnGhost" id="resetDefaultsBtn" type="button">Reset Colour Defaults</button>
+            <button class="btnGhost" id="resetDefaultsBtn" type="button">Reset to defaults</button>
             <button class="btnAccent" id="saveBrandBtnBottom" type="button">Save Brand</button>
           </div>
+
+          <p style="font-size: 12px; font-weight: 500; color: var(--h-stone, var(--h-muted)); text-align: center; margin: 0; padding: 8px 0;">
+            Every ordering page carries "Powered by Hearth" in the footer.
+          </p>
 
           <!-- T4-20: First drop nudge — revealed after brand is saved -->
           <div id="firstDropNudge">
@@ -1119,9 +1097,8 @@
           </div>
 
           <div class="brandPreviewMetaCard">
-            <h4 class="brandPreviewMetaTitle">Preview Notes</h4>
             <p class="brandPreviewMetaText">Logo, hero image, colours, display name, tagline and order label update live here as you edit.</p>
-            <p class="brandPreviewMetaText">Preview drop selection uses live first, then scheduled, then draft.</p>
+            <p class="brandPreviewMetaText">Colours, logo, and text update live. Drop preview uses the most recent live, scheduled, or draft drop.</p>
           </div>
         </div>
       </div>
@@ -1276,7 +1253,7 @@
         if (socialInputs[k]) social_handles[k] = socialInputs[k];
       });
       return {
-        name: byId("vendorName").value.trim(),
+        name: byId("vendorDisplayName").value.trim(),
         display_name: byId("vendorDisplayName").value.trim(),
         tagline: byId("vendorTagline").value.trim(),
         order_label: byId("vendorOrderLabel").value.trim(),
@@ -1620,6 +1597,9 @@
       await loadVendor();
       await loadPreviewDrop();
       populateForm(state.vendor);
+      if (typeof window._setSocialOpenAfterPopulate === 'function') {
+        window._setSocialOpenAfterPopulate();
+      }
       applyPreview();
       applyOnboardingContinuity(); // T4-19
       setSaveState("saved");
@@ -1802,15 +1782,6 @@
         }
       });
 
-      byId("refreshBrandBtn").addEventListener("click", async () => {
-        try {
-          await refreshAll();
-        } catch (err) {
-          console.error(err);
-          showError(err.message || "Unable to refresh brand settings.");
-        }
-      });
-
       byId("resetDefaultsBtn").addEventListener("click", resetColourDefaults);
 
       byId("previewOrderPageBtn").addEventListener("click", () => {
@@ -1835,6 +1806,34 @@
 
         supabase = window._getHearthClient();
         attachEvents();
+
+        // Social channels toggle
+        const socialToggleBtn = byId('socialToggleBtn');
+        const socialGrid = byId('socialChannelsGrid');
+        const socialChevron = byId('socialToggleChevron');
+
+        function setSocialOpen(open) {
+          socialGrid.style.display = open ? '' : 'none';
+          socialChevron.style.transform = open ? 'rotate(90deg)' : '';
+        }
+
+        socialToggleBtn.addEventListener('click', function() {
+          const isOpen = socialGrid.style.display !== 'none';
+          setSocialOpen(!isOpen);
+        });
+
+        // Auto-open if any social handles are already set
+        function checkSocialValues() {
+          const ids = ['vendorSocialInstagram','vendorSocialFacebook',
+                       'vendorSocialTiktok','vendorSocialWhatsapp'];
+          return ids.some(id => (byId(id)?.value || '').trim().length > 0);
+        }
+
+        // Expose so refreshAll can re-check after populateForm
+        window._setSocialOpenAfterPopulate = function() {
+          setSocialOpen(checkSocialValues());
+        };
+
         await refreshAll();
       } catch (err) {
         console.error(err);
