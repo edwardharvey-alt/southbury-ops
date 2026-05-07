@@ -31,6 +31,42 @@
       font-weight: 400;
     }
 
+    input[type="checkbox"]{
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--h-cinder, var(--h-border));
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
+      position: relative;
+    }
+
+    input[type="checkbox"]:checked{
+      background: var(--h-fire, var(--h-accent));
+      border-color: var(--h-fire, var(--h-accent));
+    }
+
+    input[type="checkbox"]:checked::after{
+      content: '';
+      position: absolute;
+      left: 3px;
+      top: 1px;
+      width: 8px;
+      height: 5px;
+      border-left: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      transform: rotate(-45deg);
+    }
+
+    input[type="checkbox"]:focus{
+      outline: 2px solid var(--h-glow, #fff3ec);
+      outline-offset: 2px;
+    }
+
     #deleteModalDropList{
       margin:8px 0 0;
       padding:0 0 0 18px;
@@ -252,25 +288,43 @@
         white-space:normal;
       }
 
-      /* Label-value pairs: each td shows its column label via ::before */
+      /* Inline metadata: category and price live in the name cell's
+         subMeta line; status stays visible as a block; the rest fold away. */
       .menuTableWrap td[data-label]{
-        display:flex;
-        align-items:center;
-        gap:6px;
-        padding:2px 0;
-        border:none;
-        white-space:normal;
-        font-size:11px;
+        display: inline;
+        padding: 0;
+        border: none;
+        font-size: 12px;
+        color: var(--h-stone, var(--h-muted));
       }
       .menuTableWrap td[data-label]::before{
-        content:attr(data-label);
-        font-size:9px;
-        font-weight:700;
-        color:var(--h-stone);
-        min-width:56px;
-        flex-shrink:0;
-        text-transform:uppercase;
-        letter-spacing:0.3px;
+        content: none;
+      }
+
+      .menuTableWrap td.menuRowMeta{
+        display: block;
+        padding: 4px 0 0;
+        border: none;
+        font-size: 12px;
+        color: var(--h-stone, var(--h-muted));
+        line-height: 1.4;
+      }
+
+      .menuTableWrap td[data-label="Category"],
+      .menuTableWrap td[data-label="Price"],
+      .menuTableWrap td[data-label="Items"]{
+        display: none;
+      }
+
+      .menuTableWrap td[data-label="Status"],
+      .menuTableWrap td[data-label="Active"]{
+        display: block;
+        padding: 4px 0 0;
+        border: none;
+      }
+      .menuTableWrap td[data-label="Status"]::before,
+      .menuTableWrap td[data-label="Active"]::before{
+        content: none;
       }
 
       /* Empty-state row */
@@ -487,9 +541,9 @@
                         <h4 class="stageSectionTitle">Selected category</h4>
                         <p class="stageSectionSub">Select a category from the list to edit it</p>
                       </div>
-                      <div class="row" style="gap:8px; flex-wrap:wrap;">
-                        <button class="btnGhost" id="toggleCategoryActiveBtn" type="button">Deactivate</button>
-                        <button class="btnGhost" id="deleteCategoryBtn" type="button" style="color:#991b1b;">Delete</button>
+                      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <button class="btnGhost" id="toggleCategoryActiveBtn" type="button" style="font-size: 12px; min-height: 36px; padding: 0 12px;">Deactivate</button>
+                        <button class="btnGhost" id="deleteCategoryBtn" type="button" style="font-size: 12px; min-height: 36px; padding: 0 12px; color: #991b1b; border-color: transparent;">Delete</button>
                       </div>
                     </div>
 
@@ -537,10 +591,10 @@
                         <h4 class="stageSectionTitle">Selected product</h4>
                         <p class="stageSectionSub">Select a product from the list to edit it</p>
                       </div>
-                      <div class="row" style="gap:8px; flex-wrap:wrap;">
-                        <button class="btnGhost" id="duplicateProductBtn" type="button">Duplicate</button>
-                        <button class="btnGhost" id="toggleProductActiveBtn" type="button">Deactivate</button>
-                        <button class="btnGhost" id="deleteProductBtn" type="button" style="color:#991b1b;">Delete</button>
+                      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <button class="btnGhost" id="duplicateProductBtn" type="button" style="font-size: 12px; min-height: 36px; padding: 0 12px;">Duplicate</button>
+                        <button class="btnGhost" id="toggleProductActiveBtn" type="button" style="font-size: 12px; min-height: 36px; padding: 0 12px;">Deactivate</button>
+                        <button class="btnGhost" id="deleteProductBtn" type="button" style="font-size: 12px; min-height: 36px; padding: 0 12px; color: #991b1b; border-color: transparent;">Delete</button>
                       </div>
                     </div>
 
@@ -638,10 +692,10 @@
                         <h4 class="stageSectionTitle">Selected bundle</h4>
                         <p class="stageSectionSub">Build combinations, hampers and multi-item offers</p>
                       </div>
-                      <div class="row" style="gap:8px; flex-wrap:wrap;">
-                        <button class="btnGhost" id="duplicateBundleBtn" type="button">Duplicate</button>
-                        <button class="btnGhost" id="toggleBundleActiveBtn" type="button">Deactivate</button>
-                        <button class="btnGhost" id="deleteBundleBtn" type="button" style="color:#991b1b;">Delete</button>
+                      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <button class="btnGhost" id="duplicateBundleBtn" type="button" style="font-size: 12px; min-height: 36px; padding: 0 12px;">Duplicate</button>
+                        <button class="btnGhost" id="toggleBundleActiveBtn" type="button" style="font-size: 12px; min-height: 36px; padding: 0 12px;">Deactivate</button>
+                        <button class="btnGhost" id="deleteBundleBtn" type="button" style="font-size: 12px; min-height: 36px; padding: 0 12px; color: #991b1b; border-color: transparent;">Delete</button>
                       </div>
                     </div>
 
@@ -1614,7 +1668,7 @@
                 </td>
                 <td class="menuRowName">
                   <div class="productName">${escapeHtml(row.name)}</div>
-                  ${row.description ? `<div class="subMeta">${escapeHtml(row.description)}</div>` : ''}
+                  <div class="subMeta">${escapeHtml(row.category_name || '—')}${row.price_pence != null ? ' · ' + formatMoneyPence(row.price_pence) : ''}</div>
                 </td>
                 <td data-label="Category">${escapeHtml(row.category_name || "—")}</td>
                 <td data-label="Price">${row.price_pence == null ? "—" : formatMoneyPence(row.price_pence)}</td>
@@ -1926,7 +1980,7 @@
         const productCount = state.products.filter((p) => p.category_id === category.id).length;
         const bundleCount = state.bundles.filter((b) => b.category_id === category.id).length;
 
-        byId("categorySelectionLabel").textContent = `${category.name} • ${category.is_active ? "active" : "inactive"} • sort ${category.sort_order ?? "—"}`;
+        byId("categorySelectionLabel").textContent = `${category.name} • ${category.is_active ? "active" : "inactive"}`;
         byId("categorySelectionMetrics").innerHTML = [
           `<span class="miniChip">${productCount} products</span>`,
           `<span class="miniChip">${bundleCount} bundles</span>`
@@ -2047,7 +2101,7 @@
 
         const lines = getBundleLines(bundle.id);
 
-        byId("bundleSelectionLabel").textContent = `${bundle.name} • ${bundle.category_name || "No category"} • ${bundle.is_active ? "active" : "inactive"} • sort ${bundle.sort_order ?? "—"}`;
+        byId("bundleSelectionLabel").textContent = `${bundle.name} • ${bundle.category_name || "No category"} • ${bundle.is_active ? "active" : "inactive"}`;
         byId("bundleSelectionMetrics").innerHTML = [
           `<span class="miniChip">${formatMoneyPence(bundle.price_pence)}</span>`,
           `<span class="miniChip">${bundle.capacity_units} capacity</span>`,
@@ -2135,7 +2189,7 @@
         byId("productPrepComplexity").value = product.prep_complexity || "standard";
         byId("toggleProductActiveBtn").textContent = product.is_active ? "Deactivate" : "Activate";
 
-        byId("productSelectionLabel").textContent = `${product.name} • ${product.category_name || "No category"} • ${product.is_active ? "active" : "inactive"} • sort ${product.sort_order ?? "—"}`;
+        byId("productSelectionLabel").textContent = `${product.name} • ${product.category_name || "No category"} • ${product.is_active ? "active" : "inactive"}`;
         byId("productSelectionMetrics").innerHTML = [
           `<span class="miniChip">${formatMoneyPence(product.price_pence)}</span>`,
           `<span class="miniChip">${product.capacity_units} capacity</span>`,
