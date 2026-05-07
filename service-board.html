@@ -587,7 +587,6 @@
               <span id="dropStatusText">—</span>
             </div>
             <div class="heroButtonRow">
-              <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
               <button class="btnGhost heroToggleBtn" id="heroToggleBtn" type="button">Hide summary</button>
             </div>
           </div>
@@ -634,7 +633,7 @@
               <select id="boardTypeFilter">
                 <option value="all">All types</option>
                 <option value="neighbourhood">Neighbourhood</option>
-                <option value="community">Community</option>
+                <option value="community">Hosted</option>
                 <option value="event">Event</option>
               </select>
             </div>
@@ -884,6 +883,12 @@
     const ACTIVE_DEFAULT_STATUSES = ["live", "scheduled", "draft"];
     const ALL_DROP_STATUSES = ["live", "scheduled", "draft", "closed", "completed", "cancelled", "archived"];
 
+    const TYPE_DISPLAY_LABELS = {
+      neighbourhood: 'Neighbourhood',
+      community: 'Hosted',
+      event: 'Event'
+    };
+
     let supabase = null;
     let realtimeChannel = null;
     let realtimeSubscribedDropId = null;
@@ -974,7 +979,9 @@
 
       const parts = [];
 
-      if (drop.drop_type) parts.push(drop.drop_type);
+      if (drop.drop_type) parts.push(
+        TYPE_DISPLAY_LABELS[drop.drop_type] || drop.drop_type
+      );
 
       if (drop.delivery_start && drop.delivery_end) {
         const start = new Date(drop.delivery_start).toLocaleString("en-GB", {
@@ -1201,7 +1208,8 @@
       state.filteredDrops.forEach((drop) => {
         const opt = document.createElement("option");
         opt.value = drop.drop_id;
-        opt.textContent = `${drop.drop_name} • ${drop.drop_type || "drop"} • ${normaliseStatus(drop.status)}`;
+        const dropTypeLabel = TYPE_DISPLAY_LABELS[drop.drop_type] || drop.drop_type || "drop";
+        opt.textContent = `${drop.drop_name} • ${dropTypeLabel} • ${normaliseStatus(drop.status)}`;
         if (drop.drop_id === state.selectedDropId) opt.selected = true;
         select.appendChild(opt);
       });
@@ -2197,16 +2205,6 @@
         } catch (err) {
           console.error(err);
           showError(err.message || "Unable to refresh selected drop.");
-        }
-      });
-
-      byId("refreshBtn").addEventListener("click", async function () {
-        try {
-          await loadDrops();
-          await refreshData();
-        } catch (err) {
-          console.error(err);
-          showError(err.message || "Unable to refresh Service Board.");
         }
       });
 
