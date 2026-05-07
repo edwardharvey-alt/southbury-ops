@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Setup</title>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
   <script src="./assets/config.js"></script>
   <script src="./assets/hearth-vendor.js?v=1"></script>
@@ -17,6 +21,10 @@
       max-width:100%;
     }
 
+    body{
+      font-family: 'Figtree', system-ui, sans-serif;
+    }
+
     /* ── Page layout ── */
     .onboardingPage{
       display:grid;
@@ -25,10 +33,10 @@
 
     /* ── Progress card ── */
     .obProgressCard{
-      background:#fff;
-      border:1px solid var(--h-border-2);
+      background:var(--h-chalk);
+      border:1px solid var(--h-cinder);
       border-radius:20px;
-      box-shadow:0 2px 10px rgba(15,23,42,0.03);
+      box-shadow:var(--h-shadow-sm);
       padding:14px 18px;
       display:flex;
       align-items:center;
@@ -45,7 +53,7 @@
       flex:1;
       min-width:20px;
       height:2px;
-      background:var(--h-border);
+      background:var(--h-cinder);
       margin:0 10px;
       border-radius:2px;
     }
@@ -54,56 +62,56 @@
       width:28px;
       height:28px;
       border-radius:999px;
-      border:2px solid var(--h-border);
+      border:2px solid var(--h-cinder);
       background:#fff;
       display:flex;
       align-items:center;
       justify-content:center;
       font-size:12px;
       font-weight:900;
-      color:var(--h-muted);
+      color:var(--h-stone);
       flex:0 0 auto;
       transition:all .2s ease;
     }
 
     .progressDot.active{
-      border-color:var(--h-accent);
+      border-color:var(--h-fire);
       background:#fff;
-      color:var(--h-accent);
+      color:var(--h-fire);
     }
 
     .progressDot.done{
-      border-color:var(--h-accent);
-      background:var(--h-accent);
+      border-color:var(--h-fire);
+      background:var(--h-fire);
       color:#fff;
     }
 
     .progressLabel{
       font-size:13px;
       font-weight:700;
-      color:var(--h-muted);
+      color:var(--h-stone);
       transition:color .2s ease, font-weight .2s ease;
     }
 
     .progressLabel.active{
-      color:var(--h-accent);
+      color:var(--h-fire);
       font-weight:800;
     }
 
     .progressLabel.done{
-      color:var(--h-text);
+      color:var(--h-slate);
       font-weight:800;
     }
 
     /* ── Stage cards — matches brandSection exactly ── */
     .obStageCard{
-      border:1px solid var(--h-border-2);
+      border:1px solid var(--h-cinder);
       border-radius:22px;
-      background:#fff;
+      background:var(--h-chalk);
       padding:20px;
       display:grid;
       gap:20px;
-      box-shadow:0 2px 10px rgba(15,23,42,0.03);
+      box-shadow:var(--h-shadow-sm);
     }
 
     /* ── Stage eyebrow — matches brandSummaryEyebrow exactly ── */
@@ -115,7 +123,8 @@
       border-radius:999px;
       background:rgba(15,23,42,0.05);
       border:1px solid rgba(15,23,42,0.08);
-      color:var(--h-accent);
+      color:var(--h-fire);
+      font-family:'Figtree', system-ui, sans-serif;
       font-size:11px;
       font-weight:800;
       text-transform:uppercase;
@@ -130,18 +139,23 @@
     }
 
     .questionLabel{
-      font-size:15px;
-      font-weight:800;
+      font-family:'Cormorant Garamond', Georgia, serif;
+      font-size:22px;
+      font-weight:400;
       letter-spacing:-0.01em;
-      color:var(--h-text);
+      color:var(--h-slate);
       line-height:1.3;
       margin:0;
+    }
+
+    @media (max-width:768px){
+      .questionLabel{ font-size:18px; }
     }
 
     .questionSub{
       font-size:12px;
       font-weight:600;
-      color:var(--h-muted);
+      color:var(--h-stone);
       margin-top:-6px;
       margin-bottom:2px;
     }
@@ -168,9 +182,9 @@
       box-sizing:border-box !important;
       width:200px !important;
       flex:0 0 200px !important;
-      border:1px solid var(--h-border);
+      border:1px solid var(--h-cinder);
       border-radius:16px;
-      background:#fff;
+      background:var(--h-chalk);
       cursor:pointer;
       transition:border-color .15s, background .15s;
       user-select:none;
@@ -191,22 +205,22 @@
     }
 
     .onboardingOption:hover{
-      border-color:color-mix(in srgb, var(--h-accent) 30%, transparent);
-      background:color-mix(in srgb, var(--h-accent) 4%, white);
+      border-color:color-mix(in srgb, var(--h-fire) 30%, transparent);
+      background:color-mix(in srgb, var(--h-fire) 4%, white);
     }
 
     .onboardingOption:has(input:checked),
     .onboardingOption.active {
-      border:2px solid var(--h-accent) !important;
-      background:color-mix(in srgb, var(--h-accent) 8%, white);
-      box-shadow:0 4px 12px color-mix(in srgb, var(--h-accent) 10%, transparent);
+      border:2px solid var(--h-fire) !important;
+      background:color-mix(in srgb, var(--h-fire) 8%, white);
+      box-shadow:0 4px 12px color-mix(in srgb, var(--h-fire) 10%, transparent);
     }
     /* ── Custom indicator circle ── */
     .optionIndicator{
       width:24px;
       height:24px;
       border-radius:999px;
-      border:2px solid var(--h-border);
+      border:2px solid var(--h-cinder);
       flex:0 0 auto;
       align-self:flex-start;
       margin-top:2px;
@@ -218,8 +232,8 @@
 
     .onboardingOption:has(input:checked) .optionIndicator,
     .onboardingOption.active .optionIndicator {
-      background:var(--h-accent);
-      border-color:var(--h-accent);
+      background:var(--h-fire);
+      border-color:var(--h-fire);
     }
     .onboardingOption:has(input:checked) .optionIndicator::after,
     .onboardingOption.active .optionIndicator::after {
@@ -233,14 +247,14 @@
     .optionTitle{
       font-size:13px;
       font-weight:800;
-      color:var(--h-text);
+      color:var(--h-slate);
       line-height:1.2;
     }
 
     .optionSub{
       font-size:11px;
       font-weight:600;
-      color:var(--h-muted);
+      color:var(--h-stone);
       margin-top:3px;
       line-height:1.35;
     }
@@ -273,11 +287,11 @@
 
     /* ── Completion card — brandSection treatment ── */
     .obCompletionCard{
-      border:1px solid var(--h-border-2);
+      border:1px solid var(--h-cinder);
       border-radius:22px;
-      background:#fff;
+      background:var(--h-chalk);
       padding:40px 28px;
-      box-shadow:0 2px 10px rgba(15,23,42,0.03);
+      box-shadow:var(--h-shadow-sm);
       text-align:center;
       display:grid;
       gap:10px;
@@ -288,27 +302,28 @@
       width:52px;
       height:52px;
       border-radius:999px;
-      background:color-mix(in srgb, var(--h-accent) 10%, white);
-      border:2px solid color-mix(in srgb, var(--h-accent) 28%, white);
+      background:color-mix(in srgb, var(--h-fire) 10%, white);
+      border:2px solid color-mix(in srgb, var(--h-fire) 28%, white);
       display:flex;
       align-items:center;
       justify-content:center;
-      color:var(--h-accent);
+      color:var(--h-fire);
       font-size:22px;
       margin-bottom:6px;
     }
 
     .completionTitle{
+      font-family:'Cormorant Garamond', Georgia, serif;
       font-size:24px;
-      font-weight:950;
+      font-weight:400;
       letter-spacing:-0.03em;
-      color:var(--h-text);
+      color:var(--h-slate);
       margin:0;
     }
 
     .completionSub{
       font-size:15px;
-      color:var(--h-muted);
+      color:var(--h-stone);
       font-weight:700;
       margin:0;
     }
@@ -325,7 +340,7 @@
     .brandMiniLink{
       font-size:12px;
       font-weight:800;
-      color:var(--h-accent);
+      color:var(--h-fire);
       text-decoration:none;
     }
 
@@ -336,7 +351,7 @@
     .completionUpdateLink{
       font-size:12px;
       font-weight:700;
-      color:var(--h-muted);
+      color:var(--h-stone);
       background:none;
       border:none;
       font:inherit;
@@ -348,7 +363,7 @@
     }
 
     .completionUpdateLink:hover{
-      color:var(--h-text);
+      color:var(--h-slate);
     }
 
     /* ── Host detail capture ── */
@@ -360,7 +375,7 @@
 
     .hostDetailRow{
       padding:14px 16px;
-      border:1px solid var(--h-border);
+      border:1px solid var(--h-cinder);
       border-radius:14px;
       background:rgba(15,23,42,0.02);
       display:grid;
@@ -370,7 +385,7 @@
     .hostDetailRowLabel{
       font-size:11px;
       font-weight:800;
-      color:var(--h-accent);
+      color:var(--h-fire);
       text-transform:uppercase;
       letter-spacing:.05em;
     }
@@ -379,18 +394,18 @@
       width:100%;
       height:38px;
       padding:0 12px;
-      border:1px solid var(--h-border);
+      border:1px solid var(--h-cinder);
       border-radius:10px;
       background:#fff;
       font-size:13px;
       font-weight:600;
-      color:var(--h-text);
+      color:var(--h-slate);
       box-sizing:border-box;
       outline:none;
     }
 
     .hostDetailRow input[type="text"]:focus{
-      border-color:color-mix(in srgb, var(--h-accent) 40%, transparent);
+      border-color:color-mix(in srgb, var(--h-fire) 40%, transparent);
     }
 
     .hostDetailSelects{
@@ -407,25 +422,25 @@
     .hostDetailFieldLabel{
       font-size:11px;
       font-weight:700;
-      color:var(--h-muted);
+      color:var(--h-stone);
     }
 
     .hostDetailField select{
       height:38px;
       padding:0 10px;
-      border:1px solid var(--h-border);
+      border:1px solid var(--h-cinder);
       border-radius:10px;
       background:#fff;
       font-size:13px;
       font-weight:600;
-      color:var(--h-text);
+      color:var(--h-slate);
       box-sizing:border-box;
       outline:none;
       cursor:pointer;
     }
 
     .hostDetailField select:focus{
-      border-color:color-mix(in srgb, var(--h-accent) 40%, transparent);
+      border-color:color-mix(in srgb, var(--h-fire) 40%, transparent);
     }
 
     @media (max-width:500px){
@@ -541,7 +556,7 @@
     .paymentIntro{
       font-size:15px;
       font-weight:600;
-      color:var(--h-text);
+      color:var(--h-slate);
       line-height:1.5;
       margin:0;
     }
@@ -549,13 +564,13 @@
     .paymentIntroSub{
       font-size:13px;
       font-weight:600;
-      color:var(--h-muted);
+      color:var(--h-stone);
       line-height:1.5;
       margin:0;
     }
 
     .paymentChecklist{
-      border:1px solid var(--h-border);
+      border:1px solid var(--h-cinder);
       border-radius:14px;
       padding:16px 18px;
       background:rgba(15,23,42,0.02);
@@ -566,7 +581,7 @@
     .paymentChecklistTitle{
       font-size:13px;
       font-weight:800;
-      color:var(--h-text);
+      color:var(--h-slate);
       margin:0;
     }
 
@@ -581,7 +596,7 @@
     .paymentChecklistItems li{
       font-size:13px;
       font-weight:600;
-      color:var(--h-muted);
+      color:var(--h-stone);
       line-height:1.4;
       display:flex;
       gap:8px;
@@ -590,7 +605,7 @@
 
     .paymentChecklistItems li::before{
       content:'○';
-      color:var(--h-accent);
+      color:var(--h-fire);
       font-weight:900;
       flex:0 0 auto;
       font-size:11px;
@@ -604,10 +619,10 @@
     }
 
     .paymentComfortItem{
-      border:1px solid var(--h-border);
+      border:1px solid var(--h-cinder);
       border-radius:14px;
       padding:14px 12px;
-      background:#fff;
+      background:var(--h-chalk);
       text-align:center;
       display:grid;
       gap:6px;
@@ -621,27 +636,27 @@
     .paymentComfortLabel{
       font-size:11px;
       font-weight:700;
-      color:var(--h-text);
+      color:var(--h-slate);
       line-height:1.3;
     }
 
     .paymentComfortSub{
       font-size:10px;
       font-weight:600;
-      color:var(--h-muted);
+      color:var(--h-stone);
       line-height:1.3;
     }
 
     .paymentFaq{
       display:grid;
       gap:0;
-      border:1px solid var(--h-border);
+      border:1px solid var(--h-cinder);
       border-radius:14px;
       overflow:hidden;
     }
 
     .paymentFaqItem{
-      border-bottom:1px solid var(--h-border);
+      border-bottom:1px solid var(--h-cinder);
     }
 
     .paymentFaqItem:last-child{
@@ -656,7 +671,7 @@
       font:inherit;
       font-size:13px;
       font-weight:700;
-      color:var(--h-text);
+      color:var(--h-slate);
       cursor:pointer;
       text-align:left;
       display:flex;
@@ -671,7 +686,7 @@
 
     .paymentFaqChevron{
       font-size:11px;
-      color:var(--h-muted);
+      color:var(--h-stone);
       transition:transform .2s ease;
       flex:0 0 auto;
     }
@@ -685,7 +700,7 @@
       padding:0 16px 14px;
       font-size:12px;
       font-weight:600;
-      color:var(--h-muted);
+      color:var(--h-stone);
       line-height:1.5;
     }
 
@@ -694,10 +709,10 @@
     }
 
     .paymentSupport{
-      border:1px solid color-mix(in srgb, var(--h-accent) 20%, transparent);
+      border:1px solid color-mix(in srgb, var(--h-fire) 20%, transparent);
       border-radius:14px;
       padding:16px 18px;
-      background:color-mix(in srgb, var(--h-accent) 4%, white);
+      background:color-mix(in srgb, var(--h-fire) 4%, white);
       display:flex;
       align-items:center;
       gap:14px;
@@ -712,20 +727,20 @@
     .paymentSupportTitle{
       font-size:13px;
       font-weight:800;
-      color:var(--h-text);
+      color:var(--h-slate);
       margin:0;
     }
 
     .paymentSupportSub{
       font-size:12px;
       font-weight:600;
-      color:var(--h-muted);
+      color:var(--h-stone);
       margin:2px 0 0;
     }
 
     .paymentStatus{
       display:none;
-      border:1px solid var(--h-border);
+      border:1px solid var(--h-cinder);
       border-radius:14px;
       padding:20px;
       text-align:center;
@@ -735,8 +750,8 @@
       display:grid;
       gap:10px;
       justify-items:center;
-      border-color:color-mix(in srgb, var(--h-accent) 25%, transparent);
-      background:color-mix(in srgb, var(--h-accent) 3%, white);
+      border-color:color-mix(in srgb, var(--h-fire) 25%, transparent);
+      background:color-mix(in srgb, var(--h-fire) 3%, white);
     }
 
     .paymentStatus.success{
@@ -758,8 +773,8 @@
     }
 
     .paymentStatus.waiting .paymentStatusIcon{
-      background:color-mix(in srgb, var(--h-accent) 10%, white);
-      color:var(--h-accent);
+      background:color-mix(in srgb, var(--h-fire) 10%, white);
+      color:var(--h-fire);
     }
 
     .paymentStatus.success .paymentStatusIcon{
@@ -770,14 +785,14 @@
     .paymentStatusTitle{
       font-size:15px;
       font-weight:800;
-      color:var(--h-text);
+      color:var(--h-slate);
       margin:0;
     }
 
     .paymentStatusSub{
       font-size:12px;
       font-weight:600;
-      color:var(--h-muted);
+      color:var(--h-stone);
       margin:0;
       line-height:1.5;
     }
@@ -793,7 +808,7 @@
 
     /* Stage 6 vendor terms link — make the inline link legible as a link */
     #stage6 .questionSub a{
-      color:var(--h-accent);
+      color:var(--h-fire);
       font-weight:800;
       text-decoration:underline;
     }
@@ -882,7 +897,7 @@
           </div>
 
           <!-- Q1 -->
-          <div class="questionBlock" style="border-top:1px solid var(--h-border-2); padding-top:20px;">
+          <div class="questionBlock" style="border-top:1px solid var(--h-cinder); padding-top:20px;">
             <p class="questionLabel">What best describes how you operate?</p>
             <div class="optionsGrid" id="q1Grid" data-question="vendor_type" data-multi="false">
               <div class="onboardingOption" role="button" tabindex="0" data-value="restaurant">
