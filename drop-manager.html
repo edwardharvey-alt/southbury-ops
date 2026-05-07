@@ -6,6 +6,10 @@
   <title>Hearth — Drop Studio</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
   <script src="./assets/config.js"></script>
   <script src="./assets/hearth-vendor.js?v=1"></script>
@@ -13,6 +17,18 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
+    body{
+      font-family: 'Figtree', system-ui, sans-serif;
+    }
+
+    .sectionTitle,
+    .stageSectionTitle,
+    .firstDropGuidanceHeading,
+    .dropCardTitle{
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+    }
+
     .menuStageTools{
       display:grid;
       gap:10px;
@@ -26,7 +42,7 @@
       align-items:flex-start;
       flex-wrap:wrap;
       padding:12px 14px;
-      border:1px solid rgba(15,23,42,0.08);
+      border:1px solid var(--h-cinder);
       border-radius:14px;
       background:rgba(139,107,63,0.04);
     }
@@ -43,9 +59,9 @@
       border-radius:999px;
       font-size:11px;
       font-weight:800;
-      border:1px solid rgba(15,23,42,0.10);
-      background:#fff;
-      color:var(--h-text);
+      border:1px solid var(--h-cinder);
+      background:var(--h-chalk);
+      color:var(--h-slate);
       white-space:nowrap;
     }
 
@@ -69,9 +85,9 @@
       width:32px;
       height:32px;
       border-radius:10px;
-      border:1px solid var(--h-border);
-      background:#fff;
-      color:var(--h-text);
+      border:1px solid var(--h-cinder);
+      background:var(--h-chalk);
+      color:var(--h-slate);
       font-size:16px;
       font-weight:900;
       cursor:grab;
@@ -88,7 +104,7 @@
     .orderingValue{
       font-size:11px;
       font-weight:700;
-      color:var(--h-muted);
+      color:var(--h-stone);
       margin-top:4px;
       display:block;
     }
@@ -104,7 +120,7 @@
 
     .productGroupHeadMeta{
       font-size:11px;
-      color:var(--h-muted);
+      color:var(--h-stone);
       font-weight:700;
     }
 
@@ -356,7 +372,7 @@
         margin-top:8px;
         font-size:11px;
         font-weight:700;
-        color:var(--h-muted);
+        color:var(--h-stone);
         letter-spacing:0.03em;
       }
 
@@ -496,7 +512,7 @@
         grid-template-rows:auto auto auto;
         gap:8px;
         padding:10px;
-        border:1px solid var(--h-border-2);
+        border:1px solid var(--h-cinder);
         border-radius:12px;
         background:var(--h-surface);
         margin-bottom:8px;
@@ -530,7 +546,7 @@
       }
       .assignmentTable tr.isDraggable td:nth-child(7)::before{
         content:"Drop price";
-        font-size:10px; font-weight:700; color:var(--h-muted);
+        font-size:10px; font-weight:700; color:var(--h-stone);
         text-transform:uppercase; white-space:nowrap;
         flex-shrink:0; min-width:64px;
       }
@@ -544,7 +560,7 @@
       }
       .assignmentTable tr.isDraggable td:nth-child(8)::before{
         content:"Stock limit";
-        font-size:10px; font-weight:700; color:var(--h-muted);
+        font-size:10px; font-weight:700; color:var(--h-stone);
         text-transform:uppercase; white-space:nowrap;
         flex-shrink:0; min-width:64px;
       }
@@ -620,11 +636,11 @@
     #demandPreviewSection .demandPreviewLine{
       font-size:13px;
       line-height:1.45;
-      color:var(--h-text);
+      color:var(--h-slate);
       margin:0;
     }
     #demandPreviewSection .demandPreviewLine.muted{
-      color:var(--h-muted);
+      color:var(--h-stone);
     }
     #demandPreviewSection .demandChip{
       display:inline-flex;
@@ -635,9 +651,9 @@
       font-size:11px;
       font-weight:800;
       letter-spacing:0.02em;
-      border:1px solid rgba(15,23,42,0.10);
+      border:1px solid var(--h-cinder);
       background:#fff;
-      color:var(--h-text);
+      color:var(--h-slate);
       white-space:nowrap;
     }
     #demandPreviewSection .demandChip.isStrong{
@@ -652,8 +668,8 @@
     }
     #demandPreviewSection .demandChip.isNew{
       background:rgba(15,23,42,0.05);
-      border-color:rgba(15,23,42,0.14);
-      color:var(--h-muted);
+      border-color:var(--h-cinder);
+      color:var(--h-stone);
     }
     #demandPreviewSection .demandChipWrap{
       display:flex;
@@ -664,7 +680,7 @@
     }
     #demandPreviewSection .demandHostHint{
       font-size:12px;
-      color:var(--h-muted);
+      color:var(--h-stone);
       margin:4px 0 0;
       padding:8px 10px;
       border-left:3px solid rgba(139,107,63,0.28);
@@ -693,12 +709,12 @@
       margin:0;
       font-size:14px;
       font-weight:800;
-      color:var(--h-text);
+      color:var(--h-slate);
     }
     #stripeGate .stripeGateBody{
       margin:2px 0 0;
       font-size:13px;
-      color:var(--h-muted);
+      color:var(--h-stone);
       line-height:1.5;
     }
     #stripeGate a.stripeGateCta{
@@ -714,7 +730,7 @@
       position:relative;
       margin:14px 0 4px;
       padding:20px 22px;
-      border:1px solid var(--h-border);
+      border:1px solid var(--h-cinder);
       border-radius:16px;
       background:rgba(139,107,63,0.05);
       display:flex;
@@ -729,7 +745,7 @@
       height:28px;
       border:none;
       background:transparent;
-      color:var(--h-muted);
+      color:var(--h-stone);
       font-size:18px;
       line-height:1;
       cursor:pointer;
@@ -742,7 +758,7 @@
     #firstDropGuidance .firstDropGuidanceDismiss:hover,
     #firstDropGuidance .firstDropGuidanceDismiss:focus-visible{
       background:rgba(15,23,42,0.06);
-      color:var(--h-text);
+      color:var(--h-slate);
       outline:none;
     }
     #firstDropGuidance .firstDropGuidanceHeading{
@@ -750,13 +766,13 @@
       font-size:16px;
       font-weight:800;
       letter-spacing:-0.01em;
-      color:var(--h-text);
+      color:var(--h-slate);
     }
     #firstDropGuidance .firstDropGuidanceBody{
       margin:0;
       font-size:13px;
       line-height:1.55;
-      color:var(--h-muted);
+      color:var(--h-stone);
       max-width:62ch;
     }
     #firstDropGuidance .firstDropGuidanceActions{
@@ -803,7 +819,7 @@
       gap:8px;
       font-size:13px;
       font-weight:600;
-      color:var(--h-text);
+      color:var(--h-slate);
       text-transform:none;
       letter-spacing:normal;
       cursor:pointer;
@@ -828,7 +844,7 @@
       align-items:center;
       gap:6px;
       font-weight:500;
-      color:var(--h-text);
+      color:var(--h-slate);
       cursor:pointer;
     }
     #postcodePrefixWrap{
@@ -850,7 +866,7 @@
       align-items:center;
       gap:6px;
       background:rgba(196,81,26,0.12);
-      color:var(--h-accent-ink, var(--h-text));
+      color:var(--h-accent-ink, var(--h-slate));
       border:1px solid rgba(196,81,26,0.3);
       border-radius:999px;
       padding:4px 10px;
@@ -1539,7 +1555,7 @@
           <div style="margin-top:12px;">
             <label style="display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px solid var(--h-border); border-radius:12px; cursor:pointer;">
               <input type="checkbox" id="newHostTermsAccept" style="margin-top:3px;" />
-              <span style="font-size:14px; line-height:1.5; color:var(--h-text); text-transform:none; letter-spacing:normal; font-weight:normal;">
+              <span style="font-size:14px; line-height:1.5; color:var(--h-slate); text-transform:none; letter-spacing:normal; font-weight:normal;">
                 I have explained the <a href="host-terms.html" target="_blank" rel="noopener noreferrer" style="color:var(--h-accent); text-decoration:underline;">host participation terms</a> to <strong id="newHostTermsAcceptHostName">this host</strong> and they have agreed.
               </span>
             </label>
@@ -2834,12 +2850,12 @@
         let hasDetail = false;
 
         if (fullHost.audience_description) {
-          enrichHtml += `<p style="margin:6px 0 0;font-size:11px;font-style:italic;color:var(--h-muted);">${escapeHtml(fullHost.audience_description)}</p>`;
+          enrichHtml += `<p style="margin:6px 0 0;font-size:11px;font-style:italic;color:var(--h-stone);">${escapeHtml(fullHost.audience_description)}</p>`;
           hasDetail = true;
         }
 
         if (fullHost.estimated_audience_size) {
-          enrichHtml += `<p style="margin:4px 0 0;font-size:11px;color:var(--h-muted);">~${Number(fullHost.estimated_audience_size).toLocaleString()} audience</p>`;
+          enrichHtml += `<p style="margin:4px 0 0;font-size:11px;color:var(--h-stone);">~${Number(fullHost.estimated_audience_size).toLocaleString()} audience</p>`;
           hasDetail = true;
         }
 
@@ -2857,7 +2873,7 @@
           }).filter(Boolean).join("  |  ");
 
           if (windowSummary) {
-            enrichHtml += `<p style="margin:4px 0 0;font-size:11px;color:var(--h-muted);">${escapeHtml(windowSummary)}</p>`;
+            enrichHtml += `<p style="margin:4px 0 0;font-size:11px;color:var(--h-stone);">${escapeHtml(windowSummary)}</p>`;
             hasDetail = true;
           }
         }
@@ -5143,7 +5159,7 @@
           cancelLink.href = "#";
           cancelLink.className = "js-cancel-remove-window";
           cancelLink.textContent = "Cancel";
-          cancelLink.style.cssText = "color:var(--h-muted);text-decoration:underline;";
+          cancelLink.style.cssText = "color:var(--h-stone);text-decoration:underline;";
 
           confirmSpan.appendChild(confirmLink);
           confirmSpan.appendChild(document.createTextNode(" "));
