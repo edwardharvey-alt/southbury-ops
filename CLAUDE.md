@@ -63,6 +63,15 @@ Core belief: great local food should strengthen communities, not bypass them.
   Loaded synchronously in every operator page's <head>. Used to build nav
   bars at parse time and preserve the ?vendor= URL param across all internal
   navigation. Cache-busted via ?v=2
+- assets/hearth-photo-upload.js — shared photo upload component (Cropper.js
+  + canvas compression + Supabase Storage). Constructor:
+  `new HearthPhotoUpload(container, opts)` with aspectRatio, storagePath
+  generator, initialUrl, guidanceCopy ('item' | 'hero'), onUpload, onRemove.
+  Used by Brand Hearth (hero) today; will be used by Menu Library (item
+  photos) in T4-31b-products.
+- assets/libheif.js — self-hosted libheif-js bundled variant (~1.4MB, WASM
+  inlined). Decodes modern iPhone HEIC for the upload component. See
+  operational learning #37 for variant choice rationale.
 - assets/vendors/southbury-farm-pizza/ — vendor image assets
 
 ## Vendors currently in the database
@@ -798,6 +807,62 @@ on top of the coding rules above.
     stripe_account_id = 'acct_test_southbury' WHERE slug =
     'southbury-farm-pizza';`. Remember to revert.
 
+35. **Vendor asset Storage bucket is `vendor-assets`, path pattern
+    is `{slug}/{asset}`.** Earlier prose in this file may have
+    referenced `assets/vendors/{slug}/...` paths — that was wrong.
+    The actual production bucket is `vendor-assets` (not
+    `assets`), and the path pattern is flat: `{slug}/logo`,
+    `{slug}/hero`, etc., established by T2-7. New asset types
+    should follow the same pattern
+    (`{slug}/products/{product_id}-{ts}.jpg` for product photos).
+    Always upsert to the same path so replacements overwrite in
+    place — eliminates orphan file accumulation. Confirmed via
+    T4-31b investigation (PR #225) where the initial spec
+    assumed the wrong bucket and path; the working code uses
+    `client.storage.from('vendor-assets').upload('${slug}/hero',
+    ...)` with `upsert: true`.
+
+36. **Self-host critical client-side libraries rather than
+    depending on CDNs.** PR #225 burned multiple iterations on
+    heic2any CDN URLs that didn't actually serve the file
+    (cdnjs doesn't host heic2any; jsDelivr's first guess URL
+    was wrong). The clean fix was to download the library into
+    `assets/` and reference locally. CDN failures are silent
+    (script tag fails to load, downstream calls throw "X is
+    not defined") and CDN coverage isn't always what you
+    expect. For libraries in critical user flows, self-host.
+    Standard cdnjs entries (Cropper.js, popular libraries) are
+    still fine; specialist or smaller libraries should be
+    vendored.
+
+37. **Modern iPhone HEIC requires a current libheif build.**
+    heic2any@0.0.4 (most recent release, from 2020) bundles a
+    years-old libheif WASM that fails on modern iPhone HEIC
+    encoding with "Could not parse HEIF file" (libheif error
+    code object visible in DevTools console). Switching
+    libraries doesn't help if they wrap the same libheif
+    build. The fix is `libheif-js` (catdad-experiments) which
+    ships a current libheif build — specifically the *bundled*
+    variant (`libheif-wasm/libheif-bundle.js`, ~1.4MB single
+    file with WASM inlined as base64), not the wasm-split
+    variant which has separate-WASM-file path resolution
+    issues. Confirmed in PR #225. Mobile uploads from iOS
+    Safari are unaffected because iOS auto-converts HEIC →
+    JPEG before passing to the browser; the issue only
+    manifests on desktop Chrome (or Mac Photos picks) where
+    HEIC reaches the JS unmodified.
+
+38. **Always hard-reload (Cmd+Shift+R) when testing save flows
+    on deploy preview.** PR #225 spent significant time
+    investigating a "save doesn't persist" bug that turned out
+    to be Chrome serving cached page state. The save was
+    working all along; the regular Cmd+R reload was returning
+    the old hero URL from disk cache. Hard-reload bypasses the
+    cache and shows current state. Standard practice for any
+    PR where save+reload matters: at least one full hard-reload
+    as part of the verification checklist, especially after
+    observing an unexpected "didn't persist" symptom.
+
 ## Stripe Connect Express (T3-8)
 
 - vendors schema: `stripe_account_id` TEXT (nullable),
@@ -883,6 +948,18 @@ the control surface for the platform itself.
   Drop Studio, Menu Library, Brand Hearth, Insights
 - Avoid: Campaign, Listing, Inventory, SKU, Funnel, Promotion, Deal
 
+**Product decisions captured during build:**
+
+- **Vendor tagline and about paragraph do not render on the customer
+  order page.** Customers arriving at order.html have already clicked
+  through a vendor- or host-specific link, so they know what vendor
+  they're ordering from. Tagline does discovery work; Hearth
+  deliberately doesn't have browsing. Vendor brand copy is a latent
+  asset that surfaces in promotion materials (T5-25), host outreach
+  (T5-26), multi-vendor events (T5-23), and host platform
+  participation (T5-27) — none of which are live yet. Captured 6 May
+  2026 during T4-31b design conversation.
+
 ## Order flow — current state
 
 Order persistence is complete. order.html writes to:
@@ -941,6 +1018,7 @@ Snapshot of which read/write paths are working in production and which are known
 - Hosts UPDATE (host-profile.html save) — WORKING via `update-host` Edge Function. Whitelisted field updates with vendor-scoped tenancy belt (id + vendor_id) and service-role write. Verified end-to-end in production 2 May 2026.
 - Drops INSERT / UPDATE / status transitions — WORKING via `create-drop`, `update-drop`, `transition-drop-status`, `assign-menu-items`, `create-host`, and `remove-event-window` Edge Functions. Confirmed via source-level grep against drop-manager.html on 2 May 2026 — no remaining direct PostgREST writes against `drops`, `drop_menu_items`, `hosts` (insert path), or related tables on the Drop Studio page.
 - Onboarding writes (vendors, host context, terms acceptance) — WORKING via `update-vendor` and `complete-onboarding` Edge Functions. Confirmed via source-level grep against onboarding.html on 2 May 2026 — no remaining direct PostgREST writes.
+- Vendor hero image upload (`vendors.hero_image_url` and Supabase Storage `vendor-assets/{slug}/hero`) — WORKING via `update-vendor` Edge Function for the DB write and direct `storage.from('vendor-assets').upload(...)` for the asset. Confirmed end-to-end on Test 11 production via PR #225. Bucket is `vendor-assets`, path is `{slug}/hero` with `upsert: true` so replacements overwrite in place. Same pattern in use for logo (`{slug}/logo`) since T2-7. Future asset types should follow the same pattern.
 - Categories INSERT / UPDATE / DELETE (drop-menu.html) — WORKING via `create-category`, `update-category`, `delete-category` Edge Functions. Shipped 2 May 2026 as T5-B16 batch 1 (PR #209).
 - Products INSERT / UPDATE / DELETE (drop-menu.html) — WORKING via `create-product`, `update-product`, `delete-product` Edge Functions. Shipped 2 May 2026 as T5-B16 batch 2 (PR #211).
 - Bundles INSERT / UPDATE / DELETE (drop-menu.html) — WORKING via `create-bundle`, `update-bundle`, `delete-bundle`, `duplicate-bundle`, `save-bundle-line`, `delete-bundle-line` Edge Functions. Shipped 2 May 2026 as T5-B16 batch 3 (PR #212). bundle_lines and bundle_line_choice_products writes are covered by the composite `save-bundle-line` and `duplicate-bundle` functions.
@@ -969,8 +1047,11 @@ index.
 
 ### Tier 4 — Enhancements that will impress
 - T4-29 — Series intelligence in Insights — open
+- T4-31b-products — Per-item photography (Menu Library mount + schema + Edge Function whitelists + order page field verification) — open. Parent T4-31b shipped hero in PR #225; this is the remaining product-photo scope.
+- T4-31b-fu1 — Server-side HEIC conversion fallback for Mac-Photos-HEIC — open, deferred until real vendor friction.
 - T4-32 — Order page: map display for collection point and delivery area — open
-- T4-33 — Brand Hearth: GenAI copy generation + customisation review — open
+- T4-33 — Brand Hearth: GenAI copy generation + customisation review — open, deferred until T5-25 surfaces a customer-facing use for vendor brand copy.
+- T4-33b — Drop copy AI generation (sixth GenAI use case, Drop Story card on order.html) — open.
 - T4-34 — Multiple windows: windowCount race condition on sibling naming — open
 - T4-35 — Multiple windows + Close Orders: duplicative timing UX — open
 - T4-36 — Multiple windows: discoverability of Create windows action — open
@@ -1087,7 +1168,8 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 
 ### Tier 9 — Agentic AI workstream
 - T9-1 — Auto-draft drops from demand signals — open
-- T9-2 — Brand configuration AI — open
+- T9-2-positioning — Brand positioning AI from uploaded assets (tagline, about paragraph, target audience) — open.
+- T9-2-visual — First-slice visual brand AI for the order page (logo palette extraction, primary_color suggestions, hero suitability, contrast checks) — open. Could land much earlier than T9-2-positioning.
 - T9-3 — Proactive host identification — open
 - T9-4 — Drop optimisation strategy — open
 - T9-5 — Promotion copy generation — open
