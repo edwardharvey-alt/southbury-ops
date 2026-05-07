@@ -350,10 +350,10 @@
       }
       .dropCard,
       #dropBand .dropCard{
-        width: 100% !important;
-        min-width: 100% !important;
-        max-width: 100% !important;
-        flex: 0 0 100% !important;
+        width: 88% !important;
+        min-width: 88% !important;
+        max-width: 88% !important;
+        flex: 0 0 88% !important;
         scroll-snap-align: start;
         box-sizing: border-box !important;
       }
@@ -632,6 +632,7 @@
 
       .productGroupHeadRow{
         margin-bottom: 16px;
+        padding-left: 4px;
       }
 
       .workspaceHeaderActions{
@@ -2779,9 +2780,10 @@
 
       band.innerHTML = drops.map((drop) => {
         const active = drop.drop_id === state.selectedDropId ? "active" : "";
+        const dropTypeLabel = TYPE_DISPLAY_LABELS[drop.drop_type] || titleCase(drop.drop_type || "drop");
         const hostLine = drop.host_name
-          ? `${escapeHtml(drop.drop_type || "drop")} • ${escapeHtml(drop.host_name)}`
-          : `${escapeHtml(drop.drop_type || "drop")}`;
+          ? `${escapeHtml(dropTypeLabel)} • ${escapeHtml(drop.host_name)}`
+          : `${escapeHtml(dropTypeLabel)}`;
 
         return `
           <div class="dropCard ${active}" data-drop-id="${drop.drop_id}">
@@ -2794,8 +2796,10 @@
                 <span class="miniChip ${escapeHtml(drop.status || "")}">${escapeHtml(drop.status || "—")}</span>
               </div>
 
-              <div class="dropCardMeta">${escapeHtml(formatDateShort(drop.delivery_start))}</div>
-              <div class="dropCardMeta">${escapeHtml(formatTimeOnly(drop.delivery_start))}–${escapeHtml(formatTimeOnly(drop.delivery_end))}</div>
+              <div class="dropCardMeta">
+                ${escapeHtml(formatDateShort(drop.delivery_start))} ·
+                ${escapeHtml(formatTimeOnly(drop.delivery_start))}–${escapeHtml(formatTimeOnly(drop.delivery_end))}
+              </div>
 
               <div class="dropCardStats">
                 <span class="miniChip">${Number(drop.capacity_units_used || 0)} / ${Number(drop.capacity_units_total || 0)} ${escapeHtml(getCapacityCategoryLabel(drop))}</span>
