@@ -678,6 +678,107 @@ photography is the next-most-valuable polish lever (i.e. when
 the order page polish from T4-31 is live and vendors are asking
 for the photo path).
 
+**Status update (7 May 2026):** PARTIAL. Hero photo upload (Brand
+Hearth) shipped in PR #225. Includes: shared
+`assets/hearth-photo-upload.js` component (Cropper.js + canvas
+compression + Supabase Storage); self-hosted libheif-js bundled
+variant (`assets/libheif.js`, ~1.4MB) for modern iPhone HEIC
+decode; hero composition guidance copy; full state machine
+(empty / selected / converting / uploading / has-image / error);
+replace and remove flows; mobile camera capture verified;
+storage bucket confirmed as `vendor-assets` with path
+`{slug}/hero` and `upsert: true`. See CLAUDE.md operational
+learnings #35-#38 for technical context.
+
+Per-product photography (Menu Library mount, schema migration,
+Edge Function whitelist updates, order page field verification)
+is split out into **T4-31b-products** as a new open ticket — see
+below.
+
+T4-31b-products: Per-item photography asset workflow — Menu
+Library mount + schema + order page integration
+
+**Status:** Open. Tier 4. Successor to T4-31b's deferred
+product-photo scope.
+
+The shared HearthPhotoUpload component built in PR #225 is ready
+to mount. Remaining work:
+
+**Schema (Ed runs in SQL editor):**
+ALTER TABLE products ADD COLUMN image_url text;
+
+**Storage layout:** Bucket `vendor-assets` (existing). Path
+`{slug}/products/{product_id}-{timestamp}.jpg`. Mirrors the flat
+`{slug}/{asset}` pattern with a `products/` subdirectory. Verify
+Storage RLS policies allow nested writes under each vendor's
+slug folder; extend if needed.
+
+**Edge Function whitelist updates:** Add `image_url` to
+ALLOWED_FIELDS in `supabase/functions/create-product/index.ts`
+and `supabase/functions/update-product/index.ts`. Both deploy
+via `supabase functions deploy` per CLAUDE.md rule #15.
+
+**View widening (Ed runs in SQL editor):** Per operational
+learning #26, append `image_url` to any v_*_enriched view that
+surfaces products to operator UI or order page. Audit list:
+`v_products_enriched`, `v_menu_library_items`,
+`v_drop_menu_items_enriched`, `v_drop_menu_item_stock`. Use
+CREATE OR REPLACE VIEW with `image_url` appended at end of
+SELECT (Postgres rejects column reordering).
+
+**Menu Library mount (drop-menu.html):** Add a Photo section to
+the product editor drawer mounting HearthPhotoUpload with 16:9
+aspect ratio, storage path
+`{slug}/products/{product_id}-{ts}.jpg`, and item-photo
+composition guidance.
+
+New product chicken-and-egg: products need an ID before upload
+can succeed. Generate a client-side UUID for the storage
+filename and save it with the product on first save. Orphan
+files possible if vendor uploads but cancels save — accepted
+for V1.
+
+**Order page verification (order.html):** T4-31 built the
+conditional render for with-photo and no-image card states.
+Verify the field name reads from `image_url`. Eye-test
+mixed-state visual rhythm on deploy preview with Test 11 (some
+products with photos, some without) — strategy 1 from T4-31b
+design (mixed by default, no per-item visibility toggle in V1).
+
+**Sequencing:** waits until the in-flight platform brand
+refresh merges to main, then this work goes onto the
+brand-refreshed drop-menu.html. Likely two PRs: PR1 covers Edge
+Function whitelists + drop-menu.html mount; PR2 covers order
+page verification. Could be one if scope holds.
+
+**Verification checklist:** product photo upload, crop, save
+end-to-end on Test 11 deploy preview; replace, remove flows;
+order page renders mixed-state cards correctly; mobile capture
+verified.
+
+T4-31b-fu1: Server-side HEIC conversion fallback
+
+**Status:** Open. Tier 4. Deferred — build only when a real
+vendor surfaces this as live friction.
+
+**Background:** PR #225 added client-side HEIC conversion via
+libheif-js bundled variant. Modern iPhone HEIC files from
+mobile Safari work because iOS auto-converts. Modern iPhone
+HEIC files synced to Mac Photos and uploaded via desktop Chrome
+may still fail on libheif's parser limits — though the bundled
+variant 1.19.8 has handled all test cases so far.
+
+**Scope when triggered:** Add a Supabase Edge Function
+(`convert-heic` or similar) that accepts a HEIC blob, runs
+server-side conversion via Sharp or ImageMagick with HEIF
+support, returns JPEG. The client falls back to this Edge
+Function when libheif-js decode throws.
+
+**Trigger:** real vendor reports being unable to upload HEIC
+from Mac Photos and the libheif client-side decode fails for
+their specific files. Until then, the workaround copy ("upload
+from your phone, or convert to JPEG via Preview") is in place.
+
 T4-31-BH: Brand Hearth — guidance updates required following T4-31
 order page redesign
 
@@ -726,6 +827,66 @@ Key constraint: the model must never generate claims about specific locations, s
 **Part 2 — Customisation review**
 
 Conduct a structured review of Brand Hearth to identify what additional brand controls would meaningfully change how vendor-owned the experience feels. Current state is minimal: hero image, display name, tagline, colour picker. Assess whether vendors currently feel proud showing their brand to customers. Candidates: font choices, accent colour application across more UI elements, secondary brand image, richer about copy, social handle display. Goal is not feature bloat — identify what is missing before deciding what to build. Run as a focused design review before any build work.
+
+**Status update (May 2026):** Deferred pending T5-25 (drop
+promotion / marketing assets). T4-33 generates vendor brand
+copy (tagline, about paragraph) which has no current
+customer-facing surface — vendor tagline and about paragraph do
+not render on the customer order page (see CLAUDE.md "Product
+decisions captured" — customers arrive in-context). The first
+surface that actually exposes vendor brand copy to customers
+indirectly is T5-25's promotion materials (poster, social
+copy). Build T4-33 alongside or just before T5-25, not as a
+standalone Brand Hearth feature. Possibly split into
+tagline-only (low blank-page burden, manual fine) and
+about-paragraph (higher blank-page burden, AI helps) at build
+time.
+
+The drop-level equivalent — T4-33b drop copy generation — has
+independent customer-facing value via Drop Story card and is
+not deferred. See T4-33b.
+
+T4-33b: Drop copy AI generation — sixth GenAI use case
+
+**Status:** Open. Tier 4. Surfaced during T4-31b design
+conversation, May 2026.
+
+**Scope:** AI-assisted copy generation for the per-drop
+`drop_intro` field that powers the Drop Story card on
+order.html. Architectural pattern matches T4-33 — opt-in CTA in
+Drop Studio, client-side Anthropic API call (Haiku 4.5),
+structured drop data in, plain-English copy out as editable
+starting point. Same hard rules as the GenAI shared principles
+(deterministic facts rendered separately, framing only
+generated, never automatic).
+
+**Why this earned its own ticket vs riding on T4-33:** vendor
+brand copy is a once-per-vendor asset with no current
+customer-facing surface (deferred until T5-25). Drop copy is a
+weekly-cadence asset that surfaces directly on order.html every
+drop. Blank-page burden is real and recurring. Higher-value
+GenAI piece in the near term.
+
+**Inputs to the prompt:** vendor brand voice from Brand Hearth
+(display_name, tagline, food category cues); drop occasion data
+(host context, day of week, drop_type, fulfilment_mode,
+opens_at / delivery_start); menu highlights (top 3-5 items by
+name from drop_menu_items); optional vendor "what's the angle
+this week" steering input.
+
+**UX:** "Generate a starting point →" link inside the Drop
+Story textarea in Drop Studio. On click, call API, populate
+textarea with editable draft. Vendor edits, saves via existing
+update-drop flow. 280-character limit unchanged.
+
+**Architecture:** client-side Haiku 4.5 call via established
+Claude-in-artifact pattern. No new Edge Function. No new
+schema.
+
+**Sequencing:** independent of brand refresh and
+T4-31b-products. Can ship anytime after the platform's first
+vendor is running real drops (otherwise no real drops to test
+against).
 
 T4-34: Multiple windows — windowCount race condition on sibling naming
 Multiple windows flow assigns the same "Window N" suffix to multiple
@@ -3029,7 +3190,11 @@ reviews, edits if needed, and publishes with one click. Nothing is
 created without explicit vendor action.
 Dependency: T4-28, T5-9, meaningful drop history.
 
-T9-2: Brand configuration AI
+T9-2-positioning: Brand positioning AI from uploaded assets
+
+**Status:** Open. Tier 9. Split from T9-2 during T4-31b design,
+May 2026.
+
 On Brand Hearth, a vendor can trigger an AI brand analysis. They
 provide their uploaded logo, hero image, a short free-text
 description of their food and ethos, and their vendor category.
@@ -3042,6 +3207,46 @@ until the vendor explicitly confirms. Particularly high value for
 new vendors who arrive at Brand Hearth unsure how to describe
 themselves.
 Dependency: T2-7 (file upload for logo and hero image).
+
+T9-2-visual: First-slice visual brand AI for the order page
+
+**Status:** Open. Tier 9 (or earlier — could land before full
+T9-2-positioning if vendor signal warrants).
+
+**Scope:** Smaller, more focused than T9-2-positioning. Helps
+the vendor's existing brand work *inside* Hearth's order-page
+frame without redesigning their brand.
+
+**Capabilities:**
+- Logo palette extraction — analyse uploaded logo, surface 3-5
+  dominant colours as suggested vendor primary/accent options.
+- Hero image suitability assessment — analyse uploaded hero,
+  flag if it's logo-led rather than food-led (per T4-31-BH
+  guidance), suggest framing improvements.
+- Contrast checks against the order page palette — vendor
+  primary_color against `#faf7f4` warm card background, against
+  body text `#1F2937`. Flag low-contrast configurations and
+  suggest adjustments.
+- Suggested primary_color for CTAs that work harmoniously with
+  the hero image without clashing.
+
+**Architecture:** client-side Anthropic API call with vision
+(Sonnet 4.6 or Opus 4.7). Structured outputs: colour swatches
+with hex values, suitability flags, suggested values. UI shows
+accept/reject per suggestion, never auto-applies.
+
+**Out of scope (lives in T9-2-positioning):** tagline
+generation, about paragraph generation, brand positioning
+statement, target audience description.
+
+**Brand playbook constraint:** "Hearth frames the experience,
+vendor fills the experience." This ticket helps vendors
+articulate their brand inside Hearth's frame, never imposes a
+Hearth-house style.
+
+**Sequencing:** could land much earlier than T9-2-positioning
+since the building blocks (hero upload, logo upload, vendor
+primary_color) are now all in place after PR #225.
 
 T9-3: Proactive host identification
 Rather than vendors browsing the host directory manually, Hearth
