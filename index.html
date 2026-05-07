@@ -3,903 +3,900 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Hearth — Plan food moments with the communities you serve</title>
+  <title>Hearth — Plan it once. Sell before you serve.</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
 
-  <link rel="stylesheet" href="./assets/hearth.css?v=31" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Figtree:wght@300;400;500;600;700&display=swap" />
 
   <style>
-    :root{
-      --ld-orange: var(--h-accent, #f97316);
-      --ld-orange-2: var(--h-accent-2, #fb923c);
-      --ld-ink: #1f2937;
-      --ld-ink-muted: #4b5563;
-      --ld-ink-soft: #6b7280;
-      --ld-cream: #faf8f5;
-      --ld-warm-grey: #f5f4f1;
-      --ld-dark: #1a1612;
-      --ld-border: #e9e3d8;
-      --ld-tile-soft: #faf7f1;
+    :root {
+      --h-fire:    #c4511a;
+      --h-glow:    #fff3ec;
+      --h-coal:    #0f0b08;
+      --h-ember:   #2a1f17;
+      --h-slate:   #4a3f37;
+      --h-stone:   #8c7b6e;
+      --h-chalk:   #faf8f5;
+      --h-ash:     #f5f0eb;
+      --h-cinder:  #e8ddd5;
+
+      --h-text-primary:   var(--h-slate);
+      --h-text-secondary: var(--h-stone);
+      --h-text-accent:    var(--h-fire);
+      --h-bg:             var(--h-chalk);
+      --h-bg-alt:         var(--h-ash);
+      --h-bg-dark:        var(--h-coal);
+      --h-border:         1px solid var(--h-cinder);
+
+      --h-radius-sm:  0.375rem;
+      --h-radius-md:  0.75rem;
+      --h-radius-lg:  1rem;
+      --h-radius-xl:  1.5rem;
+
+      --h-shadow-sm: 0 1px 3px rgba(15,11,8,0.08);
+      --h-shadow-md: 0 4px 12px rgba(15,11,8,0.10);
+      --h-shadow-lg: 0 8px 24px rgba(15,11,8,0.12);
     }
 
-    *, *::before, *::after{
-      box-sizing:border-box;
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body { margin: 0; padding: 0; }
+
+    body {
+      background: var(--h-bg);
+      color: var(--h-text-primary);
+      font-family: 'Figtree', system-ui, -apple-system, sans-serif;
+      font-weight: 400;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      padding-top: 56px;
     }
 
-    body.ldBody{
-      margin:0;
-      padding:0;
-      background:#ffffff;
-      color:var(--ld-ink);
-      font-family:
-        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans,
-        Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-      line-height:1.55;
+    a { color: inherit; text-decoration: none; }
+
+    /* ===========================================================
+       NAV
+       =========================================================== */
+    .ldNav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: var(--h-chalk);
+      border-bottom: var(--h-border);
+      z-index: 100;
     }
 
-    /* ---------- Layout primitives ---------- */
-
-    .ldSection{
-      width:100%;
-      padding:96px 24px;
+    .ldNavInner {
+      max-width: 900px;
+      height: 100%;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
-    .ldContainer{
-      max-width:1100px;
-      margin:0 auto;
+    .ldWordmark {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    @media (min-width:769px){
-      .ldSection{
-        padding:120px 48px;
+    .ldWordmarkText {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 18px;
+      color: var(--h-slate);
+      letter-spacing: -0.01em;
+    }
+
+    .ldWordmarkDot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--h-fire);
+    }
+
+    .ldNavRight {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .ldNavSignIn {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 15px;
+      color: var(--h-stone);
+    }
+
+    .ldNavSignIn:hover { color: var(--h-slate); }
+
+    .ldNavCta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 36px;
+      padding: 0 16px;
+      border: 1.5px solid var(--h-fire);
+      border-radius: var(--h-radius-md);
+      background: transparent;
+      color: var(--h-fire);
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .ldNavCta:hover { background: var(--h-glow); }
+
+    @media (max-width: 640px) {
+      .ldNavSignIn { display: none; }
+    }
+
+    /* ===========================================================
+       HERO
+       =========================================================== */
+    .ldHero {
+      background: var(--h-coal);
+      padding: 100px 24px;
+    }
+
+    @media (max-width: 768px) {
+      .ldHero { padding: 72px 24px; }
+    }
+
+    .ldHeroInner {
+      max-width: 640px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .ldEyebrow {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--h-fire);
+      margin: 0 0 24px;
+    }
+
+    .ldHeroHeadline {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: 64px;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      margin: 0 0 28px;
+    }
+
+    .ldHeroHeadline .ldLine1 {
+      display: block;
+      color: var(--h-chalk);
+    }
+
+    .ldHeroHeadline .ldLine2 {
+      display: block;
+      font-style: italic;
+      font-weight: 400;
+      color: var(--h-fire);
+    }
+
+    @media (max-width: 768px) {
+      .ldHeroHeadline { font-size: 44px; }
+    }
+
+    .ldHeroBody {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 18px;
+      line-height: 1.55;
+      color: var(--h-stone);
+      margin: 0 0 36px;
+    }
+
+    .ldHeroCta {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .ldPrimaryBtn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 52px;
+      padding: 0 28px;
+      background: var(--h-fire);
+      color: #ffffff;
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      border-radius: var(--h-radius-md);
+      letter-spacing: -0.005em;
+    }
+
+    .ldPrimaryBtn:hover {
+      background: #b34715;
+    }
+
+    .ldHeroSecondary {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--h-stone);
+    }
+
+    .ldHeroSecondary:hover { color: var(--h-chalk); }
+
+    .ldSmallPrint {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 13px;
+      color: var(--h-stone);
+      opacity: 0.6;
+      margin: 0;
+    }
+
+    /* ===========================================================
+       FEATURE SECTIONS
+       =========================================================== */
+    .ldFeature {
+      padding: 80px 24px;
+    }
+
+    @media (max-width: 768px) {
+      .ldFeature { padding: 56px 24px; }
+    }
+
+    .ldFeatureA, .ldFeatureC { background: var(--h-chalk); }
+    .ldFeatureB, .ldFeatureD { background: var(--h-ash); }
+
+    .ldFeatureInner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+    }
+
+    .ldFeatureReverse .ldFeatureText { order: 2; }
+    .ldFeatureReverse .ldCard { order: 1; }
+
+    @media (max-width: 768px) {
+      .ldFeatureInner {
+        grid-template-columns: 1fr;
+        gap: 32px;
       }
+      .ldFeatureReverse .ldFeatureText { order: 0; }
+      .ldFeatureReverse .ldCard { order: 0; }
     }
 
-    /* ---------- Wordmark ---------- */
-
-    .ldWordmark{
-      text-align:center;
-      margin:0 0 32px;
-    }
-
-    .ldWordmarkText{
-      display:inline-block;
-      font-size:22px;
-      font-weight:950;
-      letter-spacing:-0.035em;
-      color:var(--ld-ink);
-      margin:0;
-    }
-
-    .ldWordmarkDot{
-      display:inline-block;
-      width:8px;
-      height:8px;
-      border-radius:50%;
-      background:linear-gradient(135deg, var(--ld-orange), var(--ld-orange-2));
-      margin-left:6px;
-      vertical-align:middle;
-      transform:translateY(-2px);
-    }
-
-    /* ---------- Hero ---------- */
-
-    .ldHero{
-      background:
-        radial-gradient(900px 450px at 15% -10%, rgba(249,115,22,0.10), rgba(249,115,22,0) 60%),
-        radial-gradient(700px 360px at 90% 5%, rgba(251,146,60,0.08), rgba(251,146,60,0) 55%),
-        var(--ld-cream);
-      padding:80px 24px;
-      text-align:center;
-    }
-
-    @media (min-width:769px){
-      .ldHero{
-        padding:120px 48px;
-      }
-    }
-
-    .ldHeroInner{
-      max-width:760px;
-      margin:0 auto;
-      display:grid;
-      gap:20px;
-      justify-items:center;
-    }
-
-    .ldHeroHeadline{
-      font-size:36px;
-      font-weight:700;
-      line-height:1.15;
-      letter-spacing:-0.035em;
-      color:var(--ld-ink);
-      margin:8px 0 0;
-    }
-
-    @media (min-width:769px){
-      .ldHeroHeadline{
-        font-size:52px;
-      }
-    }
-
-    .ldHeroSub{
-      max-width:640px;
-      font-size:16px;
-      font-weight:500;
-      line-height:1.6;
-      color:var(--ld-ink-muted);
-      margin:0;
-    }
-
-    @media (min-width:769px){
-      .ldHeroSub{
-        font-size:18px;
-      }
-    }
-
-    .ldCtaRow{
-      display:grid;
-      gap:12px;
-      justify-items:center;
-      margin-top:12px;
-      width:100%;
-    }
-
-    .ldPrimaryBtn{
-      display:inline-block;
-      min-height:52px;
-      padding:0 28px;
-      border-radius:14px;
-      background:linear-gradient(135deg, var(--ld-orange), var(--ld-orange-2));
-      color:#fff;
-      font-size:16px;
-      font-weight:800;
-      letter-spacing:-0.01em;
-      text-decoration:none;
-      line-height:52px;
-      box-shadow:0 4px 14px rgba(249,115,22,0.22);
-      transition:transform .08s ease, box-shadow .15s ease;
-    }
-
-    .ldPrimaryBtn:hover{
-      box-shadow:0 6px 20px rgba(249,115,22,0.32);
-    }
-
-    .ldPrimaryBtn:active{
-      transform:translateY(1px);
-    }
-
-    @media (max-width:768px){
-      .ldPrimaryBtn{
-        width:100%;
-        max-width:360px;
-        text-align:center;
-      }
-    }
-
-    .ldSecondaryLink{
-      font-size:14px;
-      font-weight:700;
-      color:var(--ld-orange);
-      text-decoration:none;
-    }
-
-    .ldSecondaryLink:hover{
-      text-decoration:underline;
-    }
-
-    .ldSmallPrint{
-      font-size:13px;
-      font-weight:500;
-      color:var(--ld-ink-soft);
-      margin:4px 0 0;
-    }
-
-    /* ---------- Section scaffolding ---------- */
-
-    .ldSectionHead{
-      text-align:center;
-      margin:0 0 56px;
-    }
-
-    .ldSectionTitle{
-      font-size:26px;
-      font-weight:700;
-      line-height:1.2;
-      letter-spacing:-0.03em;
-      color:var(--ld-ink);
-      margin:0;
-    }
-
-    @media (min-width:769px){
-      .ldSectionTitle{
-        font-size:32px;
-      }
-    }
-
-    /* ---------- Section 2 — How it works ---------- */
-
-    .ldHow{
-      background:#ffffff;
-    }
-
-    .ldStepGrid{
-      display:grid;
-      gap:40px;
-      grid-template-columns:1fr;
-    }
-
-    @media (min-width:769px){
-      .ldStepGrid{
-        grid-template-columns:repeat(3, minmax(0, 1fr));
-        gap:48px;
-      }
-    }
-
-    @media (min-width:769px){
-      .ldHow .ldStepGrid{
-        grid-template-columns:repeat(2, minmax(0, 1fr));
-      }
-    }
-
-    .ldStep{
-      display:grid;
-      gap:10px;
-    }
-
-    .ldStepNum{
-      font-size:40px;
-      font-weight:900;
-      letter-spacing:-0.04em;
-      line-height:1;
-      color:var(--ld-orange);
-      margin:0;
+    .ldFeatureText {
+      max-width: 380px;
     }
 
-    .ldStepTitle{
-      font-size:20px;
-      font-weight:700;
-      letter-spacing:-0.02em;
-      color:var(--ld-ink);
-      margin:8px 0 0;
+    .ldFeatureText .ldEyebrow {
+      margin-bottom: 16px;
     }
 
-    .ldStepBody{
-      font-size:16px;
-      line-height:1.6;
-      color:var(--ld-ink-muted);
-      margin:0;
+    .ldFeatureHeadline {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: 36px;
+      line-height: 1.15;
+      letter-spacing: -0.005em;
+      color: var(--h-slate);
+      margin: 0 0 16px;
     }
 
-    @media (min-width:769px){
-      .ldStepBody{
-        font-size:18px;
-      }
+    @media (max-width: 768px) {
+      .ldFeatureHeadline { font-size: 28px; }
     }
 
-    /* ---------- Section 3 — Difference ---------- */
-
-    .ldDifference{
-      background:var(--ld-warm-grey);
-    }
-
-    .ldDifferenceGrid{
-      display:grid;
-      gap:32px;
-      grid-template-columns:1fr;
-    }
-
-    @media (min-width:769px){
-      .ldDifferenceGrid{
-        grid-template-columns:repeat(3, minmax(0, 1fr));
-        gap:48px;
-      }
-    }
-
-    .ldDifferenceCol{
-      display:grid;
-      gap:10px;
-    }
-
-    .ldDifferenceTitle{
-      font-size:18px;
-      font-weight:700;
-      letter-spacing:-0.02em;
-      color:var(--ld-ink);
-      margin:0;
-    }
-
-    @media (min-width:769px){
-      .ldDifferenceTitle{
-        font-size:20px;
-      }
-    }
-
-    .ldDifferenceCol p{
-      font-size:16px;
-      line-height:1.7;
-      color:var(--ld-ink-muted);
-      margin:0;
-    }
-
-    @media (min-width:769px){
-      .ldDifferenceCol p{
-        font-size:18px;
-      }
-    }
-
-    .ldSectionLead{
-      max-width:680px;
-      margin:16px auto 0;
-      font-size:16px;
-      line-height:1.6;
-      color:var(--ld-ink-muted);
-      text-align:center;
-    }
-
-    @media (min-width:769px){
-      .ldSectionLead{
-        font-size:18px;
-      }
-    }
-
-    /* ---------- Section 4 — Two vendor pathways ---------- */
-
-    .ldPathways{
-      background:#ffffff;
-    }
-
-    .ldPathwaysGrid{
-      display:grid;
-      gap:24px;
-      grid-template-columns:1fr;
-    }
-
-    @media (min-width:769px){
-      .ldPathwaysGrid{
-        grid-template-columns:1fr 1fr;
-        gap:32px;
-      }
-    }
-
-    .ldPathCard{
-      background:#ffffff;
-      border:1px solid var(--ld-border);
-      border-radius:18px;
-      padding:32px 28px;
-      display:grid;
-      gap:12px;
+    .ldFeatureBody {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--h-stone);
+      margin: 0;
     }
 
-    @media (min-width:769px){
-      .ldPathCard{
-        padding:40px 36px;
-      }
+    /* ===========================================================
+       SHARED CARD
+       =========================================================== */
+    .ldCard {
+      background: var(--h-chalk);
+      border: var(--h-border);
+      border-radius: var(--h-radius-lg);
+      box-shadow: var(--h-shadow-md);
     }
 
-    .ldPathTitle{
-      font-size:20px;
-      font-weight:700;
-      letter-spacing:-0.02em;
-      color:var(--ld-ink);
-      margin:0;
+    .ldCardHead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
     }
 
-    .ldPathBody{
-      font-size:16px;
-      line-height:1.6;
-      color:var(--ld-ink-muted);
-      margin:0;
+    .ldPill {
+      display: inline-flex;
+      align-items: center;
+      height: 22px;
+      padding: 0 10px;
+      border-radius: var(--h-radius-sm);
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
 
-    /* ---------- Section 5 — Who it's for ---------- */
-
-    .ldAudience{
-      background:#ffffff;
-    }
-
-    .ldAudienceGrid{
-      display:grid;
-      gap:16px;
-      grid-template-columns:1fr;
-    }
-
-    @media (min-width:600px) and (max-width:900px){
-      .ldAudienceGrid{
-        grid-template-columns:repeat(2, minmax(0, 1fr));
-      }
-    }
-
-    @media (min-width:901px){
-      .ldAudienceGrid{
-        grid-template-columns:repeat(3, minmax(0, 1fr));
-        gap:20px;
-      }
-    }
-
-    .ldAudienceTile{
-      background:var(--ld-tile-soft);
-      border-radius:16px;
-      padding:24px 22px;
-      display:grid;
-      gap:8px;
-    }
-
-    .ldAudienceTitle{
-      font-size:17px;
-      font-weight:700;
-      letter-spacing:-0.015em;
-      color:var(--ld-ink);
-      margin:0;
-    }
-
-    .ldAudienceBody{
-      font-size:15px;
-      line-height:1.55;
-      color:var(--ld-ink-muted);
-      margin:0;
-    }
-
-    /* ---------- Section 6 — Proof point ---------- */
-
-    .ldProof{
-      background:var(--ld-warm-grey);
-    }
-
-    .ldProofCard{
-      background:#ffffff;
-      border-radius:20px;
-      max-width:680px;
-      margin:0 auto;
-      padding:40px 32px;
-      text-align:center;
-      box-shadow:0 2px 16px rgba(15,23,42,0.04);
+    .ldPillLive { color: #2d6a4f; background: #eaf4ee; }
+    .ldPillNew  { color: #2d6a4f; background: #eaf4ee; }
+    .ldPillLoyal { color: var(--h-fire); background: var(--h-glow); }
+    .ldPillLapsed { color: var(--h-stone); background: var(--h-ash); }
+
+    /* ===========================================================
+       SECTION A — LIVE DROP CARD
+       =========================================================== */
+    .ldDropCard {
+      padding: 24px;
     }
 
-    @media (min-width:769px){
-      .ldProofCard{
-        padding:56px 48px;
-      }
+    .ldDropTitle {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 500;
+      font-size: 18px;
+      color: var(--h-slate);
+      line-height: 1.25;
+      margin: 0;
     }
-
-    .ldProofQuote{
-      font-size:20px;
-      font-weight:600;
-      line-height:1.5;
-      letter-spacing:-0.02em;
-      color:var(--ld-ink);
-      margin:0 0 20px;
+
+    .ldDropVendor {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 13px;
+      color: var(--h-stone);
+      margin: 4px 0 0;
     }
-
-    @media (min-width:769px){
-      .ldProofQuote{
-        font-size:24px;
-      }
+
+    .ldDropDivider {
+      height: 1px;
+      background: var(--h-cinder);
+      margin: 16px 0;
+      border: none;
     }
 
-    .ldProofAttr{
-      font-size:14px;
-      font-weight:700;
-      color:var(--ld-ink-soft);
-      margin:0;
+    .ldDropRows {
+      display: grid;
+      gap: 10px;
     }
-
-    /* ---------- Section 7 — Final CTA ---------- */
+
+    .ldDropRow {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 13px;
+    }
+
+    .ldDropLabel { color: var(--h-stone); }
+    .ldDropValue { color: var(--h-slate); text-align: right; }
+    .ldDropValueAccent { color: var(--h-fire); text-align: right; }
 
-    .ldFinal{
-      background:var(--ld-dark);
-      color:#f5f1ea;
-      text-align:center;
-    }
+    .ldCapacityRow {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-top: 18px;
+      gap: 12px;
+    }
+
+    .ldCapacityLabel {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 13px;
+      color: var(--h-stone);
+    }
+
+    .ldCapacityRemaining {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--h-fire);
+    }
+
+    .ldProgressTrack {
+      width: 100%;
+      height: 6px;
+      background: var(--h-cinder);
+      border-radius: var(--h-radius-sm);
+      overflow: hidden;
+      margin: 8px 0 18px;
+    }
+
+    .ldProgressFill {
+      width: 72%;
+      height: 100%;
+      background: var(--h-fire);
+      border-radius: var(--h-radius-sm);
+    }
+
+    .ldReserveBtn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 44px;
+      border: 1.5px solid var(--h-fire);
+      border-radius: var(--h-radius-md);
+      background: transparent;
+      color: var(--h-fire);
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    .ldReserveBtn:hover { background: var(--h-glow); }
+
+    /* ===========================================================
+       SHARED ROW PATTERN (orders + customers)
+       =========================================================== */
+    .ldFeedCard { padding: 20px; }
 
-    .ldFinalInner{
-      max-width:640px;
-      margin:0 auto;
-      display:grid;
-      gap:16px;
-      justify-items:center;
-    }
+    .ldFeedHead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+
+    .ldFeedTitle {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--h-slate);
+    }
+
+    .ldFeedAccent {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--h-fire);
+    }
+
+    .ldFeedRow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 0;
+      border-top: 1px solid var(--h-cinder);
+    }
+
+    .ldFeedRows {
+      margin-top: 12px;
+    }
+
+    .ldAvatar {
+      flex: 0 0 32px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--h-ash);
+      color: var(--h-stone);
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 0.02em;
+    }
+
+    .ldFeedBody {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .ldFeedName {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 13px;
+      color: var(--h-slate);
+      line-height: 1.3;
+    }
+
+    .ldFeedMeta {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 12px;
+      color: var(--h-stone);
+      line-height: 1.4;
+      margin-top: 2px;
+    }
+
+    .ldFeedRowRight {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .ldFeedTime {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 12px;
+      color: var(--h-stone);
+    }
+
+    .ldFeedAmount {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--h-fire);
+    }
+
+    /* Customer panel uses 24px padding instead of 20px */
+    .ldCustomerCard { padding: 24px; }
+
+    /* ===========================================================
+       SECTION D — STAT GRID
+       =========================================================== */
+    .ldStatCard { padding: 24px; }
 
-    .ldFinalHeadline{
-      font-size:26px;
-      font-weight:700;
-      line-height:1.2;
-      letter-spacing:-0.03em;
-      color:#fafaf7;
-      margin:0;
+    .ldStatGrid {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 0;
     }
 
-    @media (min-width:769px){
-      .ldFinalHeadline{
-        font-size:32px;
-      }
+    .ldStatGrid::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 1px;
+      background: var(--h-cinder);
     }
 
-    .ldFinalSub{
-      font-size:16px;
-      line-height:1.6;
-      color:rgba(245,241,234,0.72);
-      margin:0 0 12px;
-      max-width:520px;
+    .ldStatGrid::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 1px;
+      background: var(--h-cinder);
     }
 
-    @media (min-width:769px){
-      .ldFinalSub{
-        font-size:18px;
-      }
+    .ldStatCell {
+      padding: 16px;
     }
 
-    .ldFinalSecondary{
-      font-size:14px;
-      font-weight:700;
-      color:rgba(245,241,234,0.72);
-      text-decoration:none;
-      margin-top:4px;
-    }
+    .ldStatCell:nth-child(1) { padding-top: 0; padding-left: 0; }
+    .ldStatCell:nth-child(2) { padding-top: 0; padding-right: 0; }
+    .ldStatCell:nth-child(3) { padding-bottom: 0; padding-left: 0; }
+    .ldStatCell:nth-child(4) { padding-bottom: 0; padding-right: 0; }
 
-    .ldFinalSecondary:hover{
-      color:#fafaf7;
-      text-decoration:underline;
+    .ldStatLabel {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--h-stone);
+      margin: 0;
     }
 
-    /* ---------- Footer ---------- */
-
-    .ldFooter{
-      background:var(--ld-dark);
-      border-top:1px solid rgba(245,241,234,0.08);
-      padding:32px 24px;
+    .ldStatNumber {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: 40px;
+      line-height: 1.1;
+      color: var(--h-slate);
+      margin: 6px 0 4px;
     }
 
-    @media (min-width:769px){
-      .ldFooter{
-        padding:32px 48px;
-      }
+    .ldStatSub {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 12px;
+      color: var(--h-stone);
+      margin: 0;
     }
 
-    .ldFooterInner{
-      max-width:1100px;
-      margin:0 auto;
-      display:grid;
-      gap:16px;
-      grid-template-columns:1fr;
-      align-items:center;
-    }
+    .ldStatSubAccent { color: var(--h-fire); }
 
-    @media (min-width:769px){
-      .ldFooterInner{
-        grid-template-columns:auto 1fr;
-      }
+    /* ===========================================================
+       FOOTER
+       =========================================================== */
+    .ldFooter {
+      background: var(--h-coal);
+      padding: 28px 24px;
     }
 
-    .ldFooterWordmark{
-      font-size:18px;
-      font-weight:950;
-      letter-spacing:-0.035em;
-      color:#fafaf7;
-      margin:0;
+    .ldFooterInner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
     }
 
-    .ldFooterLinks{
-      display:flex;
-      gap:24px;
-      flex-wrap:wrap;
-    }
+    .ldFooterWordmark .ldWordmarkText { color: var(--h-chalk); }
 
-    @media (min-width:769px){
-      .ldFooterLinks{
-        justify-content:flex-end;
-      }
+    .ldFooterLinks {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
     }
 
-    .ldFooterLinks a{
-      font-size:13px;
-      font-weight:600;
-      color:rgba(245,241,234,0.65);
-      text-decoration:none;
+    .ldFooterLinks a {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 13px;
+      color: var(--h-stone);
     }
 
-    .ldFooterLinks a:hover{
-      color:#fafaf7;
-    }
+    .ldFooterLinks a:hover { color: var(--h-chalk); }
   </style>
 </head>
-<body class="ldBody">
+<body>
 
   <!-- ============================================================= -->
-  <!-- SECTION 1 — HERO                                               -->
+  <!-- NAV                                                            -->
   <!-- ============================================================= -->
-  <section class="ldSection ldHero">
-    <div class="ldWordmark">
-      <p class="ldWordmarkText">Hearth<span class="ldWordmarkDot" aria-hidden="true"></span></p>
+  <nav class="ldNav" aria-label="Primary">
+    <div class="ldNavInner">
+      <a href="./" class="ldWordmark" aria-label="Hearth home">
+        <span class="ldWordmarkText">Hearth</span>
+        <span class="ldWordmarkDot" aria-hidden="true"></span>
+      </a>
+      <div class="ldNavRight">
+        <a href="./login.html" class="ldNavSignIn">Sign in</a>
+        <a href="./signup.html" class="ldNavCta">Get started</a>
+      </div>
     </div>
+  </nav>
 
+  <!-- ============================================================= -->
+  <!-- HERO                                                           -->
+  <!-- ============================================================= -->
+  <section class="ldHero">
     <div class="ldHeroInner">
-      <h1 class="ldHeroHeadline">Food worth planning for.</h1>
-      <p class="ldHeroSub">
-        Hearth is for independent food businesses who want to take orders around
-        a specific time and place — not chase individual sales constantly. Each
-        moment — we call it a drop — is pre-order only. Customers order directly
-        through you. No commission, no algorithm, no middleman. Whether you're
-        running hot food drops, finish-at-home boxes, a weekly butcher's
-        hamper, or a bakery pre-order, every drop builds a customer relationship
-        you own — not one rented from a platform.
-      </p>
-      <div class="ldCtaRow">
-        <a class="ldPrimaryBtn" href="./signup.html">Start your Hearth</a>
-        <a class="ldSecondaryLink" href="./login.html">Already have an account? Sign in →</a>
+      <p class="ldEyebrow">THE DROP</p>
+      <h1 class="ldHeroHeadline">
+        <span class="ldLine1">Plan it once.</span>
+        <span class="ldLine2">Sell before you serve.</span>
+      </h1>
+      <p class="ldHeroBody">Pre-order only. Customers pay before you start. You make exactly what&rsquo;s needed &mdash; nothing more.</p>
+      <div class="ldHeroCta">
+        <a href="./signup.html" class="ldPrimaryBtn">Start your Hearth</a>
+        <a href="./login.html" class="ldHeroSecondary">Already have an account? Sign in &rarr;</a>
         <p class="ldSmallPrint">Free to get started. No credit card required.</p>
       </div>
     </div>
   </section>
 
   <!-- ============================================================= -->
-  <!-- SECTION 2 — HOW IT WORKS                                       -->
+  <!-- SECTION A — LIVE DROP CARD                                     -->
   <!-- ============================================================= -->
-  <section class="ldSection ldHow">
-    <div class="ldContainer">
-      <div class="ldSectionHead">
-        <h2 class="ldSectionTitle">How Hearth works</h2>
+  <section class="ldFeature ldFeatureA">
+    <div class="ldFeatureInner">
+      <div class="ldFeatureText">
+        <p class="ldEyebrow">THE DROP</p>
+        <h2 class="ldFeatureHeadline">See demand before you start.</h2>
+        <p class="ldFeatureBody">Set your offer, timing, and capacity. Watch orders come in before you begin.</p>
       </div>
 
-      <div class="ldStepGrid">
-        <div class="ldStep">
-          <p class="ldStepNum">01</p>
-          <h3 class="ldStepTitle">Plan a drop</h3>
-          <p class="ldStepBody">
-            Set your menu, timing, and capacity. Choose where it's hosted — a
-            local pub, a school fundraiser, a neighbourhood delivery area, or
-            your own premises. A drop is a planned moment. Not an always-open
-            store. You decide when, where, and how much.
-          </p>
+      <div class="ldCard ldDropCard">
+        <div class="ldCardHead">
+          <h3 class="ldDropTitle">Wood-fired Pizza Night</h3>
+          <span class="ldPill ldPillLive">Live</span>
         </div>
-        <div class="ldStep">
-          <p class="ldStepNum">02</p>
-          <h3 class="ldStepTitle">Your community orders in advance</h3>
-          <p class="ldStepBody">
-            Orders come in before you cook a thing. Thirty wood-fired pizzas
-            or a butcher's weekend hamper, Friday evening, Dorchester town
-            centre. Orders close at noon. You
-            know exactly what's needed, so you make exactly that — no guesswork,
-            no waste, no last-minute chaos. Customers pay upfront. You deliver
-            with confidence.
-          </p>
+        <p class="ldDropVendor">Southbury Farm Pizza Co</p>
+
+        <hr class="ldDropDivider" />
+
+        <div class="ldDropRows">
+          <div class="ldDropRow">
+            <span class="ldDropLabel">Location</span>
+            <span class="ldDropValue">The Old Barn, Dorchester</span>
+          </div>
+          <div class="ldDropRow">
+            <span class="ldDropLabel">Date</span>
+            <span class="ldDropValue">Saturday 3rd May &middot; 5&ndash;8pm</span>
+          </div>
+          <div class="ldDropRow">
+            <span class="ldDropLabel">Orders close</span>
+            <span class="ldDropValueAccent">Friday noon</span>
+          </div>
         </div>
-        <div class="ldStep">
-          <p class="ldStepNum">03</p>
-          <h3 class="ldStepTitle">Every order builds something you own</h3>
-          <p class="ldStepBody">
-            Most food businesses start from zero every service. Hearth doesn't.
-            Every order adds to a real customer database — postcodes, purchase
-            history, loyalty signals — that belongs to you. Not to a platform.
-            Not shared with competitors. Yours.
-          </p>
+
+        <div class="ldCapacityRow">
+          <span class="ldCapacityLabel">26 of 36 slots filled</span>
         </div>
-        <div class="ldStep">
-          <p class="ldStepNum">04</p>
-          <h3 class="ldStepTitle">Reach the right people before your next drop opens</h3>
-          <p class="ldStepBody">
-            Before your next drop goes live, Hearth identifies which customers
-            are most likely to order — based on where they live, what they've
-            bought before, and how recently they engaged. You reach the right
-            people at the right moment, with a message that's relevant. Not a
-            broadcast to a rented list. Not a guess. The longer you run, the
-            smarter the system gets — and the easier each drop is to fill.
-          </p>
+        <div class="ldProgressTrack">
+          <div class="ldProgressFill"></div>
+        </div>
+        <div class="ldCapacityRow" style="margin-top:0;">
+          <span class="ldCapacityRemaining">10 remaining</span>
+        </div>
+
+        <a href="./signup.html" class="ldReserveBtn" style="margin-top:18px;">Reserve your slot</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================= -->
+  <!-- SECTION B — ORDER FEED                                         -->
+  <!-- ============================================================= -->
+  <section class="ldFeature ldFeatureB ldFeatureReverse">
+    <div class="ldFeatureInner">
+      <div class="ldFeatureText">
+        <p class="ldEyebrow">ORDERS</p>
+        <h2 class="ldFeatureHeadline">Watch your drop fill &mdash; before you start.</h2>
+        <p class="ldFeatureBody">Customers pay upfront. You see real demand before you make a thing.</p>
+      </div>
+
+      <div class="ldCard ldFeedCard">
+        <div class="ldFeedHead">
+          <span class="ldFeedTitle">Incoming orders</span>
+          <span class="ldPill ldPillLive">Live</span>
+        </div>
+
+        <div class="ldFeedRows">
+          <div class="ldFeedRow">
+            <div class="ldAvatar">SM</div>
+            <div class="ldFeedBody">
+              <div class="ldFeedName">Sarah M.</div>
+              <div class="ldFeedMeta">2&times; Margherita &middot; 1&times; Napoli</div>
+            </div>
+            <div class="ldFeedRowRight">
+              <span class="ldFeedTime">just now</span>
+              <span class="ldFeedAmount">&pound;34.00 paid</span>
+            </div>
+          </div>
+
+          <div class="ldFeedRow">
+            <div class="ldAvatar">JF</div>
+            <div class="ldFeedBody">
+              <div class="ldFeedName">James &amp; family</div>
+              <div class="ldFeedMeta">4&times; Margherita &middot; 2&times; Quattro Stagioni</div>
+            </div>
+            <div class="ldFeedRowRight">
+              <span class="ldFeedTime">4 min ago</span>
+              <span class="ldFeedAmount">&pound;72.00 paid</span>
+            </div>
+          </div>
+
+          <div class="ldFeedRow">
+            <div class="ldAvatar">RT</div>
+            <div class="ldFeedBody">
+              <div class="ldFeedName">Rachel T.</div>
+              <div class="ldFeedMeta">1&times; Margherita &middot; 1&times; Funghi</div>
+            </div>
+            <div class="ldFeedRowRight">
+              <span class="ldFeedTime">12 min ago</span>
+              <span class="ldFeedAmount">&pound;26.00 paid</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
   <!-- ============================================================= -->
-  <!-- SECTION 3 — THE HEARTH DIFFERENCE                              -->
+  <!-- SECTION C — CUSTOMER INTELLIGENCE                              -->
   <!-- ============================================================= -->
-  <section class="ldSection ldDifference">
-    <div class="ldContainer">
-      <div class="ldSectionHead">
-        <h2 class="ldSectionTitle">Three things grow with every drop.</h2>
-        <p class="ldSectionLead">
-          Most ordering platforms stop at the transaction. Hearth is built so
-          every drop adds to something — and every drop makes the next one
-          easier.
-        </p>
+  <section class="ldFeature ldFeatureC">
+    <div class="ldFeatureInner">
+      <div class="ldFeatureText">
+        <p class="ldEyebrow">INTELLIGENCE</p>
+        <h2 class="ldFeatureHeadline">Know exactly who to reach before you open.</h2>
+        <p class="ldFeatureBody">Loyal core, lapsed, occasional &mdash; Hearth tells you who&rsquo;s who before every drop.</p>
       </div>
 
-      <div class="ldDifferenceGrid">
-        <div class="ldDifferenceCol">
-          <h3 class="ldDifferenceTitle">Your customers</h3>
-          <p>
-            Direct relationships with the people you actually serve. Full
-            purchase history, exportable any time, never rented out to another
-            vendor or used to advertise against you. Loyal core, occasional,
-            lapsed — Hearth tells you who's who.
-          </p>
+      <div class="ldCard ldCustomerCard">
+        <div class="ldFeedHead">
+          <span class="ldFeedTitle">Before your next drop</span>
+          <span class="ldFeedAccent">Recommended</span>
         </div>
-        <div class="ldDifferenceCol">
-          <h3 class="ldDifferenceTitle">Your host relationships</h3>
-          <p>
-            Community hosts — pubs, clubs, schools, venues, neighbourhoods —
-            are first-class in the Hearth model. Their audience, their benefit,
-            their share in your success. Every drop with a host builds a
-            relationship you can run back.
-          </p>
-        </div>
-        <div class="ldDifferenceCol">
-          <h3 class="ldDifferenceTitle">Your decision intelligence</h3>
-          <p>
-            What to sell, to whom, when, and how to communicate. Hearth reads
-            your rhythm, your menu patterns, and your geography, and turns it
-            into plain-English recommendations. The intelligence gets sharper
-            with every drop.
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
 
-  <!-- ============================================================= -->
-  <!-- SECTION 3.5 — REACH THE RIGHT CUSTOMERS                        -->
-  <!-- ============================================================= -->
-  <section class="ldSection" style="background:#ffffff;">
-    <div class="ldContainer">
-      <div class="ldSectionHead">
-        <h2 class="ldSectionTitle">Demand intelligence, built in</h2>
-        <p class="ldSectionLead">
-          Every drop makes the next one easier to plan and fill.
-        </p>
-      </div>
+        <div class="ldFeedRows">
+          <div class="ldFeedRow">
+            <div class="ldAvatar">SM</div>
+            <div class="ldFeedBody">
+              <div class="ldFeedName">Sarah M.</div>
+              <div class="ldFeedMeta">Ordered 6 times &middot; Last: 2 weeks ago</div>
+            </div>
+            <div class="ldFeedRowRight">
+              <span class="ldPill ldPillLoyal">Loyal</span>
+            </div>
+          </div>
 
-      <div class="ldStepGrid">
-        <div class="ldStep">
-          <div class="ldStepIcon"></div>
-          <h3 class="ldStepTitle">Know who to contact</h3>
-          <p class="ldStepBody">
-            Hearth identifies your loyal core, lapsed customers, and
-            highest-value buyers before every drop. No guesswork — just a
-            clear picture of who is most likely to order.
-          </p>
-        </div>
-        <div class="ldStep">
-          <div class="ldStepIcon"></div>
-          <h3 class="ldStepTitle">Communicate with purpose</h3>
-          <p class="ldStepBody">
-            Send targeted messages to the customers most likely to order.
-            Not a broadcast — a considered signal to the right people at
-            the right time.
-          </p>
-        </div>
-        <div class="ldStep">
-          <div class="ldStepIcon"></div>
-          <h3 class="ldStepTitle">Build demand, not noise</h3>
-          <p class="ldStepBody">
-            Customers receive fewer, more relevant messages. That means
-            higher open rates, stronger conversion, and a list that stays
-            healthy over time.
-          </p>
+          <div class="ldFeedRow">
+            <div class="ldAvatar">JH</div>
+            <div class="ldFeedBody">
+              <div class="ldFeedName">James H.</div>
+              <div class="ldFeedMeta">Ordered 3 times &middot; Last: 9 weeks ago</div>
+            </div>
+            <div class="ldFeedRowRight">
+              <span class="ldPill ldPillLapsed">Lapsed</span>
+            </div>
+          </div>
+
+          <div class="ldFeedRow">
+            <div class="ldAvatar">RT</div>
+            <div class="ldFeedBody">
+              <div class="ldFeedName">Rachel T.</div>
+              <div class="ldFeedMeta">First order &middot; Saturday&rsquo;s drop</div>
+            </div>
+            <div class="ldFeedRowRight">
+              <span class="ldPill ldPillNew">New</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
   <!-- ============================================================= -->
-  <!-- SECTION 4 — TWO VENDOR PATHWAYS                                -->
+  <!-- SECTION D — STAT GRID                                          -->
   <!-- ============================================================= -->
-  <section class="ldSection ldPathways">
-    <div class="ldContainer">
-      <div class="ldSectionHead">
-        <h2 class="ldSectionTitle">Whether you're bringing an audience or building one from scratch.</h2>
+  <section class="ldFeature ldFeatureD ldFeatureReverse">
+    <div class="ldFeatureInner">
+      <div class="ldFeatureText">
+        <p class="ldEyebrow">YOURS TO KEEP</p>
+        <h2 class="ldFeatureHeadline">Every drop builds something permanent.</h2>
+        <p class="ldFeatureBody">A customer base you own &mdash; not rented from a platform, not shared with competitors.</p>
       </div>
 
-      <div class="ldPathwaysGrid">
-        <div class="ldPathCard">
-          <h3 class="ldPathTitle">You already have customers</h3>
-          <p class="ldPathBody">
-            A restaurant with an email list. A food truck with a regular crowd.
-            A pop-up chef with a following. A butcher with regulars. A baker
-            with a Friday following. Hearth gives you the pre-order, capacity,
-            and customer-ownership layer on top of what you're already doing —
-            and turns every service into compounding demand.
-          </p>
-        </div>
-        <div class="ldPathCard">
-          <h3 class="ldPathTitle">You're starting fresh</h3>
-          <p class="ldPathBody">
-            A planned drop gives you something to promote before you cook a
-            single thing. Share the link on social media, put a QR code on the
-            counter, or send a message to your regulars. Customers pre-order
-            directly through you — no platform taking a cut. You see demand
-            before you start. And every order begins building a customer list
-            that's yours to keep.
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================================================= -->
-  <!-- SECTION 5 — WHO IT'S FOR                                       -->
-  <!-- ============================================================= -->
-  <section class="ldSection ldAudience">
-    <div class="ldContainer">
-      <div class="ldSectionHead">
-        <h2 class="ldSectionTitle">Made for independent food businesses.</h2>
-      </div>
-
-      <div class="ldAudienceGrid">
-        <div class="ldAudienceTile">
-          <h3 class="ldAudienceTitle">Takeaways and independent restaurants</h3>
-          <p class="ldAudienceBody">
-            Reduce aggregator dependency. Build a customer base that's yours
-            to keep.
-          </p>
-        </div>
-        <div class="ldAudienceTile">
-          <h3 class="ldAudienceTitle">Food trucks and street food traders</h3>
-          <p class="ldAudienceBody">
-            Formalise the pre-order model you're already running informally.
-            Make every night more predictable.
-          </p>
-        </div>
-        <div class="ldAudienceTile">
-          <h3 class="ldAudienceTitle">Market and events vendors</h3>
-          <p class="ldAudienceBody">
-            Turn one-off market customers into a direct audience for your
-            next drop.
-          </p>
-        </div>
-        <div class="ldAudienceTile">
-          <h3 class="ldAudienceTitle">Independent chefs and supper club hosts</h3>
-          <p class="ldAudienceBody">
-            Run planned, capacity-controlled services with professional
-            infrastructure and a compounding customer base.
-          </p>
-        </div>
-        <div class="ldAudienceTile">
-          <h3 class="ldAudienceTitle">Butchers, bakers and artisan producers</h3>
-          <p class="ldAudienceBody">
-            Sell direct to loyal customers through weekly or seasonal drops.
-            Limited quantities, committed buyers, no marketplace fees.
-          </p>
-        </div>
-        <div class="ldAudienceTile">
-          <h3 class="ldAudienceTitle">Farm shops, delis and local specialists</h3>
-          <p class="ldAudienceBody">
-            Pre-order drops for weekly produce, hampers, and seasonal
-            selections. Customers commit in advance. You make exactly what's
-            needed.
-          </p>
+      <div class="ldCard ldStatCard">
+        <div class="ldStatGrid">
+          <div class="ldStatCell">
+            <p class="ldStatLabel">Total customers</p>
+            <p class="ldStatNumber">284</p>
+            <p class="ldStatSub ldStatSubAccent">&uarr; 22 this month</p>
+          </div>
+          <div class="ldStatCell">
+            <p class="ldStatLabel">Orders taken</p>
+            <p class="ldStatNumber">641</p>
+            <p class="ldStatSub ldStatSubAccent">&uarr; 18% vs last drop</p>
+          </div>
+          <div class="ldStatCell">
+            <p class="ldStatLabel">Repeat rate</p>
+            <p class="ldStatNumber">67%</p>
+            <p class="ldStatSub">Loyal core: 48</p>
+          </div>
+          <div class="ldStatCell">
+            <p class="ldStatLabel">Commission</p>
+            <p class="ldStatNumber">0%</p>
+            <p class="ldStatSub ldStatSubAccent">Revenue: &pound;4,820</p>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
-
-  <!-- ============================================================= -->
-  <!-- SECTION 6 — PROOF POINT                                        -->
-  <!-- ============================================================= -->
-  <section class="ldSection ldProof">
-    <div class="ldContainer">
-      <div class="ldProofCard">
-        <p class="ldProofQuote">
-          “Hearth gave us a way to run our pizza drops properly — pre-orders,
-          capacity, and a customer list we actually own.”
-        </p>
-        <p class="ldProofAttr">Southbury Farm Pizza Company</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================================================= -->
-  <!-- SECTION 7 — FINAL CTA                                          -->
-  <!-- ============================================================= -->
-  <section class="ldSection ldFinal">
-    <div class="ldFinalInner">
-      <h2 class="ldFinalHeadline">Start building something that's yours.</h2>
-      <p class="ldFinalSub">
-        Free to get started. Your first drop is yours to own.
-      </p>
-      <a class="ldPrimaryBtn" href="./signup.html">Start your Hearth</a>
-      <a class="ldFinalSecondary" href="./login.html">Sign in →</a>
     </div>
   </section>
 
@@ -908,7 +905,10 @@
   <!-- ============================================================= -->
   <footer class="ldFooter">
     <div class="ldFooterInner">
-      <p class="ldFooterWordmark">Hearth<span class="ldWordmarkDot" aria-hidden="true"></span></p>
+      <div class="ldWordmark ldFooterWordmark">
+        <span class="ldWordmarkText">Hearth</span>
+        <span class="ldWordmarkDot" aria-hidden="true"></span>
+      </div>
       <div class="ldFooterLinks">
         <a href="./vendor-terms.html">Vendor terms</a>
         <a href="./privacy.html">Privacy</a>
