@@ -82,6 +82,39 @@
     /* heroButtonRow: transparent on desktop so children sit inline in dropHeroTopRight */
     .heroButtonRow { display: contents; }
 
+    input[type="checkbox"]{
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--h-cinder, #e8ddd5);
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      flex-shrink: 0;
+      position: relative;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    input[type="checkbox"]:checked{
+      background: var(--h-fire, #c4511a);
+      border-color: var(--h-fire, #c4511a);
+    }
+    input[type="checkbox"]:checked::after{
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 8px;
+      height: 5px;
+      border-left: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      transform: translate(-50%, -65%) rotate(-45deg);
+    }
+    input[type="checkbox"]:focus{
+      outline: 2px solid var(--h-glow, #fff3ec);
+      outline-offset: 2px;
+    }
+
     @media (max-width: 768px) {
 
       /* --- 1. Header bar: stack brand and nav vertically --- */
@@ -237,9 +270,9 @@
       }
 
       .mobileTab.active {
-        background: var(--h-accent);
+        background: var(--h-fire, var(--h-accent));
         color: #fff;
-        border-color: var(--h-accent);
+        border-color: var(--h-fire, var(--h-accent));
       }
 
       .mobileTabBadge {
@@ -283,9 +316,21 @@
       .boardColBody {
         height: auto !important;
         max-height: none !important;
-        min-height: 200px;
+        min-height: 80px;
         overflow-y: auto;
       }
+
+      .ordersFilters{
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -webkit-mask-image: linear-gradient(to right, #000 80%, transparent 100%);
+        mask-image: linear-gradient(to right, #000 80%, transparent 100%);
+        padding-bottom: 4px;
+      }
+      .ordersFilters::-webkit-scrollbar{ display: none; }
+      .filterChip{ flex-shrink: 0; }
 
       /* --- 11. Order cards: full width, comfortable padding --- */
       .orderCard {
