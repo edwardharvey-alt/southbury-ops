@@ -942,13 +942,11 @@
               </div>
               <div class="filterChecklist" id="typeFilterChecklist">
                 <label><input type="checkbox" value="neighbourhood" checked /> Neighbourhood</label>
-                <label><input type="checkbox" value="community" checked /> Community</label>
+                <label><input type="checkbox" value="community" checked /> Hosted</label>
                 <label><input type="checkbox" value="event" checked /> Event</label>
               </div>
             </div>
           </div>
-
-          <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
         </div>
 
         <div id="stripeGate" style="display:none;"></div>
@@ -1028,23 +1026,24 @@
 
                   <div class="studioGrid2">
                     <div class="field">
-                      <label for="dropName">Drop Name</label>
+                      <label for="dropName">Drop name</label>
                       <input id="dropName" type="text" placeholder="Friday Drop" />
                     </div>
 
                     <div class="field">
-                      <label for="dropSlug">Drop Link Name</label>
+                      <label for="dropSlug">Ordering page link</label>
                       <input id="dropSlug" type="text" placeholder="friday-drop" />
-                      <div class="helperText">Auto-generated from Drop Name. You can overwrite it if needed.</div>
+                      <div class="helperText">Auto-generated from the drop name. Only change if you need a different URL.</div>
                     </div>
 
                     <div class="field">
-                      <label for="dropType">Drop Type</label>
+                      <label for="dropType">Drop type</label>
                       <select id="dropType">
                         <option value="neighbourhood">Neighbourhood</option>
-                        <option value="community">Community</option>
+                        <option value="community">Hosted</option>
                         <option value="event">Event</option>
                       </select>
+                      <div class="helperText">Neighbourhood: delivery to a local area. Hosted: at a pub, club, school or venue. Event: one-off occasion.</div>
                     </div>
 
                   </div>
@@ -1062,8 +1061,8 @@
                 </div>
 
                 <div class="stageSection">
-                  <h4 class="stageSectionTitle">Operating Setup</h4>
-                  <p class="stageSectionSub">Set host, geography, fulfilment mode and capacity.</p>
+                  <h4 class="stageSectionTitle">Setup</h4>
+                  <p class="stageSectionSub">Set where and how orders are fulfilled, and the drop's capacity.</p>
 
                   <div class="studioGrid2">
                     <div class="field">
@@ -1120,7 +1119,7 @@
                     </div>
 
                     <div class="field fieldInlineCheck" style="grid-column:1 / -1;">
-                      <label class="inlineCheckLabel" for="customerNotesEnabled"><input id="customerNotesEnabled" type="checkbox" checked /> Allow customer notes</label>
+                      <label class="inlineCheckLabel" for="customerNotesEnabled"><input id="customerNotesEnabled" type="checkbox" checked /> Let customers add a note to their order</label>
                     </div>
 
                     <div class="field" id="centrePostcodeField" style="display:none;">
@@ -1134,20 +1133,20 @@
                     </div>
 
                     <div class="field">
-                      <label for="capacityCategory">Capacity Category</label>
+                      <label for="capacityCategory">Capacity type</label>
                       <select id="capacityCategory">
                         <option value="">Loading categories…</option>
                       </select>
-                      <div class="helperText">Choose the category that defines operational capacity for this drop.</div>
+                      <div class="helperText">The product type that counts toward this drop's capacity limit.</div>
                     </div>
 
                     <div class="field">
-                      <label for="capacityTotal">Total Capacity</label>
+                      <label for="capacityTotal">Capacity</label>
                       <input id="capacityTotal" type="number" min="0" step="1" />
                     </div>
 
                     <div class="field" style="grid-column:1 / -1;">
-                      <label for="notesInternal">Internal Notes</label>
+                      <label for="notesInternal">Private notes</label>
                       <textarea id="notesInternal" placeholder="Any internal operational notes for this drop"></textarea>
                     </div>
                   </div>
@@ -1171,11 +1170,11 @@
               <div class="stagePaneInner">
                 <div class="stageSection">
                   <h4 class="stageSectionTitle">Timing</h4>
-                  <p class="stageSectionSub">Define fulfilment timing, ordering window and recurrence.</p>
+                  <p class="stageSectionSub">When is the drop, and when can customers order?</p>
 
                   <div class="studioGrid3">
                     <div class="field">
-                      <label for="deliveryDate">Drop Date</label>
+                      <label for="deliveryDate">Date</label>
                       <input id="deliveryDate" type="date" />
                     </div>
 
@@ -1311,7 +1310,7 @@
 
                   <div id="closeOrdersSection" class="studioGrid2" style="margin-top:10px;">
                     <div class="field">
-                      <label for="closesAtDate">Close Orders</label>
+                      <label for="closesAtDate">Orders close</label>
                       <div class="studioGrid2" style="gap:8px;">
                         <input id="closesAtDate" type="date" />
                         <input id="closesAtTime" type="time" />
@@ -1327,8 +1326,8 @@
                 <div class="stageSection">
                   <div class="row space" style="margin-bottom:10px; align-items:flex-start;">
                     <div>
-                      <div class="stageSectionTitle" style="margin:0 0 4px;">Drop Menu</div>
-                      <div class="helperText">Enable menu items from the catalogue, override prices, manage stock limits, and control per-drop ordering.</div>
+                      <div class="stageSectionTitle" style="margin:0 0 4px;">Menu</div>
+                      <div class="helperText">Enable items from your catalogue, override prices and set stock limits for this drop.</div>
                     </div>
                     <div class="row" style="gap:8px; flex-wrap:wrap;">
                       <a href="drop-menu.html" class="utilityLink">Open Offer Library</a>
@@ -1359,7 +1358,7 @@
 
                   <div class="toggleRow">
                     <div>
-                      <div style="font-weight:800;">Enable Community Contribution</div>
+                      <div style="font-weight:800;">Community contribution</div>
                       <div class="helperText">Shown to customers if configured.</div>
                     </div>
                     <input id="fundraisingEnabled" type="checkbox" />
@@ -1394,13 +1393,13 @@
                   </div>
                 </div>
 
-                <div class="stageSection">
-                  <h4 class="stageSectionTitle">Commercial Host Share</h4>
-                  <p class="stageSectionSub">Optional commercial settlement for venues or hosts.</p>
+                <div class="stageSection" id="hostShareSection">
+                  <h4 class="stageSectionTitle">Host share</h4>
+                  <p class="stageSectionSub">A payment or percentage for the host — separate from community contribution.</p>
 
                   <div class="toggleRow">
                     <div>
-                      <div style="font-weight:800;">Enable Host Share</div>
+                      <div style="font-weight:800;">Host share</div>
                       <div class="helperText">Separate from community contribution.</div>
                     </div>
                     <input id="hostShareEnabled" type="checkbox" />
@@ -1464,7 +1463,7 @@
 
                 <div class="reviewGrid" style="margin-top:10px;">
                   <div class="stageSection">
-                    <h4 class="stageSectionTitle">Share Link</h4>
+                    <h4 class="stageSectionTitle">Drop link</h4>
                     <p class="stageSectionSub">Customer ordering page for this drop.</p>
                     <div class="shareLink" id="shareLinkPreview">No drop link yet.</div>
                     <div class="row" style="gap:8px; flex-wrap:wrap; margin-top:8px;">
@@ -2145,6 +2144,11 @@
     function updateTypeFilterSummary() {
       const summary = byId("typeFilterSummary");
       const selected = state.typeFilters;
+      const typeLabels = {
+        neighbourhood: 'Neighbourhood',
+        community: 'Hosted',
+        event: 'Event'
+      };
       if (selected.length === DEFAULT_TYPE_FILTERS.length) {
         summary.textContent = "All types";
         return;
@@ -2153,11 +2157,9 @@
         summary.textContent = "No types";
         return;
       }
-      if (selected.length <= 2) {
-        summary.textContent = selected.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ");
-        return;
-      }
-      summary.textContent = `${selected.length} types`;
+      summary.textContent = selected.length <= 2
+        ? selected.map((s) => typeLabels[s] || titleCase(s)).join(', ')
+        : `${selected.length} types`;
     }
 
     function getUrlParam(name) {
@@ -3052,7 +3054,7 @@
 
       summary.innerHTML = `
         <div class="selectionSummaryBar">
-          <div>${enabledCount} enabled for this drop • ${productCount} products • ${bundleCount} bundles</div>
+          <div>${enabledCount} enabled for this drop • ${productCount} products • ${bundleCount} bundle${bundleCount === 1 ? '' : 's'}</div>
           <div class="selectionSummaryMetrics">
             <button class="btnGhost" id="menuSelectAllActiveBtn" type="button">Enable all active</button>
             <button class="btnGhost" id="menuClearAllBtn" type="button">Clear all</button>
@@ -3109,7 +3111,6 @@
                 <td>
                   <span class="productName">${escapeHtml(row.name)}</span>${activeText}
                   <span class="subMeta">${escapeHtml(row.menu_item_type)}${row.description ? ` • ${escapeHtml(row.description)}` : ""}</span>
-                  <span class="orderingValue">Order ${row.sort_order == null ? "—" : row.sort_order}</span>
                 </td>
                 <td style="width:85px;">${titleCase(row.menu_item_type)}</td>
                 <td style="width:110px;">${escapeHtml(row.category_name || "Uncategorised")}</td>
@@ -3312,6 +3313,12 @@
           byId("orderOpeningSection").classList.remove("hidden");
           byId("closeOrdersSection").classList.remove("hidden");
         }
+      }
+
+      const hostShareSectionEl = byId("hostShareSection");
+      if (hostShareSectionEl) {
+        const hasHost = Boolean(byId("hostSelect")?.value);
+        hostShareSectionEl.style.display = hasHost ? '' : 'none';
       }
     }
 
@@ -4840,15 +4847,6 @@
         });
         updateTypeFilterSummary();
         renderDropBand();
-      });
-
-      byId("refreshBtn").addEventListener("click", async () => {
-        try {
-          await refreshAll();
-        } catch (err) {
-          console.error(err);
-          showError(err.message || "Unable to refresh Drop Studio.");
-        }
       });
 
       byId("newDropBtn").addEventListener("click", async () => {
