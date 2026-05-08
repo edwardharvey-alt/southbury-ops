@@ -74,11 +74,11 @@
     }
 
     .assignmentTable tr.dragOverTop{
-      box-shadow:inset 0 2px 0 var(--h-accent);
+      box-shadow:inset 0 2px 0 var(--h-fire, #c4511a);
     }
 
     .assignmentTable tr.dragOverBottom{
-      box-shadow:inset 0 -2px 0 var(--h-accent);
+      box-shadow:inset 0 -2px 0 var(--h-fire, #c4511a);
     }
 
     .dragHandleBtn{
@@ -241,8 +241,8 @@
       transition: background 0.15s, border-color 0.15s;
     }
     input[type="radio"]:checked{
-      background: var(--h-fire, var(--h-accent));
-      border-color: var(--h-fire, var(--h-accent));
+      background: var(--h-fire, #c4511a);
+      border-color: var(--h-fire, #c4511a);
     }
     input[type="radio"]:checked::after{
       content: '';
@@ -274,8 +274,8 @@
       transition: background 0.15s, border-color 0.15s;
     }
     input[type="checkbox"]:checked{
-      background: var(--h-fire, var(--h-accent));
-      border-color: var(--h-fire, var(--h-accent));
+      background: var(--h-fire, #c4511a);
+      border-color: var(--h-fire, #c4511a);
     }
     input[type="checkbox"]:checked::after{
       content: '';
@@ -721,8 +721,8 @@
     #stripeGate{
       margin:14px 0 4px;
       padding:16px 20px;
-      border:1px solid color-mix(in srgb, var(--h-accent) 24%, transparent);
-      background:color-mix(in srgb, var(--h-accent) 5%, white);
+      border:1px solid color-mix(in srgb, var(--h-fire, #c4511a) 24%, transparent);
+      background:color-mix(in srgb, var(--h-fire, #c4511a) 5%, white);
       border-radius:14px;
       display:flex;
       align-items:center;
@@ -1585,7 +1585,7 @@
             <label style="display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px solid var(--h-border); border-radius:12px; cursor:pointer;">
               <input type="checkbox" id="newHostTermsAccept" style="margin-top:3px;" />
               <span style="font-size:14px; line-height:1.5; color:var(--h-slate); text-transform:none; letter-spacing:normal; font-weight:normal;">
-                I have explained the <a href="host-terms.html" target="_blank" rel="noopener noreferrer" style="color:var(--h-accent); text-decoration:underline;">host participation terms</a> to <strong id="newHostTermsAcceptHostName">this host</strong> and they have agreed.
+                I have explained the <a href="host-terms.html" target="_blank" rel="noopener noreferrer" style="color:var(--h-fire, #c4511a); text-decoration:underline;">host participation terms</a> to <strong id="newHostTermsAcceptHostName">this host</strong> and they have agreed.
               </span>
             </label>
           </div>
@@ -1685,7 +1685,7 @@
       TIMING_FIELD_IDS.forEach((id) => {
         const field = byId(id);
         if (field) {
-          field.style.outline = "2px solid var(--h-accent)";
+          field.style.outline = "2px solid var(--h-fire, #c4511a)";
           field.style.boxShadow = "0 0 0 3px rgba(249,115,22,0.15)";
         }
       });
@@ -2918,7 +2918,7 @@
         /* Show "Complete host profile" link if incomplete */
         if (!fullHost.onboarding_completed || !hasDetail) {
           const profileHref = HearthNav.withVendor("host-profile.html?host=" + encodeURIComponent(hostId));
-          enrichHtml += `<a href="${escapeHtml(profileHref)}" style="display:inline-block;margin-top:8px;font-size:11px;font-weight:700;color:var(--h-accent);text-decoration:none;">Complete host profile \u2192</a>`;
+          enrichHtml += `<a href="${escapeHtml(profileHref)}" style="display:inline-block;margin-top:8px;font-size:11px;font-weight:700;color:var(--h-fire, #c4511a);text-decoration:none;">Complete host profile \u2192</a>`;
         }
 
         if (enrichHtml) {
