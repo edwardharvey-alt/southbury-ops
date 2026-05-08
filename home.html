@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Home</title>
@@ -15,13 +18,13 @@
 
   <style>
     :root{
-      --home-bg:#f7f5f1;
+      --home-bg: var(--h-chalk, #faf8f5);
       --home-card:#ffffff;
-      --home-border:#e9e3d8;
-      --home-text:#1f2937;
-      --home-muted:#6b7280;
+      --home-border: var(--h-cinder, #e8ddd5);
+      --home-text: var(--h-coal, #0f0b08);
+      --home-muted: var(--h-stone, #8c7b6e);
       --home-soft:#faf8f4;
-      --home-accent:var(--h-accent, #8B6B3F);
+      --home-accent: var(--h-fire, #c4511a);
       --home-accent-2:var(--h-accent-2, #CBB89D);
       --home-radius:20px;
       --home-shadow:0 10px 30px rgba(15,23,42,.05);
@@ -36,6 +39,7 @@
     body{
       background:var(--home-bg);
       color:var(--home-text);
+      font-family: 'Figtree', system-ui, sans-serif;
     }
 
     .home-shell{
@@ -789,8 +793,17 @@
 
       /* --- Panel value: wrap long unbreakable strings --- */
       .home-panelValue{
+        font-size: 18px;
+        letter-spacing: -0.01em;
+        line-height: 1.4;
         word-break:break-word;
         overflow-wrap:break-word;
+      }
+
+      .home-miniValue{
+        font-size: 18px;
+        letter-spacing: -0.02em;
+        word-break: break-word;
       }
 
       /* --- Reduce large padding to 16px on mobile --- */
@@ -807,6 +820,34 @@
         flex:1 1 auto;
         min-width:0;
       }
+    }
+
+    .home-hero h1{
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+      letter-spacing: -0.03em;
+    }
+
+    .home-sectionTitle{
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+    }
+
+    .home-panelValue{
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+    }
+
+    .home-work h3{
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+    }
+
+    .home-flow h4,
+    .home-action h4,
+    .home-recAction h4{
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
     }
   </style>
 </head>
@@ -855,7 +896,6 @@
       <!-- HERO -->
       <section class="home-hero">
         <div class="home-card home-pad-lg home-heroMain">
-          <div class="home-eyebrow">Platform Home</div>
           <h1>Planned food moments, shared locally.</h1>
           <p class="home-lead">
             Built with and for the communities vendors serve.
@@ -891,7 +931,7 @@
         <div class="home-sidePanel">
           <div class="home-card home-pad">
             <div class="home-panelTitle">How Hearth works</div>
-            <div class="home-panelValue">Brand → Menu → Drop → Run → Learn</div>
+            <div class="home-panelValue">Brand → Offer → Drop → Run → Learn</div>
             <p class="home-panelText">
               Build your identity, define your offer, create a drop, run it calmly, then learn what is working over time. Each drop compounds the next.
             </p>

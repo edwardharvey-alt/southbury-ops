@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hearth — Service Board</title>
@@ -12,6 +15,18 @@
   <script src="./assets/vendor-nav.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    body{ font-family: 'Figtree', system-ui, sans-serif; }
+
+    .dropName{
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+    }
+    .sectionTitle{
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+    }
+
     .dropHeroTopRight {
       display: flex;
       align-items: center;
@@ -81,6 +96,39 @@
 
     /* heroButtonRow: transparent on desktop so children sit inline in dropHeroTopRight */
     .heroButtonRow { display: contents; }
+
+    input[type="checkbox"]{
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--h-cinder, #e8ddd5);
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      flex-shrink: 0;
+      position: relative;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    input[type="checkbox"]:checked{
+      background: var(--h-fire, #c4511a);
+      border-color: var(--h-fire, #c4511a);
+    }
+    input[type="checkbox"]:checked::after{
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 8px;
+      height: 5px;
+      border-left: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      transform: translate(-50%, -65%) rotate(-45deg);
+    }
+    input[type="checkbox"]:focus{
+      outline: 2px solid var(--h-glow, #fff3ec);
+      outline-offset: 2px;
+    }
 
     @media (max-width: 768px) {
 
@@ -223,10 +271,10 @@
         gap: 6px;
         padding: 10px 14px;
         min-height: 44px;
-        border: 1.5px solid var(--h-border);
+        border: 1.5px solid var(--h-cinder);
         border-radius: 22px;
-        background: var(--h-surface);
-        color: var(--h-muted);
+        background: var(--h-chalk);
+        color: var(--h-stone);
         font-size: 13px;
         font-weight: 500;
         font-family: var(--sans);
@@ -237,9 +285,9 @@
       }
 
       .mobileTab.active {
-        background: var(--h-accent);
+        background: var(--h-fire, #c4511a);
         color: #fff;
-        border-color: var(--h-accent);
+        border-color: var(--h-fire, #c4511a);
       }
 
       .mobileTabBadge {
@@ -258,7 +306,7 @@
 
       .mobileTab:not(.active) .mobileTabBadge {
         background: var(--h-border-2);
-        color: var(--h-text);
+        color: var(--h-slate);
       }
 
       /* --- 10. Kanban board: tab-driven visibility --- */
@@ -283,9 +331,21 @@
       .boardColBody {
         height: auto !important;
         max-height: none !important;
-        min-height: 200px;
+        min-height: 80px;
         overflow-y: auto;
       }
+
+      .ordersFilters{
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -webkit-mask-image: linear-gradient(to right, #000 80%, transparent 100%);
+        mask-image: linear-gradient(to right, #000 80%, transparent 100%);
+        padding-bottom: 4px;
+      }
+      .ordersFilters::-webkit-scrollbar{ display: none; }
+      .filterChip{ flex-shrink: 0; }
 
       /* --- 11. Order cards: full width, comfortable padding --- */
       .orderCard {
@@ -336,7 +396,7 @@
 
     .orderFulfilmentBadge.collection {
       background: rgba(15,23,42,0.04);
-      color: var(--h-muted);
+      color: var(--h-stone);
       border: 1px solid var(--h-border-2);
     }
 
@@ -348,7 +408,7 @@
 
     .orderDeliveryAddress {
       font-size: 10px;
-      color: var(--h-muted);
+      color: var(--h-stone);
       font-weight: 500;
       line-height: 1.35;
       word-break: break-word;
@@ -362,7 +422,7 @@
       border-left: 2px solid rgba(249,115,22,0.35);
       border-radius: 0 8px 8px 0;
       font-size: 10px;
-      color: var(--h-text);
+      color: var(--h-slate);
       line-height: 1.4;
       word-break: break-word;
     }
@@ -415,7 +475,7 @@
     #undoToastBtn {
       background: none;
       border: none;
-      color: #f97316;
+      color: var(--h-fire, #c4511a);
       font-weight: 700;
       font-size: 14px;
       cursor: pointer;
@@ -443,7 +503,7 @@
     .orderCard { min-height: 120px; }
     .orderItemSummary {
       font-size: 12px;
-      color: var(--h-muted);
+      color: var(--h-stone);
       font-weight: 600;
       margin-top: 3px;
       overflow: hidden;
@@ -460,7 +520,7 @@
       flex-shrink: 0;
       font-size: 12px;
       font-weight: 600;
-      color: var(--h-text);
+      color: var(--h-slate);
       background: var(--h-bg);
       border: 1px solid var(--h-border-2);
       border-radius: 6px;
@@ -511,7 +571,7 @@
       z-index: 600;
       pointer-events: all;
       width: min(380px, calc(100vw - 32px));
-      background: var(--h-surface);
+      background: var(--h-chalk);
       border-radius: 16px;
       border: 1px solid var(--h-border-2);
       box-shadow: 0 20px 44px rgba(15, 23, 42, 0.2);
@@ -520,18 +580,18 @@
     .notifyHeading {
       font-size: 16px;
       font-weight: 600;
-      color: var(--h-text);
+      color: var(--h-slate);
       margin: 0 0 2px;
     }
     .notifyCustomerName {
       font-size: 13px;
-      color: var(--h-muted);
+      color: var(--h-stone);
       margin: 0 0 12px;
     }
     .notifyPhone {
       font-size: 14px;
       font-weight: 500;
-      color: var(--h-text);
+      color: var(--h-slate);
       margin-bottom: 16px;
       padding: 9px 12px;
       background: var(--h-bg);
@@ -587,7 +647,6 @@
               <span id="dropStatusText">—</span>
             </div>
             <div class="heroButtonRow">
-              <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
               <button class="btnGhost heroToggleBtn" id="heroToggleBtn" type="button">Hide summary</button>
             </div>
           </div>
@@ -634,7 +693,7 @@
               <select id="boardTypeFilter">
                 <option value="all">All types</option>
                 <option value="neighbourhood">Neighbourhood</option>
-                <option value="community">Community</option>
+                <option value="community">Hosted</option>
                 <option value="event">Event</option>
               </select>
             </div>
@@ -884,6 +943,12 @@
     const ACTIVE_DEFAULT_STATUSES = ["live", "scheduled", "draft"];
     const ALL_DROP_STATUSES = ["live", "scheduled", "draft", "closed", "completed", "cancelled", "archived"];
 
+    const TYPE_DISPLAY_LABELS = {
+      neighbourhood: 'Neighbourhood',
+      community: 'Hosted',
+      event: 'Event'
+    };
+
     let supabase = null;
     let realtimeChannel = null;
     let realtimeSubscribedDropId = null;
@@ -974,7 +1039,9 @@
 
       const parts = [];
 
-      if (drop.drop_type) parts.push(drop.drop_type);
+      if (drop.drop_type) parts.push(
+        TYPE_DISPLAY_LABELS[drop.drop_type] || drop.drop_type
+      );
 
       if (drop.delivery_start && drop.delivery_end) {
         const start = new Date(drop.delivery_start).toLocaleString("en-GB", {
@@ -1201,7 +1268,8 @@
       state.filteredDrops.forEach((drop) => {
         const opt = document.createElement("option");
         opt.value = drop.drop_id;
-        opt.textContent = `${drop.drop_name} • ${drop.drop_type || "drop"} • ${normaliseStatus(drop.status)}`;
+        const dropTypeLabel = TYPE_DISPLAY_LABELS[drop.drop_type] || drop.drop_type || "drop";
+        opt.textContent = `${drop.drop_name} • ${dropTypeLabel} • ${normaliseStatus(drop.status)}`;
         if (drop.drop_id === state.selectedDropId) opt.selected = true;
         select.appendChild(opt);
       });
@@ -2197,16 +2265,6 @@
         } catch (err) {
           console.error(err);
           showError(err.message || "Unable to refresh selected drop.");
-        }
-      });
-
-      byId("refreshBtn").addEventListener("click", async function () {
-        try {
-          await loadDrops();
-          await refreshData();
-        } catch (err) {
-          console.error(err);
-          showError(err.message || "Unable to refresh Service Board.");
         }
       });
 

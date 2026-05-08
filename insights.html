@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <title>Hearth — Insights</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 
@@ -16,14 +19,14 @@
 
   <style>
     :root{
-      --ins-bg:#f7f7f5;
+      --ins-bg:var(--h-chalk, #faf8f5);
       --ins-card:#ffffff;
-      --ins-border:#ece7df;
-      --ins-text:#1f2937;
-      --ins-muted:#6b7280;
-      --ins-soft:#faf8f3;
-      --ins-accent:var(--h-accent,#8B6B3F);
-      --ins-accent-2:var(--h-accent-2,#CBB89D);
+      --ins-border:var(--h-cinder, #e8ddd5);
+      --ins-text:var(--h-coal, #0f0b08);
+      --ins-muted:var(--h-stone, #8c7b6e);
+      --ins-soft:var(--h-ash, #f5f0eb);
+      --ins-accent:var(--h-fire, #c4511a);
+      --ins-accent-2:var(--h-glow, #fff3ec);
       --ins-good:#166534;
       --ins-good-bg:#ecfdf3;
       --ins-warn:#92400e;
@@ -37,6 +40,20 @@
     body{
       background:var(--ins-bg);
       color:var(--ins-text);
+      font-family: 'Figtree', system-ui, sans-serif;
+    }
+
+    .ins-heroMain h1,
+    .ins-sectionTitle {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+    }
+
+    .ins-heroContext {
+      margin: 10px 0 16px;
+      font-size: 13px;
+      color: var(--ins-muted);
+      font-family: 'Figtree', system-ui, sans-serif;
     }
 
     .ins-shell{
@@ -114,10 +131,10 @@
     }
 
     .ins-heroStats{
-      display:grid;
-      grid-template-columns:repeat(4,minmax(0,1fr));
-      gap:12px;
-      margin-top:18px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 12px;
+      margin-top: 0;
     }
 
     .ins-stat{
@@ -522,14 +539,10 @@
       .ins-signalGrid{
         grid-template-columns:1fr;
       }
-      .ins-heroStats{
-        grid-template-columns:1fr 1fr;
-      }
     }
 
     @media (max-width: 720px){
       .ins-heroMain h1{ font-size:26px; }
-      .ins-heroStats{ grid-template-columns:1fr; }
     }
 
     /* ================================================================
@@ -638,21 +651,9 @@
         grid-template-columns:1fr;
       }
 
-      /* --- Hero stats: keep 2-col at 480px–768px (overrides 720px single-col rule) --- */
-      .ins-heroStats{
-        grid-template-columns:repeat(2, minmax(0,1fr));
-      }
-
       /* --- Reduce large padding to 16px on mobile --- */
       .ins-pad-lg{
         padding:16px;
-      }
-    }
-
-    /* Hero stats: drop to single column below 480px */
-    @media (max-width: 480px){
-      .ins-heroStats{
-        grid-template-columns:1fr;
       }
     }
   </style>
@@ -683,17 +684,9 @@
           Revenue, drop rhythm, capacity performance, menu signals, host strength, and practical actions — in one place.
         </p>
 
+        <p class="ins-heroContext" id="heroContext">Loading…</p>
+
         <div class="ins-heroStats">
-          <div class="ins-stat">
-            <div class="ins-statLabel">Vendor</div>
-            <div class="ins-statValue" id="heroVendor">Loading…</div>
-            <div class="ins-statMeta" id="heroRange">Current reporting range</div>
-          </div>
-          <div class="ins-stat">
-            <div class="ins-statLabel">Selected lens</div>
-            <div class="ins-statValue" id="heroLens">All drops</div>
-            <div class="ins-statMeta" id="heroLensMeta">Across hosts and drop types</div>
-          </div>
           <div class="ins-stat">
             <div class="ins-statLabel">Business status</div>
             <div class="ins-statValue" id="heroStatus">—</div>
@@ -732,14 +725,13 @@
             </select>
           </div>
         </div>
-        <button class="ins-button" id="refreshBtn" type="button">Refresh</button>
       </div>
 
       <!-- SECTION 1 -->
       <section class="ins-card ins-pad-lg">
         <div class="ins-toolbar">
           <div>
-            <h2 class="ins-sectionTitle">1. Your Hearth Business</h2>
+            <h2 class="ins-sectionTitle">Your Hearth Business</h2>
             <p class="ins-sectionSub">High-level performance across the selected reporting lens.</p>
           </div>
         </div>
@@ -752,7 +744,7 @@
       <section class="ins-card ins-pad-lg">
         <div class="ins-toolbar">
           <div>
-            <h2 class="ins-sectionTitle">2. Momentum</h2>
+            <h2 class="ins-sectionTitle">Momentum</h2>
             <p class="ins-sectionSub">Revenue, cadence and capacity behaviour over time.</p>
           </div>
         </div>
@@ -809,7 +801,7 @@
       <section class="ins-card ins-pad-lg">
         <div class="ins-toolbar">
           <div>
-            <h2 class="ins-sectionTitle">3. What’s Working / Needs Attention</h2>
+            <h2 class="ins-sectionTitle">Signals</h2>
             <p class="ins-sectionSub">Signals that help the vendor focus quickly.</p>
           </div>
         </div>
@@ -822,7 +814,7 @@
       <section class="ins-card ins-pad-lg">
         <div class="ins-deepHeader">
           <div>
-            <h2 class="ins-sectionTitle">4. Drop Deep Dive</h2>
+            <h2 class="ins-sectionTitle">Drop Deep Dive</h2>
             <p class="ins-sectionSub">Selected drop performance, economics and order timing.</p>
           </div>
           <div class="ins-deepMeta" id="deepDiveMeta"></div>
@@ -861,7 +853,7 @@
       <section class="ins-card ins-pad-lg">
         <div class="ins-toolbar">
           <div>
-            <h2 class="ins-sectionTitle">5. Menu Intelligence</h2>
+            <h2 class="ins-sectionTitle">Menu Intelligence</h2>
             <p class="ins-sectionSub">What is driving revenue, volume and efficient use of capacity.</p>
           </div>
         </div>
@@ -923,7 +915,7 @@
       <section class="ins-card ins-pad-lg">
         <div class="ins-toolbar">
           <div>
-            <h2 class="ins-sectionTitle">6. Hosts & Context</h2>
+            <h2 class="ins-sectionTitle">Hosts & Context</h2>
             <p class="ins-sectionSub">Which hosts and contexts look strongest.</p>
           </div>
         </div>
@@ -965,7 +957,7 @@
       <section class="ins-card ins-pad-lg">
         <div class="ins-toolbar">
           <div>
-            <h2 class="ins-sectionTitle">7. Recommended Actions</h2>
+            <h2 class="ins-sectionTitle">Recommended Actions</h2>
             <p class="ins-sectionSub">Simple, practical next steps based on current signals.</p>
           </div>
         </div>
@@ -982,6 +974,12 @@
       window.HEARTH_CONFIG.SUPABASE_URL,
       window.HEARTH_CONFIG.SUPABASE_ANON_KEY
     );
+
+    const TYPE_DISPLAY_LABELS = {
+      neighbourhood: 'Neighbourhood',
+      community: 'Hosted',
+      event: 'Event'
+    };
 
     const state = {
       vendor: null,
@@ -1006,8 +1004,7 @@
       rangeSelect: document.getElementById('rangeSelect'),
       dropTypeFilter: document.getElementById('dropTypeFilter'),
       hostFilter: document.getElementById('hostFilter'),
-      dropSelect: document.getElementById('dropSelect'),
-      refreshBtn: document.getElementById('refreshBtn')
+      dropSelect: document.getElementById('dropSelect')
     };
 
     const fmtGBP = (pence) => {
@@ -1080,9 +1077,6 @@
       const _insSubtitle = document.querySelector('.brandSubtitle');
       if (_insSubtitle && state.vendor.display_name) _insSubtitle.textContent = state.vendor.display_name;
 
-      document.getElementById('heroVendor').textContent =
-        state.vendor.display_name || state.vendor.name || 'Vendor';
-
       const vendorId = state.vendorId;
 
       const [drops, revenue, items, hosts] = await Promise.all([
@@ -1119,7 +1113,7 @@
 
       document.getElementById('dropTypeFilter').innerHTML =
         `<option value="all">All drop types</option>` +
-        dropTypes.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(titleCase(t))}</option>`).join('');
+        dropTypes.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(TYPE_DISPLAY_LABELS[t] || titleCase(t))}</option>`).join('');
 
       document.getElementById('hostFilter').innerHTML =
         `<option value="all">All hosts</option>` +
@@ -1131,17 +1125,6 @@
       const dropType = els.dropTypeFilter.value;
       const host = els.hostFilter.value;
       const start = startDateFromRange(range);
-
-      document.getElementById('heroRange').textContent =
-        range === 'all' ? 'All available history' : `${range === '365' ? 'Last 12 months' : `Last ${range} days`}`;
-
-      document.getElementById('heroLens').textContent =
-        dropType === 'all' ? 'All drops' : titleCase(dropType);
-
-      document.getElementById('heroLensMeta').textContent =
-        host === 'all'
-          ? 'Across hosts and drop types'
-          : `Filtered to ${state.hostMap.get(host) || 'selected host'}`;
 
       state.filtered.drops = state.allDrops.filter(d => {
         const ds = d.delivery_start ? new Date(d.delivery_start) : null;
@@ -1242,6 +1225,19 @@
         `${count} drop${count === 1 ? '' : 's'}`;
       document.getElementById('heroSignalMeta').textContent =
         `${fmtGBP(revenue)} via Hearth in selected range`;
+
+      const vendorName = state.vendor?.display_name || state.vendor?.name || 'Vendor';
+      const rangeEl = document.getElementById('heroRange');
+      const rangeText = document.getElementById('rangeSelect')?.selectedOptions[0]?.text || '';
+      const lensText = document.getElementById('dropTypeFilter')?.value === 'all'
+        ? 'All drops'
+        : (TYPE_DISPLAY_LABELS[document.getElementById('dropTypeFilter').value] || titleCase(document.getElementById('dropTypeFilter').value));
+      const hostText = document.getElementById('hostFilter')?.value === 'all'
+        ? 'All hosts'
+        : (state.hostMap.get(document.getElementById('hostFilter').value) || 'Selected host');
+
+      const ctx = document.getElementById('heroContext');
+      if (ctx) ctx.textContent = `${vendorName} · ${rangeText} · ${lensText} · ${hostText}`;
     }
 
     function renderOverview(){
@@ -1285,7 +1281,7 @@
       const revenueSeries = aggregateRevenueSeries();
       const dropSeries = aggregateDropSeries(drops);
       const capacitySeries = drops.map(d => ({
-        label: shortDropLabel(d),
+        label: fmtShortDate(d.delivery_start),
         value: Number(d.capacity_utilisation_pct || 0)
       }));
 
@@ -1785,8 +1781,8 @@
           datasets:[{
             label,
             data: values,
-            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--ins-accent').trim() || '#8B6B3F',
-            backgroundColor:'rgba(139,107,63,.10)',
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--h-fire').trim() || '#c4511a',
+            backgroundColor: 'rgba(196,81,26,.10)',
             fill:true,
             tension:.3,
             pointRadius:2,
@@ -1822,7 +1818,7 @@
           datasets:[{
             label,
             data: values,
-            backgroundColor:'rgba(139,107,63,.75)',
+            backgroundColor: 'rgba(196,81,26,.75)',
             borderRadius:8,
             maxBarThickness:38
           }]
@@ -1849,13 +1845,13 @@
           datasets:[{
             label,
             data: values,
-            backgroundColor:[
-              'rgba(139,107,63,.92)',
-              'rgba(203,184,157,.92)',
-              'rgba(94,72,39,.85)',
-              'rgba(226,216,198,.95)',
-              'rgba(174,151,117,.88)',
-              'rgba(120,99,71,.78)'
+            backgroundColor: [
+              'rgba(196,81,26,.92)',
+              'rgba(42,31,23,.85)',
+              'rgba(196,81,26,.60)',
+              'rgba(74,63,55,.75)',
+              'rgba(140,123,110,.70)',
+              'rgba(232,221,213,.95)'
             ]
           }]
         },
@@ -1894,16 +1890,6 @@
       els.dropTypeFilter.addEventListener('change', applyFilters);
       els.hostFilter.addEventListener('change', applyFilters);
       els.dropSelect.addEventListener('change', renderDeepDive);
-      els.refreshBtn.addEventListener('click', async () => {
-        try {
-          await loadData();
-          populateFilters();
-          applyFilters();
-        } catch (err) {
-          console.error(err);
-          alert('Refresh failed. Check console.');
-        }
-      });
     }
 
     init();

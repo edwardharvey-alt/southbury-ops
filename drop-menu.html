@@ -6,6 +6,10 @@
   <title>Hearth — Offer Library</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
   <script src="./assets/config.js"></script>
   <script src="./assets/hearth-vendor.js?v=1"></script>
@@ -13,17 +17,67 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
+    body{
+      font-family: 'Figtree', system-ui, sans-serif;
+    }
+
+    .sectionTitle{
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+    }
+
+    .stageSectionTitle{
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+    }
+
+    input[type="checkbox"]{
+      appearance: none;
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--h-cinder, var(--h-border));
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
+      position: relative;
+    }
+
+    input[type="checkbox"]:checked{
+      background: var(--h-fire, #c4511a);
+      border-color: var(--h-fire, #c4511a);
+    }
+
+    input[type="checkbox"]:checked::after{
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 8px;
+      height: 5px;
+      border-left: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      transform: translate(-50%, -65%) rotate(-45deg);
+    }
+
+    input[type="checkbox"]:focus{
+      outline: 2px solid var(--h-glow, #fff3ec);
+      outline-offset: 2px;
+    }
+
     #deleteModalDropList{
       margin:8px 0 0;
       padding:0 0 0 18px;
       font-size:13px;
-      color:var(--h-text);
+      color:var(--h-slate);
       line-height:1.6;
     }
     #deleteModalBody p{
       margin:0;
       font-size:13px;
-      color:var(--h-muted);
+      color:var(--h-stone);
       line-height:1.5;
     }
     @media (max-width: 768px){
@@ -81,17 +135,24 @@
         align-items:stretch;
         width:100%;
       }
-      .menuHeaderActions .btnAccent,
-      .menuHeaderActions .btnGhost{
-        width:100%;
-        min-height:44px;
-        height:44px;
-        font-size:13px;
+      .menuHeaderActions .btnAccent {
+        width: 100%;
+        min-height: 44px;
+        height: 44px;
+        font-size: 13px;
+      }
+      .menuHeaderActions .btnGhost {
+        min-height: 44px;
+        font-size: 13px;
+        width: auto;
       }
       .menuEditorActions .btnAccent,
       .menuEditorActions .btnGhost{
         min-height:44px;
         height:44px;
+      }
+      .menuEditorActions > div[style*="flex-direction:row"]{
+        flex-direction:row !important;
       }
 
       /* ── Form inputs: full width, 44px min-height ── */
@@ -182,9 +243,9 @@
         flex-direction:column;
         position:relative;
         padding:8px 10px;
-        border:1px solid var(--h-border-2);
+        border:1px solid var(--h-cinder);
         border-radius:10px;
-        background:var(--h-surface);
+        background:var(--h-chalk);
         cursor:pointer;
         width:100%;
         box-sizing:border-box;
@@ -216,7 +277,7 @@
         padding:0 36px 6px 0;
         margin-bottom:4px;
         border:none;
-        border-bottom:1px solid var(--h-border-2);
+        border-bottom:1px solid var(--h-cinder);
         white-space:normal;
       }
       .menuTableWrap td.menuRowName .productName{
@@ -230,25 +291,43 @@
         white-space:normal;
       }
 
-      /* Label-value pairs: each td shows its column label via ::before */
+      /* Inline metadata: category and price live in the name cell's
+         subMeta line; status stays visible as a block; the rest fold away. */
       .menuTableWrap td[data-label]{
-        display:flex;
-        align-items:center;
-        gap:6px;
-        padding:2px 0;
-        border:none;
-        white-space:normal;
-        font-size:11px;
+        display: inline;
+        padding: 0;
+        border: none;
+        font-size: 12px;
+        color: var(--h-stone, var(--h-muted));
       }
       .menuTableWrap td[data-label]::before{
-        content:attr(data-label);
-        font-size:9px;
-        font-weight:700;
-        color:var(--h-muted);
-        min-width:56px;
-        flex-shrink:0;
-        text-transform:uppercase;
-        letter-spacing:0.3px;
+        content: none;
+      }
+
+      .menuTableWrap td.menuRowMeta{
+        display: block;
+        padding: 4px 0 0;
+        border: none;
+        font-size: 12px;
+        color: var(--h-stone, var(--h-muted));
+        line-height: 1.4;
+      }
+
+      .menuTableWrap td[data-label="Category"],
+      .menuTableWrap td[data-label="Price"],
+      .menuTableWrap td[data-label="Items"]{
+        display: none;
+      }
+
+      .menuTableWrap td[data-label="Status"],
+      .menuTableWrap td[data-label="Active"]{
+        display: block;
+        padding: 4px 0 0;
+        border: none;
+      }
+      .menuTableWrap td[data-label="Status"]::before,
+      .menuTableWrap td[data-label="Active"]::before{
+        content: none;
       }
 
       /* Empty-state row */
@@ -314,24 +393,6 @@
           <input id="librarySearch" type="text" placeholder="Search products, bundles or categories" />
 
           <div class="filterPopoverWrap">
-            <button class="filterSummaryBtn" id="libraryTypeBtn" type="button">
-              <span id="libraryTypeSummary">All types</span>
-              <span>▾</span>
-            </button>
-            <div class="filterPopover" id="libraryTypePopover">
-              <div class="filterQuickActions">
-                <button class="btnGhost" id="libraryTypeAllBtn" type="button">All</button>
-                <button class="btnGhost" id="libraryTypeClearBtn" type="button">Clear</button>
-              </div>
-              <div class="filterChecklist" id="libraryTypeChecklist">
-                <label><input type="checkbox" value="category" checked /> Categories</label>
-                <label><input type="checkbox" value="product" checked /> Products</label>
-                <label><input type="checkbox" value="bundle" checked /> Bundles</label>
-              </div>
-            </div>
-          </div>
-
-          <div class="filterPopoverWrap">
             <button class="filterSummaryBtn" id="libraryCategoryBtn" type="button">
               <span id="libraryCategorySummary">All categories</span>
               <span>▾</span>
@@ -376,8 +437,6 @@
               <option value="last_sold_desc">Sort: Last sold</option>
             </select>
           </div>
-
-          <button class="btnGhost" id="reloadLibraryBtn" type="button">Refresh</button>
         </div>
 
         <div class="menuStats">
@@ -485,10 +544,11 @@
                         <h4 class="stageSectionTitle">Selected category</h4>
                         <p class="stageSectionSub">Select a category from the list to edit it</p>
                       </div>
-                      <div class="row" style="gap:8px; flex-wrap:wrap;">
-                        <button class="btnGhost" id="toggleCategoryActiveBtn" type="button">Deactivate</button>
-                        <button class="btnGhost" id="deleteCategoryBtn" type="button" style="color:#991b1b;">Delete</button>
-                      </div>
+                    </div>
+
+                    <div style="display:flex; flex-direction:row; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+                      <button class="btnGhost" id="toggleCategoryActiveBtn" type="button" style="font-size:12px; min-height:36px; padding:0 14px; flex:1;">Deactivate</button>
+                      <button class="btnGhost" id="deleteCategoryBtn" type="button" style="font-size:12px; min-height:36px; padding:0 14px; flex:1; color:#991b1b;">Delete</button>
                     </div>
 
                     <div class="studioGrid2">
@@ -535,11 +595,12 @@
                         <h4 class="stageSectionTitle">Selected product</h4>
                         <p class="stageSectionSub">Select a product from the list to edit it</p>
                       </div>
-                      <div class="row" style="gap:8px; flex-wrap:wrap;">
-                        <button class="btnGhost" id="duplicateProductBtn" type="button">Duplicate</button>
-                        <button class="btnGhost" id="toggleProductActiveBtn" type="button">Deactivate</button>
-                        <button class="btnGhost" id="deleteProductBtn" type="button" style="color:#991b1b;">Delete</button>
-                      </div>
+                    </div>
+
+                    <div style="display:flex; flex-direction:row; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+                      <button class="btnGhost" id="duplicateProductBtn" type="button" style="font-size:12px; min-height:36px; padding:0 14px; flex:1;">Duplicate</button>
+                      <button class="btnGhost" id="toggleProductActiveBtn" type="button" style="font-size:12px; min-height:36px; padding:0 14px; flex:1;">Deactivate</button>
+                      <button class="btnGhost" id="deleteProductBtn" type="button" style="font-size:12px; min-height:36px; padding:0 14px; flex:1; color:#991b1b;">Delete</button>
                     </div>
 
                     <div class="studioGrid2">
@@ -583,14 +644,14 @@
                       <p class="stageSectionSub">Helps build delivery-appropriate menus and feeds future fulfilment intelligence</p>
                       <div class="studioGrid2" style="margin-top:10px;">
                         <div class="field">
-                          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; color:var(--h-text); font-weight:500; text-transform:none; letter-spacing:normal;">
-                            <input type="checkbox" id="productTravelsWell" style="flex-shrink:0; width:16px; height:16px; margin:0; cursor:pointer;" />
+                          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; color:var(--h-slate); font-weight:500; text-transform:none; letter-spacing:normal;">
+                            <input type="checkbox" id="productTravelsWell" style="flex-shrink:0; margin:0; cursor:pointer;" />
                             Travels well for delivery
                           </label>
                         </div>
                         <div class="field">
-                          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; color:var(--h-text); font-weight:500; text-transform:none; letter-spacing:normal;">
-                            <input type="checkbox" id="productSuitableForCollection" style="flex-shrink:0; width:16px; height:16px; margin:0; cursor:pointer;" />
+                          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; color:var(--h-slate); font-weight:500; text-transform:none; letter-spacing:normal;">
+                            <input type="checkbox" id="productSuitableForCollection" style="flex-shrink:0; margin:0; cursor:pointer;" />
                             Suitable for collection
                           </label>
                         </div>
@@ -636,11 +697,12 @@
                         <h4 class="stageSectionTitle">Selected bundle</h4>
                         <p class="stageSectionSub">Build combinations, hampers and multi-item offers</p>
                       </div>
-                      <div class="row" style="gap:8px; flex-wrap:wrap;">
-                        <button class="btnGhost" id="duplicateBundleBtn" type="button">Duplicate</button>
-                        <button class="btnGhost" id="toggleBundleActiveBtn" type="button">Deactivate</button>
-                        <button class="btnGhost" id="deleteBundleBtn" type="button" style="color:#991b1b;">Delete</button>
-                      </div>
+                    </div>
+
+                    <div style="display:flex; flex-direction:row; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+                      <button class="btnGhost" id="duplicateBundleBtn" type="button" style="font-size:12px; min-height:36px; padding:0 14px; flex:1;">Duplicate</button>
+                      <button class="btnGhost" id="toggleBundleActiveBtn" type="button" style="font-size:12px; min-height:36px; padding:0 14px; flex:1;">Deactivate</button>
+                      <button class="btnGhost" id="deleteBundleBtn" type="button" style="font-size:12px; min-height:36px; padding:0 14px; flex:1; color:#991b1b;">Delete</button>
                     </div>
 
                     <div class="studioGrid2">
@@ -1316,13 +1378,8 @@
       }
 
       function renderFilterSummaries() {
-        const typeSummary = byId("libraryTypeSummary");
         const categorySummary = byId("libraryCategorySummary");
         const statusSummary = byId("libraryStatusSummary");
-
-        if (state.selectedTypes.length === 3) typeSummary.textContent = "All types";
-        else if (!state.selectedTypes.length) typeSummary.textContent = "No types";
-        else typeSummary.textContent = state.selectedTypes.map(titleCase).join(", ");
 
         if (!state.selectedCategoryIds.length) {
           categorySummary.textContent = "All categories";
@@ -1548,24 +1605,19 @@
           head.innerHTML = `
             <tr>
               <th style="width:7%;">Order</th>
-              <th style="width:37%;">Name</th>
-              <th style="width:18%;">Status</th>
-              <th style="width:19%;">Products</th>
-              <th style="width:19%;">Bundles</th>
+              <th style="width:48%;">Name</th>
+              <th style="width:20%;">Status</th>
+              <th style="width:25%;">Items</th>
             </tr>
           `;
         } else {
           head.innerHTML = `
             <tr>
               <th style="width:7%;">Order</th>
-              <th style="width:24%;">Name</th>
-              <th style="width:9%;">Type</th>
-              <th style="width:13%;">Category</th>
-              <th style="width:9%;">Price</th>
-              <th style="width:9%;">Capacity</th>
-              <th style="width:10%;">Active</th>
-              <th style="width:9%;">Sold</th>
-              <th style="width:10%;">Revenue</th>
+              <th style="width:38%;">Name</th>
+              <th style="width:22%;">Category</th>
+              <th style="width:15%;">Price</th>
+              <th style="width:18%;">Status</th>
             </tr>
           `;
         }
@@ -1573,7 +1625,7 @@
         if (!rows.length) {
           body.innerHTML = `
             <tr>
-              <td colspan="${state.currentTab === "categories" ? 5 : 9}">
+              <td colspan="${state.currentTab === "categories" ? 4 : 5}">
                 <div class="emptyState">No matching catalogue items found.</div>
               </td>
             </tr>
@@ -1596,11 +1648,9 @@
                 </td>
                 <td class="menuRowName">
                   <div class="productName">${escapeHtml(row.name)}</div>
-                  <div class="subMeta">Sort order: ${row.sort_order ?? "—"}</div>
                 </td>
                 <td data-label="Status"><span class="badgeStatus ${row.is_active ? "ready" : "delivered"}">${row.is_active ? "active" : "inactive"}</span></td>
-                <td data-label="Products">${escapeHtml(String(row.product_count || 0))}</td>
-                <td data-label="Bundles">${escapeHtml(String(row.bundle_count || 0))}</td>
+                <td data-label="Items">${escapeHtml(String((row.product_count || 0) + (row.bundle_count || 0)))}</td>
               </tr>
             `;
           }).join("");
@@ -1624,15 +1674,11 @@
                 </td>
                 <td class="menuRowName">
                   <div class="productName">${escapeHtml(row.name)}</div>
-                  <div class="subMeta">${escapeHtml(row.description || "No description")} • Sort order: ${row.sort_order ?? "—"}</div>
+                  <div class="subMeta">${escapeHtml(row.category_name || '—')}${row.price_pence != null ? ' · ' + formatMoneyPence(row.price_pence) : ''}</div>
                 </td>
-                <td data-label="Type"><span class="miniChip">${escapeHtml(row.item_type)}</span></td>
                 <td data-label="Category">${escapeHtml(row.category_name || "—")}</td>
                 <td data-label="Price">${row.price_pence == null ? "—" : formatMoneyPence(row.price_pence)}</td>
-                <td data-label="Capacity">${row.capacity_units == null ? "—" : escapeHtml(String(row.capacity_units))}</td>
                 <td data-label="Status"><span class="badgeStatus ${row.is_active ? "ready" : "delivered"}">${row.is_active ? "active" : "inactive"}</span></td>
-                <td data-label="Sold">${escapeHtml(String(analytics.units_sold || 0))}</td>
-                <td data-label="Revenue">${formatMoneyPence(analytics.revenue_pence || 0)}</td>
               </tr>
             `;
           }).join("");
@@ -1834,7 +1880,7 @@
           const productCount = state.products.filter((p) => p.category_id === current.id).length;
           const bundleCount = state.bundles.filter((b) => b.category_id === current.id).length;
 
-          meta.textContent = `${current.name} • ${current.is_active ? "active" : "inactive"} • sort ${current.sort_order ?? "—"}`;
+          meta.textContent = `${current.name} • ${current.is_active ? "active" : "inactive"}`;
           chips.innerHTML = [
             `<span class="miniChip">${productCount} products</span>`,
             `<span class="miniChip">${bundleCount} bundles</span>`
@@ -1851,7 +1897,7 @@
             return;
           }
 
-          meta.textContent = `${current.name} • ${current.category_name || "No category"} • ${current.is_active ? "active" : "inactive"} • sort ${current.sort_order ?? "—"}`;
+          meta.textContent = `${current.name} • ${current.category_name || "No category"} • ${current.is_active ? "active" : "inactive"}`;
           chips.innerHTML = [
             `<span class="miniChip">${formatMoneyPence(current.price_pence)}</span>`,
             `<span class="miniChip">${current.capacity_units} capacity</span>`,
@@ -1940,7 +1986,7 @@
         const productCount = state.products.filter((p) => p.category_id === category.id).length;
         const bundleCount = state.bundles.filter((b) => b.category_id === category.id).length;
 
-        byId("categorySelectionLabel").textContent = `${category.name} • ${category.is_active ? "active" : "inactive"} • sort ${category.sort_order ?? "—"}`;
+        byId("categorySelectionLabel").textContent = `${category.name} • ${category.is_active ? "active" : "inactive"}`;
         byId("categorySelectionMetrics").innerHTML = [
           `<span class="miniChip">${productCount} products</span>`,
           `<span class="miniChip">${bundleCount} bundles</span>`
@@ -2061,7 +2107,7 @@
 
         const lines = getBundleLines(bundle.id);
 
-        byId("bundleSelectionLabel").textContent = `${bundle.name} • ${bundle.category_name || "No category"} • ${bundle.is_active ? "active" : "inactive"} • sort ${bundle.sort_order ?? "—"}`;
+        byId("bundleSelectionLabel").textContent = `${bundle.name} • ${bundle.category_name || "No category"} • ${bundle.is_active ? "active" : "inactive"}`;
         byId("bundleSelectionMetrics").innerHTML = [
           `<span class="miniChip">${formatMoneyPence(bundle.price_pence)}</span>`,
           `<span class="miniChip">${bundle.capacity_units} capacity</span>`,
@@ -2149,7 +2195,7 @@
         byId("productPrepComplexity").value = product.prep_complexity || "standard";
         byId("toggleProductActiveBtn").textContent = product.is_active ? "Deactivate" : "Activate";
 
-        byId("productSelectionLabel").textContent = `${product.name} • ${product.category_name || "No category"} • ${product.is_active ? "active" : "inactive"} • sort ${product.sort_order ?? "—"}`;
+        byId("productSelectionLabel").textContent = `${product.name} • ${product.category_name || "No category"} • ${product.is_active ? "active" : "inactive"}`;
         byId("productSelectionMetrics").innerHTML = [
           `<span class="miniChip">${formatMoneyPence(product.price_pence)}</span>`,
           `<span class="miniChip">${product.capacity_units} capacity</span>`,
@@ -2708,44 +2754,30 @@
       }
 
       function attachEvents() {
-        const libraryTypeBtn = byId("libraryTypeBtn");
-        const libraryTypePopover = byId("libraryTypePopover");
         const libraryCategoryBtn = byId("libraryCategoryBtn");
         const libraryCategoryPopover = byId("libraryCategoryPopover");
         const libraryStatusBtn = byId("libraryStatusBtn");
         const libraryStatusPopover = byId("libraryStatusPopover");
 
         function closeAllPopovers() {
-          libraryTypePopover.classList.remove("open");
           libraryCategoryPopover.classList.remove("open");
           libraryStatusPopover.classList.remove("open");
         }
 
-        libraryTypeBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          libraryCategoryPopover.classList.remove("open");
-          libraryStatusPopover.classList.remove("open");
-          libraryTypePopover.classList.toggle("open");
-        });
-
         libraryCategoryBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          libraryTypePopover.classList.remove("open");
           libraryStatusPopover.classList.remove("open");
           libraryCategoryPopover.classList.toggle("open");
         });
 
         libraryStatusBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          libraryTypePopover.classList.remove("open");
           libraryCategoryPopover.classList.remove("open");
           libraryStatusPopover.classList.toggle("open");
         });
 
         document.addEventListener("click", (e) => {
           if (
-            !libraryTypePopover.contains(e.target) &&
-            !libraryTypeBtn.contains(e.target) &&
             !libraryCategoryPopover.contains(e.target) &&
             !libraryCategoryBtn.contains(e.target) &&
             !libraryStatusPopover.contains(e.target) &&
@@ -2785,29 +2817,6 @@
           }
 
           renderEverything();
-        });
-
-        byId("libraryTypeChecklist").addEventListener("change", () => {
-          state.selectedTypes = Array.from(byId("libraryTypeChecklist").querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
-          renderFilterSummaries();
-          renderOrderingControls();
-          renderLibraryTable();
-        });
-
-        byId("libraryTypeAllBtn").addEventListener("click", () => {
-          state.selectedTypes = ["category", "product", "bundle"];
-          byId("libraryTypeChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = true; });
-          renderFilterSummaries();
-          renderOrderingControls();
-          renderLibraryTable();
-        });
-
-        byId("libraryTypeClearBtn").addEventListener("click", () => {
-          state.selectedTypes = [];
-          byId("libraryTypeChecklist").querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
-          renderFilterSummaries();
-          renderOrderingControls();
-          renderLibraryTable();
         });
 
         byId("libraryCategoryChecklist").addEventListener("change", () => {
@@ -2903,15 +2912,6 @@
           state.selectedBundleLineId = row.dataset.bundleLineId;
           renderBundleEditor();
           scrollBundleEditorIntoView();
-        });
-
-        byId("reloadLibraryBtn").addEventListener("click", async () => {
-          try {
-            await refreshAll();
-          } catch (err) {
-            console.error(err);
-            showError(err.message || "Unable to refresh Menu Library.");
-          }
         });
 
         byId("newCategoryBtn").addEventListener("click", () => {

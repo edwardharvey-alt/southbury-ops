@@ -6,6 +6,10 @@
   <title>Hearth — Drop Studio</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
   <script src="./assets/config.js"></script>
   <script src="./assets/hearth-vendor.js?v=1"></script>
@@ -13,6 +17,18 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
+    body{
+      font-family: 'Figtree', system-ui, sans-serif;
+    }
+
+    .sectionTitle,
+    .stageSectionTitle,
+    .firstDropGuidanceHeading,
+    .dropCardTitle{
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+    }
+
     .menuStageTools{
       display:grid;
       gap:10px;
@@ -26,7 +42,7 @@
       align-items:flex-start;
       flex-wrap:wrap;
       padding:12px 14px;
-      border:1px solid rgba(15,23,42,0.08);
+      border:1px solid var(--h-cinder);
       border-radius:14px;
       background:rgba(139,107,63,0.04);
     }
@@ -43,9 +59,9 @@
       border-radius:999px;
       font-size:11px;
       font-weight:800;
-      border:1px solid rgba(15,23,42,0.10);
-      background:#fff;
-      color:var(--h-text);
+      border:1px solid var(--h-cinder);
+      background:var(--h-chalk);
+      color:var(--h-slate);
       white-space:nowrap;
     }
 
@@ -58,20 +74,20 @@
     }
 
     .assignmentTable tr.dragOverTop{
-      box-shadow:inset 0 2px 0 var(--h-accent);
+      box-shadow:inset 0 2px 0 var(--h-fire, #c4511a);
     }
 
     .assignmentTable tr.dragOverBottom{
-      box-shadow:inset 0 -2px 0 var(--h-accent);
+      box-shadow:inset 0 -2px 0 var(--h-fire, #c4511a);
     }
 
     .dragHandleBtn{
       width:32px;
       height:32px;
       border-radius:10px;
-      border:1px solid var(--h-border);
-      background:#fff;
-      color:var(--h-text);
+      border:1px solid var(--h-cinder);
+      background:var(--h-chalk);
+      color:var(--h-slate);
       font-size:16px;
       font-weight:900;
       cursor:grab;
@@ -88,7 +104,7 @@
     .orderingValue{
       font-size:11px;
       font-weight:700;
-      color:var(--h-muted);
+      color:var(--h-stone);
       margin-top:4px;
       display:block;
     }
@@ -104,7 +120,7 @@
 
     .productGroupHeadMeta{
       font-size:11px;
-      color:var(--h-muted);
+      color:var(--h-stone);
       font-weight:700;
     }
 
@@ -211,6 +227,72 @@
       color:#1f2937;
     }
 
+    input[type="radio"]{
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--h-cinder, var(--h-border));
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      flex-shrink: 0;
+      position: relative;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    input[type="radio"]:checked{
+      background: var(--h-fire, #c4511a);
+      border-color: var(--h-fire, #c4511a);
+    }
+    input[type="radio"]:checked::after{
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #fff;
+      transform: translate(-50%, -50%);
+    }
+    input[type="radio"]:focus{
+      outline: 2px solid var(--h-glow, #fff3ec);
+      outline-offset: 2px;
+    }
+
+    input[type="checkbox"]{
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--h-cinder, var(--h-border));
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      flex-shrink: 0;
+      position: relative;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    input[type="checkbox"]:checked{
+      background: var(--h-fire, #c4511a);
+      border-color: var(--h-fire, #c4511a);
+    }
+    input[type="checkbox"]:checked::after{
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 8px;
+      height: 5px;
+      border-left: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      transform: translate(-50%, -65%) rotate(-45deg);
+    }
+    input[type="checkbox"]:focus{
+      outline: 2px solid var(--h-glow, #fff3ec);
+      outline-offset: 2px;
+    }
+
     @media (max-width:1180px){
       .browserToolbar{
         grid-template-columns:1fr 1fr !important;
@@ -261,18 +343,27 @@
       }
       .dropBandWrap::-webkit-scrollbar{ display:none; }
       .dropBand{
-        display:flex !important;
-        flex-direction:row !important;
-        width:auto !important;
-        gap:0 !important;
+        display: flex !important;
+        flex-direction: row !important;
+        width: auto !important;
+        gap: 0 !important;
+        align-items: flex-start !important;
       }
-      .dropCard{
-        width:100% !important;
-        min-width:100% !important;
-        max-width:100% !important;
-        flex:0 0 100% !important;
-        scroll-snap-align:start;
-        box-sizing:border-box !important;
+      .dropCard,
+      #dropBand .dropCard{
+        width: 88% !important;
+        min-width: 88% !important;
+        max-width: 88% !important;
+        flex: 0 0 88% !important;
+        scroll-snap-align: start;
+        box-sizing: border-box !important;
+        height: auto !important;
+        min-height: 0 !important;
+        padding: 20px 16px !important;
+      }
+      #dropBand .dropCardStats,
+      .dropCardStats{
+        margin-top: 10px !important;
       }
       /* Hide duplicate button on mobile — accessible via editor panel when drop selected.
          Scorecard link remains visible for closed drops (rendered outside .dropCardActions). */
@@ -290,7 +381,7 @@
         margin-top:8px;
         font-size:11px;
         font-weight:700;
-        color:var(--h-muted);
+        color:var(--h-stone);
         letter-spacing:0.03em;
       }
 
@@ -430,7 +521,7 @@
         grid-template-rows:auto auto auto;
         gap:8px;
         padding:10px;
-        border:1px solid var(--h-border-2);
+        border:1px solid var(--h-cinder);
         border-radius:12px;
         background:var(--h-surface);
         margin-bottom:8px;
@@ -464,7 +555,7 @@
       }
       .assignmentTable tr.isDraggable td:nth-child(7)::before{
         content:"Drop price";
-        font-size:10px; font-weight:700; color:var(--h-muted);
+        font-size:10px; font-weight:700; color:var(--h-stone);
         text-transform:uppercase; white-space:nowrap;
         flex-shrink:0; min-width:64px;
       }
@@ -478,7 +569,7 @@
       }
       .assignmentTable tr.isDraggable td:nth-child(8)::before{
         content:"Stock limit";
-        font-size:10px; font-weight:700; color:var(--h-muted);
+        font-size:10px; font-weight:700; color:var(--h-stone);
         text-transform:uppercase; white-space:nowrap;
         flex-shrink:0; min-width:64px;
       }
@@ -503,13 +594,12 @@
         white-space:normal;
       }
 
-      /* --- toggleRow checkbox: consistent size and accent colour --- */
+      /* --- toggleRow checkbox: consistent size --- */
       .toggleRow input[type="checkbox"]{
         width:20px;
         height:20px;
         min-height:0;
         flex-shrink:0;
-        accent-color:var(--h-accent);
       }
 
       /* --- Date and time inputs: strip iOS native appearance --- */
@@ -522,6 +612,11 @@
         min-width:0 !important;
         box-sizing:border-box !important;
         display:block !important;
+        text-align: center;
+        height: 44px;
+        line-height: 44px;
+        padding-top: 0;
+        padding-bottom: 0;
       }
       .studioGrid2 > *,
       .studioGrid3 > *{
@@ -535,6 +630,21 @@
       }
       .stageSection{
         overflow:hidden;
+      }
+
+      .productGroupHeadMeta{
+        width: 100%;
+        margin-top: 2px;
+        font-size: 12px;
+      }
+
+      .productGroupHeadRow{
+        margin-bottom: 16px;
+        padding-left: 4px;
+      }
+
+      .workspaceHeaderActions{
+        display: none !important;
       }
     }
 
@@ -555,11 +665,11 @@
     #demandPreviewSection .demandPreviewLine{
       font-size:13px;
       line-height:1.45;
-      color:var(--h-text);
+      color:var(--h-slate);
       margin:0;
     }
     #demandPreviewSection .demandPreviewLine.muted{
-      color:var(--h-muted);
+      color:var(--h-stone);
     }
     #demandPreviewSection .demandChip{
       display:inline-flex;
@@ -570,9 +680,9 @@
       font-size:11px;
       font-weight:800;
       letter-spacing:0.02em;
-      border:1px solid rgba(15,23,42,0.10);
+      border:1px solid var(--h-cinder);
       background:#fff;
-      color:var(--h-text);
+      color:var(--h-slate);
       white-space:nowrap;
     }
     #demandPreviewSection .demandChip.isStrong{
@@ -587,8 +697,8 @@
     }
     #demandPreviewSection .demandChip.isNew{
       background:rgba(15,23,42,0.05);
-      border-color:rgba(15,23,42,0.14);
-      color:var(--h-muted);
+      border-color:var(--h-cinder);
+      color:var(--h-stone);
     }
     #demandPreviewSection .demandChipWrap{
       display:flex;
@@ -599,7 +709,7 @@
     }
     #demandPreviewSection .demandHostHint{
       font-size:12px;
-      color:var(--h-muted);
+      color:var(--h-stone);
       margin:4px 0 0;
       padding:8px 10px;
       border-left:3px solid rgba(139,107,63,0.28);
@@ -611,8 +721,8 @@
     #stripeGate{
       margin:14px 0 4px;
       padding:16px 20px;
-      border:1px solid color-mix(in srgb, var(--h-accent) 24%, transparent);
-      background:color-mix(in srgb, var(--h-accent) 5%, white);
+      border:1px solid color-mix(in srgb, var(--h-fire, #c4511a) 24%, transparent);
+      background:color-mix(in srgb, var(--h-fire, #c4511a) 5%, white);
       border-radius:14px;
       display:flex;
       align-items:center;
@@ -628,12 +738,12 @@
       margin:0;
       font-size:14px;
       font-weight:800;
-      color:var(--h-text);
+      color:var(--h-slate);
     }
     #stripeGate .stripeGateBody{
       margin:2px 0 0;
       font-size:13px;
-      color:var(--h-muted);
+      color:var(--h-stone);
       line-height:1.5;
     }
     #stripeGate a.stripeGateCta{
@@ -649,7 +759,7 @@
       position:relative;
       margin:14px 0 4px;
       padding:20px 22px;
-      border:1px solid var(--h-border);
+      border:1px solid var(--h-cinder);
       border-radius:16px;
       background:rgba(139,107,63,0.05);
       display:flex;
@@ -664,7 +774,7 @@
       height:28px;
       border:none;
       background:transparent;
-      color:var(--h-muted);
+      color:var(--h-stone);
       font-size:18px;
       line-height:1;
       cursor:pointer;
@@ -677,7 +787,7 @@
     #firstDropGuidance .firstDropGuidanceDismiss:hover,
     #firstDropGuidance .firstDropGuidanceDismiss:focus-visible{
       background:rgba(15,23,42,0.06);
-      color:var(--h-text);
+      color:var(--h-slate);
       outline:none;
     }
     #firstDropGuidance .firstDropGuidanceHeading{
@@ -685,13 +795,13 @@
       font-size:16px;
       font-weight:800;
       letter-spacing:-0.01em;
-      color:var(--h-text);
+      color:var(--h-slate);
     }
     #firstDropGuidance .firstDropGuidanceBody{
       margin:0;
       font-size:13px;
       line-height:1.55;
-      color:var(--h-muted);
+      color:var(--h-stone);
       max-width:62ch;
     }
     #firstDropGuidance .firstDropGuidanceActions{
@@ -738,7 +848,7 @@
       gap:8px;
       font-size:13px;
       font-weight:600;
-      color:var(--h-text);
+      color:var(--h-slate);
       text-transform:none;
       letter-spacing:normal;
       cursor:pointer;
@@ -749,7 +859,6 @@
       height:16px;
       margin:0;
       flex-shrink:0;
-      accent-color:var(--h-accent);
     }
 
     /* T3-12a — Delivery area restriction (postcode prefix chip input) */
@@ -764,7 +873,7 @@
       align-items:center;
       gap:6px;
       font-weight:500;
-      color:var(--h-text);
+      color:var(--h-slate);
       cursor:pointer;
     }
     #postcodePrefixWrap{
@@ -786,7 +895,7 @@
       align-items:center;
       gap:6px;
       background:rgba(196,81,26,0.12);
-      color:var(--h-accent-ink, var(--h-text));
+      color:var(--h-accent-ink, var(--h-slate));
       border:1px solid rgba(196,81,26,0.3);
       border-radius:999px;
       padding:4px 10px;
@@ -878,13 +987,11 @@
               </div>
               <div class="filterChecklist" id="typeFilterChecklist">
                 <label><input type="checkbox" value="neighbourhood" checked /> Neighbourhood</label>
-                <label><input type="checkbox" value="community" checked /> Community</label>
+                <label><input type="checkbox" value="community" checked /> Hosted</label>
                 <label><input type="checkbox" value="event" checked /> Event</label>
               </div>
             </div>
           </div>
-
-          <button class="btnGhost" id="refreshBtn" type="button">Refresh</button>
         </div>
 
         <div id="stripeGate" style="display:none;"></div>
@@ -964,23 +1071,24 @@
 
                   <div class="studioGrid2">
                     <div class="field">
-                      <label for="dropName">Drop Name</label>
+                      <label for="dropName">Drop name</label>
                       <input id="dropName" type="text" placeholder="Friday Drop" />
                     </div>
 
                     <div class="field">
-                      <label for="dropSlug">Drop Link Name</label>
+                      <label for="dropSlug">Ordering page link</label>
                       <input id="dropSlug" type="text" placeholder="friday-drop" />
-                      <div class="helperText">Auto-generated from Drop Name. You can overwrite it if needed.</div>
+                      <div class="helperText">Auto-generated from the drop name. Only change if you need a different URL.</div>
                     </div>
 
                     <div class="field">
-                      <label for="dropType">Drop Type</label>
+                      <label for="dropType">Drop type</label>
                       <select id="dropType">
                         <option value="neighbourhood">Neighbourhood</option>
-                        <option value="community">Community</option>
+                        <option value="community">Hosted</option>
                         <option value="event">Event</option>
                       </select>
+                      <div class="helperText">Neighbourhood: delivery to a local area. Hosted: at a pub, club, school or venue. Event: one-off occasion.</div>
                     </div>
 
                   </div>
@@ -998,8 +1106,8 @@
                 </div>
 
                 <div class="stageSection">
-                  <h4 class="stageSectionTitle">Operating Setup</h4>
-                  <p class="stageSectionSub">Set host, geography, fulfilment mode and capacity.</p>
+                  <h4 class="stageSectionTitle">Setup</h4>
+                  <p class="stageSectionSub">Set where and how orders are fulfilled, and the drop's capacity.</p>
 
                   <div class="studioGrid2">
                     <div class="field">
@@ -1056,7 +1164,7 @@
                     </div>
 
                     <div class="field fieldInlineCheck" style="grid-column:1 / -1;">
-                      <label class="inlineCheckLabel" for="customerNotesEnabled"><input id="customerNotesEnabled" type="checkbox" checked /> Allow customer notes</label>
+                      <label class="inlineCheckLabel" for="customerNotesEnabled"><input id="customerNotesEnabled" type="checkbox" checked /> Let customers add a note to their order</label>
                     </div>
 
                     <div class="field" id="centrePostcodeField" style="display:none;">
@@ -1070,20 +1178,20 @@
                     </div>
 
                     <div class="field">
-                      <label for="capacityCategory">Capacity Category</label>
+                      <label for="capacityCategory">Capacity type</label>
                       <select id="capacityCategory">
                         <option value="">Loading categories…</option>
                       </select>
-                      <div class="helperText">Choose the category that defines operational capacity for this drop.</div>
+                      <div class="helperText">The product type that counts toward this drop's capacity limit.</div>
                     </div>
 
                     <div class="field">
-                      <label for="capacityTotal">Total Capacity</label>
+                      <label for="capacityTotal">Capacity</label>
                       <input id="capacityTotal" type="number" min="0" step="1" />
                     </div>
 
                     <div class="field" style="grid-column:1 / -1;">
-                      <label for="notesInternal">Internal Notes</label>
+                      <label for="notesInternal">Private notes</label>
                       <textarea id="notesInternal" placeholder="Any internal operational notes for this drop"></textarea>
                     </div>
                   </div>
@@ -1107,11 +1215,11 @@
               <div class="stagePaneInner">
                 <div class="stageSection">
                   <h4 class="stageSectionTitle">Timing</h4>
-                  <p class="stageSectionSub">Define fulfilment timing, ordering window and recurrence.</p>
+                  <p class="stageSectionSub">When is the drop, and when can customers order?</p>
 
                   <div class="studioGrid3">
                     <div class="field">
-                      <label for="deliveryDate">Drop Date</label>
+                      <label for="deliveryDate">Date</label>
                       <input id="deliveryDate" type="date" />
                     </div>
 
@@ -1247,7 +1355,7 @@
 
                   <div id="closeOrdersSection" class="studioGrid2" style="margin-top:10px;">
                     <div class="field">
-                      <label for="closesAtDate">Close Orders</label>
+                      <label for="closesAtDate">Orders close</label>
                       <div class="studioGrid2" style="gap:8px;">
                         <input id="closesAtDate" type="date" />
                         <input id="closesAtTime" type="time" />
@@ -1263,8 +1371,8 @@
                 <div class="stageSection">
                   <div class="row space" style="margin-bottom:10px; align-items:flex-start;">
                     <div>
-                      <div class="stageSectionTitle" style="margin:0 0 4px;">Drop Menu</div>
-                      <div class="helperText">Enable menu items from the catalogue, override prices, manage stock limits, and control per-drop ordering.</div>
+                      <div class="stageSectionTitle" style="margin:0 0 4px;">Menu</div>
+                      <div class="helperText">Enable items from your catalogue, override prices and set stock limits for this drop.</div>
                     </div>
                     <div class="row" style="gap:8px; flex-wrap:wrap;">
                       <a href="drop-menu.html" class="utilityLink">Open Offer Library</a>
@@ -1295,7 +1403,7 @@
 
                   <div class="toggleRow">
                     <div>
-                      <div style="font-weight:800;">Enable Community Contribution</div>
+                      <div style="font-weight:800;">Community contribution</div>
                       <div class="helperText">Shown to customers if configured.</div>
                     </div>
                     <input id="fundraisingEnabled" type="checkbox" />
@@ -1330,13 +1438,13 @@
                   </div>
                 </div>
 
-                <div class="stageSection">
-                  <h4 class="stageSectionTitle">Commercial Host Share</h4>
-                  <p class="stageSectionSub">Optional commercial settlement for venues or hosts.</p>
+                <div class="stageSection" id="hostShareSection">
+                  <h4 class="stageSectionTitle">Host share</h4>
+                  <p class="stageSectionSub">A payment or percentage for the host — separate from community contribution.</p>
 
                   <div class="toggleRow">
                     <div>
-                      <div style="font-weight:800;">Enable Host Share</div>
+                      <div style="font-weight:800;">Host share</div>
                       <div class="helperText">Separate from community contribution.</div>
                     </div>
                     <input id="hostShareEnabled" type="checkbox" />
@@ -1400,7 +1508,7 @@
 
                 <div class="reviewGrid" style="margin-top:10px;">
                   <div class="stageSection">
-                    <h4 class="stageSectionTitle">Share Link</h4>
+                    <h4 class="stageSectionTitle">Drop link</h4>
                     <p class="stageSectionSub">Customer ordering page for this drop.</p>
                     <div class="shareLink" id="shareLinkPreview">No drop link yet.</div>
                     <div class="row" style="gap:8px; flex-wrap:wrap; margin-top:8px;">
@@ -1476,8 +1584,8 @@
           <div style="margin-top:12px;">
             <label style="display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px solid var(--h-border); border-radius:12px; cursor:pointer;">
               <input type="checkbox" id="newHostTermsAccept" style="margin-top:3px;" />
-              <span style="font-size:14px; line-height:1.5; color:var(--h-text); text-transform:none; letter-spacing:normal; font-weight:normal;">
-                I have explained the <a href="host-terms.html" target="_blank" rel="noopener noreferrer" style="color:var(--h-accent); text-decoration:underline;">host participation terms</a> to <strong id="newHostTermsAcceptHostName">this host</strong> and they have agreed.
+              <span style="font-size:14px; line-height:1.5; color:var(--h-slate); text-transform:none; letter-spacing:normal; font-weight:normal;">
+                I have explained the <a href="host-terms.html" target="_blank" rel="noopener noreferrer" style="color:var(--h-fire, #c4511a); text-decoration:underline;">host participation terms</a> to <strong id="newHostTermsAcceptHostName">this host</strong> and they have agreed.
               </span>
             </label>
           </div>
@@ -1500,6 +1608,11 @@
     const SUPABASE_URL = CONFIG.SUPABASE_URL;
     const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
     const STAGES = ["basics", "timing", "menu", "commercials", "review"];
+    const TYPE_DISPLAY_LABELS = {
+      neighbourhood: 'Neighbourhood',
+      community: 'Hosted',
+      event: 'Event'
+    };
     const ACTIVE_DEFAULT_STATUSES = ["live", "scheduled", "draft"];
     const DEFAULT_TYPE_FILTERS = ["neighbourhood", "community", "event"];
 
@@ -1572,7 +1685,7 @@
       TIMING_FIELD_IDS.forEach((id) => {
         const field = byId(id);
         if (field) {
-          field.style.outline = "2px solid var(--h-accent)";
+          field.style.outline = "2px solid var(--h-fire, #c4511a)";
           field.style.boxShadow = "0 0 0 3px rgba(249,115,22,0.15)";
         }
       });
@@ -2033,7 +2146,7 @@
       const capacityLabel = getCapacityCategoryLabel(liveDrop);
 
       meta.textContent = [
-        liveDrop.drop_type || "drop",
+        TYPE_DISPLAY_LABELS[liveDrop.drop_type] || liveDrop.drop_type || "drop",
         host ? host.name : "No host",
         liveDrop.delivery_start ? `${formatDateShort(liveDrop.delivery_start)} ${formatTimeOnly(liveDrop.delivery_start)}–${formatTimeOnly(liveDrop.delivery_end)}` : "No fulfilment window"
       ].filter(Boolean).join(" • ");
@@ -2081,6 +2194,11 @@
     function updateTypeFilterSummary() {
       const summary = byId("typeFilterSummary");
       const selected = state.typeFilters;
+      const typeLabels = {
+        neighbourhood: 'Neighbourhood',
+        community: 'Hosted',
+        event: 'Event'
+      };
       if (selected.length === DEFAULT_TYPE_FILTERS.length) {
         summary.textContent = "All types";
         return;
@@ -2089,11 +2207,9 @@
         summary.textContent = "No types";
         return;
       }
-      if (selected.length <= 2) {
-        summary.textContent = selected.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ");
-        return;
-      }
-      summary.textContent = `${selected.length} types`;
+      summary.textContent = selected.length <= 2
+        ? selected.map((s) => typeLabels[s] || titleCase(s)).join(', ')
+        : `${selected.length} types`;
     }
 
     function getUrlParam(name) {
@@ -2672,9 +2788,10 @@
 
       band.innerHTML = drops.map((drop) => {
         const active = drop.drop_id === state.selectedDropId ? "active" : "";
+        const dropTypeLabel = TYPE_DISPLAY_LABELS[drop.drop_type] || titleCase(drop.drop_type || "drop");
         const hostLine = drop.host_name
-          ? `${escapeHtml(drop.drop_type || "drop")} • ${escapeHtml(drop.host_name)}`
-          : `${escapeHtml(drop.drop_type || "drop")}`;
+          ? `${escapeHtml(dropTypeLabel)} • ${escapeHtml(drop.host_name)}`
+          : `${escapeHtml(dropTypeLabel)}`;
 
         return `
           <div class="dropCard ${active}" data-drop-id="${drop.drop_id}">
@@ -2687,8 +2804,10 @@
                 <span class="miniChip ${escapeHtml(drop.status || "")}">${escapeHtml(drop.status || "—")}</span>
               </div>
 
-              <div class="dropCardMeta">${escapeHtml(formatDateShort(drop.delivery_start))}</div>
-              <div class="dropCardMeta">${escapeHtml(formatTimeOnly(drop.delivery_start))}–${escapeHtml(formatTimeOnly(drop.delivery_end))}</div>
+              <div class="dropCardMeta">
+                ${escapeHtml(formatDateShort(drop.delivery_start))} ·
+                ${escapeHtml(formatTimeOnly(drop.delivery_start))}–${escapeHtml(formatTimeOnly(drop.delivery_end))}
+              </div>
 
               <div class="dropCardStats">
                 <span class="miniChip">${Number(drop.capacity_units_used || 0)} / ${Number(drop.capacity_units_total || 0)} ${escapeHtml(getCapacityCategoryLabel(drop))}</span>
@@ -2768,12 +2887,12 @@
         let hasDetail = false;
 
         if (fullHost.audience_description) {
-          enrichHtml += `<p style="margin:6px 0 0;font-size:11px;font-style:italic;color:var(--h-muted);">${escapeHtml(fullHost.audience_description)}</p>`;
+          enrichHtml += `<p style="margin:6px 0 0;font-size:11px;font-style:italic;color:var(--h-stone);">${escapeHtml(fullHost.audience_description)}</p>`;
           hasDetail = true;
         }
 
         if (fullHost.estimated_audience_size) {
-          enrichHtml += `<p style="margin:4px 0 0;font-size:11px;color:var(--h-muted);">~${Number(fullHost.estimated_audience_size).toLocaleString()} audience</p>`;
+          enrichHtml += `<p style="margin:4px 0 0;font-size:11px;color:var(--h-stone);">~${Number(fullHost.estimated_audience_size).toLocaleString()} audience</p>`;
           hasDetail = true;
         }
 
@@ -2791,7 +2910,7 @@
           }).filter(Boolean).join("  |  ");
 
           if (windowSummary) {
-            enrichHtml += `<p style="margin:4px 0 0;font-size:11px;color:var(--h-muted);">${escapeHtml(windowSummary)}</p>`;
+            enrichHtml += `<p style="margin:4px 0 0;font-size:11px;color:var(--h-stone);">${escapeHtml(windowSummary)}</p>`;
             hasDetail = true;
           }
         }
@@ -2799,7 +2918,7 @@
         /* Show "Complete host profile" link if incomplete */
         if (!fullHost.onboarding_completed || !hasDetail) {
           const profileHref = HearthNav.withVendor("host-profile.html?host=" + encodeURIComponent(hostId));
-          enrichHtml += `<a href="${escapeHtml(profileHref)}" style="display:inline-block;margin-top:8px;font-size:11px;font-weight:700;color:var(--h-accent);text-decoration:none;">Complete host profile \u2192</a>`;
+          enrichHtml += `<a href="${escapeHtml(profileHref)}" style="display:inline-block;margin-top:8px;font-size:11px;font-weight:700;color:var(--h-fire, #c4511a);text-decoration:none;">Complete host profile \u2192</a>`;
         }
 
         if (enrichHtml) {
@@ -2988,7 +3107,7 @@
 
       summary.innerHTML = `
         <div class="selectionSummaryBar">
-          <div>${enabledCount} enabled for this drop • ${productCount} products • ${bundleCount} bundles</div>
+          <div>${enabledCount} enabled for this drop • ${productCount} products • ${bundleCount} bundle${bundleCount === 1 ? '' : 's'}</div>
           <div class="selectionSummaryMetrics">
             <button class="btnGhost" id="menuSelectAllActiveBtn" type="button">Enable all active</button>
             <button class="btnGhost" id="menuClearAllBtn" type="button">Clear all</button>
@@ -3045,7 +3164,6 @@
                 <td>
                   <span class="productName">${escapeHtml(row.name)}</span>${activeText}
                   <span class="subMeta">${escapeHtml(row.menu_item_type)}${row.description ? ` • ${escapeHtml(row.description)}` : ""}</span>
-                  <span class="orderingValue">Order ${row.sort_order == null ? "—" : row.sort_order}</span>
                 </td>
                 <td style="width:85px;">${titleCase(row.menu_item_type)}</td>
                 <td style="width:110px;">${escapeHtml(row.category_name || "Uncategorised")}</td>
@@ -3249,6 +3367,12 @@
           byId("closeOrdersSection").classList.remove("hidden");
         }
       }
+
+      const hostShareSectionEl = byId("hostShareSection");
+      if (hostShareSectionEl) {
+        const hasHost = Boolean(byId("hostSelect")?.value);
+        hostShareSectionEl.style.display = hasHost ? '' : 'none';
+      }
     }
 
     function ensureScheduleRows() {
@@ -3384,7 +3508,7 @@
 
       summary.innerHTML = [
         ["Drop", liveDrop.name || "—"],
-        ["Type", liveDrop.drop_type || "—"],
+        ["Type", TYPE_DISPLAY_LABELS[liveDrop.drop_type] || titleCase(liveDrop.drop_type || "—")],
         ["Host", host ? host.name : "No host"],
         ["Status", liveDrop.status || "draft"],
         ["Order Window", liveDrop.opens_at && liveDrop.closes_at ? `${formatDateShort(liveDrop.opens_at)} ${formatTimeOnly(liveDrop.opens_at)} → ${formatDateShort(liveDrop.closes_at)} ${formatTimeOnly(liveDrop.closes_at)}` : (liveDrop.closes_at ? `Open immediately → ${formatDateShort(liveDrop.closes_at)} ${formatTimeOnly(liveDrop.closes_at)}` : "Not set")],
@@ -4778,15 +4902,6 @@
         renderDropBand();
       });
 
-      byId("refreshBtn").addEventListener("click", async () => {
-        try {
-          await refreshAll();
-        } catch (err) {
-          console.error(err);
-          showError(err.message || "Unable to refresh Drop Studio.");
-        }
-      });
-
       byId("newDropBtn").addEventListener("click", async () => {
         try {
           await createNewDrop();
@@ -5081,7 +5196,7 @@
           cancelLink.href = "#";
           cancelLink.className = "js-cancel-remove-window";
           cancelLink.textContent = "Cancel";
-          cancelLink.style.cssText = "color:var(--h-muted);text-decoration:underline;";
+          cancelLink.style.cssText = "color:var(--h-stone);text-decoration:underline;";
 
           confirmSpan.appendChild(confirmLink);
           confirmSpan.appendChild(document.createTextNode(" "));
