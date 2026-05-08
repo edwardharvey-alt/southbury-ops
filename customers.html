@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <title>Hearth — Customers</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 
@@ -15,13 +18,13 @@
 
   <style>
     :root {
-      --cu-bg: #f7f5f1;
+      --cu-bg: var(--h-chalk, #faf8f5);
       --cu-card: #ffffff;
-      --cu-border: #e9e3d8;
-      --cu-text: #1f2937;
-      --cu-muted: #6b7280;
-      --cu-accent: var(--h-accent, #f97316);
-      --cu-accent-light: rgba(249, 115, 22, 0.08);
+      --cu-border: var(--h-cinder, #e8ddd5);
+      --cu-text: var(--h-coal, #0f0b08);
+      --cu-muted: var(--h-stone, #8c7b6e);
+      --cu-accent: var(--h-fire, #c4511a);
+      --cu-accent-light: rgba(196, 81, 26, 0.08);
       --cu-radius: 18px;
       --cu-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
       --cu-good: #166534;
@@ -33,6 +36,14 @@
     body {
       background: var(--cu-bg);
       color: var(--cu-text);
+      font-family: 'Figtree', system-ui, sans-serif;
+    }
+
+    #assetSummary h1,
+    #recsSection h2,
+    #listSection h2 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
     }
 
     #customersShell {
@@ -304,9 +315,9 @@
     }
 
     .cu-filter-btn.active {
-      border-color: rgba(249, 115, 22, 0.28);
-      background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(251, 146, 60, 0.08));
-      color: var(--h-accent-ink, #7c2d12);
+      border-color: rgba(196, 81, 26, 0.28);
+      background: linear-gradient(135deg, rgba(196, 81, 26, 0.12), rgba(196, 81, 26, 0.06));
+      color: var(--h-ember, #2a1f17);
     }
 
     #customerTableWrap {
@@ -580,12 +591,12 @@
           <div class="cu-stat">
             <div class="cu-stat-label">Earned through drops</div>
             <div class="cu-stat-value" id="statOrders">—</div>
-            <div class="cu-stat-meta">Source: order</div>
+            <div class="cu-stat-meta">Customers who've placed an order</div>
           </div>
           <div class="cu-stat">
             <div class="cu-stat-label">Brought by you</div>
             <div class="cu-stat-value" id="statImports">—</div>
-            <div class="cu-stat-meta">Source: import</div>
+            <div class="cu-stat-meta">Added from your existing audience</div>
           </div>
         </div>
       </section>
