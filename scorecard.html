@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <title>Hearth — Scorecard</title>
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
   <script src="./assets/config.js"></script>
@@ -12,12 +15,12 @@
   <script src="./assets/hearth-intelligence.js"></script>
   <style>
     :root {
-      --sc-bg: #f7f5f1;
+      --sc-bg: var(--h-chalk, #faf8f5);
       --sc-card: #ffffff;
-      --sc-border: #e9e3d8;
-      --sc-text: #1f2937;
-      --sc-muted: #6b7280;
-      --sc-accent: var(--h-accent, #8B6B3F);
+      --sc-border: var(--h-cinder, #e8ddd5);
+      --sc-text: var(--h-coal, #0f0b08);
+      --sc-muted: var(--h-stone, #8c7b6e);
+      --sc-accent: var(--h-fire, #c4511a);
       --sc-radius: 18px;
       --sc-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
       --sc-good: #166534;
@@ -28,10 +31,15 @@
 
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'Figtree', system-ui, sans-serif;
       background: var(--sc-bg);
       color: var(--sc-text);
       -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
     }
 
     #scorecardShell {
