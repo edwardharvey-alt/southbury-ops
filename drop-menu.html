@@ -367,7 +367,9 @@
 
     /* T4-31b-products: cap upload preview width in the product editor */
     #productPhotoUploadContainer,
-    #newProductPhotoUploadContainer{
+    #newProductPhotoUploadContainer,
+    #bundlePhotoUploadContainer,
+    #newBundlePhotoUploadContainer{
       max-width:400px;
       margin:0 auto;
     }
@@ -732,6 +734,12 @@
                       </div>
 
                       <div class="field" style="grid-column:1 / -1;">
+                        <label>Photo</label>
+                        <div id="bundlePhotoUploadContainer"></div>
+                        <div class="helperText">Square image. Customers see this on your order page.</div>
+                      </div>
+
+                      <div class="field" style="grid-column:1 / -1;">
                         <label for="bundleDescription">Description</label>
                         <textarea id="bundleDescription" placeholder="Optional bundle description"></textarea>
                       </div>
@@ -1008,6 +1016,12 @@
                 </div>
 
                 <div class="field" style="grid-column:1 / -1;">
+                  <label>Photo</label>
+                  <div id="newBundlePhotoUploadContainer"></div>
+                  <div class="helperText">Square image. Customers see this on your order page.</div>
+                </div>
+
+                <div class="field" style="grid-column:1 / -1;">
                   <label for="newBundleDescription">Description</label>
                   <textarea id="newBundleDescription" placeholder="Optional description"></textarea>
                 </div>
@@ -1111,7 +1125,15 @@
         editProductImageUrl: null,
         newProductPhotoUpload: null,
         newProductUuid: null,
-        newProductImageUrl: null
+        newProductImageUrl: null,
+
+        // T4-31b-products: per-bundle photo upload state.
+        editBundlePhotoUpload: null,
+        mountedEditBundleId: null,
+        editBundleImageUrl: null,
+        newBundlePhotoUpload: null,
+        newBundleUuid: null,
+        newBundleImageUrl: null
       };
 
       function byId(id) {
@@ -2108,6 +2130,7 @@
 
         const bundle = state.bundles.find((b) => b.id === state.selectedBundleId);
         const analytics = bundle ? getBundleAnalytics(bundle.id) : null;
+        syncEditBundleUpload(bundle || null);
 
         if (!bundle) {
           byId("bundleName").value = "";
@@ -2292,6 +2315,108 @@
         closeModal("newProductModal");
       }
 
+      // T4-31b-products: bundle photo upload mount helpers, mirroring
+      // the product equivalents above. Two surfaces use HearthPhotoUpload
+      // — the inline bundle editor (existing bundles) and the
+      // newBundleModal (creating).
+
+      function destroyEditBundleUpload() {
+        if (state.editBundlePhotoUpload) {
+          try { state.editBundlePhotoUpload.destroy(); } catch (e) { /* ignore */ }
+          state.editBundlePhotoUpload = null;
+        }
+        state.mountedEditBundleId = null;
+        state.editBundleImageUrl = null;
+      }
+
+      function syncEditBundleUpload(bundle) {
+        const container = byId("bundlePhotoUploadContainer");
+        if (!container || typeof window.HearthPhotoUpload !== "function") return;
+        if (!bundle) {
+          destroyEditBundleUpload();
+          container.innerHTML = "";
+          return;
+        }
+        if (state.mountedEditBundleId === bundle.id && state.editBundlePhotoUpload) {
+          return;
+        }
+        if (state.editBundlePhotoUpload) {
+          try { state.editBundlePhotoUpload.destroy(); } catch (e) { /* ignore */ }
+          state.editBundlePhotoUpload = null;
+        }
+        const slug = state.vendor && state.vendor.slug;
+        if (!slug) return;
+        state.editBundleImageUrl = bundle.image_url || null;
+        state.mountedEditBundleId = bundle.id;
+        state.editBundlePhotoUpload = new HearthPhotoUpload(container, {
+          aspectRatio: 1,
+          storagePath: () => `${slug}/bundles/${bundle.id}`,
+          initialUrl: bundle.image_url || null,
+          guidanceCopy: "item",
+          onUpload: (publicUrl) => {
+            state.editBundleImageUrl = publicUrl || null;
+          },
+          onRemove: () => {
+            state.editBundleImageUrl = null;
+          }
+        });
+      }
+
+      function mountNewBundleUpload() {
+        const container = byId("newBundlePhotoUploadContainer");
+        if (!container || typeof window.HearthPhotoUpload !== "function") return;
+        const slug = state.vendor && state.vendor.slug;
+        if (!slug) return;
+        if (state.newBundlePhotoUpload) {
+          try { state.newBundlePhotoUpload.destroy(); } catch (e) { /* ignore */ }
+          state.newBundlePhotoUpload = null;
+        }
+        state.newBundleUuid =
+          (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function")
+            ? crypto.randomUUID()
+            : null;
+        state.newBundleImageUrl = null;
+        if (!state.newBundleUuid) return;
+        const newId = state.newBundleUuid;
+        state.newBundlePhotoUpload = new HearthPhotoUpload(container, {
+          aspectRatio: 1,
+          storagePath: () => `${slug}/bundles/${newId}`,
+          initialUrl: null,
+          guidanceCopy: "item",
+          onUpload: (publicUrl) => {
+            state.newBundleImageUrl = publicUrl || null;
+          },
+          onRemove: () => {
+            state.newBundleImageUrl = null;
+          }
+        });
+      }
+
+      function resetNewBundleModal({ orphanCleanup }) {
+        if (orphanCleanup && state.newBundleImageUrl && state.newBundleUuid) {
+          const slug = state.vendor && state.vendor.slug;
+          if (slug) {
+            const path = `${slug}/bundles/${state.newBundleUuid}`;
+            try {
+              supabase.storage.from("vendor-assets").remove([path]);
+            } catch (e) { /* fire-and-forget */ }
+          }
+        }
+        if (state.newBundlePhotoUpload) {
+          try { state.newBundlePhotoUpload.destroy(); } catch (e) { /* ignore */ }
+          state.newBundlePhotoUpload = null;
+        }
+        const container = byId("newBundlePhotoUploadContainer");
+        if (container) container.innerHTML = "";
+        state.newBundleUuid = null;
+        state.newBundleImageUrl = null;
+      }
+
+      function closeNewBundleModalWithCleanup() {
+        resetNewBundleModal({ orphanCleanup: true });
+        closeModal("newBundleModal");
+      }
+
       function renderProductEditor() {
         populateCategorySelect("productCategory");
         const product = state.products.find((p) => p.id === state.selectedProductId);
@@ -2459,17 +2584,20 @@
           price_pence: Math.round(Number(byId("newBundlePricePence").value || 0) * 100),
           capacity_units: Number(byId("newBundleCapacityUnits").value || 0),
           sort_order: getNextSortOrder(itemsInCategory),
-          is_active: byId("newBundleActive").value === "true"
+          is_active: byId("newBundleActive").value === "true",
+          image_url: state.newBundleImageUrl || null
         };
 
-        const { data, error } = await supabase.functions.invoke("create-bundle", {
-          body: { vendor_id: state.vendorId, fields }
-        });
+        const body = { vendor_id: state.vendorId, fields };
+        if (state.newBundleUuid) body.id = state.newBundleUuid;
+
+        const { data, error } = await supabase.functions.invoke("create-bundle", { body });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
 
         state.selectedBundleId = data.id;
         if (categoryId) state.orderingCategoryIdBundles = categoryId;
+        resetNewBundleModal({ orphanCleanup: false });
         closeModal("newBundleModal");
         await refreshAll();
         state.currentTab = "bundles";
@@ -2564,7 +2692,8 @@
           price_pence: Math.round(Number(byId("bundlePricePence").value || 0) * 100),
           capacity_units: Number(byId("bundleCapacityUnits").value || 0),
           sort_order: bundle.sort_order ?? 10,
-          is_active: byId("bundleIsActive").value === "true"
+          is_active: byId("bundleIsActive").value === "true",
+          image_url: state.editBundleImageUrl ?? null
         };
 
         if (!fields.name) throw new Error("Bundle Name is required.");
@@ -3064,6 +3193,7 @@
         byId("newBundleBtn").addEventListener("click", () => {
           populateCategorySelect("newBundleCategory", true, "No category");
           showModalMessage("newBundleModalMessage", "");
+          mountNewBundleUpload();
           openModal("newBundleModal");
         });
 
@@ -3071,8 +3201,8 @@
         byId("cancelNewCategoryBtn").addEventListener("click", () => closeModal("newCategoryModal"));
         byId("closeNewProductModalBtn").addEventListener("click", () => closeNewProductModalWithCleanup());
         byId("cancelNewProductBtn").addEventListener("click", () => closeNewProductModalWithCleanup());
-        byId("closeNewBundleModalBtn").addEventListener("click", () => closeModal("newBundleModal"));
-        byId("cancelNewBundleBtn").addEventListener("click", () => closeModal("newBundleModal"));
+        byId("closeNewBundleModalBtn").addEventListener("click", () => closeNewBundleModalWithCleanup());
+        byId("cancelNewBundleBtn").addEventListener("click", () => closeNewBundleModalWithCleanup());
 
         byId("newCategoryModal").addEventListener("click", (e) => {
           if (e.target === byId("newCategoryModal")) closeModal("newCategoryModal");
@@ -3081,7 +3211,7 @@
           if (e.target === byId("newProductModal")) closeNewProductModalWithCleanup();
         });
         byId("newBundleModal").addEventListener("click", (e) => {
-          if (e.target === byId("newBundleModal")) closeModal("newBundleModal");
+          if (e.target === byId("newBundleModal")) closeNewBundleModalWithCleanup();
         });
 
         byId("bundleLineType").addEventListener("change", updateBundleLineMode);
