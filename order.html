@@ -528,11 +528,9 @@
       border:1px solid rgba(15,23,42,0.10);
       border-radius:22px;
       background:#faf7f4;
-      padding:16px;
-      display:flex;
-      flex-direction:row-reverse;
-      align-items:flex-start;
-      gap:14px;
+      padding:0;
+      display:grid;
+      gap:0;
       box-shadow:0 6px 16px rgba(15,23,42,0.06);
       overflow:hidden;
       position:relative;
@@ -540,10 +538,11 @@
 
     .menuItemMedia{
       position:relative;
-      flex:0 0 96px;
-      width:96px;
-      height:96px;
-      border-radius:12px;
+      width:100%;
+      max-width:240px;
+      aspect-ratio:1 / 1;
+      margin:16px auto;
+      border-radius:14px;
       background:var(--h-border-2);
       overflow:hidden;
     }
@@ -575,9 +574,7 @@
     }
 
     .menuItemBody{
-      flex:1;
-      min-width:0;
-      padding:0;
+      padding:14px 22px 14px;
       display:grid;
       gap:10px;
     }
@@ -603,6 +600,11 @@
       margin:0;
       color:var(--h-text);
       letter-spacing:-0.005em;
+    }
+
+    .menuItemCard:not(:has(.menuItemMedia)) .menuItemBody{
+      padding:24px 24px 18px;
+      gap:12px;
     }
 
     .menuItemCard:not(:has(.menuItemMedia)) .menuItemName{
@@ -1387,8 +1389,13 @@
       }
 
       .menuItemBody{
-        padding:0;
+        padding:12px 18px 12px;
         gap:8px;
+      }
+
+      .menuItemCard:not(:has(.menuItemMedia)) .menuItemBody{
+        padding:20px 20px 16px;
+        gap:10px;
       }
 
       .menuItemName{
