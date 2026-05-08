@@ -612,6 +612,30 @@
       line-height:1.05;
     }
 
+    .menuItemCard:has(> .menuItemMedia):not(:has(> .menuItemCard)) {
+      padding: 16px;
+      display: flex;
+      flex-direction: row-reverse;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .menuItemCard:has(> .menuItemMedia):not(:has(> .menuItemCard)) > .menuItemMedia {
+      flex: 0 0 96px;
+      width: 96px;
+      height: 96px;
+      max-width: none;
+      aspect-ratio: 1 / 1;
+      margin: 0;
+      border-radius: 12px;
+    }
+
+    .menuItemCard:has(> .menuItemMedia):not(:has(> .menuItemCard)) > .menuItemBody {
+      flex: 1;
+      min-width: 0;
+      padding: 0;
+    }
+
     .menuItemDesc{
       margin:6px 0 0;
       font-family:'Figtree', system-ui, -apple-system, sans-serif;

@@ -696,10 +696,20 @@ is split out into **T4-31b-products** as a new open ticket — see
 below.
 
 T4-31b-products: Per-item photography asset workflow — Menu
-Library mount + schema + order page integration
+Library mount + schema + order page integration ✓ COMPLETE
 
-**Status:** Open. Tier 4. Successor to T4-31b's deferred
-product-photo scope.
+**Status:** Complete. Closed 2026-05-08 with the order.html
+horizontal-card layout PR. The schema migration shipped, the
+Menu Library product editor mounts HearthPhotoUpload, the
+update-product / create-product Edge Function whitelists
+include image_url, the v_*_enriched views were widened, the
+HearthPhotoUpload component was extended onto the bundle
+editor and creation modal (commit 8637c7b), and order.html
+now renders with-photo cards as a 96px-thumbnail-on-right
+horizontal layout while bundle outer cards and text-only
+cards keep the existing vertical layout. Mixed-state visual
+rhythm verified on Test 11 deploy preview. Closing narrative
+preserved below for git-blame purposes.
 
 The shared HearthPhotoUpload component built in PR #225 is ready
 to mount. Remaining work:

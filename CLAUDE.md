@@ -1047,7 +1047,6 @@ index.
 
 ### Tier 4 — Enhancements that will impress
 - T4-29 — Series intelligence in Insights — open
-- T4-31b-products — Per-item photography (Menu Library mount + schema + Edge Function whitelists + order page field verification) — open. Parent T4-31b shipped hero in PR #225; this is the remaining product-photo scope.
 - T4-31b-fu1 — Server-side HEIC conversion fallback for Mac-Photos-HEIC — open, deferred until real vendor friction.
 - T4-32 — Order page: map display for collection point and delivery area — open
 - T4-33 — Brand Hearth: GenAI copy generation + customisation review — open, deferred until T5-25 surfaces a customer-facing use for vendor brand copy.
