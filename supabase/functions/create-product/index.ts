@@ -12,6 +12,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 const ALLOWED_FIELDS = new Set([
   "name",
   "description",
+  "image_url",
   "category_id",
   "category",
   "price_pence",
@@ -22,6 +23,14 @@ const ALLOWED_FIELDS = new Set([
   "suitable_for_collection",
   "prep_complexity",
 ]);
+
+// Caller may optionally supply a UUID for the new row's primary key.
+// Required when the frontend uploads an asset to a path keyed by
+// product id before the row is saved (T4-31b-products). The id is
+// handled at the top level of the request body — NOT inside `fields`
+// — so it is not subject to ALLOWED_FIELDS filtering.
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -48,17 +57,32 @@ Deno.serve(async (req) => {
     );
     if (authError || !user) return jsonResponse({ error: "Unauthorized" }, 401);
 
-    let body: { vendor_id?: string; fields?: Record<string, unknown> };
+    let body: {
+      vendor_id?: string;
+      id?: unknown;
+      fields?: Record<string, unknown>;
+    };
     try {
       body = await req.json();
     } catch {
       return jsonResponse({ error: "Invalid JSON body" }, 400);
     }
 
-    const { vendor_id, fields } = body;
+    const { vendor_id, id: suppliedId, fields } = body;
     if (!vendor_id) return jsonResponse({ error: "vendor_id is required" }, 400);
     if (!fields || typeof fields !== "object") {
       return jsonResponse({ error: "fields object is required" }, 400);
+    }
+
+    let validatedId: string | null = null;
+    if (suppliedId !== undefined && suppliedId !== null) {
+      if (typeof suppliedId !== "string" || !UUID_RE.test(suppliedId)) {
+        return jsonResponse(
+          { error: "Invalid id: must be a valid UUID" },
+          400
+        );
+      }
+      validatedId = suppliedId;
     }
 
     const serviceClient = createClient(
@@ -81,6 +105,7 @@ Deno.serve(async (req) => {
     }
 
     const insertPayload: Record<string, unknown> = { vendor_id: vendor.id };
+    if (validatedId) insertPayload.id = validatedId;
     for (const key of Object.keys(fields)) {
       if (ALLOWED_FIELDS.has(key)) {
         insertPayload[key] = fields[key];
@@ -97,7 +122,17 @@ Deno.serve(async (req) => {
       .select("*")
       .single();
 
-    if (error) return jsonResponse({ error: error.message }, 400);
+    if (error) {
+      const errCode = (error as { code?: string }).code;
+      const errMsg = (error.message || "").toLowerCase();
+      if (errCode === "23505" || errMsg.includes("duplicate key")) {
+        return jsonResponse(
+          { error: "Product with this id already exists" },
+          409
+        );
+      }
+      return jsonResponse({ error: error.message }, 400);
+    }
     return jsonResponse(data, 200);
   } catch (err) {
     return jsonResponse({ error: (err as Error).message }, 500);

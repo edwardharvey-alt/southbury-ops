@@ -12,6 +12,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 const ALLOWED_FIELDS = new Set([
   "name",
   "description",
+  "image_url",
   "category_id",
   "category",
   "price_pence",
