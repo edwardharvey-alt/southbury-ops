@@ -14,6 +14,7 @@
   <script src="./assets/config.js"></script>
   <script src="./assets/hearth-vendor.js?v=1"></script>
   <script src="./assets/vendor-nav.js?v=2"></script>
+  <script src="./assets/hearth-photo-upload.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -615,6 +616,12 @@
                       </div>
 
                       <div class="field" style="grid-column:1 / -1;">
+                        <label>Photo</label>
+                        <div id="productPhotoUploadContainer"></div>
+                        <div class="helperText">Square image. Customers see this on your order page.</div>
+                      </div>
+
+                      <div class="field" style="grid-column:1 / -1;">
                         <label for="productDescription">Description</label>
                         <textarea id="productDescription" placeholder="Optional description"></textarea>
                       </div>
@@ -933,6 +940,12 @@
                 </div>
 
                 <div class="field" style="grid-column:1 / -1;">
+                  <label>Photo</label>
+                  <div id="newProductPhotoUploadContainer"></div>
+                  <div class="helperText">Square image. Customers see this on your order page.</div>
+                </div>
+
+                <div class="field" style="grid-column:1 / -1;">
                   <label for="newProductDescription">Description</label>
                   <textarea id="newProductDescription" placeholder="Optional description"></textarea>
                 </div>
@@ -1083,7 +1096,15 @@
         dragState: {
           draggedId: null,
           draggedType: null
-        }
+        },
+
+        // T4-31b-products: per-product photo upload state.
+        editProductPhotoUpload: null,
+        mountedEditProductId: null,
+        editProductImageUrl: null,
+        newProductPhotoUpload: null,
+        newProductUuid: null,
+        newProductImageUrl: null
       };
 
       function byId(id) {
@@ -2162,10 +2183,113 @@
         renderBundleLineEditor();
       }
 
+      // T4-31b-products: photo upload mount helpers.
+      // Two surfaces use HearthPhotoUpload — the inline product editor
+      // (existing products) and the newProductModal (creating). The
+      // helpers below own lifecycle for both.
+
+      function destroyEditProductUpload() {
+        if (state.editProductPhotoUpload) {
+          try { state.editProductPhotoUpload.destroy(); } catch (e) { /* ignore */ }
+          state.editProductPhotoUpload = null;
+        }
+        state.mountedEditProductId = null;
+        state.editProductImageUrl = null;
+      }
+
+      function syncEditProductUpload(product) {
+        const container = byId("productPhotoUploadContainer");
+        if (!container || typeof window.HearthPhotoUpload !== "function") return;
+        if (!product) {
+          destroyEditProductUpload();
+          container.innerHTML = "";
+          return;
+        }
+        if (state.mountedEditProductId === product.id && state.editProductPhotoUpload) {
+          return;
+        }
+        if (state.editProductPhotoUpload) {
+          try { state.editProductPhotoUpload.destroy(); } catch (e) { /* ignore */ }
+          state.editProductPhotoUpload = null;
+        }
+        const slug = state.vendor && state.vendor.slug;
+        if (!slug) return;
+        state.editProductImageUrl = product.image_url || null;
+        state.mountedEditProductId = product.id;
+        state.editProductPhotoUpload = new HearthPhotoUpload(container, {
+          aspectRatio: 1,
+          storagePath: () => `${slug}/products/${product.id}`,
+          initialUrl: product.image_url || null,
+          guidanceCopy: "item",
+          onUpload: (publicUrl) => {
+            state.editProductImageUrl = publicUrl || null;
+          },
+          onRemove: () => {
+            state.editProductImageUrl = null;
+          }
+        });
+      }
+
+      function mountNewProductUpload() {
+        const container = byId("newProductPhotoUploadContainer");
+        if (!container || typeof window.HearthPhotoUpload !== "function") return;
+        const slug = state.vendor && state.vendor.slug;
+        if (!slug) return;
+        if (state.newProductPhotoUpload) {
+          try { state.newProductPhotoUpload.destroy(); } catch (e) { /* ignore */ }
+          state.newProductPhotoUpload = null;
+        }
+        state.newProductUuid =
+          (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function")
+            ? crypto.randomUUID()
+            : null;
+        state.newProductImageUrl = null;
+        if (!state.newProductUuid) return;
+        const newId = state.newProductUuid;
+        state.newProductPhotoUpload = new HearthPhotoUpload(container, {
+          aspectRatio: 1,
+          storagePath: () => `${slug}/products/${newId}`,
+          initialUrl: null,
+          guidanceCopy: "item",
+          onUpload: (publicUrl) => {
+            state.newProductImageUrl = publicUrl || null;
+          },
+          onRemove: () => {
+            state.newProductImageUrl = null;
+          }
+        });
+      }
+
+      function resetNewProductModal({ orphanCleanup }) {
+        if (orphanCleanup && state.newProductImageUrl && state.newProductUuid) {
+          const slug = state.vendor && state.vendor.slug;
+          if (slug) {
+            const path = `${slug}/products/${state.newProductUuid}`;
+            try {
+              supabase.storage.from("vendor-assets").remove([path]);
+            } catch (e) { /* fire-and-forget */ }
+          }
+        }
+        if (state.newProductPhotoUpload) {
+          try { state.newProductPhotoUpload.destroy(); } catch (e) { /* ignore */ }
+          state.newProductPhotoUpload = null;
+        }
+        const container = byId("newProductPhotoUploadContainer");
+        if (container) container.innerHTML = "";
+        state.newProductUuid = null;
+        state.newProductImageUrl = null;
+      }
+
+      function closeNewProductModalWithCleanup() {
+        resetNewProductModal({ orphanCleanup: true });
+        closeModal("newProductModal");
+      }
+
       function renderProductEditor() {
         populateCategorySelect("productCategory");
         const product = state.products.find((p) => p.id === state.selectedProductId);
         const analytics = product ? getProductAnalytics(product.id) : null;
+        syncEditProductUpload(product || null);
 
         if (!product) {
           byId("productName").value = "";
@@ -2293,17 +2417,20 @@
           price_pence: Math.round(Number(byId("newProductPricePence").value || 0) * 100),
           capacity_units: Number(byId("newProductCapacityUnits").value || 0),
           sort_order: getNextSortOrder(itemsInCategory),
-          is_active: byId("newProductActive").value === "true"
+          is_active: byId("newProductActive").value === "true",
+          image_url: state.newProductImageUrl || null
         };
 
-        const { data, error } = await supabase.functions.invoke("create-product", {
-          body: { vendor_id: state.vendorId, fields }
-        });
+        const body = { vendor_id: state.vendorId, fields };
+        if (state.newProductUuid) body.id = state.newProductUuid;
+
+        const { data, error } = await supabase.functions.invoke("create-product", { body });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
 
         state.selectedProductId = data.id;
         if (categoryId) state.orderingCategoryIdProducts = categoryId;
+        resetNewProductModal({ orphanCleanup: false });
         closeModal("newProductModal");
         await refreshAll();
         state.currentTab = "products";
@@ -2393,7 +2520,8 @@
           is_active: byId("productIsActive").value === "true",
           travels_well: byId("productTravelsWell").checked,
           suitable_for_collection: byId("productSuitableForCollection").checked,
-          prep_complexity: byId("productPrepComplexity").value
+          prep_complexity: byId("productPrepComplexity").value,
+          image_url: state.editProductImageUrl ?? null
         };
 
         if (!payload.name) throw new Error("Product Name is required.");
@@ -2922,6 +3050,7 @@
         byId("newProductBtn").addEventListener("click", () => {
           populateCategorySelect("newProductCategory");
           showModalMessage("newProductModalMessage", "");
+          mountNewProductUpload();
           openModal("newProductModal");
         });
 
@@ -2933,8 +3062,8 @@
 
         byId("closeNewCategoryModalBtn").addEventListener("click", () => closeModal("newCategoryModal"));
         byId("cancelNewCategoryBtn").addEventListener("click", () => closeModal("newCategoryModal"));
-        byId("closeNewProductModalBtn").addEventListener("click", () => closeModal("newProductModal"));
-        byId("cancelNewProductBtn").addEventListener("click", () => closeModal("newProductModal"));
+        byId("closeNewProductModalBtn").addEventListener("click", () => closeNewProductModalWithCleanup());
+        byId("cancelNewProductBtn").addEventListener("click", () => closeNewProductModalWithCleanup());
         byId("closeNewBundleModalBtn").addEventListener("click", () => closeModal("newBundleModal"));
         byId("cancelNewBundleBtn").addEventListener("click", () => closeModal("newBundleModal"));
 
@@ -2942,7 +3071,7 @@
           if (e.target === byId("newCategoryModal")) closeModal("newCategoryModal");
         });
         byId("newProductModal").addEventListener("click", (e) => {
-          if (e.target === byId("newProductModal")) closeModal("newProductModal");
+          if (e.target === byId("newProductModal")) closeNewProductModalWithCleanup();
         });
         byId("newBundleModal").addEventListener("click", (e) => {
           if (e.target === byId("newBundleModal")) closeModal("newBundleModal");
