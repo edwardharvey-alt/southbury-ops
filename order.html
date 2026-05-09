@@ -658,23 +658,27 @@
       font-weight:400;
     }
 
-    /* Container for price + small add button in compact header */
-    .menuItemPriceAdd{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      flex:0 0 auto;
+    /* Top-right add zone — absolute over the card, overlapping photo when present */
+    .menuItemAddZone{
+      position:absolute;
+      top:8px;
+      right:8px;
+      z-index:5;
     }
 
-    /* Small circular + icon button for compact state */
+    .menuItemCard.expanded .menuItemAddZone{
+      display:none;
+    }
+
+    /* Compact + button (qty 0) */
     .menuItemAddSmall{
-      width:36px;
-      height:36px;
+      width:32px;
+      height:32px;
       border-radius:999px;
-      background:transparent;
+      background:#fff;
       border:1px solid var(--order-brand-primary);
       color:var(--order-brand-primary);
-      font-size:18px;
+      font-size:16px;
       line-height:1;
       font-weight:400;
       display:inline-flex;
@@ -682,6 +686,7 @@
       justify-content:center;
       cursor:pointer;
       padding:0;
+      box-shadow:0 1px 3px rgba(15,23,42,0.08);
       transition:background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
     }
 
@@ -691,9 +696,7 @@
     }
 
     .menuItemAddSmall:active{
-      background:var(--order-brand-primary);
-      color:#fff;
-      transform:scale(0.95);
+      transform:scale(0.92);
     }
 
     .menuItemAddSmall:disabled{
@@ -701,17 +704,62 @@
       opacity:.5;
     }
 
-    /* Actions row hidden in compact, shown in expanded */
-    .menuItemCard:not(:has(> .menuItemCard)) > .menuItemActions{
+    /* Compact qty control (qty > 0) */
+    .menuItemQty{
+      display:inline-flex;
+      align-items:center;
+      height:32px;
+      border-radius:999px;
+      background:#fff;
+      border:1px solid var(--order-brand-primary);
+      overflow:hidden;
+      box-shadow:0 1px 3px rgba(15,23,42,0.08);
+    }
+
+    .menuItemQty .menuItemQtyBtn{
+      width:32px;
+      height:32px;
+      background:transparent;
+      border:none;
+      color:var(--order-brand-primary);
+      font-size:16px;
+      line-height:1;
+      cursor:pointer;
+      padding:0;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .menuItemQty .menuItemQtyBtn:active{
+      background:var(--order-brand-primary);
+      color:#fff;
+    }
+
+    .menuItemQty .menuItemQtyBtn:disabled{
+      cursor:not-allowed;
+      opacity:.5;
+    }
+
+    .menuItemQty .menuItemQtyCount{
+      min-width:24px;
+      text-align:center;
+      color:var(--order-brand-primary);
+      font-weight:500;
+      font-size:14px;
+    }
+
+    /* Expanded actions row */
+    .menuItemActions{
       display:none;
     }
 
-    .menuItemCard.expanded > .menuItemActions{
+    .menuItemCard.expanded .menuItemActions{
       display:flex;
       margin-top:4px;
     }
 
-    /* Full-width Add to order button for expanded state */
+    /* Expanded full-width Add to order */
     .menuItemAddLarge{
       width:100%;
       padding:12px 20px;
@@ -723,7 +771,7 @@
       font-weight:500;
       font-size:15px;
       cursor:pointer;
-      transition:background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+      transition:background-color 0.15s ease, color 0.15s ease;
     }
 
     .menuItemAddLarge:hover{
@@ -731,20 +779,52 @@
       color:#fff;
     }
 
-    .menuItemAddLarge:active{
-      background:var(--order-brand-primary);
-      color:#fff;
-      transform:scale(0.99);
-    }
-
     .menuItemAddLarge:disabled{
       cursor:not-allowed;
       opacity:.5;
     }
 
-    /* When expanded, hide the small + button (not needed — large button takes over) */
-    .menuItemCard.expanded .menuItemAddSmall{
-      display:none;
+    /* Expanded full-width qty control */
+    .menuItemQtyLarge{
+      width:100%;
+      display:flex;
+      height:44px;
+      border-radius:999px;
+      background:#fff;
+      border:1px solid var(--order-brand-primary);
+      overflow:hidden;
+    }
+
+    .menuItemQtyLarge .menuItemQtyBtn{
+      flex:0 0 56px;
+      height:100%;
+      background:transparent;
+      border:none;
+      color:var(--order-brand-primary);
+      font-size:18px;
+      line-height:1;
+      cursor:pointer;
+      padding:0;
+    }
+
+    .menuItemQtyLarge .menuItemQtyBtn:active{
+      background:var(--order-brand-primary);
+      color:#fff;
+    }
+
+    .menuItemQtyLarge .menuItemQtyBtn:disabled{
+      cursor:not-allowed;
+      opacity:.5;
+    }
+
+    .menuItemQtyLarge .menuItemQtyCount{
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:var(--order-brand-primary);
+      font-weight:500;
+      font-size:16px;
     }
 
     /* Expanded state: photo grows full-width, description un-clamps */
@@ -1798,7 +1878,8 @@
         bundleDraft: null,
         menuScrollObserver: null,
         nextDrop: null,
-        deliveryAreaBlocked: false /* T3-12a */
+        deliveryAreaBlocked: false /* T3-12a */,
+        expandedMenuItems: new Set()
       };
 
       function byId(id) {
@@ -2587,68 +2668,25 @@
               ? `<div class="menuItemMedia image" style="background-image:url('${escapeHtml(item.image_url)}');" role="img" aria-label="${escapeHtml(item.name)}">${item.is_sold_out ? `<div class="menuItemSoldOutBadge">Sold out</div>` : ""}</div>`
               : "";
 
-            if (item.menu_item_type === "product") {
-              const disabled = item.is_sold_out || isDropClosed();
+            const priceHint = item.menu_item_type === "product" ? "each" : "bundle";
 
-              return `
-                <div class="menuItemCard ${item.is_sold_out ? "soldOut" : ""}">
-                  <div class="menuItemTop">
-                    ${mediaHtml}
-                    <div class="menuItemBody">
-                      <div class="menuItemHeader">
-                        <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
-                        <div class="menuItemPriceAdd">
-                          <div class="menuPriceBlock">
-                            <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
-                            <div class="menuPriceHint">each</div>
-                          </div>
-                          ${ordersHidden ? "" : `
-                            <button class="menuItemAddSmall js-product-add" type="button" aria-label="Add to order" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>+</button>
-                          `}
-                        </div>
-                      </div>
-                      ${item.description ? `<div class="menuItemDescription">${escapeHtml(item.description)}</div>` : ""}
-                    </div>
-                  </div>
-                  ${ordersHidden ? "" : `
-                    <div class="menuItemActions">
-                      <button class="menuItemAddLarge js-product-add" type="button" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>
-                        ${item.is_sold_out ? "Sold out" : "Add to order"}
-                      </button>
-                    </div>
-                  `}
-                </div>
-              `;
-            }
-
-            const bundleDisabled = item.is_sold_out || isDropClosed();
             return `
-              <div class="menuItemCard ${item.is_sold_out ? "soldOut" : ""}">
+              <div class="menuItemCard ${item.is_sold_out ? "soldOut" : ""}" data-item-id="${item.id}">
+                <div class="menuItemAddZone" data-item-id="${item.id}">${renderAddZoneContent(item, ordersHidden)}</div>
                 <div class="menuItemTop">
                   ${mediaHtml}
                   <div class="menuItemBody">
                     <div class="menuItemHeader">
                       <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
-                      <div class="menuItemPriceAdd">
-                        <div class="menuPriceBlock">
-                          <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
-                          <div class="menuPriceHint">bundle</div>
-                        </div>
-                        ${ordersHidden ? "" : `
-                          <button class="menuItemAddSmall js-open-bundle" type="button" aria-label="Customize bundle" data-bundle-id="${item.id}" ${bundleDisabled ? "disabled" : ""}>+</button>
-                        `}
+                      <div class="menuPriceBlock">
+                        <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
+                        <div class="menuPriceHint">${priceHint}</div>
                       </div>
                     </div>
                     ${item.description ? `<div class="menuItemDescription">${escapeHtml(item.description)}</div>` : ""}
                   </div>
                 </div>
-                ${ordersHidden ? "" : `
-                  <div class="menuItemActions">
-                    <button class="menuItemAddLarge js-open-bundle" type="button" data-bundle-id="${item.id}" ${bundleDisabled ? "disabled" : ""}>
-                      ${item.is_sold_out ? "Sold out" : "Customize"}
-                    </button>
-                  </div>
-                `}
+                <div class="menuItemActions" data-item-id="${item.id}">${renderActionsContent(item, ordersHidden)}</div>
               </div>
             `;
           }).join("");
@@ -2672,15 +2710,71 @@
         wireMenuCardExpand();
       }
 
+      function renderAddZoneContent(item, ordersHidden) {
+        if (ordersHidden) return "";
+        const disabled = item.is_sold_out || isDropClosed();
+        if (item.menu_item_type === "product") {
+          const qty = getProductBasketQuantity(item.id);
+          if (qty > 0) {
+            return `
+              <div class="menuItemQty">
+                <button type="button" class="menuItemQtyBtn menuItemQtyMinus" aria-label="Decrease quantity">−</button>
+                <span class="menuItemQtyCount">${qty}</span>
+                <button type="button" class="menuItemQtyBtn menuItemQtyPlus" aria-label="Increase quantity" ${disabled ? "disabled" : ""}>+</button>
+              </div>
+            `;
+          }
+          return `<button type="button" class="menuItemAddSmall" aria-label="Add to order" ${disabled ? "disabled" : ""}>+</button>`;
+        }
+        return `<button type="button" class="menuItemAddSmall" aria-label="Customize bundle" ${disabled ? "disabled" : ""}>+</button>`;
+      }
+
+      function renderActionsContent(item, ordersHidden) {
+        if (ordersHidden) return "";
+        const disabled = item.is_sold_out || isDropClosed();
+        if (item.menu_item_type === "product") {
+          const qty = getProductBasketQuantity(item.id);
+          if (qty > 0) {
+            return `
+              <div class="menuItemQtyLarge">
+                <button type="button" class="menuItemQtyBtn menuItemQtyMinus" aria-label="Decrease quantity">−</button>
+                <span class="menuItemQtyCount">${qty}</span>
+                <button type="button" class="menuItemQtyBtn menuItemQtyPlus" aria-label="Increase quantity" ${disabled ? "disabled" : ""}>+</button>
+              </div>
+            `;
+          }
+          return `<button type="button" class="menuItemAddLarge" ${disabled ? "disabled" : ""}>${item.is_sold_out ? "Sold out" : "Add to order"}</button>`;
+        }
+        return `<button type="button" class="menuItemAddLarge" ${disabled ? "disabled" : ""}>${item.is_sold_out ? "Sold out" : "Customize"}</button>`;
+      }
+
+      function renderItemAddState(itemId) {
+        const item = getDropMenuItems().find((x) => x.id === itemId);
+        if (!item) return;
+        const ordersHidden = isDropClosed() || isDropPreOpen();
+        const addZone = document.querySelector(`.menuItemAddZone[data-item-id="${itemId}"]`);
+        const actions = document.querySelector(`.menuItemActions[data-item-id="${itemId}"]`);
+        if (addZone) addZone.innerHTML = renderAddZoneContent(item, ordersHidden);
+        if (actions) actions.innerHTML = renderActionsContent(item, ordersHidden);
+      }
+
       function wireMenuCardExpand() {
         document.querySelectorAll('#menuSections .menuItemCard:not(:has(> .menuItemCard))').forEach((card) => {
           card.addEventListener('click', (e) => {
-            if (e.target.closest('.menuItemAddSmall')) return;
-            if (e.target.closest('.menuItemAddLarge')) return;
+            if (e.target.closest('.menuItemAddZone')) return;
             if (e.target.closest('.menuItemActions')) return;
             if (e.target.closest('button')) return;
-            card.classList.toggle('expanded');
+            const itemId = card.dataset.itemId;
+            const expanded = card.classList.toggle('expanded');
+            if (itemId) {
+              if (expanded) state.expandedMenuItems.add(itemId);
+              else state.expandedMenuItems.delete(itemId);
+            }
           });
+        });
+        state.expandedMenuItems.forEach((id) => {
+          const card = document.querySelector(`#menuSections .menuItemCard[data-item-id="${id}"]`);
+          if (card) card.classList.add('expanded');
         });
       }
 
@@ -2740,7 +2834,8 @@
 
         if (delta > 0 && !canAddCapacity(productMenuItem.capacity_units || 0)) {
           showCheckoutNotice(`No more ${pluralizeLabel(getCategoryDisplayName())} capacity is available for this service.`, "warn");
-          renderAll();
+          renderHero();
+          renderBasketBar();
           return;
         }
 
@@ -2762,7 +2857,10 @@
           });
         }
 
-        renderAll();
+        renderHero();
+        renderItemAddState(productId);
+        renderBasketBar();
+        renderBasketSheet();
       }
 
       function addBundleToBasket(bundleDraft) {
@@ -3488,6 +3586,10 @@ async function handoffToPayment() {
           const basketPlus = e.target.closest(".js-basket-plus");
           const basketRemove = e.target.closest(".js-basket-remove");
           const menuPill = e.target.closest(".js-menu-pill");
+          const menuQtyPlus = e.target.closest(".menuItemQtyPlus");
+          const menuQtyMinus = e.target.closest(".menuItemQtyMinus");
+          const menuAddSmall = e.target.closest(".menuItemAddSmall");
+          const menuAddLarge = e.target.closest(".menuItemAddLarge");
 
           if (menuPill) {
             e.preventDefault();
@@ -3497,6 +3599,27 @@ async function handoffToPayment() {
             document.querySelectorAll(".js-menu-pill").forEach((p) => {
               p.classList.toggle("active", p.dataset.categoryKey === key);
             });
+            return;
+          }
+
+          if (menuQtyPlus || menuQtyMinus) {
+            const wrapper = (menuQtyPlus || menuQtyMinus).closest('[data-item-id]');
+            const itemId = wrapper?.dataset.itemId;
+            if (itemId) addProductToBasket(itemId, menuQtyPlus ? 1 : -1);
+            return;
+          }
+
+          if (menuAddSmall || menuAddLarge) {
+            const wrapper = (menuAddSmall || menuAddLarge).closest('[data-item-id]');
+            const itemId = wrapper?.dataset.itemId;
+            if (!itemId) return;
+            const item = getDropMenuItems().find((x) => x.id === itemId);
+            if (!item) return;
+            if (item.menu_item_type === "product") {
+              addProductToBasket(itemId, 1);
+            } else if (item.menu_item_type === "bundle") {
+              openBundleModal(itemId);
+            }
             return;
           }
 
