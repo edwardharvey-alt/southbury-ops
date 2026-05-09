@@ -66,7 +66,7 @@
       overflow:hidden;
       position:relative;
       padding:0;
-      border-radius:28px;
+      border-radius:12px;
     }
 
     .heroMedia{
@@ -344,11 +344,12 @@
       display:grid;
       grid-template-columns:minmax(0, 1fr);
       gap:14px;
+      border-radius:12px;
     }
 
     .dropStoryCard{
       padding:20px 22px;
-      border-radius:22px;
+      border-radius:12px;
       background:linear-gradient(180deg,
         color-mix(in srgb, var(--order-brand-primary) 8%, #fff) 0%,
         color-mix(in srgb, var(--order-brand-secondary) 6%, #fff) 100%);
@@ -520,31 +521,52 @@
       padding-top:12px;
     }
 
+    /* Base card — applies to all card variants */
     .menuItemCard{
       box-sizing:border-box;
       width:100%;
-      max-width:100%;
-      min-width:0;
       border:1px solid rgba(15,23,42,0.10);
-      border-radius:22px;
+      border-radius:12px;
       background:#faf7f4;
-      padding:0;
-      display:grid;
-      gap:0;
       box-shadow:0 6px 16px rgba(15,23,42,0.06);
       overflow:hidden;
       position:relative;
     }
 
-    .menuItemMedia{
-      position:relative;
-      width:100%;
-      max-width:240px;
+    /* Standalone cards (not bundle outer cards) get the new compact layout */
+    .menuItemCard:not(:has(> .menuItemCard)){
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      padding:14px;
+      cursor:pointer;
+    }
+
+    /* Bundle outer cards keep grid stacking (existing behaviour) */
+    .menuItemCard:has(> .menuItemCard){
+      display:grid;
+      gap:0;
+      padding:0;
+    }
+
+    /* Top row: photo right, body left */
+    .menuItemTop{
+      display:flex;
+      flex-direction:row-reverse;
+      align-items:flex-start;
+      gap:14px;
+    }
+
+    /* Photo as compact thumbnail */
+    .menuItemTop > .menuItemMedia{
+      flex:0 0 80px;
+      width:80px;
+      height:80px;
       aspect-ratio:1 / 1;
-      margin:16px auto;
-      border-radius:14px;
+      border-radius:8px;
       background:var(--h-border-2);
       overflow:hidden;
+      position:relative;
     }
 
     .menuItemMedia.image{
@@ -573,88 +595,41 @@
       -webkit-backdrop-filter:blur(4px);
     }
 
+    /* Body */
     .menuItemBody{
-      padding:14px 22px 14px;
-      display:grid;
-      gap:10px;
+      flex:1;
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      padding:0;
     }
 
+    /* Header: name on left, price on right */
     .menuItemHeader{
       display:flex;
-      align-items:flex-start;
       justify-content:space-between;
+      align-items:baseline;
       gap:14px;
-      min-width:0;
-    }
-
-    .menuItemCopy{
-      min-width:0;
-      flex:1;
     }
 
     .menuItemName{
       font-family:'Cormorant Garamond', Georgia, 'Times New Roman', serif;
-      font-size:22px;
-      line-height:1.1;
-      font-weight:600;
       margin:0;
+      font-size:18px;
+      line-height:1.2;
+      font-weight:600;
       color:var(--h-text);
       letter-spacing:-0.005em;
     }
 
-    .menuItemCard:not(:has(.menuItemMedia)) .menuItemBody{
-      padding:24px 24px 18px;
-      gap:12px;
-    }
-
-    .menuItemCard:not(:has(.menuItemMedia)) .menuItemName{
-      font-size:28px;
-      line-height:1.05;
-    }
-
-    .menuItemCard:has(> .menuItemMedia):not(:has(> .menuItemCard)){
-      padding:16px;
-      display:flex;
-      flex-direction:row-reverse;
-      align-items:flex-start;
-      gap:14px;
-    }
-
-    .menuItemCard:has(> .menuItemMedia):not(:has(> .menuItemCard)) > .menuItemMedia{
-      flex:0 0 96px;
-      width:96px;
-      height:96px;
-      max-width:none;
-      aspect-ratio:1 / 1;
-      margin:0;
-      border-radius:12px;
-    }
-
-    .menuItemCard:has(> .menuItemMedia):not(:has(> .menuItemCard)) > .menuItemBody{
-      flex:1;
-      min-width:0;
-      padding:0;
-    }
-
-    .menuItemDesc{
-      margin:6px 0 0;
-      font-family:'Figtree', system-ui, -apple-system, sans-serif;
-      font-size:13.5px;
-      line-height:1.5;
-      color:var(--h-muted);
-      max-width:52ch;
-      font-weight:400;
-    }
-
     .menuPriceBlock{
-      text-align:right;
       flex:0 0 auto;
-      min-width:max-content;
+      text-align:right;
     }
 
     .menuPrice{
-      min-width:max-content;
-      font-size:22px;
+      font-size:18px;
       line-height:1;
       font-weight:950;
       color:var(--h-text);
@@ -663,11 +638,38 @@
     }
 
     .menuPriceHint{
-      margin-top:5px;
+      margin-top:4px;
       font-size:11px;
       line-height:1.2;
       color:var(--h-muted);
       font-weight:700;
+    }
+
+    /* Description: 2-line clamp with ellipsis */
+    .menuItemDescription{
+      font-family:'Figtree', system-ui, -apple-system, sans-serif;
+      font-size:14px;
+      color:var(--h-muted, #6b7280);
+      line-height:1.4;
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+      font-weight:400;
+    }
+
+    /* Actions row: compact pill, right-aligned */
+    .menuItemActions{
+      display:flex;
+      justify-content:flex-end;
+    }
+
+    .menuItemActions > button,
+    .menuItemActions > .menuControls > button{
+      width:auto;
+      min-width:140px;
+      padding:10px 20px;
+      border-radius:999px;
     }
 
     .menuControls{
@@ -682,12 +684,29 @@
       flex-wrap:wrap;
     }
 
-    .menuControls .brandBtn{
+    /* Expanded state: photo grows full-width, description un-clamps */
+    .menuItemCard.expanded:not(:has(> .menuItemCard)){
+      cursor:default;
+    }
+
+    .menuItemCard.expanded .menuItemTop{
+      flex-direction:column-reverse;
+      align-items:stretch;
+    }
+
+    .menuItemCard.expanded .menuItemTop > .menuItemMedia{
+      flex:0 0 auto;
       width:100%;
-      min-height:40px;
-      height:40px;
-      font-size:13px;
+      height:auto;
+      max-width:480px;
+      align-self:center;
       border-radius:12px;
+    }
+
+    .menuItemCard.expanded .menuItemDescription{
+      -webkit-line-clamp:unset;
+      display:block;
+      overflow:visible;
     }
 
     .menuItemCard.soldOut{
@@ -1406,36 +1425,6 @@
 
       .checkoutGrid{
         grid-template-columns:1fr;
-      }
-
-      .menuItemHeader{
-        align-items:flex-start;
-      }
-
-      .menuItemBody{
-        padding:12px 18px 12px;
-        gap:8px;
-      }
-
-      .menuItemCard:not(:has(.menuItemMedia)) .menuItemBody{
-        padding:20px 20px 16px;
-        gap:10px;
-      }
-
-      .menuItemName{
-        font-size:20px;
-      }
-
-      .menuItemCard:not(:has(.menuItemMedia)) .menuItemName{
-        font-size:24px;
-      }
-
-      .menuItemDesc{
-        font-size:13px;
-      }
-
-      .menuPrice{
-        font-size:20px;
       }
 
       .menuControlsRow{
@@ -2541,21 +2530,21 @@
 
               return `
                 <div class="menuItemCard ${item.is_sold_out ? "soldOut" : ""}">
-                  ${mediaHtml}
-                  <div class="menuItemBody">
-                    <div class="menuItemHeader">
-                      <div class="menuItemCopy">
+                  <div class="menuItemTop">
+                    ${mediaHtml}
+                    <div class="menuItemBody">
+                      <div class="menuItemHeader">
                         <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
-                        ${item.description ? `<p class="menuItemDesc">${escapeHtml(item.description)}</p>` : ""}
+                        <div class="menuPriceBlock">
+                          <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
+                          <div class="menuPriceHint">each</div>
+                        </div>
                       </div>
-
-                      <div class="menuPriceBlock">
-                        <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
-                        <div class="menuPriceHint">each</div>
-                      </div>
+                      ${item.description ? `<div class="menuItemDescription">${escapeHtml(item.description)}</div>` : ""}
                     </div>
-
-                    ${ordersHidden ? "" : `
+                  </div>
+                  ${ordersHidden ? "" : `
+                    <div class="menuItemActions">
                       <div class="menuControls">
                         ${qty > 0 ? `
                           <div class="menuControlsRow">
@@ -2570,8 +2559,8 @@
                           ${item.is_sold_out ? "Sold out" : (qty > 0 ? "View basket" : "Add to order")}
                         </button>
                       </div>
-                    `}
-                  </div>
+                    </div>
+                  `}
                 </div>
               `;
             }
@@ -2579,27 +2568,28 @@
             const bundleDisabled = item.is_sold_out || isDropClosed();
             return `
               <div class="menuItemCard ${item.is_sold_out ? "soldOut" : ""}">
-                ${mediaHtml}
-                <div class="menuItemBody">
-                  <div class="menuItemHeader">
-                    <div class="menuItemCopy">
+                <div class="menuItemTop">
+                  ${mediaHtml}
+                  <div class="menuItemBody">
+                    <div class="menuItemHeader">
                       <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
-                      ${item.description ? `<p class="menuItemDesc">${escapeHtml(item.description)}</p>` : ""}
+                      <div class="menuPriceBlock">
+                        <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
+                        <div class="menuPriceHint">bundle</div>
+                      </div>
                     </div>
-
-                    <div class="menuPriceBlock">
-                      <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
-                      <div class="menuPriceHint">bundle</div>
-                    </div>
+                    ${item.description ? `<div class="menuItemDescription">${escapeHtml(item.description)}</div>` : ""}
                   </div>
-
-                  ${ordersHidden ? "" : `
+                </div>
+                ${ordersHidden ? "" : `
+                  <div class="menuItemActions">
                     <div class="menuControls">
                       <button class="brandBtn js-open-bundle" type="button" data-bundle-id="${item.id}" ${bundleDisabled ? "disabled" : ""}>
                         ${item.is_sold_out ? "Sold out" : "Customize"}
                       </button>
                     </div>
-                  `}
+                  </div>
+                `}
               </div>
             `;
           }).join("");
@@ -2620,6 +2610,17 @@
         `;
 
         setupMenuScrollSpy();
+        wireMenuCardExpand();
+      }
+
+      function wireMenuCardExpand() {
+        document.querySelectorAll('#menuSections .menuItemCard:not(:has(> .menuItemCard))').forEach((card) => {
+          card.addEventListener('click', (e) => {
+            if (e.target.closest('.menuItemActions')) return;
+            if (e.target.closest('button')) return;
+            card.classList.toggle('expanded');
+          });
+        });
       }
 
       function setupMenuScrollSpy() {
