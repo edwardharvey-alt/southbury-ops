@@ -658,30 +658,93 @@
       font-weight:400;
     }
 
-    /* Actions row: compact pill, right-aligned */
-    .menuItemActions{
-      display:flex;
-      justify-content:flex-end;
-    }
-
-    .menuItemActions > button,
-    .menuItemActions > .menuControls > button{
-      width:auto;
-      min-width:140px;
-      padding:10px 20px;
-      border-radius:999px;
-    }
-
-    .menuControls{
-      display:grid;
-      gap:10px;
-    }
-
-    .menuControlsRow{
+    /* Container for price + small add button in compact header */
+    .menuItemPriceAdd{
       display:flex;
       align-items:center;
       gap:10px;
-      flex-wrap:wrap;
+      flex:0 0 auto;
+    }
+
+    /* Small circular + icon button for compact state */
+    .menuItemAddSmall{
+      width:36px;
+      height:36px;
+      border-radius:999px;
+      background:transparent;
+      border:1px solid var(--order-brand-primary);
+      color:var(--order-brand-primary);
+      font-size:18px;
+      line-height:1;
+      font-weight:400;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      padding:0;
+      transition:background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+    }
+
+    .menuItemAddSmall:hover{
+      background:var(--order-brand-primary);
+      color:#fff;
+    }
+
+    .menuItemAddSmall:active{
+      background:var(--order-brand-primary);
+      color:#fff;
+      transform:scale(0.95);
+    }
+
+    .menuItemAddSmall:disabled{
+      cursor:not-allowed;
+      opacity:.5;
+    }
+
+    /* Actions row hidden in compact, shown in expanded */
+    .menuItemCard:not(:has(> .menuItemCard)) > .menuItemActions{
+      display:none;
+    }
+
+    .menuItemCard.expanded > .menuItemActions{
+      display:flex;
+      margin-top:4px;
+    }
+
+    /* Full-width Add to order button for expanded state */
+    .menuItemAddLarge{
+      width:100%;
+      padding:12px 20px;
+      border-radius:999px;
+      background:transparent;
+      border:1px solid var(--order-brand-primary);
+      color:var(--order-brand-primary);
+      font-family:'Figtree', system-ui, -apple-system, sans-serif;
+      font-weight:500;
+      font-size:15px;
+      cursor:pointer;
+      transition:background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+    }
+
+    .menuItemAddLarge:hover{
+      background:var(--order-brand-primary);
+      color:#fff;
+    }
+
+    .menuItemAddLarge:active{
+      background:var(--order-brand-primary);
+      color:#fff;
+      transform:scale(0.99);
+    }
+
+    .menuItemAddLarge:disabled{
+      cursor:not-allowed;
+      opacity:.5;
+    }
+
+    /* When expanded, hide the small + button (not needed — large button takes over) */
+    .menuItemCard.expanded .menuItemAddSmall{
+      display:none;
     }
 
     /* Expanded state: photo grows full-width, description un-clamps */
@@ -2525,7 +2588,6 @@
               : "";
 
             if (item.menu_item_type === "product") {
-              const qty = getProductBasketQuantity(item.id);
               const disabled = item.is_sold_out || isDropClosed();
 
               return `
@@ -2535,9 +2597,14 @@
                     <div class="menuItemBody">
                       <div class="menuItemHeader">
                         <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
-                        <div class="menuPriceBlock">
-                          <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
-                          <div class="menuPriceHint">each</div>
+                        <div class="menuItemPriceAdd">
+                          <div class="menuPriceBlock">
+                            <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
+                            <div class="menuPriceHint">each</div>
+                          </div>
+                          ${ordersHidden ? "" : `
+                            <button class="menuItemAddSmall js-product-add" type="button" aria-label="Add to order" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>+</button>
+                          `}
                         </div>
                       </div>
                       ${item.description ? `<div class="menuItemDescription">${escapeHtml(item.description)}</div>` : ""}
@@ -2545,20 +2612,9 @@
                   </div>
                   ${ordersHidden ? "" : `
                     <div class="menuItemActions">
-                      <div class="menuControls">
-                        ${qty > 0 ? `
-                          <div class="menuControlsRow">
-                            <div class="stepper">
-                              <button type="button" class="js-product-minus" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>−</button>
-                              <div class="stepperValue">${qty}</div>
-                              <button type="button" class="js-product-plus" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>+</button>
-                            </div>
-                          </div>
-                        ` : ""}
-                        <button class="brandBtn ${qty > 0 ? "secondary" : ""} js-product-add" type="button" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>
-                          ${item.is_sold_out ? "Sold out" : (qty > 0 ? "View basket" : "Add to order")}
-                        </button>
-                      </div>
+                      <button class="menuItemAddLarge js-product-add" type="button" data-product-id="${item.id}" ${disabled ? "disabled" : ""}>
+                        ${item.is_sold_out ? "Sold out" : "Add to order"}
+                      </button>
                     </div>
                   `}
                 </div>
@@ -2573,9 +2629,14 @@
                   <div class="menuItemBody">
                     <div class="menuItemHeader">
                       <h4 class="menuItemName">${escapeHtml(item.name)}</h4>
-                      <div class="menuPriceBlock">
-                        <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
-                        <div class="menuPriceHint">bundle</div>
+                      <div class="menuItemPriceAdd">
+                        <div class="menuPriceBlock">
+                          <div class="menuPrice">${formatMoneyPence(item.base_price_pence)}</div>
+                          <div class="menuPriceHint">bundle</div>
+                        </div>
+                        ${ordersHidden ? "" : `
+                          <button class="menuItemAddSmall js-open-bundle" type="button" aria-label="Customize bundle" data-bundle-id="${item.id}" ${bundleDisabled ? "disabled" : ""}>+</button>
+                        `}
                       </div>
                     </div>
                     ${item.description ? `<div class="menuItemDescription">${escapeHtml(item.description)}</div>` : ""}
@@ -2583,11 +2644,9 @@
                 </div>
                 ${ordersHidden ? "" : `
                   <div class="menuItemActions">
-                    <div class="menuControls">
-                      <button class="brandBtn js-open-bundle" type="button" data-bundle-id="${item.id}" ${bundleDisabled ? "disabled" : ""}>
-                        ${item.is_sold_out ? "Sold out" : "Customize"}
-                      </button>
-                    </div>
+                    <button class="menuItemAddLarge js-open-bundle" type="button" data-bundle-id="${item.id}" ${bundleDisabled ? "disabled" : ""}>
+                      ${item.is_sold_out ? "Sold out" : "Customize"}
+                    </button>
                   </div>
                 `}
               </div>
@@ -2616,6 +2675,8 @@
       function wireMenuCardExpand() {
         document.querySelectorAll('#menuSections .menuItemCard:not(:has(> .menuItemCard))').forEach((card) => {
           card.addEventListener('click', (e) => {
+            if (e.target.closest('.menuItemAddSmall')) return;
+            if (e.target.closest('.menuItemAddLarge')) return;
             if (e.target.closest('.menuItemActions')) return;
             if (e.target.closest('button')) return;
             card.classList.toggle('expanded');
