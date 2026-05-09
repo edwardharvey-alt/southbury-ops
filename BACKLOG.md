@@ -696,9 +696,47 @@ is split out into **T4-31b-products** as a new open ticket — see
 below.
 
 T4-31b-products: Per-item photography asset workflow — Menu
-Library mount + schema + order page integration
+Library mount + schema + order page integration ✓ COMPLETE 2026-05-09
 
-**Status:** Open. Tier 4. Successor to T4-31b's deferred
+**Status:** ✓ COMPLETE 2026-05-09. Tier 4. Successor to T4-31b's
+deferred product-photo scope.
+
+**Closure note (2026-05-09):** Per-item photography is wired
+end-to-end across products and bundles.
+
+- Schema: `products.image_url` (text, nullable) added; later
+  extended to `bundles.image_url` (text, nullable).
+- Views: `v_drop_menu_items_enriched`, `v_menu_library_items`,
+  `v_drop_menu_item_stock`, `v_products_enriched`, and
+  `v_bundles_enriched` updated to expose `image_url` (per
+  operational learning #26 — appended at end of SELECT to satisfy
+  Postgres's no-reorder-on-replace rule).
+- Edge Functions: `create-product` and `update-product` accept
+  `image_url` in their ALLOWED_FIELDS. `create-bundle` and
+  `update-bundle` accept `image_url`. Both `create-product` and
+  `create-bundle` accept an optional caller-supplied `id` field
+  (UUID-validated; conflict → 409) so the storage upload path
+  can be constructed before the row is saved (operational
+  learning #41).
+- Storage: bucket `vendor-assets`, path `{slug}/products/{id}`
+  for products and `{slug}/bundles/{id}` for bundles, both with
+  `upsert: true` so replacements overwrite in place.
+- drop-menu.html: HearthPhotoUpload mounted on the product
+  editor drawer, the bundle editor drawer, and the product /
+  bundle creation modals — mirroring the Brand Hearth hero
+  integration.
+- order.html: `:has()`-based horizontal photo-right layout
+  (96px thumbnail on the right, body on the left) for cards
+  with a direct `.menuItemMedia` child. Bundle outer cards
+  with nested choice cards and text-only cards fall through to
+  the existing vertical layout. Specificity (0,4,0) of the new
+  selector wins over the (0,1,0) base `.menuItemBody` rules
+  including in the mobile `@media` block — no per-breakpoint
+  scoping required (operational learning #40).
+
+Original spec preserved below for reference.
+
+**Original status:** Open. Tier 4. Successor to T4-31b's deferred
 product-photo scope.
 
 The shared HearthPhotoUpload component built in PR #225 is ready
