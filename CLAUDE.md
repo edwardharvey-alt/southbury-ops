@@ -863,6 +863,41 @@ on top of the coding rules above.
     as part of the verification checklist, especially after
     observing an unexpected "didn't persist" symptom.
 
+39. **Bundles support `image_url` the same way products do.**
+    Schema column is `bundles.image_url` (text, nullable).
+    Storage path convention is `{slug}/bundles/{id}` in the
+    `vendor-assets` bucket, mirroring the product pattern
+    (`{slug}/products/{id}`). Both `create-bundle` and
+    `update-bundle` Edge Functions accept `image_url` in their
+    field whitelists. `v_drop_menu_items_enriched`,
+    `v_menu_library_items`, and `v_bundles_enriched` all expose
+    `image_url` so the order page and Menu Library can read it.
+
+40. **order.html menu card layout uses a `:has()`-based
+    selector to distinguish standalone-cards-with-photos from
+    bundle-outer-cards.** The selector
+    `.menuItemCard:has(> .menuItemMedia):not(:has(> .menuItemCard))`
+    targets the horizontal photo-right layout (96px thumbnail
+    on the right, body on the left). Anything not matching that
+    selector — text-only cards, or future bundle outer cards
+    that wrap nested choice cards — falls through to the
+    existing vertical layout. The `>` combinator inside `:has()`
+    is required: descendant matching (`:has(.menuItemMedia)`)
+    would catch nested cards and break the bundle case.
+    Specificity of the new selector is (0,4,0), which beats
+    the (0,1,0) base `.menuItemBody` rule including in the
+    `@media (max-width:720px)` block — no per-breakpoint
+    scoping needed.
+
+41. **Edge Function pattern for new-row creation with
+    client-supplied UUID.** `create-product` and `create-bundle`
+    both accept an optional `id` field at the top level of the
+    request body (sibling of `vendor_id` and the field payload).
+    The `id` is validated by UUID regex; invalid → 400, conflict
+    → 409 (Postgres SQLSTATE 23505). This pattern is required
+    for any future "upload before save" photo flow because the
+    storage path needs the row id before the row exists.
+
 ## Stripe Connect Express (T3-8)
 
 - vendors schema: `stripe_account_id` TEXT (nullable),
@@ -1047,7 +1082,6 @@ index.
 
 ### Tier 4 — Enhancements that will impress
 - T4-29 — Series intelligence in Insights — open
-- T4-31b-products — Per-item photography (Menu Library mount + schema + Edge Function whitelists + order page field verification) — open. Parent T4-31b shipped hero in PR #225; this is the remaining product-photo scope.
 - T4-31b-fu1 — Server-side HEIC conversion fallback for Mac-Photos-HEIC — open, deferred until real vendor friction.
 - T4-32 — Order page: map display for collection point and delivery area — open
 - T4-33 — Brand Hearth: GenAI copy generation + customisation review — open, deferred until T5-25 surfaces a customer-facing use for vendor brand copy.
