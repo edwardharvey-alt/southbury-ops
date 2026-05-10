@@ -2544,8 +2544,8 @@
           byId("productTravelsWell").checked = true;
           byId("productSuitableForCollection").checked = true;
           byId("productPrepComplexity").value = "standard";
-          state.editProductAllergens = new Set();
-          state.editProductDietaryFlags = new Set();
+          state.editProductAllergens.clear();
+          state.editProductDietaryFlags.clear();
           renderPillGroup("productAllergensPills", ALLERGEN_OPTIONS, state.editProductAllergens);
           renderPillGroup("productDietaryFlagsPills", DIETARY_FLAG_OPTIONS, state.editProductDietaryFlags);
           wirePillGroup("productAllergensPills", state.editProductAllergens);
@@ -2566,8 +2566,10 @@
         byId("productTravelsWell").checked = product.travels_well !== false;
         byId("productSuitableForCollection").checked = product.suitable_for_collection !== false;
         byId("productPrepComplexity").value = product.prep_complexity || "standard";
-        state.editProductAllergens = new Set(Array.isArray(product.allergens) ? product.allergens : []);
-        state.editProductDietaryFlags = new Set(Array.isArray(product.dietary_flags) ? product.dietary_flags : []);
+        state.editProductAllergens.clear();
+        (Array.isArray(product.allergens) ? product.allergens : []).forEach(v => state.editProductAllergens.add(v));
+        state.editProductDietaryFlags.clear();
+        (Array.isArray(product.dietary_flags) ? product.dietary_flags : []).forEach(v => state.editProductDietaryFlags.add(v));
         renderPillGroup("productAllergensPills", ALLERGEN_OPTIONS, state.editProductAllergens);
         renderPillGroup("productDietaryFlagsPills", DIETARY_FLAG_OPTIONS, state.editProductDietaryFlags);
         wirePillGroup("productAllergensPills", state.editProductAllergens);
