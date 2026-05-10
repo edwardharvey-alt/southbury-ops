@@ -373,6 +373,45 @@
       max-width:400px;
       margin:0 auto;
     }
+
+    /* Allergen and dietary flag pill-toggle groups */
+    .pillToggleGroup{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin:8px 0 6px;
+    }
+    .pillToggle{
+      display:inline-flex;
+      align-items:center;
+      padding:8px 14px;
+      border-radius:999px;
+      border:1.5px solid #8B6B3F;
+      background:#fff;
+      color:#8B6B3F;
+      font-size:13px;
+      font-weight:600;
+      cursor:pointer;
+      transition:background 0.12s, color 0.12s, border-color 0.12s;
+      user-select:none;
+      min-height:36px;
+      line-height:1.2;
+    }
+    .pillToggle:hover{
+      background:rgba(139,107,63,0.08);
+    }
+    .pillToggle.active{
+      background:#8B6B3F;
+      color:#fff;
+    }
+    .pillToggle.active:hover{
+      background:#7a5e37;
+      border-color:#7a5e37;
+    }
+    .pillToggle:focus-visible{
+      outline:2px solid #8B6B3F;
+      outline-offset:2px;
+    }
   </style>
 </head>
 <body>
@@ -680,6 +719,18 @@
                           <option value="complex">Complex</option>
                         </select>
                       </div>
+                    </div>
+
+                    <div class="stageSection" style="margin-top:20px;">
+                      <h4 class="stageSectionTitle">Contains allergens</h4>
+                      <div class="pillToggleGroup" id="productAllergensPills"></div>
+                      <p class="helperText">Select every allergen this dish contains. Leave empty only if you have confirmed none apply.</p>
+                    </div>
+
+                    <div class="stageSection" style="margin-top:20px;">
+                      <h4 class="stageSectionTitle">Suitable for</h4>
+                      <div class="pillToggleGroup" id="productDietaryFlagsPills"></div>
+                      <p class="helperText">Only select options you can confirm for this dish.</p>
                     </div>
 
                     <div class="menuEditorActions">
@@ -1087,6 +1138,31 @@
       let supabase = null;
       let successTimer = null;
 
+      const ALLERGEN_OPTIONS = [
+        { value: "cereals_gluten", label: "Cereals (gluten)" },
+        { value: "crustaceans", label: "Crustaceans" },
+        { value: "eggs", label: "Eggs" },
+        { value: "fish", label: "Fish" },
+        { value: "peanuts", label: "Peanuts" },
+        { value: "soybeans", label: "Soybeans" },
+        { value: "milk", label: "Milk" },
+        { value: "nuts", label: "Tree nuts" },
+        { value: "celery", label: "Celery" },
+        { value: "mustard", label: "Mustard" },
+        { value: "sesame", label: "Sesame" },
+        { value: "sulphites", label: "Sulphites" },
+        { value: "lupin", label: "Lupin" },
+        { value: "molluscs", label: "Molluscs" }
+      ];
+
+      const DIETARY_FLAG_OPTIONS = [
+        { value: "vegetarian", label: "Vegetarian" },
+        { value: "vegan", label: "Vegan" },
+        { value: "gluten_free", label: "Gluten-free" },
+        { value: "dairy_free", label: "Dairy-free" },
+        { value: "nut_free", label: "Nut-free" }
+      ];
+
       const state = {
         vendor: null,
         vendorId: null,
@@ -1126,6 +1202,10 @@
         newProductPhotoUpload: null,
         newProductUuid: null,
         newProductImageUrl: null,
+
+        // Allergen / dietary flag selections for the product editor.
+        editProductAllergens: new Set(),
+        editProductDietaryFlags: new Set(),
 
         // T4-31b-products: per-bundle photo upload state.
         editBundlePhotoUpload: null,
@@ -2417,6 +2497,37 @@
         closeModal("newBundleModal");
       }
 
+      function renderPillGroup(containerId, options, selectedSet) {
+        const container = byId(containerId);
+        if (!container) return;
+        container.innerHTML = options.map((opt) => {
+          const active = selectedSet.has(opt.value) ? " active" : "";
+          const pressed = selectedSet.has(opt.value) ? "true" : "false";
+          return `<button type="button" class="pillToggle${active}" data-value="${opt.value}" aria-pressed="${pressed}">${opt.label}</button>`;
+        }).join("");
+      }
+
+      function wirePillGroup(containerId, selectedSet) {
+        const container = byId(containerId);
+        if (!container || container.dataset.pillsWired === "1") return;
+        container.dataset.pillsWired = "1";
+        container.addEventListener("click", (e) => {
+          const pill = e.target.closest(".pillToggle");
+          if (!pill || !container.contains(pill)) return;
+          const value = pill.dataset.value;
+          if (!value) return;
+          if (selectedSet.has(value)) {
+            selectedSet.delete(value);
+            pill.classList.remove("active");
+            pill.setAttribute("aria-pressed", "false");
+          } else {
+            selectedSet.add(value);
+            pill.classList.add("active");
+            pill.setAttribute("aria-pressed", "true");
+          }
+        });
+      }
+
       function renderProductEditor() {
         populateCategorySelect("productCategory");
         const product = state.products.find((p) => p.id === state.selectedProductId);
@@ -2433,6 +2544,12 @@
           byId("productTravelsWell").checked = true;
           byId("productSuitableForCollection").checked = true;
           byId("productPrepComplexity").value = "standard";
+          state.editProductAllergens = new Set();
+          state.editProductDietaryFlags = new Set();
+          renderPillGroup("productAllergensPills", ALLERGEN_OPTIONS, state.editProductAllergens);
+          renderPillGroup("productDietaryFlagsPills", DIETARY_FLAG_OPTIONS, state.editProductDietaryFlags);
+          wirePillGroup("productAllergensPills", state.editProductAllergens);
+          wirePillGroup("productDietaryFlagsPills", state.editProductDietaryFlags);
           byId("toggleProductActiveBtn").textContent = "Deactivate";
           byId("productSelectionLabel").textContent = "No product selected";
           byId("productSelectionMetrics").innerHTML = "";
@@ -2449,6 +2566,12 @@
         byId("productTravelsWell").checked = product.travels_well !== false;
         byId("productSuitableForCollection").checked = product.suitable_for_collection !== false;
         byId("productPrepComplexity").value = product.prep_complexity || "standard";
+        state.editProductAllergens = new Set(Array.isArray(product.allergens) ? product.allergens : []);
+        state.editProductDietaryFlags = new Set(Array.isArray(product.dietary_flags) ? product.dietary_flags : []);
+        renderPillGroup("productAllergensPills", ALLERGEN_OPTIONS, state.editProductAllergens);
+        renderPillGroup("productDietaryFlagsPills", DIETARY_FLAG_OPTIONS, state.editProductDietaryFlags);
+        wirePillGroup("productAllergensPills", state.editProductAllergens);
+        wirePillGroup("productDietaryFlagsPills", state.editProductDietaryFlags);
         byId("toggleProductActiveBtn").textContent = product.is_active ? "Deactivate" : "Activate";
 
         byId("productSelectionLabel").textContent = `${product.name} • ${product.category_name || "No category"} • ${product.is_active ? "active" : "inactive"}`;
@@ -2656,6 +2779,8 @@
           travels_well: byId("productTravelsWell").checked,
           suitable_for_collection: byId("productSuitableForCollection").checked,
           prep_complexity: byId("productPrepComplexity").value,
+          allergens: Array.from(state.editProductAllergens),
+          dietary_flags: Array.from(state.editProductDietaryFlags),
           image_url: state.editProductImageUrl ?? null
         };
 
