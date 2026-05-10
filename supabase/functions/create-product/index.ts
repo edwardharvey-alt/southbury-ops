@@ -22,6 +22,8 @@ const ALLOWED_FIELDS = new Set([
   "travels_well",
   "suitable_for_collection",
   "prep_complexity",
+  "allergens",
+  "dietary_flags",
 ]);
 
 // Caller may optionally supply a UUID for the new row's primary key.
@@ -111,6 +113,9 @@ Deno.serve(async (req) => {
         insertPayload[key] = fields[key];
       }
     }
+
+    if (!("allergens" in insertPayload)) insertPayload.allergens = [];
+    if (!("dietary_flags" in insertPayload)) insertPayload.dietary_flags = [];
 
     if (typeof insertPayload.name !== "string" || !(insertPayload.name as string).trim()) {
       return jsonResponse({ error: "name is required" }, 400);
