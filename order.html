@@ -861,44 +861,6 @@
       opacity:0.78;
     }
 
-    .stepper{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:4px;
-      border:1px solid var(--h-border);
-      border-radius:999px;
-      padding:3px;
-      background:#fff;
-      min-height:40px;
-      width:100%;
-    }
-
-    .stepper button{
-      width:30px;
-      height:30px;
-      min-width:30px;
-      border-radius:999px;
-      border:1px solid var(--h-border);
-      background:#fff;
-      color:var(--h-text);
-      font-size:15px;
-      font-weight:900;
-      cursor:pointer;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-
-    .stepperValue{
-      flex:1;
-      min-width:26px;
-      text-align:center;
-      font-size:15px;
-      font-weight:900;
-      color:var(--h-text);
-    }
-
     .brandBtn{
       min-height:36px;
       height:36px;
@@ -1076,60 +1038,46 @@
     }
 
     .basketItem{
-      border:1px solid var(--h-border-2);
-      border-radius:16px;
-      background:rgba(15,23,42,0.02);
-      padding:12px;
-      display:grid;
-      gap:10px;
+      padding:14px 16px;
+      border:1px solid rgba(15,23,42,0.10);
+      border-radius:12px;
+      background:#faf7f4;
+      box-shadow:0 6px 16px rgba(15,23,42,0.06);
+      margin-bottom:12px;
     }
 
-    .basketItemTop{
+    .basketItemMain{
       display:flex;
-      align-items:flex-start;
       justify-content:space-between;
-      gap:10px;
+      align-items:baseline;
+      gap:14px;
     }
 
     .basketItemName{
-      font-size:15px;
-      font-weight:900;
-      line-height:1.18;
-      color:var(--h-text);
-      margin:0;
+      font-size:17px;
+      font-weight:500;
+      color:#1F2937;
+      flex:1;
+      min-width:0;
     }
 
-    .basketItemSub{
+    .basketItemPrice{
+      font-size:17px;
+      font-weight:600;
+      color:#1F2937;
+      flex:0 0 auto;
+    }
+
+    .basketItemMeta{
+      font-size:13px;
+      color:var(--h-muted);
       margin-top:4px;
-      font-size:11px;
-      color:var(--h-muted);
-      font-weight:700;
-      line-height:1.35;
     }
 
-    .basketSelectionList{
-      display:grid;
-      gap:6px;
-      margin-top:2px;
-    }
-
-    .basketSelectionLine{
+    .basketItemQty{
       display:flex;
-      justify-content:space-between;
-      gap:10px;
-      font-size:12px;
-      color:var(--h-text);
-      line-height:1.3;
-    }
-
-    .basketSelectionLine span:first-child{
-      color:var(--h-muted);
-      font-weight:700;
-    }
-
-    .basketSelectionLine span:last-child{
-      text-align:right;
-      font-weight:800;
+      justify-content:flex-end;
+      margin-top:10px;
     }
 
     .basketTotals{
@@ -1578,27 +1526,11 @@
         flex-wrap:nowrap;
       }
 
-      .stepper{
-        min-height:38px;
-      }
-
-      .stepper button{
-        width:28px;
-        height:28px;
-        min-width:28px;
-      }
-
       .brandBtn{
         min-height:34px;
         height:34px;
         padding:0 12px;
         font-size:12px;
-      }
-
-      .menuControls .brandBtn{
-        min-height:38px;
-        height:38px;
-        font-size:13px;
       }
 
       .basketSheet{
@@ -2948,41 +2880,35 @@
           list.innerHTML = `<div class="emptyState">Your basket is empty.</div>`;
         } else {
           list.innerHTML = state.basket.map((item) => {
-            const selectionHtml = item.type === "bundle"
-              ? `
-                <div class="basketSelectionList">
-                  ${(item.selections || []).map((s) => `
-                    <div class="basketSelectionLine">
-                      <span>${escapeHtml(s.label || s.product_name || "Selection")}</span>
-                      <span>${escapeHtml(s.product_name || "—")}</span>
-                    </div>
-                  `).join("")}
-                </div>
-              `
+            const qty = Number(item.quantity || 0);
+            const unitPence = Number(item.unit_price_pence || 0);
+            const lineTotalPence = unitPence * qty;
+            const selectedOptions = item.type === "bundle"
+              ? (item.selections || [])
+                  .map((s) => String(s.product_name || s.label || "").trim())
+                  .filter(Boolean)
+              : [];
+            const optionsLine = item.type === "bundle"
+              ? `<div class="basketItemMeta">${escapeHtml(selectedOptions.join(" · "))}</div>`
+              : "";
+            const eachLine = qty > 1
+              ? `<div class="basketItemMeta">${formatMoneyPence(unitPence)} each</div>`
               : "";
 
             return `
-              <div class="basketItem">
-                <div class="basketItemTop">
-                  <div>
-                    <h4 class="basketItemName">${escapeHtml(item.name)}</h4>
-                    <div class="basketItemSub">
-                      ${item.type === "bundle" ? "Bundle" : "Product"} • ${formatMoneyPence(item.unit_price_pence)} each
-                    </div>
-                  </div>
-                  <div class="menuPrice">${formatMoneyPence(Number(item.unit_price_pence || 0) * Number(item.quantity || 0))}</div>
+              <div class="basketItem" data-item-id="${escapeHtml(item.key)}">
+                <div class="basketItemMain">
+                  <div class="basketItemName">${escapeHtml(item.name)}</div>
+                  <div class="basketItemPrice">${formatMoneyPence(lineTotalPence)}</div>
                 </div>
-
-                ${selectionHtml}
-
-                <div class="menuControls">
-                  <div class="stepper">
-                    <button type="button" class="js-basket-minus" data-key="${escapeHtml(item.key)}">−</button>
-                    <div class="stepperValue">${Number(item.quantity || 0)}</div>
-                    <button type="button" class="js-basket-plus" data-key="${escapeHtml(item.key)}" ${isDropClosed() ? "disabled" : ""}>+</button>
+                ${optionsLine}
+                ${eachLine}
+                <div class="basketItemQty">
+                  <div class="menuItemQty">
+                    <button type="button" class="menuItemQtyBtn menuItemQtyMinus" aria-label="Decrease quantity">−</button>
+                    <span class="menuItemQtyCount">${qty}</span>
+                    <button type="button" class="menuItemQtyBtn menuItemQtyPlus" aria-label="Increase quantity" ${isDropClosed() ? "disabled" : ""}>+</button>
                   </div>
-
-                  <button class="brandBtn secondary js-basket-remove" type="button" data-key="${escapeHtml(item.key)}">Remove</button>
                 </div>
               </div>
             `;
@@ -3586,9 +3512,6 @@ async function handoffToPayment() {
           const productMinus = e.target.closest(".js-product-minus");
           const productAdd = e.target.closest(".js-product-add");
           const openBundle = e.target.closest(".js-open-bundle");
-          const basketMinus = e.target.closest(".js-basket-minus");
-          const basketPlus = e.target.closest(".js-basket-plus");
-          const basketRemove = e.target.closest(".js-basket-remove");
           const menuPill = e.target.closest(".js-menu-pill");
           const menuQtyPlus = e.target.closest(".menuItemQtyPlus");
           const menuQtyMinus = e.target.closest(".menuItemQtyMinus");
@@ -3607,9 +3530,17 @@ async function handoffToPayment() {
           }
 
           if (menuQtyPlus || menuQtyMinus) {
-            const wrapper = (menuQtyPlus || menuQtyMinus).closest('[data-item-id]');
+            const target = menuQtyPlus || menuQtyMinus;
+            const delta = menuQtyPlus ? 1 : -1;
+            const basketContainer = target.closest('.basketItem');
+            if (basketContainer) {
+              const key = basketContainer.dataset.itemId;
+              if (key) updateBasketItemQuantity(key, delta);
+              return;
+            }
+            const wrapper = target.closest('[data-item-id]');
             const itemId = wrapper?.dataset.itemId;
-            if (itemId) addProductToBasket(itemId, menuQtyPlus ? 1 : -1);
+            if (itemId) addProductToBasket(itemId, delta);
             return;
           }
 
@@ -3647,20 +3578,6 @@ async function handoffToPayment() {
           if (openBundle) {
             openBundleModal(openBundle.dataset.bundleId);
             return;
-          }
-
-          if (basketMinus) {
-            updateBasketItemQuantity(basketMinus.dataset.key, -1);
-            return;
-          }
-
-          if (basketPlus) {
-            updateBasketItemQuantity(basketPlus.dataset.key, 1);
-            return;
-          }
-
-          if (basketRemove) {
-            removeBasketItem(basketRemove.dataset.key);
           }
         });
 
