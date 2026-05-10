@@ -22,6 +22,8 @@ const ALLOWED_FIELDS = new Set([
   "travels_well",
   "suitable_for_collection",
   "prep_complexity",
+  "allergens",
+  "dietary_flags",
 ]);
 
 Deno.serve(async (req) => {
