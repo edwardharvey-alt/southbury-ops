@@ -754,6 +754,26 @@
       #stripeGate a.stripeGateCta{ width:100%; text-align:center; min-height:44px; display:inline-flex; align-items:center; justify-content:center; }
     }
 
+    /* Allergen review warning banner */
+    #allergenReviewBanner{
+      margin:0 0 14px;
+      padding:12px 16px;
+      border:1px solid #f59e0b;
+      background:#fffbeb;
+      border-radius:12px;
+      color:#78350f;
+      font-size:13px;
+      line-height:1.5;
+    }
+    #allergenReviewBanner .allergenReviewTitle{
+      font-weight:800;
+      margin:0 0 2px;
+      color:#78350f;
+    }
+    #allergenReviewBanner .allergenReviewBody{
+      margin:0;
+    }
+
     /* ── First-drop guidance card (T4-23) ── */
     #firstDropGuidance{
       position:relative;
@@ -1388,6 +1408,11 @@
                       </div>
                       <span class="menuOrderingBadge">Drag within category</span>
                     </div>
+                  </div>
+
+                  <div id="allergenReviewBanner" style="display:none;">
+                    <p class="allergenReviewTitle">Allergen information missing</p>
+                    <p class="allergenReviewBody">One or more items on this menu have no allergen information recorded. Review each item before this drop goes live.</p>
                   </div>
 
                   <div id="assignmentGroups" style="width:100%;"></div>
@@ -3093,6 +3118,20 @@
     function renderAssignments() {
       const container = byId("assignmentGroups");
       const summary = byId("menuStageSummary");
+
+      const allergenBanner = byId("allergenReviewBanner");
+      if (allergenBanner) {
+        const enabledProductIds = new Set(
+          (state.menuAssignments || [])
+            .filter((row) => row.enabled && row.menu_item_type === "product" && row.product_id)
+            .map((row) => row.product_id)
+        );
+        const hasUnreviewed = (state.products || []).some((p) => {
+          if (!enabledProductIds.has(p.id)) return false;
+          return !Array.isArray(p.allergens) || p.allergens.length === 0;
+        });
+        allergenBanner.style.display = hasUnreviewed ? "block" : "none";
+      }
 
       if (!state.menuAssignments.length) {
         summary.textContent = "No catalogue items found yet. Build products and bundles in Menu Library first.";
