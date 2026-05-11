@@ -649,6 +649,60 @@
       font-weight:700;
     }
 
+    /* Dietary badges on compact card */
+    .menuItemDietaryBadges{
+      display:inline-flex;
+      flex-wrap:wrap;
+      gap:3px;
+      align-items:center;
+    }
+
+    .menuItemDietaryBadge{
+      display:inline-flex;
+      align-items:center;
+      line-height:1;
+      font-family:'Figtree', system-ui, -apple-system, sans-serif;
+      font-size:10px;
+      font-weight:600;
+      padding:2px 5px;
+      border-radius:999px;
+      background:#d1fae5;
+      color:#065f46;
+    }
+
+    .menuItemCard.expanded .menuItemDietaryBadges{
+      display:none;
+    }
+
+    /* Allergen + dietary info sections (expanded card only) */
+    .menuItemInfo{
+      display:none;
+      flex-direction:column;
+      gap:4px;
+      margin-bottom:8px;
+    }
+
+    .menuItemCard.expanded .menuItemInfo{
+      display:flex;
+    }
+
+    .menuItemInfoRow{
+      font-family:'Figtree', system-ui, -apple-system, sans-serif;
+      font-size:13px;
+      line-height:1.4;
+      color:var(--h-text);
+    }
+
+    .menuItemInfoLabel{
+      display:inline;
+      font-size:11px;
+      font-weight:600;
+      color:#6b7280;
+      text-transform:uppercase;
+      letter-spacing:0.05em;
+      margin-right:6px;
+    }
+
     /* Description: 2-line clamp with ellipsis */
     .menuItemDescription{
       font-family:'Figtree', system-ui, -apple-system, sans-serif;
@@ -2441,6 +2495,8 @@
                 category_name: getCategoryNameForItem(product),
                 base_price_pence: row.price_override_pence ?? product.price_pence ?? 0,
                 capacity_units: Number(product.capacity_units || 0),
+                allergens: Array.isArray(product.allergens) ? product.allergens : [],
+                dietary_flags: Array.isArray(product.dietary_flags) ? product.dietary_flags : [],
                 is_sold_out: false,
                 sort_order: row.sort_order ?? product.sort_order ?? 9999,
                 category_sort_order: getCategorySortForItem(product)
@@ -2462,6 +2518,8 @@
                 category_name: getCategoryNameForItem(bundle),
                 base_price_pence: row.price_override_pence ?? bundle.price_pence ?? 0,
                 capacity_units: Number(bundle.capacity_units || 0),
+                allergens: [],
+                dietary_flags: [],
                 is_sold_out: false,
                 sort_order: row.sort_order ?? bundle.sort_order ?? 9999,
                 category_sort_order: getCategorySortForItem(bundle)
@@ -2673,6 +2731,8 @@
                         <div class="menuPriceHint">${priceHint}</div>
                       </div>
                     </div>
+                    ${renderDietaryBadges(item)}
+                    ${renderItemInfoSections(item)}
                     ${item.description ? `<div class="menuItemDescription">${escapeHtml(item.description)}</div>` : ""}
                   </div>
                 </div>
@@ -2698,6 +2758,71 @@
 
         setupMenuScrollSpy();
         wireMenuCardExpand();
+      }
+
+      const DIETARY_BADGE_LABELS = {
+        vegetarian: "V",
+        vegan: "VG",
+        gluten_free: "GF",
+        dairy_free: "DF",
+        nut_free: "NF"
+      };
+
+      const DIETARY_FULL_LABELS = {
+        vegetarian: "Vegetarian",
+        vegan: "Vegan",
+        gluten_free: "Gluten-free",
+        dairy_free: "Dairy-free",
+        nut_free: "Nut-free"
+      };
+
+      const ALLERGEN_LABELS = {
+        cereals_gluten: "Cereals (gluten)",
+        crustaceans: "Crustaceans",
+        eggs: "Eggs",
+        fish: "Fish",
+        peanuts: "Peanuts",
+        soybeans: "Soybeans",
+        milk: "Milk",
+        nuts: "Tree nuts",
+        celery: "Celery",
+        mustard: "Mustard",
+        sesame: "Sesame",
+        sulphites: "Sulphites",
+        lupin: "Lupin",
+        molluscs: "Molluscs"
+      };
+
+      function renderDietaryBadges(item) {
+        const flags = Array.isArray(item.dietary_flags) ? item.dietary_flags : [];
+        if (!flags.length) return "";
+        const badges = flags
+          .map((f) => DIETARY_BADGE_LABELS[f])
+          .filter(Boolean)
+          .map((label) => `<span class="menuItemDietaryBadge">${escapeHtml(label)}</span>`)
+          .join("");
+        if (!badges) return "";
+        return `<div class="menuItemDietaryBadges" aria-label="Dietary flags">${badges}</div>`;
+      }
+
+      function renderItemInfoSections(item) {
+        const allergens = Array.isArray(item.allergens) ? item.allergens : [];
+        const flags = Array.isArray(item.dietary_flags) ? item.dietary_flags : [];
+
+        const allergenLabels = allergens.map((a) => ALLERGEN_LABELS[a]).filter(Boolean);
+        const flagLabels = flags.map((f) => DIETARY_FULL_LABELS[f]).filter(Boolean);
+
+        if (!allergenLabels.length && !flagLabels.length) return "";
+
+        const rows = [];
+        if (allergenLabels.length) {
+          rows.push(`<div class="menuItemInfoRow"><span class="menuItemInfoLabel">Contains:</span>${escapeHtml(allergenLabels.join(", "))}</div>`);
+        }
+        if (flagLabels.length) {
+          rows.push(`<div class="menuItemInfoRow"><span class="menuItemInfoLabel">Suitable for:</span>${escapeHtml(flagLabels.join(", "))}</div>`);
+        }
+
+        return `<div class="menuItemInfo">${rows.join("")}</div>`;
       }
 
       function renderAddZoneContent(item, ordersHidden) {
