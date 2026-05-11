@@ -345,6 +345,50 @@ ALTER TABLE drops DROP COLUMN is_radius_restricted;
 ```
 Verify no Edge Function or UI references it before running.
 
+---
+
+T3-13: Capacity driver — multi-mode support
+
+**Status:** Open. Pre-launch critical — must land before first vendor goes live.
+
+The platform currently models capacity via a single `capacity_category` (text slug, nullable) and `capacity_units_total` (integer). This works for vendors with one capacity-driving item type, but breaks down in two common real-world scenarios: vendors whose capacity is better understood as a total order count regardless of what's in each basket, and vendors whose capacity pool is shared across multiple item categories.
+
+**Three modes to support**
+
+**(1) Single category — current behaviour**
+One category drives capacity. Every unit of that category ordered draws from the pool. Non-capacity categories are unrestricted. Example: 40 pizzas; drinks don't count.
+
+**(2) Order count — new, simple**
+Capacity is a ceiling on total orders, not tied to any category. Every order placed draws one unit from the pool regardless of contents. Example: a caterer who can handle 30 orders per service regardless of what's in them. Simpler than the current model — no category association needed, just a total and a count of orders placed.
+
+**(3) Multi-category shared pool — new, moderate complexity**
+Multiple categories all draw from a single shared capacity total. The vendor sets one number; any order containing items from any of the designated capacity categories consumes units from that shared pool. Example: vendor sets 40 capacity; burgers, wraps, and sandwiches all contribute toward the 40 — the drop closes when the pool is exhausted regardless of which category filled it.
+
+This is one pool, multiple contributing categories — not independent caps per category. That distinction keeps the implementation tractable.
+
+**Deferred modes — spec only, do not build**
+
+*Time-slot / collection window* — X customers per defined slot. Relevant once busy collection drops are common. Requires slot selection in order.html and a different capacity display model. Revisit when vendor feedback confirms the friction.
+
+*Ingredient-constrained* — capacity bound by a raw material shared across items. Requires vendors to do input costing the platform does not support. V2+ only.
+
+**Downstream surfaces affected by modes (2) and (3)**
+
+- `drops` schema — `capacity_driver` type field needed; multi-category mode needs a `capacity_categories` join or array column. Schema changes are Ed's responsibility via the Supabase SQL editor before any build begins.
+- `create-order` / capacity check logic — currently counts units from one category; must branch by driver type
+- `order.html` — capacity display and real-time reservation must reflect the correct pool
+- `v_drop_summary` / `v_drop_menu_item_stock` — capacity consumed calculation changes by driver type
+- Service Board — capacity bar reads from the same views; should be unaffected once views are correct
+- Drop Studio — capacity setup UI needs mode selector and multi-category picker
+
+**Warning**
+Modes (2) and (3) touch the capacity check inside `create-order`, which is payment-critical. Any change here must be verified end-to-end against a real Stripe test order before shipping. Do not build until T5-A3 (RLS rewrite) is complete.
+
+**Sequencing**
+Order-count (mode 2) first — simpler than the current model, unblocks a real vendor type. Multi-category (mode 3) second, as its own focused build session. Schema changes required before either build; Ed to run via SQL editor once schema design is agreed in Claude Chat.
+
+Supersedes T7-13.
+
 ### Tier 4 — Enhancements that will impress
 
 T4-1: Recurring series — actually create drops ✓ COMPLETE
@@ -3047,27 +3091,8 @@ workspace, freeze drop, revoke host access, notify affected customers.
 Hopefully rarely used, but required before the platform is operating
 at scale without direct trust in every participant.
 
-T7-13: Capacity driver concept and modelling
-The platform currently models capacity via `capacity_category`
-(text, now nullable post-PR-3) and `capacity_units_total`
-(integer). This implicitly assumes capacity is menu-driven —
-vendors think in terms of "I can make 40 pizzas." Real-world
-capacity may also be order-driven ("I can handle 30 orders
-regardless of items"), time-driven ("I can serve 10 customers
-per 30-minute slot"), or hybrid. Review whether the data model
-needs to express capacity as a typed driver (units / orders /
-time-slots) rather than a free-text category. Surfaced during
-PR 3 (`create-drop`) when the legacy `'pizza'` default was
-removed and the broader question of how capacity should be
-modelled became visible.
-
-- With W-4 closed by orphan-text refusal in update-drop (PR 4b),
-  the redundant capacity_category non-null check in
-  transition-drop-status:71-74 becomes a candidate for removal.
-  Slug field is provably non-null only when the FK is non-null
-  after the guard lands. Removing the check is a one-line change
-  but adds noise to PR 4b for no behavioural benefit. Defer to
-  T7-13.
+T7-13: Capacity driver concept and modelling — SUPERSEDED
+Promoted to Tier 3 as T3-13. See T3-13 for full spec.
 
 T7-14: Multi-admin access
 Platform-level admin access is currently gated to a single hardcoded
