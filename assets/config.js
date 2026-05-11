@@ -7,60 +7,52 @@ window.HEARTH_CONFIG = {
   STRIPE_PUBLISHABLE_KEY: "pk_test_51TPHfyDdq1ydYXxzvZxiVzRARP46G6o1V72V8pVw9Jvfb3BbpG1xlGDXSUNydCpXTYb3Tc76J8hkM8Gufs4tnhhq00lwmuhtUC"
 };
 
-// Singleton Supabase client with manual Authorization header attachment.
+// Singleton Supabase client with per-request session JWT injection.
 //
 // Background: supabase-js does not reliably attach the user session JWT
-// to outbound PostgREST requests when the apikey is in the new publishable
-// format (sb_publishable_...). Without this manual handling, authenticated
-// mutations silently fail with HTTP 204 / zero rows changed.
+// to outbound PostgREST requests when the apikey is in the new
+// publishable format (sb_publishable_...). The prior workaround set the
+// header asynchronously via auth.getSession().then(...), but this
+// raced with the first batch of page queries — initial reads went out
+// as anon and RLS silently denied any non-public data.
 //
-// This singleton:
-//   1. Creates the client with persistSession + autoRefreshToken
-//   2. Reads any existing session from localStorage on startup
-//   3. If a session exists, sets Authorization: Bearer <jwt> on the rest
-//      client's headers
-//   4. Listens to onAuthStateChange to keep the header in sync as the
-//      session changes (signin, signout, token refresh)
-//
-// Pages that use this singleton get authenticated mutations working.
-// Pages that still call createClient() inline do NOT benefit and will
-// continue to silently fail until migrated.
+// This version injects the session JWT per-request via a global.fetch
+// wrapper. Every PostgREST call reads the current session at fetch
+// time and attaches Authorization: Bearer <jwt> if a session exists.
+// Auth (/auth/v1/) and Storage requests are left untouched. Edge
+// Functions (/functions/v1/) handle their own JWT attachment via
+// supabase-js's invoke() and don't need help here.
 window._getHearthClient = function () {
   if (window._hearthClientInstance) {
     return window._hearthClientInstance;
   }
-
   var url = window.HEARTH_CONFIG.SUPABASE_URL;
   var anonKey = window.HEARTH_CONFIG.SUPABASE_ANON_KEY;
 
-  var client = window.supabase.createClient(url, anonKey, {
+  var client;
+
+  client = window.supabase.createClient(url, anonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true
+    },
+    global: {
+      fetch: async function (input, init) {
+        var requestUrl = typeof input === "string" ? input : (input && input.url) || "";
+        if (requestUrl.indexOf("/rest/v1/") !== -1) {
+          try {
+            var result = await client.auth.getSession();
+            var session = result && result.data ? result.data.session : null;
+            if (session && session.access_token) {
+              init = init || {};
+              init.headers = new Headers(init.headers || {});
+              init.headers.set("Authorization", "Bearer " + session.access_token);
+            }
+          } catch (e) { /* fall through with default headers */ }
+        }
+        return fetch(input, init);
+      }
     }
-  });
-
-  // Apply a session's JWT to all outbound REST requests, or remove the
-  // override if there's no session (so the library falls back to the
-  // apikey as Bearer, the documented unauthenticated behaviour).
-  function applyAuthHeader(session) {
-    if (!client.rest || !client.rest.headers) return;
-    if (session && session.access_token) {
-      client.rest.headers["Authorization"] = "Bearer " + session.access_token;
-    } else {
-      delete client.rest.headers["Authorization"];
-    }
-  }
-
-  // On startup, check for an existing persisted session and apply it.
-  client.auth.getSession().then(function (result) {
-    var session = result && result.data ? result.data.session : null;
-    applyAuthHeader(session);
-  });
-
-  // Keep the header in sync as the session changes.
-  client.auth.onAuthStateChange(function (event, session) {
-    applyAuthHeader(session);
   });
 
   window._hearthClientInstance = client;
