@@ -1103,6 +1103,7 @@ index.
 
 ### Tier 3 — Should be done before regular use
 - T3-12b — Order page: neighbourhood delivery area enforcement (radius mode) — open. T3-12a (postcode prefix mode) closed 2026-05-03: schema discriminator added (`delivery_area_type`, `allowed_postcode_prefixes`); Drop Studio UI for prefix entry; client-side onBlur validation; server-side enforcement in `create-order`; widened `update-drop` ALLOWED_FIELDS with paired-field invariants. Radius mode reserved for T3-12b.
+- T3-13: Capacity driver multi-mode support (order-count + multi-category shared pool) — pre-launch critical, schema design in Claude Chat before build
 
 ### Tier 4 — Enhancements that will impress
 - T4-29 — Series intelligence in Insights — open
@@ -1197,7 +1198,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T7-10 — Geographic map view — open
 - T7-11 — Platform economics dashboard — open
 - T7-12 — Moderation and intervention tooling — open
-- T7-13 — Capacity driver concept and modelling — open
+- T7-13: SUPERSEDED by T3-13 — see Tier 3
 - T7-14 — Multi-admin access (admins table) — open
 - T7-15 — Admin write capability — open
 - T7-16 — Business partner admin access — open
