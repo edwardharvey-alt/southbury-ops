@@ -390,31 +390,32 @@
         }
 
         var response = await fetch(
-          window.HEARTH_CONFIG.SUPABASE_URL + '/rest/v1/vendors',
+          window.HEARTH_CONFIG.SUPABASE_URL + '/functions/v1/create-vendor',
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'apikey': window.HEARTH_CONFIG.SUPABASE_ANON_KEY,
-              'Authorization': 'Bearer ' + session.access_token,
-              'Prefer': 'return=minimal'
+              'Authorization': 'Bearer ' + session.access_token
             },
             body: JSON.stringify({
               name: name,
               slug: slug,
               display_name: displayName || name,
-              email: email,
-              onboarding_completed: false
+              email: email
             })
           }
         );
 
         if (!response.ok) {
-          var err = await response.json();
-          if (response.status === 409 || (err.code === "23505") || (err.message && err.message.includes("duplicate"))) {
-            showError("A vendor with this slug already exists.");
+          var err = {};
+          try { err = await response.json(); } catch (_) {}
+          if (response.status === 409) {
+            showError(err.error || "A vendor with this slug already exists.");
+          } else if (response.status === 401 || response.status === 403) {
+            showError(err.error || "Not authorised to create vendors.");
           } else {
-            throw new Error(err.message || "Insert failed");
+            throw new Error(err.error || err.message || "Vendor creation failed");
           }
           isSubmitting = false;
           submitEl.disabled = false;
