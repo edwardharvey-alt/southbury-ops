@@ -703,6 +703,14 @@
       margin-right:6px;
     }
 
+    /* Small "Contains: …" line used in bundle picker and basket */
+    .menuItemAllergenLine{
+      font-family:'Figtree', system-ui, -apple-system, sans-serif;
+      font-size:11px;
+      line-height:1.4;
+      color:#6b7280;
+    }
+
     /* Description: 2-line clamp with ellipsis */
     .menuItemDescription{
       font-family:'Figtree', system-ui, -apple-system, sans-serif;
@@ -2805,6 +2813,14 @@
         return `<div class="menuItemDietaryBadges" aria-label="Dietary flags">${badges}</div>`;
       }
 
+      function renderAllergenLine(item) {
+        const allergens = Array.isArray(item.allergens) ? item.allergens : [];
+        if (!allergens.length) return "";
+        const labels = allergens.map((a) => ALLERGEN_LABELS[a]).filter(Boolean);
+        if (!labels.length) return "";
+        return `<div class="menuItemAllergenLine">Contains: ${escapeHtml(labels.join(", "))}</div>`;
+      }
+
       function renderItemInfoSections(item) {
         const allergens = Array.isArray(item.allergens) ? item.allergens : [];
         const flags = Array.isArray(item.dietary_flags) ? item.dietary_flags : [];
@@ -2968,6 +2984,7 @@
             name: productMenuItem.name,
             unit_price_pence: Number(productMenuItem.base_price_pence || 0),
             capacity_units: Number(productMenuItem.capacity_units || 0),
+            allergens: Array.isArray(productMenuItem.allergens) ? productMenuItem.allergens : [],
             quantity: nextQty
           });
         }
@@ -3073,6 +3090,9 @@
             const eachLine = qty > 1
               ? `<div class="basketItemMeta">${formatMoneyPence(unitPence)} each</div>`
               : "";
+            const allergenLine = item.type === "product"
+              ? renderAllergenLine(item)
+              : "";
 
             return `
               <div class="basketItem" data-item-id="${escapeHtml(item.key)}">
@@ -3080,6 +3100,7 @@
                   <div class="basketItemName">${escapeHtml(item.name)}</div>
                   <div class="basketItemPrice">${formatMoneyPence(lineTotalPence)}</div>
                 </div>
+                ${allergenLine}
                 ${optionsLine}
                 ${eachLine}
                 <div class="basketItemQty">
@@ -3231,7 +3252,9 @@
               name: product.name,
               description: product.description || "",
               category_name: getCategoryNameForItem(product),
-              image_url: product.image_url || ""
+              image_url: product.image_url || "",
+              allergens: Array.isArray(product.allergens) ? product.allergens : [],
+              dietary_flags: Array.isArray(product.dietary_flags) ? product.dietary_flags : []
             }];
           }
         } else if (lineType === "category_choice") {
@@ -3247,16 +3270,23 @@
               name: p.name,
               description: p.description || "",
               category_name: getCategoryNameForItem(p),
-              image_url: p.image_url || ""
+              image_url: p.image_url || "",
+              allergens: Array.isArray(p.allergens) ? p.allergens : [],
+              dietary_flags: Array.isArray(p.dietary_flags) ? p.dietary_flags : []
             }));
         } else {
-          options = getChoiceProducts(line.id).map((p) => ({
-            value: p.product_id,
-            name: p.product_name,
-            description: p.product_description || "",
-            category_name: p.category_name || "Other",
-            image_url: getProductById(p.product_id)?.image_url || ""
-          }));
+          options = getChoiceProducts(line.id).map((p) => {
+            const product = getProductById(p.product_id);
+            return {
+              value: p.product_id,
+              name: p.product_name,
+              description: p.product_description || "",
+              category_name: p.category_name || "Other",
+              image_url: product?.image_url || "",
+              allergens: Array.isArray(product?.allergens) ? product.allergens : [],
+              dietary_flags: Array.isArray(product?.dietary_flags) ? product.dietary_flags : []
+            };
+          });
         }
 
         const inputType = Number(line.max_choices || 1) > 1 ? "checkbox" : "radio";
@@ -3285,7 +3315,9 @@
                   />
                   <div class="bundleOptionBody">
                     <div class="bundleOptionName">${escapeHtml(opt.name)}</div>
+                    ${renderDietaryBadges(opt)}
                     <div class="bundleOptionSub">${escapeHtml(opt.description || opt.category_name || "")}</div>
+                    ${renderAllergenLine(opt)}
                   </div>
                   ${opt.image_url ? `<div class="bundleOptionMedia image" style="background-image:url('${escapeHtml(opt.image_url)}')"></div>` : ""}
                 </label>
