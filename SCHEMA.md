@@ -169,7 +169,20 @@ columns — query with array operators (`@>`, `&&`), not equality.
 `description`, `category_id` (FK to `categories`), `category` (text,
 legacy), `price_pence`, `capacity_units` (numeric, NOT NULL DEFAULT 1),
 `is_active`, `sort_order`, `travels_well`, `suitable_for_collection`,
-`prep_complexity` (text, default 'standard').
+`prep_complexity` (text, default 'standard'),
+`allergens` (text[] NOT NULL DEFAULT '{}'),
+`dietary_flags` (text[] NOT NULL DEFAULT '{}'),
+`image_url` (text, nullable).
+
+Allergen and dietary type note: the underlying Postgres ENUM types
+`allergen` and `dietary_flag` were created during T4-31d/T4-31e but
+the columns are deliberately stored as `text[]`, not as
+`allergen[]` / `dietary_flag[]`. PostgREST (and the Supabase JS
+client by extension) cannot write custom ENUM array types over the
+REST surface — writes fail with a binary-encoding error. Value
+validation moves to the application layer via the constants in
+`drop-menu.html` and `order.html` (`ALLERGEN_LABELS` etc.). See
+operational learning #42 in CLAUDE.md.
 
 **bundles** — fixed or choose-your-own combinations.
 `vendor_id` (FK, nullable — note this; older bundles may not have it

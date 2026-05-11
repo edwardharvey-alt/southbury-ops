@@ -794,6 +794,62 @@ end-to-end on Test 11 deploy preview; replace, remove flows;
 order page renders mixed-state cards correctly; mobile capture
 verified.
 
+T4-31d: Allergen capture and display ✓ COMPLETE 2026-05-11
+
+**Status:** ✓ COMPLETE 2026-05-11. Tier 4. Customer-facing allergen
+information across order.html, the bundle picker, and the basket.
+
+**Closure note (2026-05-11):**
+
+- Schema: `products.allergens` (text[] NOT NULL DEFAULT '{}') added.
+  The Postgres `allergen` ENUM type was created up front but is
+  unused by application code — see operational learning #42 in
+  CLAUDE.md for the PostgREST-can't-write-ENUM-array reason the
+  columns are `text[]` rather than `allergen[]`.
+- Edge Functions: `create-product` and `update-product` accept
+  `allergens` in their ALLOWED_FIELDS (shipped earlier in the
+  T4-31d batch, PR #236).
+- drop-menu.html: allergen pill picker on the product editor with
+  the canonical 14-allergen set (PR #237).
+- order.html: expanded menu cards render a "Contains: …" line
+  above the description using the `ALLERGEN_LABELS` lookup; bundle
+  picker choice cards render a small muted "Contains: …" line
+  beneath each option; basket product line items render the same
+  "Contains: …" line beneath the item name. Bundles deliberately
+  show nothing allergen-related — bundle composition can vary by
+  selection, so allergen surfacing happens at the constituent
+  product card and inside the basket summary for products. Order
+  page changes shipped this session.
+
+**Operational learning surfaced:** PostgREST cannot write
+custom Postgres ENUM array types via the Supabase JS client — use
+`text[]` columns and validate at the application layer. Recorded as
+operational learning #42 in CLAUDE.md.
+
+T4-31e: Dietary flag capture and display ✓ COMPLETE 2026-05-11
+
+**Status:** ✓ COMPLETE 2026-05-11. Tier 4. Customer-facing dietary
+flag information across order.html and the bundle picker.
+
+**Closure note (2026-05-11):**
+
+- Schema: `products.dietary_flags` (text[] NOT NULL DEFAULT '{}')
+  added. As with allergens, the `dietary_flag` ENUM type exists
+  but the column is `text[]` for PostgREST write compatibility —
+  see operational learning #42.
+- Edge Functions: `create-product` and `update-product` accept
+  `dietary_flags` in their ALLOWED_FIELDS (PR #236).
+- drop-menu.html: dietary flag pill picker on the product editor
+  with the canonical five-flag set (vegetarian, vegan, gluten_free,
+  dairy_free, nut_free) (PR #237).
+- order.html: compact menu cards show abbreviated dietary badges
+  (V / VG / GF / DF / NF) immediately below the dish name in a
+  muted-green pill style; expanded cards show a "Suitable for: …"
+  line with the full labels above the description; bundle picker
+  choice cards show the same abbreviated badges beneath each
+  option name. Dietary flags are deliberately not shown in the
+  basket — allergens are the safety-critical surface there.
+
 T4-31b-fu1: Server-side HEIC conversion fallback
 
 **Status:** Open. Tier 4. Deferred — build only when a real

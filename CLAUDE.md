@@ -136,7 +136,11 @@ regeneration query is at the top of that file.
   collection_point_description (text), delivery_area_description (text),
   customer_notes_enabled (boolean, default true)
 - drop_menu_items — items enabled for a specific drop (product or bundle)
-- products — catalogue products (vendor-scoped)
+- products — catalogue products (vendor-scoped). `allergens` and
+  `dietary_flags` are `text[] NOT NULL DEFAULT '{}'` (T4-31d /
+  T4-31e). The matching Postgres `allergen` and `dietary_flag`
+  ENUM types exist in the database but are deliberately not used
+  as the column types — see operational learning #42.
 - bundles — catalogue bundles with bundle_lines and bundle_line_choice_products
 - categories — product/bundle groupings (vendor-scoped)
 - orders — customer orders (drop_id, customer details, status, pizzas field)
@@ -897,6 +901,26 @@ on top of the coding rules above.
     → 409 (Postgres SQLSTATE 23505). This pattern is required
     for any future "upload before save" photo flow because the
     storage path needs the row id before the row exists.
+
+42. **PostgREST cannot write custom Postgres ENUM array types via
+    the Supabase JS client. Use text[] columns instead.** Surfaced
+    during T4-31d / T4-31e (allergens and dietary flags). Postgres
+    ENUM types serialise fine over single-value reads but the
+    array variant (`allergen[]`, `dietary_flag[]`) cannot be
+    written through PostgREST — inserts and updates fail with a
+    binary-encoding error from the client, regardless of whether
+    the payload is sent as a JSON array, a Postgres array literal
+    string, or via `.rpc()`. The fix is to define the columns as
+    `text[]` with `DEFAULT '{}'` and move value validation to the
+    application layer via shared constants (`ALLERGEN_LABELS`,
+    `DIETARY_BADGE_LABELS`, `DIETARY_FULL_LABELS` in `order.html`;
+    matching option arrays in `drop-menu.html` and the Edge
+    Function whitelists). `products.allergens` and
+    `products.dietary_flags` follow this pattern. The
+    `allergen` and `dietary_flag` ENUM types exist in the
+    database but are unused by application code. Future
+    tag-array columns (e.g. dish tags, drop tags) should use
+    `text[]` from the outset for the same reason.
 
 ## Stripe Connect Express (T3-8)
 
