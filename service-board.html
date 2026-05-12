@@ -1820,21 +1820,36 @@
       }
 
       const [dropRes, summaryRes, ordersRes, items] = await Promise.all([
-        supabase.from("drops").select("*").eq("id", state.selectedDropId).single(),
+        supabase.functions.invoke('get-drop', { body: { drop_id: state.selectedDropId } }),
         supabase.from("v_drop_summary").select("*").eq("drop_id", state.selectedDropId).single(),
         supabase.from("v_drop_orders_summary").select("*").eq("drop_id", state.selectedDropId).order("created_at", { ascending: true }),
         loadExpandedOrderDetails(state.selectedDropId)
       ]);
 
-      if (dropRes.error) throw dropRes.error;
+      const dropData = (!dropRes.error && dropRes.data && !dropRes.data.error) ? dropRes.data : null;
       if (summaryRes.error) throw summaryRes.error;
       if (ordersRes.error) throw ordersRes.error;
+
+      // get-drop returns null gracefully when the drop is not found or
+      // is owned by another vendor. Mirror the cross-vendor branch
+      // below: clear state and reload. This replaces the throw-on-no-rows
+      // behaviour of the previous .single() call.
+      if (!dropData) {
+        localStorage.removeItem("hearth:selectedDropId");
+        state.selectedDropId = null;
+        state.drop = null;
+        state.dropSummary = null;
+        state.ordersSummary = [];
+        state.itemDetails = [];
+        await loadDrops();
+        return;
+      }
 
       // Vendor isolation assertion — defends against a stale
       // selectedDropId (e.g. from localStorage hearth:selectedDropId
       // written by a previous session on another vendor) pointing at a
       // drop that belongs to a different vendor. Mirrors scorecard.html.
-      if (dropRes.data && dropRes.data.vendor_id !== state.vendorId) {
+      if (dropData.vendor_id !== state.vendorId) {
         localStorage.removeItem("hearth:selectedDropId");
         state.selectedDropId = null;
         state.drop = null;
@@ -1847,7 +1862,7 @@
 
       localStorage.setItem("hearth:selectedDropId", state.selectedDropId);
 
-      state.drop = dropRes.data;
+      state.drop = dropData;
       state.dropSummary = summaryRes.data;
       state.ordersSummary = ordersRes.data || [];
       state.itemDetails = await enrichItemDetailsWithProductData(items || []);
