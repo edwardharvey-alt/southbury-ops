@@ -2734,7 +2734,14 @@ work.
 
 Cross-reference: T4-37 (parent verification surfaced this).
 
-### T5-B42 — Edge Function migration for authenticated drops table reads
+### T5-B42 — Edge Function migration for authenticated drops table reads ✓ COMPLETE
+
+**Status update (2026-05-12):** ✓ COMPLETE. Shipped across three PRs:
+- PR #244 — get-drop Edge Function + drop-manager.html rewire (loadSelectedDrop, duplicateDrop, createEventWindow source fetches)
+- PR #246 — list-drops Edge Function + service-board.html, drop-manager.html sibling window queries, brand-hearth.html rewires
+- PR #[this PR number] — home.html rewires (final session)
+
+All 10 identified direct PostgREST reads against the raw drops table on authenticated operator pages have been migrated. The platform has no remaining surfaces that depend on the user JWT being honoured by direct PostgREST queries for drops. Catering Direct (the triggering fixture — vendor with only draft drops) verified working end-to-end.
 
 **Status:** Open. Tier 5-B. Direct successor to T5-B16 (catalog writes migration), applied to drops reads.
 
