@@ -2840,6 +2840,18 @@ Mirror the T5-B16 sequencing — one function per session is safer than batching
 - After this ticket lands, the platform has no remaining surfaces that depend on the user JWT being honoured by direct PostgREST queries.
 - New operational learning candidate: when a brand-new vendor's Drop Studio appears broken (catalogue won't load, drops won't resolve), check whether that vendor has any drops in public status (live/scheduled/completed). If all their drops are drafts, you're hitting the auth-not-attached bug on direct drops table reads. The Edge Function pattern is the durable fix. Test fixtures for new vendors should include at least one live drop to avoid masking this symptom.
 
+### T5-B43 — Home page Payments card: Dashboard button routed to platform Stripe account ✓ COMPLETE 2026-05-12
+
+**Status:** ✓ COMPLETE. Shipped in PR #248.
+
+**Root cause:** The Dashboard button handler in home.html used a raw fetch() call to invoke the create-stripe-login-link Edge Function, passing only an Authorization header. Per CLAUDE.md operational learning #17, Edge Function calls from operator pages require both apikey and Authorization headers. Missing apikey caused the function call to fail silently and the button to route to the platform Stripe dashboard instead of the vendor's own Express dashboard.
+
+**Fix:** Migrated the raw fetch() to sb.functions.invoke('create-stripe-login-link', { body: { vendor_id: state.vendor.id } }). The Edge Function itself was unchanged — it already correctly called stripe.accounts.createLoginLink(vendor.stripe_account_id). Page-only change, no deploy required.
+
+**Verified:** Test 11 and Catering Direct both open their own vendor-specific connect.stripe.com/express/... dashboard correctly.
+
+**Cross-reference:** Operational learning #17 (both apikey and Authorization headers required for Edge Function calls from operator pages).
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live
