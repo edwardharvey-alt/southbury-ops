@@ -3,7 +3,7 @@
 
 window.HEARTH_CONFIG = {
   SUPABASE_URL: "https://tvqhhjvumgumyetvpgid.supabase.co",
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2cWhoanZ1bWd1bXlldHZwZ2lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MDkxNzAsImV4cCI6MjA4NzA4NTE3MH0.XrL9Ir6iZzaZyqP0dCW4m7AzE03qVdB-jphjqOVwlyM",
+  SUPABASE_ANON_KEY: "sb_publishable_GftZ3Mw1M2-jb2bStjv80Q_gRDC9FzD",
   STRIPE_PUBLISHABLE_KEY: "pk_test_51TPHfyDdq1ydYXxzvZxiVzRARP46G6o1V72V8pVw9Jvfb3BbpG1xlGDXSUNydCpXTYb3Tc76J8hkM8Gufs4tnhhq00lwmuhtUC"
 };
 
