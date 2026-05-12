@@ -1573,16 +1573,13 @@
       if (res.error) throw res.error;
       if (res.data?.length) return res.data[0];
 
-      res = await supabase
-        .from("drops")
-        .select("*")
-        .eq("vendor_id", vendorId)
-        .eq("status", "draft")
-        .order("created_at", { ascending: false })
-        .limit(1);
+      const draftRes = await supabase.functions.invoke('list-drops', {
+        body: { status: ['draft'], limit: 1 }
+      });
 
-      if (res.error) throw res.error;
-      if (res.data?.length) return res.data[0];
+      if (!draftRes.error && Array.isArray(draftRes.data) && draftRes.data.length) {
+        return draftRes.data[0];
+      }
 
       return null;
     }
@@ -1676,12 +1673,12 @@
 
       // Suppress if vendor already has drops — nudge is for first-timers only
       try {
-        const { count, error } = await supabase
-          .from('drops')
-          .select('id', { count: 'exact', head: true })
-          .eq('vendor_id', state.vendor.id);
+        const { data, error } = await supabase.functions.invoke('list-drops', {
+          body: {}
+        });
 
-        if (error || count > 0) return;
+        const dropCount = (!error && Array.isArray(data)) ? data.length : 0;
+        if (dropCount > 0) return;
       } catch (e) {
         return;
       }

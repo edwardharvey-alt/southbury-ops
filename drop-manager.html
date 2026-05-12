@@ -4149,13 +4149,11 @@
         const sourceDate = new Date(sourceDrop.delivery_start);
         const sourceDateStr = `${sourceDate.getFullYear()}-${String(sourceDate.getMonth() + 1).padStart(2, "0")}-${String(sourceDate.getDate()).padStart(2, "0")}`;
 
-        const { data: hostDrops, error: countError } = await supabase
-          .from("drops")
-          .select("id, delivery_start")
-          .eq("host_id", sourceDrop.host_id)
-          .eq("vendor_id", state.vendorId);
+        const { data: hostDrops, error: countError } = await supabase.functions.invoke('list-drops', {
+          body: { host_id: sourceDrop.host_id }
+        });
 
-        if (!countError && hostDrops) {
+        if (!countError && Array.isArray(hostDrops)) {
           windowCount = hostDrops.filter((d) => {
             if (!d.delivery_start) return false;
             const dDate = new Date(d.delivery_start);
@@ -4164,13 +4162,11 @@
           }).length;
         }
       } else if (sourceDrop.host_id) {
-        const { data: hostDrops, error: countError } = await supabase
-          .from("drops")
-          .select("id")
-          .eq("host_id", sourceDrop.host_id)
-          .eq("vendor_id", state.vendorId);
+        const { data: hostDrops, error: countError } = await supabase.functions.invoke('list-drops', {
+          body: { host_id: sourceDrop.host_id }
+        });
 
-        if (!countError && hostDrops) {
+        if (!countError && Array.isArray(hostDrops)) {
           windowCount = hostDrops.length;
         }
       }
@@ -4346,17 +4342,17 @@
       content.innerHTML = '<div class="helperText">Loading\u2026</div>';
 
       try {
-        const { data, error } = await supabase
-          .from("drops")
-          .select("id, name, delivery_start, delivery_end")
-          .eq("window_group_id", groupId)
-          .eq("vendor_id", state.vendorId)
-          .neq("id", state.selectedDropId)
-          .order("delivery_start", { ascending: true });
+        const { data: invokeData, error } = await supabase.functions.invoke('list-drops', {
+          body: { window_group_id: groupId }
+        });
 
         if (error) throw error;
 
-        if (!data || !data.length) {
+        const data = Array.isArray(invokeData)
+          ? invokeData.filter((d) => d.id !== state.selectedDropId)
+          : [];
+
+        if (!data.length) {
           /* No siblings remain. Post PR 4b the survivor un-grouping
              is performed server-side by remove-event-window's RPC
              and reflected in state.drop.window_group_id by the click
