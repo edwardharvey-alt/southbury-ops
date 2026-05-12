@@ -2719,6 +2719,105 @@ work.
 
 Cross-reference: T4-37 (parent verification surfaced this).
 
+### T5-B42 — Edge Function migration for authenticated drops table reads
+
+**Status:** Open. Tier 5-B. Direct successor to T5-B16 (catalog writes migration), applied to drops reads.
+
+**Issue:**
+
+The platform's publishable-key auth-attach issue (operational learnings #12, #13, #14, #16, #17) is still active for direct PostgREST reads against tables with restrictive anon SELECT policies. Authenticated requests are silently treated as anon — the JWT is attached to outbound requests (verified via the assets/config.js global.fetch wrapper) but PostgREST does not honour it for direct table reads.
+
+For the `drops` table specifically, the anon SELECT policy is scoped to `status IN ('live', 'scheduled', 'completed')`. Authenticated users cannot see their own draft drops via direct PostgREST queries. The bug is normally masked because:
+
+1. Drop Studio loads its drop list from `v_drop_summary` (which has no RLS — anon sees everything)
+2. Most vendors have at least one live drop, so anon can see at least some rows
+
+But when a vendor has ONLY draft drops (e.g., a brand-new vendor mid-onboarding), the bug becomes fully visible: `loadSelectedDrop` returns null for every drop, the catalogue won't render, and Drop Studio appears completely broken.
+
+**Confirmed in production 11 May 2026** against Catering Direct (vendor_id `a2a757fd-6882-49f8-9a54-7e682eab1e90`). Verification:
+
+- SQL editor (service role): drops with that vendor_id exist
+- Browser console as authenticated Test 11 user: `from('drops').select().limit(10)` returned only `live` drops across multiple vendor_ids — the unmistakable anon signature
+- Healthy Habits Cafe and Test 11 unaffected because both have live drops that mask the bug
+
+**Architectural fix:**
+
+Migrate direct PostgREST reads against the `drops` table to Edge Functions, following the canonical pattern from operational learning #16:
+
+- `verify_jwt = false` in `supabase/config.toml`
+- Manual JWT verification via `anonClient.auth.getUser()`
+- Vendor ownership check via service-role client against `vendors.auth_user_id`
+- Service-role read with tenancy belt (`vendor_id` filter)
+- Top-level try/catch with `jsonResponse` inline closure
+- CORS via `getCorsHeaders()` from `_shared/cors.ts`
+
+**Prerequisite investigation (already specced):**
+
+Run the codebase audit prompt for all direct `drops` table reads. For each match, decide:
+
+- **Migrate to Edge Function** — any read that fetches by drop_id and needs to see drafts (the operator's own drops in Drop Studio, Service Board's selected-drop fetch, Scorecard's drop fetch).
+- **Stay on v_drop_summary** — any list read that's already going through the view and doesn't need anon-invisible rows.
+- **Stay on PostgREST** — any read where the table-level anon policy is permissive enough for the use case (e.g., a public host-view fetch of a live drop is fine via the existing anon policy).
+
+Likely candidates for migration (subject to investigation confirmation):
+
+- `drop-manager.html` `loadSelectedDrop()` — fetches a specific drop by ID
+- `service-board.html` selected-drop fetch — same shape
+- `scorecard.html` drop fetch — same shape
+
+**Function spec:**
+
+`get-drop` Edge Function:
+
+- Input: `{ drop_id: uuid }`
+- Auth: in-function JWT verification, vendor ownership check
+- Returns: full drop row (all columns) or 404 if not owned or not found
+- Tenancy belt: `where drops.id = drop_id AND drops.vendor_id = <ownership-resolved vendor_id>`
+- CORS: `getCorsHeaders()` from `_shared/cors.ts` (preview-domain safe)
+
+Possibly also `list-drops` if the investigation surfaces a list-style read that needs migrating:
+
+- Input: `{ status?: text[], limit?: int, host_id?: uuid }`
+- Returns: array of drop rows for the calling vendor only
+
+**Reference patterns:**
+
+- `supabase/functions/get-host/index.ts` — single-row fetch with ownership check
+- `supabase/functions/list-hosts/index.ts` — list fetch with ownership check
+- `supabase/functions/update-drop/index.ts` — auth + ownership pattern (read won't need ALLOWED_FIELDS but the auth + ownership block is the precedent)
+- Operational learning #16 — canonical pattern
+
+**Estimated effort:** 2–3 Claude Code build sessions.
+
+1. `get-drop` function + drop-manager.html rewire (1 session)
+2. `list-drops` function (if needed) + remaining page rewires (1 session)
+3. Verification + close-out (partial session)
+
+Mirror the T5-B16 sequencing — one function per session is safer than batching, per CLAUDE.md rule #15 (deploy-before-merge cadence).
+
+**Verification checklist:**
+
+- Catering Direct fixture: create a fresh draft, the draft renders correctly in Drop Studio, "Loading categories…" resolves, the catalogue loads, "selectedDropId did not resolve" warning is gone
+- Test 11 regression check: existing drops still load correctly, no behavioural change
+- Cross-vendor isolation maintained: vendor A cannot fetch vendor B's drop via the Edge Function
+- Service Board / Scorecard unaffected if those surfaces are out of scope; migrated together if they're in scope
+- Captured-headers test: confirm no remaining direct PostgREST reads against drops on the migrated pages
+
+**Cross-references:**
+
+- T5-B16 (catalog writes migration — same pattern, precedent)
+- T5-B17 (underlying auth-not-attached bug — partial; this ticket addresses one surface but does not close T5-B17)
+- T5-A3 (RLS rewrite — broader workstream that eventually removes the dependency on permissive anon policies entirely)
+- Operational learning #14 (auth-not-attached symptom)
+- Operational learning #16 (Edge Function migration as canonical authenticated DB access pattern)
+
+**Notes:**
+
+- Read-side mirror of T5-B16. Same root cause drove both.
+- The Catering Direct vendor fixture should be retained for verification — it's the simplest reproduction case of the bug.
+- After this ticket lands, the platform has no remaining surfaces that depend on the user JWT being honoured by direct PostgREST queries.
+- New operational learning candidate: when a brand-new vendor's Drop Studio appears broken (catalogue won't load, drops won't resolve), check whether that vendor has any drops in public status (live/scheduled/completed). If all their drops are drafts, you're hitting the auth-not-attached bug on direct drops table reads. The Edge Function pattern is the durable fix. Test fixtures for new vendors should include at least one live drop to avoid masking this symptom.
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live

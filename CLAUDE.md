@@ -1174,6 +1174,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B37 — save-bundle-line update-path partial-failure note — open
 - T5-B40 — Audit v_*_enriched views for missing columns — open
 - T5-B41 — drop-manager.html enrichHostPreview appends rather than replaces (cosmetic) — open
+- T5-B42 — Edge Function migration for authenticated drops table reads — open
 
 ### Tier 6 — Production readiness
 - T6-2 — Local development environment — open
