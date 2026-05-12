@@ -349,43 +349,58 @@ Verify no Edge Function or UI references it before running.
 
 T3-13: Capacity driver — multi-mode support
 
-**Status:** Open. Pre-launch critical — must land before first vendor goes live.
+**Status:** Open. Pre-launch critical — must land before Healthy Habits Cafe goes live. All three modes required.
 
-The platform currently models capacity via a single `capacity_category` (text slug, nullable) and `capacity_units_total` (integer). This works for vendors with one capacity-driving item type, but breaks down in two common real-world scenarios: vendors whose capacity is better understood as a total order count regardless of what's in each basket, and vendors whose capacity pool is shared across multiple item categories.
+**The problem with the current model**
+
+The platform currently models capacity via a single `capacity_category` (text slug, nullable) and `capacity_units_total` (integer), with individual items carrying a `capacity_units` decimal field. Two problems: (1) decimal capacity units are confusing in practice — no vendor thinks in fractions of a slot; (2) asking "how many units does this item consume?" at the item level is really a drop-level configuration question dressed as a product attribute. The decimal field is retired as part of this ticket.
 
 **Three modes to support**
 
-**(1) Single category — current behaviour**
-One category drives capacity. Every unit of that category ordered draws from the pool. Non-capacity categories are unrestricted. Example: 40 pizzas; drinks don't count.
+**(1) By item type — replaces current behaviour**
+One category drives capacity. Every item from that category ordered draws one slot from the pool. Items in other categories are unrestricted. Example: 40 pizzas; drinks and sides don't count.
 
-**(2) Order count — new, simple**
-Capacity is a ceiling on total orders, not tied to any category. Every order placed draws one unit from the pool regardless of contents. Example: a caterer who can handle 30 orders per service regardless of what's in them. Simpler than the current model — no category association needed, just a total and a count of orders placed.
+**(2) By order — new**
+Capacity is a ceiling on total orders, not tied to any category. Every order placed draws one slot regardless of contents. Example: a café that can handle 30 orders per service regardless of what's in them. Simplest mode — no category association needed.
 
-**(3) Multi-category shared pool — new, moderate complexity**
-Multiple categories all draw from a single shared capacity total. The vendor sets one number; any order containing items from any of the designated capacity categories consumes units from that shared pool. Example: vendor sets 40 capacity; burgers, wraps, and sandwiches all contribute toward the 40 — the drop closes when the pool is exhausted regardless of which category filled it.
+**(3) By shared pool — new**
+Multiple categories all draw from a single shared total. Any item from any of the designated categories consumes one slot from the shared pool. Example: vendor sets 40 capacity; burgers, wraps, and sandwiches all contribute — the drop closes when the pool is exhausted regardless of which category filled it. One pool, multiple contributing categories — not independent caps per category.
 
-This is one pool, multiple contributing categories — not independent caps per category. That distinction keeps the implementation tractable.
+**Item-level model**
 
-**Deferred modes — spec only, do not build**
+The `capacity_units` decimal field is retired. Replaced with a binary: does this item count toward capacity — yes or no? If yes, it always counts as 1 slot.
 
-*Time-slot / collection window* — X customers per defined slot. Relevant once busy collection drops are common. Requires slot selection in order.html and a different capacity display model. Revisit when vendor feedback confirms the friction.
+One exception: an optional integer field (whole numbers 1, 2, or 3 only — no decimals) for items that genuinely consume multiple slots (e.g. a sharing platter that takes as long as two mains). This field defaults to 1 and is hidden unless the vendor explicitly needs it. Most vendors will never touch it. This field only applies when the item's category is a capacity driver — it has no effect otherwise.
 
-*Ingredient-constrained* — capacity bound by a raw material shared across items. Requires vendors to do input costing the platform does not support. V2+ only.
+**Drop Studio UX**
 
-**Downstream surfaces affected by modes (2) and (3)**
+Capacity setup becomes a short mode selector in Drop Studio Basics pane:
 
-- `drops` schema — `capacity_driver` type field needed; multi-category mode needs a `capacity_categories` join or array column. Schema changes are Ed's responsibility via the Supabase SQL editor before any build begins.
-- `create-order` / capacity check logic — currently counts units from one category; must branch by driver type
-- `order.html` — capacity display and real-time reservation must reflect the correct pool
-- `v_drop_summary` / `v_drop_menu_item_stock` — capacity consumed calculation changes by driver type
-- Service Board — capacity bar reads from the same views; should be unaffected once views are correct
-- Drop Studio — capacity setup UI needs mode selector and multi-category picker
+- Pick mode: By item type / By order / By shared pool
+- Set capacity total (integer)
+- For "By item type": confirm which single category is the driver
+- For "By shared pool": confirm which categories share the pool (multi-select)
+- "By order" requires no category selection
 
-**Warning**
-Modes (2) and (3) touch the capacity check inside `create-order`, which is payment-critical. Any change here must be verified end-to-end against a real Stripe test order before shipping. Do not build until T5-A3 (RLS rewrite) is complete.
+**Menu Library UX**
+
+Item-level capacity field becomes a simple toggle: "Counts toward drop capacity." Replaces the current decimal input. The optional integer weight field (1–3) appears beneath the toggle only when it is switched on. Label: "Slots used per item" — defaults to 1.
+
+**Downstream surfaces affected**
+
+- `drops` schema — `capacity_driver` type field required; multi-category mode needs a `capacity_categories` join or array column. Schema changes are Ed's responsibility via the SQL editor before any build begins.
+- `products` schema — `capacity_units` decimal column retired; replaced with `counts_toward_capacity` boolean and `capacity_weight` integer (default 1, range 1–3).
+- `create-order` / capacity check logic — currently counts units from one category; must branch by driver type. Payment-critical — must be verified end-to-end against a real Stripe test order before shipping.
+- `order.html` — capacity display and real-time reservation must reflect the correct pool and mode.
+- `v_drop_summary` / `v_drop_menu_item_stock` — capacity consumed calculation changes by driver type; views must be updated to match.
+- Service Board — capacity bar reads from these views; unaffected once views are correct.
+- Drop Studio — capacity setup UI replaced with mode selector as described above.
 
 **Sequencing**
-Order-count (mode 2) first — simpler than the current model, unblocks a real vendor type. Multi-category (mode 3) second, as its own focused build session. Schema changes required before either build; Ed to run via SQL editor once schema design is agreed in Claude Chat.
+
+Schema design to be agreed in Claude Chat before any build begins. Ed runs schema changes via SQL editor. Recommended build order: mode selector UI in Drop Studio → item-level toggle in Menu Library → capacity check logic in `create-order` → view updates → end-to-end Stripe test verification.
+
+Do not ship until verified end-to-end against a real Stripe test order. The capacity check inside `create-order` is payment-critical.
 
 Supersedes T7-13.
 
