@@ -1853,28 +1853,15 @@
           btn.textContent = 'Opening Stripe…';
 
           try {
-            const { data: { session } } = await sb.auth.getSession();
-            const token = session?.access_token;
-            if (!token) throw new Error('Not signed in');
+            const { data, error } = await sb.functions.invoke('create-stripe-login-link', {
+              body: { vendor_id: state.vendor.id }
+            });
 
-            const resp = await fetch(
-              `${window.HEARTH_CONFIG.SUPABASE_URL}/functions/v1/create-stripe-login-link`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ vendor_id: state.vendor.id })
-              }
-            );
-
-            const result = await resp.json().catch(() => ({}));
-            if (!resp.ok || !result.url) {
-              throw new Error(result.error || 'No login link received');
+            if (error || (data && data.error) || !data?.url) {
+              throw new Error((data && data.error) || (error && error.message) || 'No login link received');
             }
 
-            window.open(result.url, '_blank', 'noopener,noreferrer');
+            window.open(data.url, '_blank', 'noopener,noreferrer');
             btn.textContent = originalLabel;
             btn.dataset.busy = '';
 
