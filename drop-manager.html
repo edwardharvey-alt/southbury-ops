@@ -2609,7 +2609,8 @@
       }
 
       const [dropRes, summaryRes, readinessRes, dropMenuItemsRes, stockRes] = await Promise.all([
-        supabase.from("drops").select("*").eq("id", state.selectedDropId).eq("vendor_id", state.vendorId).maybeSingle(),
+        supabase.functions.invoke("get-drop", { body: { drop_id: state.selectedDropId } })
+          .then(({ data, error }) => ({ data: (error || data?.error) ? null : data, error: null })),
         supabase.from("v_drop_summary").select("*").eq("drop_id", state.selectedDropId).eq("vendor_id", state.vendorId).maybeSingle(),
         supabase.from("v_drop_readiness_v2").select("*").eq("drop_id", state.selectedDropId).maybeSingle(),
         supabase.from("drop_menu_items").select("*").eq("drop_id", state.selectedDropId),
@@ -4071,14 +4072,10 @@
       const targetId = dropId || state.selectedDropId;
       if (!targetId) return;
 
-      const { data: sourceDrop, error: sourceError } = await supabase
-        .from("drops")
-        .select("*")
-        .eq("id", targetId)
-        .eq("vendor_id", state.vendorId)
-        .maybeSingle();
-
-      if (sourceError) throw sourceError;
+      const { data: invokeData, error: invokeError } = await supabase.functions.invoke("get-drop", {
+        body: { drop_id: targetId }
+      });
+      const sourceDrop = (invokeError || invokeData?.error) ? null : invokeData;
 
       // Source drop no longer resolves under the current vendor scope
       // (deleted in another tab, or stale UI state). Refresh the drops
@@ -4133,14 +4130,10 @@
       const targetId = dropId || state.selectedDropId;
       if (!targetId) return;
 
-      const { data: sourceDrop, error: sourceError } = await supabase
-        .from("drops")
-        .select("*")
-        .eq("id", targetId)
-        .eq("vendor_id", state.vendorId)
-        .maybeSingle();
-
-      if (sourceError) throw sourceError;
+      const { data: invokeData, error: invokeError } = await supabase.functions.invoke("get-drop", {
+        body: { drop_id: targetId }
+      });
+      const sourceDrop = (invokeError || invokeData?.error) ? null : invokeData;
 
       // Source drop no longer resolves under the current vendor scope.
       // Refresh the drops list silently and bail without an error banner.
