@@ -134,14 +134,22 @@ regeneration query is at the top of that file.
   `idx_vendors_stripe_account_id` WHERE `stripe_account_id IS NOT NULL`
 - drops — the core unit: each drop has slug, timing, capacity, host, status,
   collection_point_description (text), delivery_area_description (text),
-  customer_notes_enabled (boolean, default true)
+  customer_notes_enabled (boolean, default true). Capacity is driven by
+  `capacity_driver` (`'by_order'` | `'by_category'`) and
+  `capacity_categories` (jsonb) — added as part of T3-13. Legacy
+  `capacity_units` retained for backward compatibility.
 - drop_menu_items — items enabled for a specific drop (product or bundle)
 - products — catalogue products (vendor-scoped). `allergens` and
   `dietary_flags` are `text[] NOT NULL DEFAULT '{}'` (T4-31d /
   T4-31e). The matching Postgres `allergen` and `dietary_flag`
   ENUM types exist in the database but are deliberately not used
   as the column types — see operational learning #42.
-- bundles — catalogue bundles with bundle_lines and bundle_line_choice_products
+  `counts_toward_capacity` (boolean) and `capacity_weight` (integer)
+  drive per-item capacity contribution under T3-13. Same pair exists
+  on `bundles`.
+- bundles — catalogue bundles with bundle_lines and bundle_line_choice_products.
+  `counts_toward_capacity` (boolean) and `capacity_weight` (integer)
+  mirror the product columns — see T3-13.
 - categories — product/bundle groupings (vendor-scoped)
 - orders — customer orders (drop_id, customer details, status, pizzas field)
 - order_items — line items (item_type: product|bundle, qty, price_pence,
@@ -1103,11 +1111,17 @@ index.
 
 ### Tier 3 — Should be done before regular use
 - T3-12b — Order page: neighbourhood delivery area enforcement (radius mode) — open. T3-12a (postcode prefix mode) closed 2026-05-03: schema discriminator added (`delivery_area_type`, `allowed_postcode_prefixes`); Drop Studio UI for prefix entry; client-side onBlur validation; server-side enforcement in `create-order`; widened `update-drop` ALLOWED_FIELDS with paired-field invariants. Radius mode reserved for T3-12b.
-- T3-13: Capacity driver multi-mode support (order-count + multi-category shared pool) — pre-launch critical, schema design in Claude Chat before build
+- T3-13b — Event / catering workflow — open, next active ticket. Schema migration already applied: `drops.expected_guests`, `drops.discount_tiers` (jsonb), `orders.discount_pence`, `orders.discount_breakdown` (jsonb). Code work pending: Drop Studio event-type behaviour + bulk discount tier editor + slug random suffix + helper text; order page event UX + discount preview; `create-order` to skip capacity enforcement for events and server-compute discount.
+- T3-13-polish-1 — Chevron CSS specificity in drop-menu.html — open. `.capacitySlotsExpanded[hidden]` is overridden by the `display: flex` rule. Add `.capacitySlotsExpanded[hidden] { display: none; }` after the existing rule.
+- T3-13-polish-2 — Product editor chips ("£X", "Y slot per item / Doesn't count", "Z sold") don't refresh after save until hard refresh — open. Save flow needs to trigger a re-render of the product list and chips.
+- T3-13-polish-3 — Drop Studio Capacity section feels oversized — open. Pills are large, category list is one-per-row. Possibly compact pills + multi-column chip layout for categories. Needs design conversation.
+
+T3-13 (capacity driver multi-mode) closed 2026-05-13: Drop Studio capacity mode UI (PR #251), Menu Library capacity UI (PR #252), pending_payment fix (PR #250) merged; eight Edge Functions redeployed (`create-order`, `create-drop`, `update-drop`, `create-product`, `update-product`, `create-bundle`, `update-bundle`, `duplicate-bundle`); schema migrations and view rewrites applied earlier; verified end-to-end on Test 11 for both `by_order` and `by_category` modes with capacity math correct in both.
 
 ### Tier 4 — Enhancements that will impress
 - T4-29 — Series intelligence in Insights — open
 - T4-31b-fu1 — Server-side HEIC conversion fallback for Mac-Photos-HEIC — open, deferred until real vendor friction.
+- T4-31b-followup — `update-bundle` ALLOWED_FIELDS missing `image_url`; bundle photos save to storage but never persist on the row — open. Verify `duplicate-bundle` has the same gap. Add `image_url` to both whitelists and redeploy both functions.
 - T4-32 — Order page: map display for collection point and delivery area — open
 - T4-33 — Brand Hearth: GenAI copy generation + customisation review — open, deferred until T5-25 surfaces a customer-facing use for vendor brand copy.
 - T4-33b — Drop copy AI generation (sixth GenAI use case, Drop Story card on order.html) — open.
@@ -1191,6 +1205,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T7-5 — Host management page — open
 - T7-6 — Aggregate customer base view — open
 - T7-7 — Admin event log / audit trail — open
+- T7-followup-1 — Service Board order Details tab missing order date/time — open. Small UX gap.
 
 ### Tier 7 — Platform oversight (Phase 2, approaching ~100 vendors)
 - T7-8 — At-risk vendor detection queue — open
@@ -1198,7 +1213,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T7-10 — Geographic map view — open
 - T7-11 — Platform economics dashboard — open
 - T7-12 — Moderation and intervention tooling — open
-- T7-13: SUPERSEDED by T3-13 — see Tier 3
+- T7-13: SUPERSEDED by T3-13 (closed 2026-05-13). Capacity driver multi-mode now in production.
 - T7-14 — Multi-admin access (admins table) — open
 - T7-15 — Admin write capability — open
 - T7-16 — Business partner admin access — open
