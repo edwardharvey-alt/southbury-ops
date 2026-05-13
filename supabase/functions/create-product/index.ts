@@ -17,6 +17,8 @@ const ALLOWED_FIELDS = new Set([
   "category",
   "price_pence",
   "capacity_units",
+  "counts_toward_capacity",
+  "capacity_weight",
   "sort_order",
   "is_active",
   "travels_well",
