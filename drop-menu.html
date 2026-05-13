@@ -465,6 +465,9 @@
       flex-direction: column;
       gap: 6px;
     }
+    .capacitySlotsExpanded[hidden] {
+      display: none;
+    }
     .capacitySlotsExpanded label {
       font-size: 11px;
       font-weight: 700;
@@ -1573,6 +1576,22 @@
 
         if (optionsError) throw optionsError;
         state.bundleChoiceOptions = options || [];
+      }
+
+      // Merge a row returned by an Edge Function save into the matching
+      // state array. The enriched views (v_products_enriched /
+      // v_bundles_enriched) can lag behind newly-added columns
+      // (counts_toward_capacity, capacity_weight), so patching the saved
+      // row on top of the view-loaded row keeps the chips in sync without
+      // a hard browser refresh.
+      function applySavedRowToState(arrayName, savedRow) {
+        if (!savedRow || !savedRow.id) return;
+        const arr = state[arrayName];
+        if (!Array.isArray(arr)) return;
+        const idx = arr.findIndex((x) => x && x.id === savedRow.id);
+        if (idx >= 0) {
+          arr[idx] = { ...arr[idx], ...savedRow };
+        }
       }
 
       function ensureSelectionsStillValid() {
@@ -2839,6 +2858,7 @@
         resetNewProductModal({ orphanCleanup: false });
         closeModal("newProductModal");
         await refreshAll();
+        applySavedRowToState("products", data);
         state.currentTab = "products";
         renderEverything();
         showInlineSuccess("Product created");
@@ -2876,6 +2896,7 @@
         resetNewBundleModal({ orphanCleanup: false });
         closeModal("newBundleModal");
         await refreshAll();
+        applySavedRowToState("bundles", data);
         state.currentTab = "bundles";
         renderEverything();
         showInlineSuccess("Bundle created");
@@ -2957,6 +2978,8 @@
 
         if (categoryId) state.orderingCategoryIdProducts = categoryId;
         await refreshAll();
+        applySavedRowToState("products", data);
+        renderEverything();
         showInlineSuccess("Product saved");
       }
 
@@ -2998,6 +3021,8 @@
 
         if (categoryId) state.orderingCategoryIdBundles = categoryId;
         await refreshAll();
+        applySavedRowToState("bundles", data);
+        renderEverything();
         showInlineSuccess("Bundle saved");
       }
 
@@ -3048,6 +3073,8 @@
         state.selectedBundleId = data.id;
         if (bundle.category_id) state.orderingCategoryIdBundles = bundle.category_id;
         await refreshAll();
+        applySavedRowToState("bundles", data);
+        renderEverything();
         showInlineSuccess("Bundle duplicated");
       }
 

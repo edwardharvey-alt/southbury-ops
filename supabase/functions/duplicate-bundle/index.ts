@@ -22,6 +22,7 @@ const BUNDLE_FIELDS = [
   "capacity_weight",
   "sort_order",
   "is_active",
+  "image_url",
 ] as const;
 
 const LINE_FIELDS = [

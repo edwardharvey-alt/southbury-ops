@@ -16,6 +16,7 @@ const ALLOWED_FIELDS = new Set([
   "capacity_weight",
   "sort_order",
   "is_active",
+  "image_url",
 ]);
 
 Deno.serve(async (req) => {
