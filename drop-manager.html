@@ -942,6 +942,71 @@
     #postcodePrefixError.show{
       display:block;
     }
+    .capacityModeToggle {
+      display: flex;
+      gap: 8px;
+    }
+    .capacityModePill {
+      flex: 1;
+      padding: 10px 16px;
+      min-height: 44px;
+      border: 1px solid var(--h-cinder, var(--h-border));
+      border-radius: 999px;
+      background: transparent;
+      color: var(--h-slate);
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .capacityModePill:hover:not(.active) {
+      background: rgba(139, 107, 63, 0.08);
+    }
+    .capacityModePill.active {
+      background: #8B6B3F;
+      border-color: #8B6B3F;
+      color: #fff;
+    }
+    .capacityCategoriesList {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 12px 14px;
+      border: 1px solid var(--h-cinder, var(--h-border));
+      border-radius: 12px;
+      background: #fff;
+    }
+    .capacityCategoriesList label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--h-slate);
+      cursor: pointer;
+      padding: 6px 0;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+    .capacityCategoriesList .helperText {
+      margin: 0;
+    }
+    .capacityTotalRow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .capacityTotalRow input {
+      flex: 1;
+      min-width: 0;
+    }
+    .capacityUnitLabel {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--h-stone);
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -1197,22 +1262,36 @@
                       <input id="radiusKm" type="number" min="0" step="0.1" />
                     </div>
 
-                    <div class="field">
-                      <label for="capacityCategory">Capacity type</label>
-                      <select id="capacityCategory">
-                        <option value="">Loading categories…</option>
-                      </select>
-                      <div class="helperText">The product type that counts toward this drop's capacity limit.</div>
-                    </div>
-
-                    <div class="field">
-                      <label for="capacityTotal">Capacity</label>
-                      <input id="capacityTotal" type="number" min="0" step="1" />
-                    </div>
-
                     <div class="field" style="grid-column:1 / -1;">
                       <label for="notesInternal">Private notes</label>
                       <textarea id="notesInternal" placeholder="Any internal operational notes for this drop"></textarea>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Capacity</h4>
+                  <p class="stageSectionSub">How does this drop fill?</p>
+
+                  <div class="capacityModeToggle" id="capacityModeToggle" role="group" aria-label="Capacity mode">
+                    <button type="button" class="capacityModePill active" data-mode="by_order">By order</button>
+                    <button type="button" class="capacityModePill" data-mode="by_category">By category</button>
+                  </div>
+
+                  <p class="helperText" id="capacityModeHelper" style="margin-top:10px;">
+                    Every order takes one slot, regardless of basket contents.
+                  </p>
+
+                  <div class="field hidden" id="capacityCategoriesField" style="margin-top:14px;">
+                    <label>Which categories count?</label>
+                    <div id="capacityCategoriesList" class="capacityCategoriesList"></div>
+                  </div>
+
+                  <div class="field" style="margin-top:14px;">
+                    <label for="capacityTotal">Total capacity</label>
+                    <div class="capacityTotalRow">
+                      <input id="capacityTotal" type="number" min="0" step="1" />
+                      <span class="capacityUnitLabel" id="capacityUnitLabel">orders</span>
                     </div>
                   </div>
                 </div>
@@ -1907,9 +1986,17 @@
     }
 
     function getCapacityCategoryLabel(dropLike) {
-      const category = getCapacityCategoryRecord(dropLike);
-      if (category?.name) return category.name;
-      return titleCase(dropLike?.capacity_category || "Units");
+      if (!dropLike) return 'Units';
+      const driver = dropLike.capacity_driver;
+      if (driver === 'by_order') return 'orders';
+      const categories = Array.isArray(dropLike.capacity_categories) ? dropLike.capacity_categories : [];
+      if (categories.length > 0) {
+        const first = getCategoryById(categories[0]);
+        if (first?.name) return first.name;
+      }
+      const legacy = getCapacityCategoryRecord(dropLike);
+      if (legacy?.name) return legacy.name;
+      return titleCase(dropLike.capacity_category || 'Units');
     }
 
     function getCapacityCategorySlugFromId(categoryId) {
@@ -1926,27 +2013,50 @@
       );
     }
 
-    function populateCapacityCategoryOptions(selectedCategoryId = null, fallbackCapacityCategory = null) {
-      const select = byId("capacityCategory");
+    function getSelectedCapacityMode() {
+      const active = document.querySelector('.capacityModePill.active');
+      return active ? active.dataset.mode : 'by_order';
+    }
 
+    function getSelectedCapacityCategoryIds() {
+      return Array.from(
+        document.querySelectorAll('#capacityCategoriesList input[type="checkbox"]:checked')
+      ).map(cb => cb.value);
+    }
+
+    function setCapacityMode(mode) {
+      const validMode = mode === 'by_category' ? 'by_category' : 'by_order';
+      document.querySelectorAll('.capacityModePill').forEach(pill => {
+        pill.classList.toggle('active', pill.dataset.mode === validMode);
+      });
+      const helper = byId('capacityModeHelper');
+      const unitLabel = byId('capacityUnitLabel');
+      const categoriesField = byId('capacityCategoriesField');
+      if (validMode === 'by_order') {
+        if (helper) helper.textContent = "Every order takes one slot, regardless of basket contents.";
+        if (unitLabel) unitLabel.textContent = "orders";
+        if (categoriesField) categoriesField.classList.add('hidden');
+      } else {
+        if (helper) helper.textContent = "Only items from the categories you select fill the capacity. Other items — drinks, sides — don't count.";
+        if (unitLabel) unitLabel.textContent = "slots";
+        if (categoriesField) categoriesField.classList.remove('hidden');
+      }
+    }
+
+    function renderCapacityCategoriesList(selectedIds) {
+      const list = byId('capacityCategoriesList');
+      if (!list) return;
+      const selectedSet = new Set((selectedIds || []).map(String));
       if (!state.categories.length) {
-        select.innerHTML = `<option value="">No categories found</option>`;
+        list.innerHTML = '<p class="helperText">No categories yet. Add categories in Menu Library.</p>';
         return;
       }
-
-      let selectedId = selectedCategoryId;
-      if (!selectedId && fallbackCapacityCategory) {
-        selectedId = getCategoryBySlugOrName(fallbackCapacityCategory)?.id || null;
-      }
-      if (!selectedId) {
-        selectedId = getDefaultCapacityCategory()?.id || null;
-      }
-
-      select.innerHTML = state.categories.map((category) => `
-        <option value="${category.id}" ${category.id === selectedId ? "selected" : ""}>
-          ${escapeHtml(category.name)}
-        </option>
-      `).join("");
+      list.innerHTML = state.categories.map(cat => `
+        <label>
+          <input type="checkbox" value="${escapeHtml(cat.id)}" ${selectedSet.has(cat.id) ? 'checked' : ''} />
+          <span>${escapeHtml(cat.name)}</span>
+        </label>
+      `).join('');
     }
 
     function groupByCategory(items) {
@@ -2033,13 +2143,16 @@
       const hasCapacityItem = enabledAssignments.some((item) => Number(item.capacity_units || 0) > 0);
 
       const requiresHost = dropData.drop_type === "community";
+      const driver = dropData.capacity_driver || (dropData.capacity_category_id ? 'by_category' : 'by_order');
+      const categories = Array.isArray(dropData.capacity_categories) ? dropData.capacity_categories : [];
+      const capacityValid =
+        Number(dropData.capacity_units_total || 0) > 0 &&
+        (driver === 'by_order' || categories.length > 0);
       const basicsComplete =
         Boolean(dropData.name) &&
         Boolean(dropData.slug) &&
         Boolean(dropData.drop_type) &&
-        Boolean(dropData.capacity_category_id) &&
-        Boolean(dropData.capacity_category) &&
-        Number(dropData.capacity_units_total || 0) > 0 &&
+        capacityValid &&
         (!requiresHost || Boolean(dropData.host_id));
 
       const deliveryStartOk = Boolean(dropData.delivery_start);
@@ -3110,7 +3223,12 @@
       renderPostcodePrefixChips();
       clearPostcodePrefixError();
 
-      populateCapacityCategoryOptions(d.capacity_category_id, d.capacity_category);
+      const driver = d.capacity_driver === 'by_order' ? 'by_order' : 'by_category';
+      const categories = Array.isArray(d.capacity_categories)
+        ? d.capacity_categories.map(String)
+        : [];
+      renderCapacityCategoriesList(categories);
+      setCapacityMode(driver);
       byId("capacityTotal").value = Number(d.capacity_units_total || 0);
 
       byId("deliveryDate").value = formatDateInput(d.delivery_start);
@@ -3655,8 +3773,15 @@
         ? combineDateTime(byId("opensAtDate").value, byId("opensAtTime").value)
         : null;
 
-      const capacityCategoryId = byId("capacityCategory").value || null;
-      const capacityCategorySlug = getCapacityCategorySlugFromId(capacityCategoryId);
+      const capacityDriver = getSelectedCapacityMode();
+      const selectedCategoryIds = capacityDriver === 'by_category'
+        ? getSelectedCapacityCategoryIds()
+        : [];
+      // Legacy fields kept in sync for v_drop_summary compatibility.
+      const legacyCategoryId = selectedCategoryIds[0] || null;
+      const legacyCategorySlug = legacyCategoryId
+        ? getCapacityCategorySlugFromId(legacyCategoryId)
+        : null;
 
       /* T3-12a — Delivery area restriction. Mode hygiene: when "None" or
          "Postcode prefixes" is selected, both legacy radius columns are
@@ -3686,8 +3811,10 @@
         radius_km: null,
         delivery_area_type: deliveryAreaType,
         allowed_postcode_prefixes: allowedPostcodePrefixes,
-        capacity_category_id: capacityCategoryId,
-        capacity_category: capacityCategorySlug,
+        capacity_driver: capacityDriver,
+        capacity_categories: selectedCategoryIds,
+        capacity_category_id: legacyCategoryId,
+        capacity_category: legacyCategorySlug,
         capacity_units_total: Number(byId("capacityTotal").value || 0),
 
         delivery_start: combineDateTime(byId("deliveryDate").value, byId("deliveryStartTime").value),
@@ -3735,6 +3862,8 @@
         radius_km: dropData.radius_km,
         delivery_area_type: dropData.delivery_area_type,
         allowed_postcode_prefixes: dropData.allowed_postcode_prefixes,
+        capacity_driver: dropData.capacity_driver,
+        capacity_categories: dropData.capacity_categories,
         capacity_category_id: dropData.capacity_category_id,
         capacity_category: dropData.capacity_category,
         capacity_units_total: dropData.capacity_units_total,
@@ -4030,7 +4159,6 @@
       const closesAt = new Date(deliveryStart);
       closesAt.setHours(18, 0, 0, 0);
 
-      const defaultCapacityCategory = getDefaultCapacityCategory();
       const slug = buildUniqueSlug(`new-drop-${uidSuffix()}`);
 
       const payload = {
@@ -4042,8 +4170,10 @@
         fulfilment_mode: null,
         centre_postcode: null,
         radius_km: null,
-        capacity_category_id: defaultCapacityCategory?.id || null,
-        capacity_category: defaultCapacityCategory?.slug || null,
+        capacity_driver: 'by_order',
+        capacity_categories: [],
+        capacity_category_id: null,
+        capacity_category: null,
         capacity_units_total: 40,
         opens_at: null,
         closes_at: closesAt.toISOString(),
@@ -5009,7 +5139,7 @@
       [
         "dropType", "hostSelect", "notesInternal",
         "fulfilmentMode", "collectionPointDescription", "deliveryAreaDescription", "customerNotesEnabled",
-        "centrePostcode", "radiusKm", "capacityCategory", "capacityTotal",
+        "centrePostcode", "radiusKm", "capacityTotal",
         "deliveryStartTime", "deliveryEndTime",
         "opensAtDate", "opensAtTime", "closesAtDate", "closesAtTime",
         "fundraisingEnabled", "fundraisingModel", "fundraisingPercentage", "fundraisingPerOrderPence", "fundraisingDisplayText",
@@ -5045,6 +5175,22 @@
         el.addEventListener("change", clearDuplicateBanner);
         el.addEventListener("input", clearDuplicateBanner);
       });
+
+      document.querySelectorAll('.capacityModePill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          setCapacityMode(pill.dataset.mode);
+          markDirty();
+        });
+      });
+
+      const capacityCategoriesListEl = byId('capacityCategoriesList');
+      if (capacityCategoriesListEl) {
+        capacityCategoriesListEl.addEventListener('change', (e) => {
+          if (e.target.matches('input[type="checkbox"]')) {
+            markDirty();
+          }
+        });
+      }
 
       document.querySelectorAll('input[name="openPattern"]').forEach((radio) => {
         radio.addEventListener("change", () => {

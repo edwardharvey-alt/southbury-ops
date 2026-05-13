@@ -33,6 +33,8 @@ const ALLOWED_FIELDS = new Set([
   "allowed_postcode_prefixes",
   "capacity_category_id",
   "capacity_category",
+  "capacity_driver",
+  "capacity_categories",
   "capacity_units_total",
   "opens_at",
   "closes_at",
