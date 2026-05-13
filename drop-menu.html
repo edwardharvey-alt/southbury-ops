@@ -412,6 +412,70 @@
       outline:2px solid #8B6B3F;
       outline-offset:2px;
     }
+    .capacityCheckboxLabel {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--h-slate);
+      text-transform: none;
+      letter-spacing: normal;
+      margin-bottom: 4px;
+    }
+    .capacityHelper {
+      margin: 0;
+      font-size: 12px;
+      color: var(--h-stone);
+      line-height: 1.4;
+    }
+    .capacitySlotsBlock {
+      display: none;
+      margin-top: 4px;
+    }
+    .capacitySlotsBlock.visible {
+      display: block;
+    }
+    .capacitySlotsTrigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: 0;
+      padding: 4px 0;
+      font-size: 13px;
+      color: var(--h-stone);
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .capacitySlotsTrigger:hover { color: var(--h-slate); }
+    .capacityChevron {
+      font-size: 14px;
+      transition: transform 0.2s;
+      display: inline-block;
+    }
+    .capacitySlotsTrigger[aria-expanded="true"] .capacityChevron {
+      transform: rotate(180deg);
+    }
+    .capacitySlotsExpanded {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .capacitySlotsExpanded label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--h-slate);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .capacitySlotsExpanded input[type="number"] {
+      max-width: 100px;
+      min-width: 0;
+    }
   </style>
 </head>
 <body>
@@ -679,10 +743,23 @@
                         <input id="productPricePence" type="number" min="0" step="0.01" />
                       </div>
 
-                      <div class="field">
-                        <label for="productCapacityUnits">Capacity Impact</label>
-                        <input id="productCapacityUnits" type="number" min="0" step="0.01" />
-                        <div class="helperText">How much of a drop’s available capacity this item uses. Use 1 for a main item, 0 for add-ons.</div>
+                      <div class="field" style="grid-column:1 / -1;">
+                        <label class="capacityCheckboxLabel" for="productCountsTowardCapacity">
+                          <input type="checkbox" id="productCountsTowardCapacity" />
+                          <span>Counts toward capacity</span>
+                        </label>
+                        <p class="capacityHelper">Applies to drops set to <strong>By category</strong>. Items like drinks, sides, or extras usually don't count.</p>
+                        <div class="capacitySlotsBlock" id="productSlotsBlock">
+                          <button type="button" class="capacitySlotsTrigger" id="productSlotsTrigger" aria-expanded="false">
+                            <span id="productSlotsDisplay">1 slot per item</span>
+                            <span class="capacityChevron" aria-hidden="true">⌄</span>
+                          </button>
+                          <div class="capacitySlotsExpanded" id="productSlotsExpanded" hidden>
+                            <label for="productCapacityWeight">Slots used</label>
+                            <input id="productCapacityWeight" type="number" min="1" step="1" value="1" />
+                            <p class="capacityHelper">Use for sharing platters or items that fill multiple kitchen slots.</p>
+                          </div>
+                        </div>
                       </div>
 
                       <div class="field">
@@ -800,10 +877,23 @@
                         <input id="bundlePricePence" type="number" min="0" step="0.01" />
                       </div>
 
-                      <div class="field">
-                        <label for="bundleCapacityUnits">Capacity Impact</label>
-                        <input id="bundleCapacityUnits" type="number" min="0" step="0.01" />
-                        <div class="helperText">How much operational capacity the full bundle uses when ordered. In most cases this should match the main item inside the bundle.</div>
+                      <div class="field" style="grid-column:1 / -1;">
+                        <label class="capacityCheckboxLabel" for="bundleCountsTowardCapacity">
+                          <input type="checkbox" id="bundleCountsTowardCapacity" />
+                          <span>Counts toward capacity</span>
+                        </label>
+                        <p class="capacityHelper">Applies to drops set to <strong>By category</strong>. The whole bundle takes a slot when ordered.</p>
+                        <div class="capacitySlotsBlock" id="bundleSlotsBlock">
+                          <button type="button" class="capacitySlotsTrigger" id="bundleSlotsTrigger" aria-expanded="false">
+                            <span id="bundleSlotsDisplay">1 slot per bundle</span>
+                            <span class="capacityChevron" aria-hidden="true">⌄</span>
+                          </button>
+                          <div class="capacitySlotsExpanded" id="bundleSlotsExpanded" hidden>
+                            <label for="bundleCapacityWeight">Slots used</label>
+                            <input id="bundleCapacityWeight" type="number" min="1" step="1" value="1" />
+                            <p class="capacityHelper">Use for sharing or family-size bundles that fill multiple kitchen slots.</p>
+                          </div>
+                        </div>
                       </div>
 
                       <div class="field">
@@ -1021,9 +1111,12 @@
                   <input id="newProductPricePence" type="number" min="0" step="0.01" value="0" />
                 </div>
 
-                <div class="field">
-                  <label for="newProductCapacityUnits">Capacity Impact</label>
-                  <input id="newProductCapacityUnits" type="number" min="0" step="0.01" value="0" />
+                <div class="field" style="grid-column:1 / -1;">
+                  <label class="capacityCheckboxLabel" for="newProductCountsTowardCapacity">
+                    <input type="checkbox" id="newProductCountsTowardCapacity" />
+                    <span>Counts toward capacity</span>
+                  </label>
+                  <div class="helperText">Items like drinks or sides usually don't. You can adjust slots used after creating.</div>
                 </div>
 
                 <div class="field">
@@ -1082,9 +1175,12 @@
                   <input id="newBundlePricePence" type="number" min="0" step="0.01" value="0" />
                 </div>
 
-                <div class="field">
-                  <label for="newBundleCapacityUnits">Capacity Impact</label>
-                  <input id="newBundleCapacityUnits" type="number" min="0" step="0.01" value="0" />
+                <div class="field" style="grid-column:1 / -1;">
+                  <label class="capacityCheckboxLabel" for="newBundleCountsTowardCapacity">
+                    <input type="checkbox" id="newBundleCountsTowardCapacity" />
+                    <span>Counts toward capacity</span>
+                  </label>
+                  <div class="helperText">The whole bundle takes a slot when ordered. You can adjust slots used after creating.</div>
                 </div>
 
                 <div class="field">
@@ -1266,6 +1362,41 @@
           .replaceAll(">", "&gt;")
           .replaceAll('"', "&quot;")
           .replaceAll("'", "&#39;");
+      }
+
+      function resolveCountsToward(row) {
+        if (!row) return false;
+        if (typeof row.counts_toward_capacity === 'boolean') return row.counts_toward_capacity;
+        return Number(row.capacity_units || 0) > 0;
+      }
+      function resolveCapacityWeight(row) {
+        if (!row) return 1;
+        const w = Number(row.capacity_weight || 0);
+        if (w >= 1) return w;
+        const legacy = Number(row.capacity_units || 0);
+        return Math.max(1, Math.round(legacy) || 1);
+      }
+      function formatSlotsDisplay(n, suffix) {
+        const v = Math.max(1, Number(n) || 1);
+        return v === 1 ? `1 slot ${suffix}` : `${v} slots ${suffix}`;
+      }
+      function syncCapacityUI(prefix, suffix) {
+        const toggle = byId(`${prefix}CountsTowardCapacity`);
+        const slotsBlock = byId(`${prefix}SlotsBlock`);
+        const trigger = byId(`${prefix}SlotsTrigger`);
+        const expanded = byId(`${prefix}SlotsExpanded`);
+        const display = byId(`${prefix}SlotsDisplay`);
+        const weightInput = byId(`${prefix}CapacityWeight`);
+        if (!toggle || !slotsBlock) return;
+        const isOn = toggle.checked;
+        slotsBlock.classList.toggle('visible', isOn);
+        if (!isOn) {
+          if (expanded) expanded.hidden = true;
+          if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        }
+        if (display && weightInput) {
+          display.textContent = formatSlotsDisplay(weightInput.value, suffix);
+        }
       }
 
       function slugify(text) {
@@ -2030,7 +2161,9 @@
           meta.textContent = `${current.name} • ${current.category_name || "No category"} • ${current.is_active ? "active" : "inactive"}`;
           chips.innerHTML = [
             `<span class="miniChip">${formatMoneyPence(current.price_pence)}</span>`,
-            `<span class="miniChip">${current.capacity_units} capacity</span>`,
+            (resolveCountsToward(current)
+              ? `<span class="miniChip">${formatSlotsDisplay(resolveCapacityWeight(current), 'per item')}</span>`
+              : `<span class="miniChip">Doesn't count</span>`),
             `<span class="miniChip">${Number(analytics?.units_sold || 0)} sold</span>`
           ].join("");
           return;
@@ -2048,7 +2181,9 @@
         meta.textContent = `${current.name} • ${current.category_name || "No category"} • ${current.is_active ? "active" : "inactive"} • sort ${current.sort_order ?? "—"}`;
         chips.innerHTML = [
           `<span class="miniChip">${formatMoneyPence(current.price_pence)}</span>`,
-          `<span class="miniChip">${current.capacity_units} capacity</span>`,
+          (resolveCountsToward(current)
+            ? `<span class="miniChip">${formatSlotsDisplay(resolveCapacityWeight(current), 'per bundle')}</span>`
+            : `<span class="miniChip">Doesn't count</span>`),
           `<span class="miniChip">${lineCount} included item${lineCount === 1 ? "" : "s"}</span>`,
           `<span class="miniChip">${Number(analytics?.units_sold || 0)} sold</span>`
         ].join("");
@@ -2217,7 +2352,9 @@
           byId("bundleDescription").value = "";
           byId("bundleCategory").value = "";
           byId("bundlePricePence").value = "";
-          byId("bundleCapacityUnits").value = "";
+          byId("bundleCountsTowardCapacity").checked = false;
+          byId("bundleCapacityWeight").value = 1;
+          syncCapacityUI('bundle', 'per bundle');
           byId("bundleIsActive").value = "true";
           byId("toggleBundleActiveBtn").textContent = "Deactivate";
           byId("bundleSelectionLabel").textContent = "No bundle selected";
@@ -2232,7 +2369,9 @@
         byId("bundleDescription").value = bundle.description || "";
         byId("bundleCategory").value = bundle.category_id || "";
         byId("bundlePricePence").value = (Number(bundle.price_pence || 0) / 100).toFixed(2);
-        byId("bundleCapacityUnits").value = bundle.capacity_units ?? 0;
+        byId("bundleCountsTowardCapacity").checked = resolveCountsToward(bundle);
+        byId("bundleCapacityWeight").value = resolveCapacityWeight(bundle);
+        syncCapacityUI('bundle', 'per bundle');
         byId("bundleIsActive").value = String(Boolean(bundle.is_active));
         byId("toggleBundleActiveBtn").textContent = bundle.is_active ? "Deactivate" : "Activate";
 
@@ -2241,7 +2380,9 @@
         byId("bundleSelectionLabel").textContent = `${bundle.name} • ${bundle.category_name || "No category"} • ${bundle.is_active ? "active" : "inactive"}`;
         byId("bundleSelectionMetrics").innerHTML = [
           `<span class="miniChip">${formatMoneyPence(bundle.price_pence)}</span>`,
-          `<span class="miniChip">${bundle.capacity_units} capacity</span>`,
+          (resolveCountsToward(bundle)
+            ? `<span class="miniChip">${formatSlotsDisplay(resolveCapacityWeight(bundle), 'per bundle')}</span>`
+            : `<span class="miniChip">Doesn't count</span>`),
           `<span class="miniChip">${lines.length} included item${lines.length === 1 ? "" : "s"}</span>`,
           `<span class="miniChip">${Number(analytics?.units_sold || 0)} sold</span>`
         ].join("");
@@ -2539,7 +2680,9 @@
           byId("productDescription").value = "";
           byId("productCategory").value = "";
           byId("productPricePence").value = "";
-          byId("productCapacityUnits").value = "";
+          byId("productCountsTowardCapacity").checked = false;
+          byId("productCapacityWeight").value = 1;
+          syncCapacityUI('product', 'per item');
           byId("productIsActive").value = "true";
           byId("productTravelsWell").checked = true;
           byId("productSuitableForCollection").checked = true;
@@ -2561,7 +2704,9 @@
         byId("productDescription").value = product.description || "";
         byId("productCategory").value = product.category_id || "";
         byId("productPricePence").value = (Number(product.price_pence || 0) / 100).toFixed(2);
-        byId("productCapacityUnits").value = product.capacity_units ?? 0;
+        byId("productCountsTowardCapacity").checked = resolveCountsToward(product);
+        byId("productCapacityWeight").value = resolveCapacityWeight(product);
+        syncCapacityUI('product', 'per item');
         byId("productIsActive").value = String(Boolean(product.is_active));
         byId("productTravelsWell").checked = product.travels_well !== false;
         byId("productSuitableForCollection").checked = product.suitable_for_collection !== false;
@@ -2579,7 +2724,9 @@
         byId("productSelectionLabel").textContent = `${product.name} • ${product.category_name || "No category"} • ${product.is_active ? "active" : "inactive"}`;
         byId("productSelectionMetrics").innerHTML = [
           `<span class="miniChip">${formatMoneyPence(product.price_pence)}</span>`,
-          `<span class="miniChip">${product.capacity_units} capacity</span>`,
+          (resolveCountsToward(product)
+            ? `<span class="miniChip">${formatSlotsDisplay(resolveCapacityWeight(product), 'per item')}</span>`
+            : `<span class="miniChip">Doesn't count</span>`),
           `<span class="miniChip">${Number(analytics?.units_sold || 0)} sold</span>`
         ].join("");
 
@@ -2672,7 +2819,9 @@
           category_id: categoryId,
           category: state.categories.find((c) => c.id === categoryId)?.name || "uncategorised",
           price_pence: Math.round(Number(byId("newProductPricePence").value || 0) * 100),
-          capacity_units: Number(byId("newProductCapacityUnits").value || 0),
+          counts_toward_capacity: byId("newProductCountsTowardCapacity").checked,
+          capacity_weight: 1,
+          capacity_units: byId("newProductCountsTowardCapacity").checked ? 1 : 0,
           sort_order: getNextSortOrder(itemsInCategory),
           is_active: byId("newProductActive").value === "true",
           image_url: state.newProductImageUrl || null
@@ -2707,7 +2856,9 @@
           description: byId("newBundleDescription").value.trim() || null,
           category_id: categoryId,
           price_pence: Math.round(Number(byId("newBundlePricePence").value || 0) * 100),
-          capacity_units: Number(byId("newBundleCapacityUnits").value || 0),
+          counts_toward_capacity: byId("newBundleCountsTowardCapacity").checked,
+          capacity_weight: 1,
+          capacity_units: byId("newBundleCountsTowardCapacity").checked ? 1 : 0,
           sort_order: getNextSortOrder(itemsInCategory),
           is_active: byId("newBundleActive").value === "true",
           image_url: state.newBundleImageUrl || null
@@ -2775,7 +2926,11 @@
           category_id: categoryId,
           category: state.categories.find((c) => c.id === categoryId)?.name || product.legacy_category || "uncategorised",
           price_pence: Math.round(Number(byId("productPricePence").value || 0) * 100),
-          capacity_units: Number(byId("productCapacityUnits").value || 0),
+          counts_toward_capacity: byId("productCountsTowardCapacity").checked,
+          capacity_weight: Math.max(1, Number(byId("productCapacityWeight").value || 1)),
+          capacity_units: byId("productCountsTowardCapacity").checked
+            ? Math.max(1, Number(byId("productCapacityWeight").value || 1))
+            : 0,
           sort_order: product.sort_order ?? 10,
           is_active: byId("productIsActive").value === "true",
           travels_well: byId("productTravelsWell").checked,
@@ -2817,7 +2972,11 @@
           description: byId("bundleDescription").value.trim() || null,
           category_id: categoryId,
           price_pence: Math.round(Number(byId("bundlePricePence").value || 0) * 100),
-          capacity_units: Number(byId("bundleCapacityUnits").value || 0),
+          counts_toward_capacity: byId("bundleCountsTowardCapacity").checked,
+          capacity_weight: Math.max(1, Number(byId("bundleCapacityWeight").value || 1)),
+          capacity_units: byId("bundleCountsTowardCapacity").checked
+            ? Math.max(1, Number(byId("bundleCapacityWeight").value || 1))
+            : 0,
           sort_order: bundle.sort_order ?? 10,
           is_active: byId("bundleIsActive").value === "true",
           image_url: state.editBundleImageUrl ?? null
@@ -2854,7 +3013,9 @@
           category_id: product.category_id,
           category: product.legacy_category || product.category_name || "uncategorised",
           price_pence: product.price_pence,
-          capacity_units: product.capacity_units,
+          counts_toward_capacity: resolveCountsToward(product),
+          capacity_weight: resolveCapacityWeight(product),
+          capacity_units: resolveCountsToward(product) ? resolveCapacityWeight(product) : 0,
           travels_well: product.travels_well,
           suitable_for_collection: product.suitable_for_collection,
           prep_complexity: product.prep_complexity,
@@ -3421,6 +3582,34 @@
             console.error(err);
             showError(err.message || "Unable to duplicate bundle.");
           }
+        });
+
+        byId('productCountsTowardCapacity').addEventListener('change', () => {
+          syncCapacityUI('product', 'per item');
+        });
+        byId('productSlotsTrigger').addEventListener('click', () => {
+          const trigger = byId('productSlotsTrigger');
+          const expanded = byId('productSlotsExpanded');
+          const isOpen = trigger.getAttribute('aria-expanded') === 'true';
+          trigger.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+          if (expanded) expanded.hidden = isOpen;
+        });
+        byId('productCapacityWeight').addEventListener('input', () => {
+          syncCapacityUI('product', 'per item');
+        });
+
+        byId('bundleCountsTowardCapacity').addEventListener('change', () => {
+          syncCapacityUI('bundle', 'per bundle');
+        });
+        byId('bundleSlotsTrigger').addEventListener('click', () => {
+          const trigger = byId('bundleSlotsTrigger');
+          const expanded = byId('bundleSlotsExpanded');
+          const isOpen = trigger.getAttribute('aria-expanded') === 'true';
+          trigger.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+          if (expanded) expanded.hidden = isOpen;
+        });
+        byId('bundleCapacityWeight').addEventListener('input', () => {
+          syncCapacityUI('bundle', 'per bundle');
         });
 
         byId("toggleCategoryActiveBtn").addEventListener("click", async () => {

@@ -18,6 +18,8 @@ const BUNDLE_FIELDS = [
   "category_id",
   "price_pence",
   "capacity_units",
+  "counts_toward_capacity",
+  "capacity_weight",
   "sort_order",
   "is_active",
 ] as const;
