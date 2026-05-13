@@ -412,14 +412,16 @@ Deno.serve(async (req) => {
 
     // Step 8 — capacity available. Compute consumed capacity directly from
     // the orders table so the check is server-authoritative and doesn't
-    // depend on view freshness. pending_payment and cancelled rows are
-    // excluded; every other status counts against capacity. The pizzas
-    // column carries the server-computed capacity units consumed.
+    // depend on view freshness. Mirrors v_drop_capacity_usage: only
+    // cancelled rows are excluded, so pending_payment orders DO consume
+    // capacity for their 30-minute Stripe Checkout window. This prevents
+    // two customers racing for the same last slot during checkout. The
+    // pizzas column carries the server-computed capacity units consumed.
     const { data: liveOrders, error: liveOrdersErr } = await serviceClient
       .from("orders")
       .select("pizzas")
       .eq("drop_id", payload.drop_id)
-      .not("status", "in", "(pending_payment,cancelled)");
+      .neq("status", "cancelled");
     if (liveOrdersErr) {
       console.error("live orders lookup failed", liveOrdersErr);
       return jsonResponse({ error: "Capacity lookup failed" }, 500);
