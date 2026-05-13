@@ -1007,6 +1007,18 @@
       color: var(--h-stone);
       white-space: nowrap;
     }
+    .scheduleTable td.discountTierRemoveCell {
+      width: 1%;
+      white-space: nowrap;
+      text-align: right;
+    }
+    .scheduleTable td.discountTierRemoveCell .btnGhost {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+    .discountTiersError {
+      color: #b91c1c;
+    }
   </style>
 </head>
 <body>
@@ -1173,7 +1185,7 @@
                         <option value="community">Hosted</option>
                         <option value="event">Event</option>
                       </select>
-                      <div class="helperText">Neighbourhood: delivery to a local area. Hosted: at a pub, club, school or venue. Event: one-off occasion.</div>
+                      <div class="helperText" id="dropTypeHelper">Open to your area. Individuals each pay for their own order.</div>
                     </div>
 
                   </div>
@@ -1269,7 +1281,7 @@
                   </div>
                 </div>
 
-                <div class="stageSection">
+                <div class="stageSection" id="capacitySection">
                   <h4 class="stageSectionTitle">Capacity</h4>
                   <p class="stageSectionSub">How does this drop fill?</p>
 
@@ -1293,6 +1305,17 @@
                       <input id="capacityTotal" type="number" min="0" step="1" />
                       <span class="capacityUnitLabel" id="capacityUnitLabel">orders</span>
                     </div>
+                  </div>
+                </div>
+
+                <div class="stageSection hidden" id="expectedGuestsSection">
+                  <h4 class="stageSectionTitle">Expected guests</h4>
+                  <p class="stageSectionSub">How many people will the organiser be ordering for?</p>
+
+                  <div class="field" style="margin-top:8px;">
+                    <label for="expectedGuests">Expected guests</label>
+                    <input id="expectedGuests" type="number" min="1" step="1" placeholder="e.g. 40" />
+                    <div class="helperText">Used for planning only. No capacity enforcement.</div>
                   </div>
                 </div>
 
@@ -1591,6 +1614,28 @@
                     </div>
                   </div>
                 </div>
+
+                <div class="stageSection" id="discountTiersSection">
+                  <h4 class="stageSectionTitle">Bulk discount tiers</h4>
+                  <p class="stageSectionSub">Optional. Offer a discount when the order subtotal hits a threshold. The highest matching tier applies.</p>
+
+                  <div class="scheduleTableWrap hidden" id="discountTiersTableWrap">
+                    <table class="scheduleTable">
+                      <thead>
+                        <tr>
+                          <th>Order subtotal at least</th>
+                          <th>Discount type</th>
+                          <th>Discount value</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody id="discountTiersBody"></tbody>
+                    </table>
+                  </div>
+
+                  <button class="btnGhost" id="addDiscountTierBtn" type="button" style="margin-top:10px;">+ Add tier</button>
+                  <div class="helperText discountTiersError hidden" id="discountTiersError" style="margin-top:8px;"></div>
+                </div>
               </div>
             </div>
 
@@ -1747,6 +1792,7 @@
       currentStage: "basics",
       seriesRows: [],
       showInactiveMenuItems: false,
+      discountTiers: [],
       dragState: {
         key: null,
         categoryName: null
@@ -2145,9 +2191,13 @@
       const requiresHost = dropData.drop_type === "community";
       const driver = dropData.capacity_driver || (dropData.capacity_category_id ? 'by_category' : 'by_order');
       const categories = Array.isArray(dropData.capacity_categories) ? dropData.capacity_categories : [];
-      const capacityValid =
-        Number(dropData.capacity_units_total || 0) > 0 &&
-        (driver === 'by_order' || categories.length > 0);
+      // Event drops bypass capacity — single organiser pays for a group,
+      // capacity reservation is skipped server-side. expected_guests is
+      // planning-only and not part of readiness.
+      const capacityValid = dropData.drop_type === "event"
+        ? true
+        : Number(dropData.capacity_units_total || 0) > 0 &&
+          (driver === 'by_order' || categories.length > 0);
       const basicsComplete =
         Boolean(dropData.name) &&
         Boolean(dropData.slug) &&
@@ -3231,6 +3281,18 @@
       setCapacityMode(driver);
       byId("capacityTotal").value = Number(d.capacity_units_total || 0);
 
+      byId("expectedGuests").value = d.expected_guests == null ? "" : String(d.expected_guests);
+
+      state.discountTiers = Array.isArray(d.discount_tiers)
+        ? d.discount_tiers.map(t => ({
+            threshold_pence: Number(t.threshold_pence) || 0,
+            discount_type: t.discount_type === "amount" ? "amount" : "percentage",
+            discount_value: Number(t.discount_value) || 0
+          }))
+        : [];
+      renderDiscountTiers();
+      clearDiscountTiersError();
+
       byId("deliveryDate").value = formatDateInput(d.delivery_start);
       byId("deliveryStartTime").value = formatTimeInput(d.delivery_start);
       byId("deliveryEndTime").value = formatTimeInput(d.delivery_end);
@@ -3500,7 +3562,24 @@
       });
     }
 
+    const DROP_TYPE_HELPERS = {
+      neighbourhood: "Open to your area. Individuals each pay for their own order.",
+      community: "Anchored to a venue or host. Individuals each pay for their own order.",
+      event: "Private link for one organiser to order and pay for a group. One-off only."
+    };
+
     function renderConditionalFields() {
+      const dropType = byId("dropType").value || "neighbourhood";
+      const dropTypeHelper = byId("dropTypeHelper");
+      if (dropTypeHelper) {
+        dropTypeHelper.textContent = DROP_TYPE_HELPERS[dropType] || DROP_TYPE_HELPERS.neighbourhood;
+      }
+      const isEvent = dropType === "event";
+      const capacitySection = byId("capacitySection");
+      const expectedGuestsSection = byId("expectedGuestsSection");
+      if (capacitySection) capacitySection.classList.toggle("hidden", isEvent);
+      if (expectedGuestsSection) expectedGuestsSection.classList.toggle("hidden", !isEvent);
+
       const fulfilmentMode = byId("fulfilmentMode").value;
       byId("collectionPointDescriptionField").classList.toggle("hidden", fulfilmentMode !== "collection" && fulfilmentMode !== "mixed");
       byId("deliveryAreaDescriptionField").classList.toggle("hidden", fulfilmentMode !== "delivery" && fulfilmentMode !== "mixed");
@@ -3569,6 +3648,111 @@
         const hasHost = Boolean(byId("hostSelect")?.value);
         hostShareSectionEl.style.display = hasHost ? '' : 'none';
       }
+    }
+
+    /* T3-13b — Event slug suffix.
+       Event drops carry a -XXXX random suffix on the slug as a soft
+       obscurity layer (the link is private, so it shouldn't be easily
+       guessable). Idempotent: if the slug already ends in -XXXX (4
+       lowercase alphanumeric chars after a hyphen) we leave it alone,
+       so re-saving doesn't keep appending. */
+    const EVENT_SLUG_SUFFIX_PATTERN = /-[a-z0-9]{4}$/;
+    function maybeAppendEventSlugSuffix(slug) {
+      if (!slug) return slug;
+      if (EVENT_SLUG_SUFFIX_PATTERN.test(slug)) return slug;
+      const suffix = Math.random().toString(36).replace(/[^a-z0-9]/g, "").slice(0, 4).padEnd(4, "0");
+      return `${slug}-${suffix}`;
+    }
+
+    /* T3-13b — Bulk discount tiers. state.discountTiers is the source of
+       truth while the form is open. populateForm seeds it from the drop
+       row; renderDiscountTiers paints the rows; the event handlers below
+       mutate it in place. */
+    function renderDiscountTiers() {
+      const tableWrap = byId("discountTiersTableWrap");
+      const body = byId("discountTiersBody");
+      if (!tableWrap || !body) return;
+      const tiers = state.discountTiers || [];
+      if (!tiers.length) {
+        tableWrap.classList.add("hidden");
+        body.innerHTML = "";
+        return;
+      }
+      tableWrap.classList.remove("hidden");
+      body.innerHTML = tiers.map((tier, idx) => {
+        const thresholdPounds = (Number(tier.threshold_pence || 0) / 100).toFixed(2);
+        const isPercentage = tier.discount_type !== "amount";
+        const valueDisplay = isPercentage
+          ? String(Math.round(Number(tier.discount_value || 0)))
+          : (Number(tier.discount_value || 0) / 100).toFixed(2);
+        const valueStep = isPercentage ? "1" : "0.01";
+        const valueMax = isPercentage ? ' max="100"' : "";
+        return `
+          <tr data-tier-idx="${idx}">
+            <td><input class="js-tier-threshold" type="number" min="0" step="0.01" value="${thresholdPounds}" placeholder="0.00" /></td>
+            <td>
+              <select class="js-tier-type">
+                <option value="percentage" ${isPercentage ? "selected" : ""}>Percentage</option>
+                <option value="amount" ${!isPercentage ? "selected" : ""}>Fixed amount</option>
+              </select>
+            </td>
+            <td><input class="js-tier-value" type="number" min="0" step="${valueStep}"${valueMax} value="${valueDisplay}" placeholder="0" /></td>
+            <td class="discountTierRemoveCell"><button class="btnGhost js-tier-remove" type="button">Remove</button></td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function setDiscountTiersError(message) {
+      const el = byId("discountTiersError");
+      if (!el) return;
+      if (!message) {
+        el.classList.add("hidden");
+        el.textContent = "";
+        return;
+      }
+      el.textContent = message;
+      el.classList.remove("hidden");
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function clearDiscountTiersError() {
+      setDiscountTiersError("");
+    }
+
+    function validateAndNormalizeDiscountTiers() {
+      const tiers = state.discountTiers || [];
+      for (let i = 0; i < tiers.length; i++) {
+        const t = tiers[i];
+        const pos = i + 1;
+        if (!t || typeof t !== "object") {
+          throw new Error(`Tier ${pos} is invalid.`);
+        }
+        if (t.discount_type !== "percentage" && t.discount_type !== "amount") {
+          throw new Error(`Tier ${pos}: choose Percentage or Fixed amount.`);
+        }
+        const threshold = Number(t.threshold_pence);
+        if (!Number.isFinite(threshold) || threshold <= 0 || !Number.isInteger(threshold)) {
+          throw new Error(`Tier ${pos}: order subtotal threshold must be greater than 0.`);
+        }
+        const value = Number(t.discount_value);
+        if (!Number.isFinite(value) || value <= 0) {
+          throw new Error(`Tier ${pos}: discount value must be greater than 0.`);
+        }
+        if (t.discount_type === "percentage") {
+          if (!Number.isInteger(value) || value > 100) {
+            throw new Error(`Tier ${pos}: percentage must be a whole number between 1 and 100.`);
+          }
+        } else {
+          if (!Number.isInteger(value)) {
+            throw new Error(`Tier ${pos}: fixed amount must round to a whole pence value.`);
+          }
+        }
+      }
+      state.discountTiers = tiers
+        .slice()
+        .sort((a, b) => Number(a.threshold_pence) - Number(b.threshold_pence));
+      renderDiscountTiers();
     }
 
     function ensureScheduleRows() {
@@ -3773,14 +3957,26 @@
         ? combineDateTime(byId("opensAtDate").value, byId("opensAtTime").value)
         : null;
 
-      const capacityDriver = getSelectedCapacityMode();
-      const selectedCategoryIds = capacityDriver === 'by_category'
-        ? getSelectedCapacityCategoryIds()
-        : [];
+      const dropType = byId("dropType").value || "neighbourhood";
+      const isEvent = dropType === "event";
+
+      // Events bypass capacity entirely. The hidden capacity UI may still hold
+      // old values from a type-switch; force the by_order/empty-categories
+      // shape so the existing CHECK constraint is satisfied and create-order's
+      // capacity reservation skips this drop.
+      const capacityDriver = isEvent ? 'by_order' : getSelectedCapacityMode();
+      const selectedCategoryIds = isEvent
+        ? []
+        : (capacityDriver === 'by_category' ? getSelectedCapacityCategoryIds() : []);
       // Legacy fields kept in sync for v_drop_summary compatibility.
       const legacyCategoryId = selectedCategoryIds[0] || null;
       const legacyCategorySlug = legacyCategoryId
         ? getCapacityCategorySlugFromId(legacyCategoryId)
+        : null;
+
+      const expectedGuestsRaw = byId("expectedGuests").value;
+      const expectedGuests = isEvent && expectedGuestsRaw !== ""
+        ? Math.max(1, Math.floor(Number(expectedGuestsRaw)))
         : null;
 
       /* T3-12a — Delivery area restriction. Mode hygiene: when "None" or
@@ -3816,6 +4012,8 @@
         capacity_category_id: legacyCategoryId,
         capacity_category: legacyCategorySlug,
         capacity_units_total: Number(byId("capacityTotal").value || 0),
+        expected_guests: expectedGuests,
+        discount_tiers: (state.discountTiers || []).map(t => ({ ...t })),
 
         delivery_start: combineDateTime(byId("deliveryDate").value, byId("deliveryStartTime").value),
         delivery_end: combineDateTime(byId("deliveryDate").value, byId("deliveryEndTime").value),
@@ -3867,6 +4065,8 @@
         capacity_category_id: dropData.capacity_category_id,
         capacity_category: dropData.capacity_category,
         capacity_units_total: dropData.capacity_units_total,
+        expected_guests: dropData.expected_guests,
+        discount_tiers: dropData.discount_tiers,
         opens_at: dropData.opens_at,
         closes_at: dropData.closes_at,
         delivery_start: dropData.delivery_start,
@@ -5139,7 +5339,7 @@
       [
         "dropType", "hostSelect", "notesInternal",
         "fulfilmentMode", "collectionPointDescription", "deliveryAreaDescription", "customerNotesEnabled",
-        "centrePostcode", "radiusKm", "capacityTotal",
+        "centrePostcode", "radiusKm", "capacityTotal", "expectedGuests",
         "deliveryStartTime", "deliveryEndTime",
         "opensAtDate", "opensAtTime", "closesAtDate", "closesAtTime",
         "fundraisingEnabled", "fundraisingModel", "fundraisingPercentage", "fundraisingPerOrderPence", "fundraisingDisplayText",
