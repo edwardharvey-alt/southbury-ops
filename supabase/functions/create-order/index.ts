@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
     // closed-by-time gets caught regardless of raw drops.status.
     const { data: dropSummary, error: dropErr } = await serviceClient
       .from("v_drop_summary")
-      .select("drop_id, vendor_id, slug, status, opens_at, closes_at, capacity_units_total, capacity_units_remaining")
+      .select("drop_id, vendor_id, slug, status, opens_at, closes_at, capacity_units_total")
       .eq("drop_id", payload.drop_id)
       .maybeSingle();
 
@@ -219,7 +219,7 @@ Deno.serve(async (req) => {
     // config can't accidentally let all orders through.
     const { data: dropAreaRow, error: dropAreaErr } = await serviceClient
       .from("drops")
-      .select("delivery_area_type, allowed_postcode_prefixes")
+      .select("delivery_area_type, allowed_postcode_prefixes, capacity_driver, capacity_categories")
       .eq("id", payload.drop_id)
       .maybeSingle();
     if (dropAreaErr) return jsonResponse({ error: "Drop area lookup failed" }, 500);
@@ -255,6 +255,17 @@ Deno.serve(async (req) => {
     }
 
     // Step 5 — every product / bundle in the basket belongs to this vendor.
+    // The capacity-relevant fields fetched here are reused in Step 7.5 to
+    // compute server-authoritative capacity contributions, so we promote
+    // the rows into lookup maps keyed by id.
+    type CapacityLookup = {
+      category_id: string | null;
+      counts_toward_capacity: boolean;
+      capacity_weight: number;
+    };
+    const productMap = new Map<string, CapacityLookup>();
+    const bundleMap = new Map<string, CapacityLookup>();
+
     const productIds = payload.basket
       .filter((i) => i.type === "product")
       .map((i) => i.product_id as string);
@@ -265,7 +276,7 @@ Deno.serve(async (req) => {
     if (productIds.length > 0) {
       const { data: products, error: prodErr } = await serviceClient
         .from("products")
-        .select("id, vendor_id")
+        .select("id, vendor_id, category_id, counts_toward_capacity, capacity_weight")
         .in("id", productIds);
       if (prodErr) return jsonResponse({ error: "Product lookup failed" }, 500);
       const found = new Set((products || []).map((p) => p.id));
@@ -275,12 +286,19 @@ Deno.serve(async (req) => {
       if ((products || []).some((p) => p.vendor_id !== vendorId)) {
         return jsonResponse({ error: "Basket contains a product that does not belong to this vendor" }, 400);
       }
+      for (const p of products || []) {
+        productMap.set(p.id as string, {
+          category_id: (p.category_id as string | null) ?? null,
+          counts_toward_capacity: Boolean(p.counts_toward_capacity),
+          capacity_weight: Number(p.capacity_weight ?? 1),
+        });
+      }
     }
 
     if (bundleIds.length > 0) {
       const { data: bundles, error: bunErr } = await serviceClient
         .from("bundles")
-        .select("id, vendor_id")
+        .select("id, vendor_id, category_id, counts_toward_capacity, capacity_weight")
         .in("id", bundleIds);
       if (bunErr) return jsonResponse({ error: "Bundle lookup failed" }, 500);
       const found = new Set((bundles || []).map((b) => b.id));
@@ -289,6 +307,13 @@ Deno.serve(async (req) => {
       }
       if ((bundles || []).some((b) => b.vendor_id !== vendorId)) {
         return jsonResponse({ error: "Basket contains a bundle that does not belong to this vendor" }, 400);
+      }
+      for (const b of bundles || []) {
+        bundleMap.set(b.id as string, {
+          category_id: (b.category_id as string | null) ?? null,
+          counts_toward_capacity: Boolean(b.counts_toward_capacity),
+          capacity_weight: Number(b.capacity_weight ?? 1),
+        });
       }
     }
 
@@ -336,9 +361,75 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Step 8 — capacity available.
-    const remaining = Number(dropSummary.capacity_units_remaining ?? 0);
-    if (payload.totals.capacity_units > remaining) {
+    // Step 7.5 — T3-13 server-authoritative capacity computation.
+    // Walk the basket in order, compute each item's capacity contribution
+    // from the row data fetched in Step 5, and sum them according to the
+    // drop's capacity_driver. From this point on, payload.totals.capacity_units
+    // and per-item capacity_units are ignored — the schema validator still
+    // accepts them for backward compatibility but they are not trusted.
+    const capacityDriver = String(dropAreaRow.capacity_driver || "");
+    const capacityCategorySet = new Set<string>(
+      Array.isArray(dropAreaRow.capacity_categories)
+        ? (dropAreaRow.capacity_categories as unknown[]).filter(
+            (v): v is string => typeof v === "string"
+          )
+        : []
+    );
+
+    const serverItemCapacity: number[] = new Array(payload.basket.length).fill(0);
+    for (let i = 0; i < payload.basket.length; i++) {
+      const item = payload.basket[i];
+      const row =
+        item.type === "product"
+          ? productMap.get(item.product_id as string)
+          : bundleMap.get(item.bundle_id as string);
+      if (!row || !row.counts_toward_capacity) {
+        serverItemCapacity[i] = 0;
+        continue;
+      }
+      if (capacityDriver === "by_order") {
+        // Order contributes a single unit once, computed at total level below.
+        serverItemCapacity[i] = 0;
+        continue;
+      }
+      if (capacityDriver === "by_category") {
+        if (!row.category_id || !capacityCategorySet.has(row.category_id)) {
+          serverItemCapacity[i] = 0;
+          continue;
+        }
+        serverItemCapacity[i] = row.capacity_weight * item.quantity;
+        continue;
+      }
+      // Unknown driver — fall through as zero contribution. drops.capacity_driver
+      // is NOT NULL with a constrained value set, so this branch should be unreachable.
+      serverItemCapacity[i] = 0;
+    }
+
+    const totalOrderConsumption =
+      capacityDriver === "by_order"
+        ? 1
+        : serverItemCapacity.reduce((sum, n) => sum + n, 0);
+
+    // Step 8 — capacity available. Compute consumed capacity directly from
+    // the orders table so the check is server-authoritative and doesn't
+    // depend on view freshness. pending_payment and cancelled rows are
+    // excluded; every other status counts against capacity. The pizzas
+    // column carries the server-computed capacity units consumed.
+    const { data: liveOrders, error: liveOrdersErr } = await serviceClient
+      .from("orders")
+      .select("pizzas")
+      .eq("drop_id", payload.drop_id)
+      .not("status", "in", "(pending_payment,cancelled)");
+    if (liveOrdersErr) {
+      console.error("live orders lookup failed", liveOrdersErr);
+      return jsonResponse({ error: "Capacity lookup failed" }, 500);
+    }
+    const alreadyConsumed = (liveOrders || []).reduce(
+      (sum, row) => sum + Number(row.pizzas ?? 0),
+      0
+    );
+    const capacityTotal = Number(dropSummary.capacity_units_total ?? 0);
+    if (alreadyConsumed + totalOrderConsumption > capacityTotal) {
       return jsonResponse(
         { error: "Not enough capacity remaining for this order — please refresh and try again" },
         400
@@ -356,7 +447,7 @@ Deno.serve(async (req) => {
 
     const platformFeePct = Number(vendor.platform_fee_pct ?? 0);
     const platformFeePence = Math.floor((payload.totals.total_pence * platformFeePct) / 100);
-    const capacityUnitsConsumed = Math.max(1, payload.totals.capacity_units);
+    const capacityUnitsConsumed = Math.max(1, totalOrderConsumption);
 
     // Database writes — sequence with cleanup. No transactions over
     // PostgREST, so on any failure after the orders row is created we
@@ -461,7 +552,8 @@ Deno.serve(async (req) => {
 
     // C. Insert order_items. Capture each id for D.
     const insertedItemIds: { id: string; selections: BasketSelection[] }[] = [];
-    for (const item of payload.basket) {
+    for (let i = 0; i < payload.basket.length; i++) {
+      const item = payload.basket[i];
       const { data: itemRow, error: itemErr } = await serviceClient
         .from("order_items")
         .insert({
@@ -472,7 +564,7 @@ Deno.serve(async (req) => {
           item_name_snapshot: item.name,
           qty: item.quantity,
           price_pence: item.unit_price_pence,
-          capacity_units_snapshot: item.capacity_units,
+          capacity_units_snapshot: serverItemCapacity[i],
         })
         .select("id")
         .single();
