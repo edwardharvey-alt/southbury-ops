@@ -4211,6 +4211,26 @@
       }
       clearPostcodePrefixError();
 
+      /* T3-13b — Bulk discount tier validation. The helper sorts state.discountTiers
+         in place on success and re-renders, so the payload below picks up the
+         sorted order via readDropFromForm's reference to state.discountTiers. */
+      try {
+        validateAndNormalizeDiscountTiers();
+        clearDiscountTiersError();
+      } catch (err) {
+        setDiscountTiersError(err.message || "Discount tiers are invalid.");
+        setSaveState("error", err.message || "Discount tiers are invalid.");
+        throw err;
+      }
+      // Re-read after sort so dropData.discount_tiers reflects the sorted state.
+      dropData = readDropFromForm();
+
+      /* T3-13b — Event slug obscurity suffix. Idempotent: re-saves don't
+         keep appending because EVENT_SLUG_SUFFIX_PATTERN guards the helper. */
+      if (dropData.drop_type === "event") {
+        dropData.slug = maybeAppendEventSlugSuffix(dropData.slug);
+      }
+
       dropData.slug = buildUniqueSlug(dropData.slug, state.selectedDropId);
       byId("dropSlug").value = dropData.slug;
 
@@ -5464,6 +5484,89 @@
         state.seriesRows = state.seriesRows.filter((r) => r.id !== tr.dataset.rowId);
         renderScheduleRows();
         renderSeriesPreview();
+        markDirty();
+      });
+
+      /* T3-13b — Bulk discount tier wiring. Delegation on the tbody so
+         re-renders don't strand listeners on stale row elements. */
+      byId("addDiscountTierBtn").addEventListener("click", () => {
+        state.discountTiers.push({
+          threshold_pence: 0,
+          discount_type: "percentage",
+          discount_value: 0
+        });
+        renderDiscountTiers();
+        clearDiscountTiersError();
+        markDirty();
+      });
+
+      const discountTiersBody = byId("discountTiersBody");
+
+      function getDiscountTierIndex(target) {
+        const tr = target.closest("tr[data-tier-idx]");
+        if (!tr) return -1;
+        const idx = Number(tr.dataset.tierIdx);
+        if (!Number.isInteger(idx) || idx < 0 || idx >= (state.discountTiers || []).length) return -1;
+        return idx;
+      }
+
+      function syncDiscountTierFromRow(idx, target) {
+        const tier = state.discountTiers[idx];
+        if (!tier) return;
+        if (target.matches(".js-tier-threshold")) {
+          const raw = Number(target.value);
+          tier.threshold_pence = Number.isFinite(raw) ? Math.round(raw * 100) : 0;
+          return;
+        }
+        if (target.matches(".js-tier-value")) {
+          const raw = Number(target.value);
+          if (tier.discount_type === "percentage") {
+            tier.discount_value = Number.isFinite(raw) ? Math.round(raw) : 0;
+          } else {
+            tier.discount_value = Number.isFinite(raw) ? Math.round(raw * 100) : 0;
+          }
+        }
+      }
+
+      discountTiersBody.addEventListener("input", (e) => {
+        const idx = getDiscountTierIndex(e.target);
+        if (idx < 0) return;
+        syncDiscountTierFromRow(idx, e.target);
+        clearDiscountTiersError();
+        markDirty();
+      });
+
+      discountTiersBody.addEventListener("change", (e) => {
+        const idx = getDiscountTierIndex(e.target);
+        if (idx < 0) return;
+        if (e.target.matches(".js-tier-type")) {
+          const next = e.target.value === "amount" ? "amount" : "percentage";
+          const tier = state.discountTiers[idx];
+          if (tier.discount_type !== next) {
+            // discount_value semantics change between modes; reset to 0 so
+            // we don't carry over e.g. a 250-pence "25%" reading or a
+            // 25-pound "25-pence amount" reading.
+            tier.discount_type = next;
+            tier.discount_value = 0;
+            renderDiscountTiers();
+          }
+          clearDiscountTiersError();
+          markDirty();
+          return;
+        }
+        syncDiscountTierFromRow(idx, e.target);
+        clearDiscountTiersError();
+        markDirty();
+      });
+
+      discountTiersBody.addEventListener("click", (e) => {
+        const btn = e.target.closest(".js-tier-remove");
+        if (!btn) return;
+        const idx = getDiscountTierIndex(btn);
+        if (idx < 0) return;
+        state.discountTiers.splice(idx, 1);
+        renderDiscountTiers();
+        clearDiscountTiersError();
         markDirty();
       });
 

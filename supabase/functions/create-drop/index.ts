@@ -29,6 +29,8 @@ const ALLOWED_FIELDS = new Set([
   "capacity_driver",
   "capacity_categories",
   "capacity_units_total",
+  "expected_guests",
+  "discount_tiers",
   "opens_at",
   "closes_at",
   "delivery_start",
