@@ -31,6 +31,10 @@ type Drop = Record<string, unknown> & {
   capacity_category_id: string | null;
   capacity_category: string | null;
   capacity_units_total: number | null;
+  capacity_driver: string | null;
+  capacity_categories: unknown;
+  expected_guests: number | null;
+  discount_tiers: unknown;
   host_id: string | null;
   delivery_start: string | null;
   delivery_end: string | null;
@@ -68,11 +72,27 @@ async function evaluateLiveReadiness(
   if (!drop.name) return { ready: false, reason: "Drop name is required" };
   if (!drop.slug) return { ready: false, reason: "Drop slug is required" };
   if (!drop.drop_type) return { ready: false, reason: "Drop type is required" };
-  if (!drop.capacity_category_id) return { ready: false, reason: "Capacity category is required" };
-  if (!drop.capacity_category) return { ready: false, reason: "Capacity category slug is required" };
-  if (!isFiniteNumber(drop.capacity_units_total) || drop.capacity_units_total <= 0) {
-    return { ready: false, reason: "Capacity units total must be greater than zero" };
+
+  // Event drops bypass capacity — single organiser pays for a group,
+  // capacity reservation is skipped server-side. expected_guests is
+  // planning-only and not part of readiness. Mirrors getLiveReadiness()
+  // in drop-manager.html (T3-13b).
+  if (drop.drop_type !== "event") {
+    const driver = drop.capacity_driver;
+    if (driver !== "by_order" && driver !== "by_category") {
+      return { ready: false, reason: "Capacity driver is required (by_order or by_category)" };
+    }
+    if (!isFiniteNumber(drop.capacity_units_total) || drop.capacity_units_total <= 0) {
+      return { ready: false, reason: "Capacity units total must be greater than zero" };
+    }
+    if (driver === "by_category") {
+      const categories = Array.isArray(drop.capacity_categories) ? drop.capacity_categories : [];
+      if (categories.length === 0) {
+        return { ready: false, reason: "At least one capacity category is required when capacity is tracked by category" };
+      }
+    }
   }
+
   if (drop.drop_type === "community" && !drop.host_id) {
     return { ready: false, reason: "Community drops require a host" };
   }
