@@ -564,6 +564,14 @@ Deno.serve(async (req) => {
       status: "pending_payment",
       stripe_payment_status: "pending",
       platform_fee_pence: platformFeePence,
+      discount_pence: computedDiscount,
+      discount_breakdown: matchedTier
+        ? {
+            threshold_pence: matchedTier.threshold_pence,
+            discount_type: matchedTier.discount_type,
+            discount_value: matchedTier.discount_value,
+          }
+        : null,
       // Legacy NOT NULL >= 1 column (see SCHEMA.md). Populate with
       // capacity units consumed, minimum 1, until formally migrated away.
       pizzas: capacityUnitsConsumed,
@@ -674,6 +682,27 @@ Deno.serve(async (req) => {
       `&checkout_cancelled=1&order_id=${encodeURIComponent(orderId)}` +
       `&session_id={CHECKOUT_SESSION_ID}`;
 
+    // T3-13b — create a one-off Stripe coupon when a discount was matched.
+    // Stripe applies the discount on its side, preserving the line-item
+    // breakdown. application_fee_amount is unchanged because total_pence
+    // is already post-discount (Step 7 guard).
+    let coupon: Stripe.Coupon | null = null;
+    if (computedDiscount > 0) {
+      try {
+        coupon = await stripe.coupons.create({
+          amount_off: computedDiscount,
+          currency: "gbp",
+          duration: "once",
+          max_redemptions: 1,
+          name: "Volume discount",
+        });
+      } catch (couponErr) {
+        console.error("stripe coupon create failed", couponErr);
+        await markCancelled("stripe_coupon_create_failed");
+        return jsonResponse({ error: "Could not apply discount — please try again" }, 502);
+      }
+    }
+
     let session;
     try {
       session = await stripe.checkout.sessions.create({
@@ -692,6 +721,7 @@ Deno.serve(async (req) => {
           },
           quantity: item.quantity,
         })),
+        discounts: coupon ? [{ coupon: coupon.id }] : undefined,
         payment_intent_data: {
           application_fee_amount: platformFeePence,
           transfer_data: { destination: vendor.stripe_account_id! },
