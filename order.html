@@ -1165,6 +1165,10 @@
       font-weight:950;
     }
 
+    .basketTotalLine--discount #basketDiscount{
+      color:var(--h-good);
+    }
+
     .checkoutBlock{
       display:grid;
       gap:10px;
@@ -1767,6 +1771,10 @@
           <span>Subtotal</span>
           <span id="basketSubtotal">£0.00</span>
         </div>
+        <div class="basketTotalLine basketTotalLine--discount hidden" id="basketDiscountLine">
+          <span>Volume discount</span>
+          <span id="basketDiscount">−£0.00</span>
+        </div>
         <div class="basketTotalLine">
           <span>Delivery</span>
           <span id="basketDelivery">Free</span>
@@ -2212,8 +2220,46 @@
         return 0;
       }
 
+      // T3-13b — bulk discount tier preview. Server-side enforcement lives
+      // in create-order; this is the client-side mirror so the customer sees
+      // the same number Stripe will charge.
+      function calculateDiscountPence(subtotalPence, tiers) {
+        if (!Array.isArray(tiers) || tiers.length === 0) return 0;
+        if (!Number.isFinite(subtotalPence) || subtotalPence <= 0) return 0;
+
+        const sorted = [...tiers]
+          .filter(t => t && Number.isFinite(Number(t.threshold_pence)))
+          .sort((a, b) => Number(a.threshold_pence) - Number(b.threshold_pence));
+
+        let matched = null;
+        for (const tier of sorted) {
+          if (Number(tier.threshold_pence) <= subtotalPence) matched = tier;
+          else break;
+        }
+        if (!matched) return 0;
+
+        if (matched.discount_type === "percentage") {
+          const pct = Math.max(0, Math.min(100, Number(matched.discount_value) || 0));
+          return Math.round(subtotalPence * (pct / 100));
+        }
+        if (matched.discount_type === "amount") {
+          return Math.max(0, Math.round(Number(matched.discount_value) || 0));
+        }
+        return 0;
+      }
+
+      function getDiscountPence() {
+        return calculateDiscountPence(
+          getBasketSubtotalPence(),
+          state.drop?.discount_tiers || []
+        );
+      }
+
       function getGrandTotalPence() {
-        return getBasketSubtotalPence() + getDeliveryChargePence();
+        return Math.max(
+          0,
+          getBasketSubtotalPence() - getDiscountPence() + getDeliveryChargePence()
+        );
       }
 
       function isDropClosed() {
@@ -2631,23 +2677,31 @@
             windowChip.textContent = timeLeft ? `Orders close in ${timeLeft}` : "Ordering open";
           }
 
-          const remaining = Math.max(0, getCapacityRemainingAfterBasket());
-          const rawRemaining = Math.max(0, getCapacityRemainingRaw());
-          const total = Math.max(0, Number(state.drop?.capacity_units_total ?? 0));
-          const lowThreshold = Math.max(5, Math.ceil(total * 0.1));
           const capacityChip = byId("chipCapacityLeft");
           capacityChip.className = "heroChip";
 
-          if (total > 0 && rawRemaining >= total) {
+          // Event drops don't enforce capacity server-side, so "X of Y
+          // places remaining" would be misleading. Hide the chip entirely.
+          if (String(state.drop?.drop_type || "").toLowerCase() === "event") {
             capacityChip.classList.add("hidden");
             capacityChip.textContent = "";
-          } else if (total > 0 && rawRemaining > 0 && rawRemaining <= lowThreshold) {
-            capacityChip.classList.add("low");
-            capacityChip.textContent = "Last few places";
           } else {
-            capacityChip.textContent = total > 0
-              ? `${remaining} of ${total} places remaining`
-              : `Places available · ${remaining}`;
+            const remaining = Math.max(0, getCapacityRemainingAfterBasket());
+            const rawRemaining = Math.max(0, getCapacityRemainingRaw());
+            const total = Math.max(0, Number(state.drop?.capacity_units_total ?? 0));
+            const lowThreshold = Math.max(5, Math.ceil(total * 0.1));
+
+            if (total > 0 && rawRemaining >= total) {
+              capacityChip.classList.add("hidden");
+              capacityChip.textContent = "";
+            } else if (total > 0 && rawRemaining > 0 && rawRemaining <= lowThreshold) {
+              capacityChip.classList.add("low");
+              capacityChip.textContent = "Last few places";
+            } else {
+              capacityChip.textContent = total > 0
+                ? `${remaining} of ${total} places remaining`
+                : `Places available · ${remaining}`;
+            }
           }
 
           byId("chipFulfilment").classList.add("hidden");
@@ -3118,6 +3172,15 @@
         byId("basketSubtotal").textContent = formatMoneyPence(getBasketSubtotalPence());
         byId("basketDelivery").textContent = getDeliveryChargePence() ? formatMoneyPence(getDeliveryChargePence()) : "Free";
         byId("basketGrandTotal").textContent = formatMoneyPence(getGrandTotalPence());
+
+        const discountPence = getDiscountPence();
+        const discountLine = byId("basketDiscountLine");
+        if (discountPence > 0) {
+          byId("basketDiscount").textContent = "−" + formatMoneyPence(discountPence);
+          discountLine.classList.remove("hidden");
+        } else {
+          discountLine.classList.add("hidden");
+        }
 
         renderCheckoutForm();
       }
