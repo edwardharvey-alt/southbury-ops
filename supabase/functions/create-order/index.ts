@@ -79,6 +79,42 @@ function isFiniteNumber(v: unknown): v is number {
   return typeof v === "number" && Number.isFinite(v);
 }
 
+// T3-13b — bulk discount tier matcher. Mirrors the client-side helpers
+// in order.html (prompt 2) so server and customer compute the same
+// number. The matched tier is the highest tier whose threshold_pence
+// is <= the basket subtotal; nothing matches below the lowest threshold.
+type DiscountTier = {
+  threshold_pence: number;
+  discount_type: "percentage" | "amount";
+  discount_value: number;
+};
+
+function findMatchingTier(subtotalPence: number, tiers: unknown): DiscountTier | null {
+  if (!Array.isArray(tiers) || tiers.length === 0) return null;
+  if (!isFiniteNumber(subtotalPence) || subtotalPence <= 0) return null;
+  const sorted = (tiers as DiscountTier[])
+    .filter((t) => t && Number.isFinite(Number(t?.threshold_pence)))
+    .sort((a, b) => Number(a.threshold_pence) - Number(b.threshold_pence));
+  let matched: DiscountTier | null = null;
+  for (const tier of sorted) {
+    if (Number(tier.threshold_pence) <= subtotalPence) matched = tier;
+    else break;
+  }
+  return matched;
+}
+
+function calculateDiscountPence(subtotalPence: number, matchedTier: DiscountTier | null): number {
+  if (!matchedTier) return 0;
+  if (matchedTier.discount_type === "percentage") {
+    const pct = Math.max(0, Math.min(100, Number(matchedTier.discount_value) || 0));
+    return Math.round(subtotalPence * (pct / 100));
+  }
+  if (matchedTier.discount_type === "amount") {
+    return Math.max(0, Math.round(Number(matchedTier.discount_value) || 0));
+  }
+  return 0;
+}
+
 function validatePayload(body: unknown): { ok: true; data: Payload } | { ok: false; reason: string } {
   if (!body || typeof body !== "object") return { ok: false, reason: "Body must be a JSON object" };
   const b = body as Record<string, unknown>;
@@ -219,7 +255,7 @@ Deno.serve(async (req) => {
     // config can't accidentally let all orders through.
     const { data: dropAreaRow, error: dropAreaErr } = await serviceClient
       .from("drops")
-      .select("delivery_area_type, allowed_postcode_prefixes, capacity_driver, capacity_categories")
+      .select("delivery_area_type, allowed_postcode_prefixes, capacity_driver, capacity_categories, drop_type, discount_tiers")
       .eq("id", payload.drop_id)
       .maybeSingle();
     if (dropAreaErr) return jsonResponse({ error: "Drop area lookup failed" }, 500);
@@ -350,10 +386,19 @@ Deno.serve(async (req) => {
     }
 
     // Step 7 — totals match basket. Guards against client-side tampering.
-    const computedTotal = payload.basket.reduce(
+    // T3-13b — apply the matched bulk-discount tier to the server-computed
+    // subtotal before comparing against the client total. matchedTier and
+    // computedDiscount remain in scope for Step B (orders insert) so the
+    // values can be persisted and forwarded to Stripe in 3.3.
+    const computedSubtotal = payload.basket.reduce(
       (sum, item) => sum + item.unit_price_pence * item.quantity,
       0
     );
+    const matchedTier = findMatchingTier(computedSubtotal, dropAreaRow?.discount_tiers ?? null);
+    const computedDiscount = calculateDiscountPence(computedSubtotal, matchedTier);
+    const deliveryPence = 0;  // matches client; delivery pricing not shipped
+    const computedTotal = Math.max(0, computedSubtotal - computedDiscount + deliveryPence);
+
     if (computedTotal !== payload.totals.total_pence) {
       return jsonResponse(
         { error: "Total does not match basket — please refresh and try again" },
@@ -417,25 +462,30 @@ Deno.serve(async (req) => {
     // capacity for their 30-minute Stripe Checkout window. This prevents
     // two customers racing for the same last slot during checkout. The
     // pizzas column carries the server-computed capacity units consumed.
-    const { data: liveOrders, error: liveOrdersErr } = await serviceClient
-      .from("orders")
-      .select("pizzas")
-      .eq("drop_id", payload.drop_id)
-      .neq("status", "cancelled");
-    if (liveOrdersErr) {
-      console.error("live orders lookup failed", liveOrdersErr);
-      return jsonResponse({ error: "Capacity lookup failed" }, 500);
-    }
-    const alreadyConsumed = (liveOrders || []).reduce(
-      (sum, row) => sum + Number(row.pizzas ?? 0),
-      0
-    );
-    const capacityTotal = Number(dropSummary.capacity_units_total ?? 0);
-    if (alreadyConsumed + totalOrderConsumption > capacityTotal) {
-      return jsonResponse(
-        { error: "Not enough capacity remaining for this order — please refresh and try again" },
-        400
+    // T3-13b — event drops are catering-style: expected_guests is a
+    // planning signal, not a hard slot count, so capacity enforcement
+    // is skipped entirely for drop_type === "event".
+    if (dropAreaRow?.drop_type !== "event") {
+      const { data: liveOrders, error: liveOrdersErr } = await serviceClient
+        .from("orders")
+        .select("pizzas")
+        .eq("drop_id", payload.drop_id)
+        .neq("status", "cancelled");
+      if (liveOrdersErr) {
+        console.error("live orders lookup failed", liveOrdersErr);
+        return jsonResponse({ error: "Capacity lookup failed" }, 500);
+      }
+      const alreadyConsumed = (liveOrders || []).reduce(
+        (sum, row) => sum + Number(row.pizzas ?? 0),
+        0
       );
+      const capacityTotal = Number(dropSummary.capacity_units_total ?? 0);
+      if (alreadyConsumed + totalOrderConsumption > capacityTotal) {
+        return jsonResponse(
+          { error: "Not enough capacity remaining for this order — please refresh and try again" },
+          400
+        );
+      }
     }
 
     // Stripe SDK init (verify secret present before any DB writes so we
@@ -514,6 +564,14 @@ Deno.serve(async (req) => {
       status: "pending_payment",
       stripe_payment_status: "pending",
       platform_fee_pence: platformFeePence,
+      discount_pence: computedDiscount,
+      discount_breakdown: matchedTier
+        ? {
+            threshold_pence: matchedTier.threshold_pence,
+            discount_type: matchedTier.discount_type,
+            discount_value: matchedTier.discount_value,
+          }
+        : null,
       // Legacy NOT NULL >= 1 column (see SCHEMA.md). Populate with
       // capacity units consumed, minimum 1, until formally migrated away.
       pizzas: capacityUnitsConsumed,
@@ -624,6 +682,27 @@ Deno.serve(async (req) => {
       `&checkout_cancelled=1&order_id=${encodeURIComponent(orderId)}` +
       `&session_id={CHECKOUT_SESSION_ID}`;
 
+    // T3-13b — create a one-off Stripe coupon when a discount was matched.
+    // Stripe applies the discount on its side, preserving the line-item
+    // breakdown. application_fee_amount is unchanged because total_pence
+    // is already post-discount (Step 7 guard).
+    let coupon: Stripe.Coupon | null = null;
+    if (computedDiscount > 0) {
+      try {
+        coupon = await stripe.coupons.create({
+          amount_off: computedDiscount,
+          currency: "gbp",
+          duration: "once",
+          max_redemptions: 1,
+          name: "Volume discount",
+        });
+      } catch (couponErr) {
+        console.error("stripe coupon create failed", couponErr);
+        await markCancelled("stripe_coupon_create_failed");
+        return jsonResponse({ error: "Could not apply discount — please try again" }, 502);
+      }
+    }
+
     let session;
     try {
       session = await stripe.checkout.sessions.create({
@@ -642,6 +721,7 @@ Deno.serve(async (req) => {
           },
           quantity: item.quantity,
         })),
+        discounts: coupon ? [{ coupon: coupon.id }] : undefined,
         payment_intent_data: {
           application_fee_amount: platformFeePence,
           transfer_data: { destination: vendor.stripe_account_id! },
