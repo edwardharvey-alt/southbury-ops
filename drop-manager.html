@@ -3895,7 +3895,9 @@
         ["Status", liveDrop.status || "draft"],
         ["Order Window", liveDrop.opens_at && liveDrop.closes_at ? `${formatDateShort(liveDrop.opens_at)} ${formatTimeOnly(liveDrop.opens_at)} → ${formatDateShort(liveDrop.closes_at)} ${formatTimeOnly(liveDrop.closes_at)}` : (liveDrop.closes_at ? `Open immediately → ${formatDateShort(liveDrop.closes_at)} ${formatTimeOnly(liveDrop.closes_at)}` : "Not set")],
         ["Fulfilment", liveDrop.delivery_start && liveDrop.delivery_end ? `${formatDateShort(liveDrop.delivery_start)} ${formatTimeOnly(liveDrop.delivery_start)}–${formatTimeOnly(liveDrop.delivery_end)}` : "Not set"],
-        ["Capacity", `${Number(liveDrop.capacity_units_total || 0)} ${capacityLabel}`],
+        liveDrop.drop_type === "event"
+          ? ["Expected guests", liveDrop.expected_guests == null ? "Not set" : `${Number(liveDrop.expected_guests)}`]
+          : ["Capacity", `${Number(liveDrop.capacity_units_total || 0)} ${capacityLabel}`],
         ["Menu", `${enabledItems} enabled • ${enabledProducts} products • ${enabledBundles} bundles`],
         ["Repeat", getRepeatPattern() === "recurring" ? "Recurring" : "One-off"]
       ].map(([label, value]) => `
@@ -4227,13 +4229,15 @@
       // Re-read after sort so dropData.discount_tiers reflects the sorted state.
       dropData = readDropFromForm();
 
-      /* T3-13b — Event slug obscurity suffix. Idempotent: re-saves don't
-         keep appending because EVENT_SLUG_SUFFIX_PATTERN guards the helper. */
+      /* T3-13b — Event slug obscurity suffix. Must run AFTER
+         buildUniqueSlug: buildUniqueSlug preserves the existing DB slug
+         for the same dropId, which would strip the -e-XXXX marker if
+         applied first. Idempotent: re-saves don't keep appending
+         because EVENT_SLUG_SUFFIX_PATTERN guards the helper. */
+      dropData.slug = buildUniqueSlug(dropData.slug, state.selectedDropId);
       if (dropData.drop_type === "event") {
         dropData.slug = maybeAppendEventSlugSuffix(dropData.slug);
       }
-
-      dropData.slug = buildUniqueSlug(dropData.slug, state.selectedDropId);
       byId("dropSlug").value = dropData.slug;
 
       const isRecurring = getRepeatPattern() === "recurring";
