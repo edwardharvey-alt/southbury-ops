@@ -386,10 +386,19 @@ Deno.serve(async (req) => {
     }
 
     // Step 7 — totals match basket. Guards against client-side tampering.
-    const computedTotal = payload.basket.reduce(
+    // T3-13b — apply the matched bulk-discount tier to the server-computed
+    // subtotal before comparing against the client total. matchedTier and
+    // computedDiscount remain in scope for Step B (orders insert) so the
+    // values can be persisted and forwarded to Stripe in 3.3.
+    const computedSubtotal = payload.basket.reduce(
       (sum, item) => sum + item.unit_price_pence * item.quantity,
       0
     );
+    const matchedTier = findMatchingTier(computedSubtotal, dropAreaRow?.discount_tiers ?? null);
+    const computedDiscount = calculateDiscountPence(computedSubtotal, matchedTier);
+    const deliveryPence = 0;  // matches client; delivery pricing not shipped
+    const computedTotal = Math.max(0, computedSubtotal - computedDiscount + deliveryPence);
+
     if (computedTotal !== payload.totals.total_pence) {
       return jsonResponse(
         { error: "Total does not match basket — please refresh and try again" },
@@ -453,25 +462,30 @@ Deno.serve(async (req) => {
     // capacity for their 30-minute Stripe Checkout window. This prevents
     // two customers racing for the same last slot during checkout. The
     // pizzas column carries the server-computed capacity units consumed.
-    const { data: liveOrders, error: liveOrdersErr } = await serviceClient
-      .from("orders")
-      .select("pizzas")
-      .eq("drop_id", payload.drop_id)
-      .neq("status", "cancelled");
-    if (liveOrdersErr) {
-      console.error("live orders lookup failed", liveOrdersErr);
-      return jsonResponse({ error: "Capacity lookup failed" }, 500);
-    }
-    const alreadyConsumed = (liveOrders || []).reduce(
-      (sum, row) => sum + Number(row.pizzas ?? 0),
-      0
-    );
-    const capacityTotal = Number(dropSummary.capacity_units_total ?? 0);
-    if (alreadyConsumed + totalOrderConsumption > capacityTotal) {
-      return jsonResponse(
-        { error: "Not enough capacity remaining for this order — please refresh and try again" },
-        400
+    // T3-13b — event drops are catering-style: expected_guests is a
+    // planning signal, not a hard slot count, so capacity enforcement
+    // is skipped entirely for drop_type === "event".
+    if (dropAreaRow?.drop_type !== "event") {
+      const { data: liveOrders, error: liveOrdersErr } = await serviceClient
+        .from("orders")
+        .select("pizzas")
+        .eq("drop_id", payload.drop_id)
+        .neq("status", "cancelled");
+      if (liveOrdersErr) {
+        console.error("live orders lookup failed", liveOrdersErr);
+        return jsonResponse({ error: "Capacity lookup failed" }, 500);
+      }
+      const alreadyConsumed = (liveOrders || []).reduce(
+        (sum, row) => sum + Number(row.pizzas ?? 0),
+        0
       );
+      const capacityTotal = Number(dropSummary.capacity_units_total ?? 0);
+      if (alreadyConsumed + totalOrderConsumption > capacityTotal) {
+        return jsonResponse(
+          { error: "Not enough capacity remaining for this order — please refresh and try again" },
+          400
+        );
+      }
     }
 
     // Stripe SDK init (verify secret present before any DB writes so we
