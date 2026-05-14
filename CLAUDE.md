@@ -930,6 +930,57 @@ on top of the coding rules above.
     tag-array columns (e.g. dish tags, drop tags) should use
     `text[]` from the outset for the same reason.
 
+43. **Schema migrations and the matching Edge Function deploy are
+    an atomic pair.** When a new column is added as `NOT NULL`
+    with no default, every subsequent write through an Edge
+    Function that does not yet know about the column will fail
+    with a not-null violation — and on the customer order path
+    that means every checkout 500s in production until the
+    function is redeployed. Same shape applies for new tables and
+    new constraints. The migration and the function deploy must
+    land in the same operation: either deploy the widened function
+    first (it tolerates the old schema), then apply the migration;
+    or apply the migration with a sensible default, then deploy
+    the function, then drop the default. Never run the bare
+    migration on its own and hope the deploy follows shortly.
+    Surfaced during T3-13b where `orders.discount_pence` /
+    `orders.discount_breakdown` were added and `create-order` had
+    to be redeployed in lockstep — the gap between the two would
+    have broken every order.
+
+44. **Stripe Connect discounts: use a one-off coupon, not collapsed
+    line items.** When applying a volume / event discount on a
+    Stripe Connect destination charge, the wrong move is to
+    re-shape `line_items` so each line carries a reduced
+    `unit_amount` — that destroys the itemised breakdown on
+    Stripe's side (vendor and customer receipts both lose the
+    original prices, and reconciliation against `order_items`
+    becomes impossible). The right move is to create a one-off
+    Stripe coupon (`amount_off` in pence, `currency: 'gbp'`,
+    `duration: 'once'`, `max_redemptions: 1`) and attach it to
+    the Checkout Session via `discounts: [{ coupon: <id> }]`.
+    `line_items` stay at their true unit prices; Stripe applies
+    the discount at the session level and the receipt shows the
+    breakdown plus the discount line. `application_fee_amount` is
+    naturally correct because it's computed from the post-discount
+    `total_pence` we already hold — no extra arithmetic needed.
+    Surfaced during T3-13b prompt 3.3 (PR #254).
+
+45. **Customer-payment Edge Function changes go through branch + PR
+    + Ed-deploys + Ed-merges, never directly to main.** This is
+    Critical Rule #15 (deploy-before-merge), reaffirmed during the
+    T3-13b prompt 3 build of `create-order`. The three-prompt
+    split (3.1 helpers, 3.2 capacity skip + total guard, 3.3
+    persist discount + Stripe coupon) was specifically a defence
+    against stream-idle timeouts on a long function — keeping each
+    prompt under the threshold that triggers the degenerate retry
+    loop documented in operational learning #27. Pattern works:
+    Claude Code drafts source on a feature branch, Ed pulls,
+    deploys via `supabase functions deploy create-order`, smoke-
+    tests, and only then merges the PR. Never short-circuit by
+    pushing function changes straight to main — merging before
+    deploy 500s every order until the function redeploys.
+
 ## Stripe Connect Express (T3-8)
 
 - vendors schema: `stripe_account_id` TEXT (nullable),
@@ -1110,12 +1161,14 @@ index.
 - T2-8 — Replace hardcoded vendor slug across operator pages — open
 
 ### Tier 3 — Should be done before regular use
+- T3-8 — Stripe Connect Express: next major priority — final gate before Healthy Habits go-live. Schema (`vendors.stripe_account_id`, `vendors.stripe_onboarding_complete`) and the `create-stripe-connect-link` / `check-stripe-connect-status` Edge Functions are in place; drop publish gate is wired. Outstanding work is whatever remains to take a real vendor (Healthy Habits) through onboarding end-to-end on the live Stripe platform. See the dedicated "Stripe Connect Express (T3-8)" section above for current state.
 - T3-12b — Order page: neighbourhood delivery area enforcement (radius mode) — open. T3-12a (postcode prefix mode) closed 2026-05-03: schema discriminator added (`delivery_area_type`, `allowed_postcode_prefixes`); Drop Studio UI for prefix entry; client-side onBlur validation; server-side enforcement in `create-order`; widened `update-drop` ALLOWED_FIELDS with paired-field invariants. Radius mode reserved for T3-12b.
-- T3-13b — Event / catering workflow — open, next active ticket. Schema migration already applied: `drops.expected_guests`, `drops.discount_tiers` (jsonb), `orders.discount_pence`, `orders.discount_breakdown` (jsonb). Code work pending: Drop Studio event-type behaviour + bulk discount tier editor + slug random suffix + helper text; order page event UX + discount preview; `create-order` to skip capacity enforcement for events and server-compute discount.
 - T3-13-polish-2 — Product/bundle editor chips ("£X", "Y slot per item / Doesn't count", "Z sold") don't refresh after save until hard refresh — open. PR #253 attempted a fix by adding `applySavedRowToState` to patch `state.products` / `state.bundles` with the Edge Function response after `refreshAll()`, but the chips remained stale in production. Leading hypothesis: the chip render function reads from an enriched / derived source (a separately-fetched array, or a `v_products_enriched` / `v_bundles_enriched` result the helper doesn't touch) while `applySavedRowToState` only mutates the raw `state.products` / `state.bundles` arrays. Two follow-up sessions stalled in extended thinking — start the next session by `grep`-ing for `productsEnriched`, `bundlesEnriched`, `menuItems`, and the enriched view names in `drop-menu.html`, and trace the chip render function back to its actual data source before editing.
 - T3-13-polish-3 — Drop Studio Capacity section feels oversized — open. Pills are large, category list is one-per-row. Possibly compact pills + multi-column chip layout for categories. Needs design conversation.
 
 T3-13 (capacity driver multi-mode) closed 2026-05-13: Drop Studio capacity mode UI (PR #251), Menu Library capacity UI (PR #252), pending_payment fix (PR #250) merged; eight Edge Functions redeployed (`create-order`, `create-drop`, `update-drop`, `create-product`, `update-product`, `create-bundle`, `update-bundle`, `duplicate-bundle`); schema migrations and view rewrites applied earlier; verified end-to-end on Test 11 for both `by_order` and `by_category` modes with capacity math correct in both.
+
+T3-13b (event / catering workflow) closed 2026-05-14: schema migration (`drops.expected_guests`, `drops.discount_tiers` jsonb, `orders.discount_pence`, `orders.discount_breakdown` jsonb) applied earlier; Drop Studio event-type behaviour (event-mode toggle, expected guests, bulk discount tier editor, slug random suffix, helper text) and order page event UX (capacity chip hidden on event drops, volume discount preview at checkout) merged across PRs in the T3-13b series; `create-order` updated to skip capacity enforcement for events, apply the matched discount in the Step 7 total guard, persist `discount_pence` and `discount_breakdown` on the orders row, and apply a one-off Stripe coupon (`amount_off` + `duration: 'once'` + `max_redemptions: 1`) to the Checkout Session so the itemised breakdown remains intact on Stripe's side. Shipped via PR #254 (three-prompt split: 3.1 helpers + select extension, 3.2 capacity skip + total guard, 3.3 persist discount + Stripe coupon).
 
 ### Tier 4 — Enhancements that will impress
 - T4-29 — Series intelligence in Insights — open
