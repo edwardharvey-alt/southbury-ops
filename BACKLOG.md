@@ -213,6 +213,22 @@ Offers Call, SMS (pre-filled with "your order is ready" message), and
 Skip options. Delivery orders skip the modal and go straight to status
 update. Modal HTML is in the DOM before attachEvents() runs.
 
+**Update note (May 2026 — from T5-C1 design session):**
+
+The manual modal (call/SMS/skip) is the correct fallback path and should
+remain. However, the automated SMS path — firing automatically when the
+vendor marks an order Ready, without requiring the modal — is the
+preferred default. T5-11 (comms engine) is the correct home for the
+automated path. When T5-11 ships, the order_ready trigger should fire an
+automated SMS to the customer's mobile number if present, and the manual
+modal should appear as a secondary option for vendors who want to
+personalise the notification or call the customer. Both paths coexist.
+
+SMS is confirmed as the correct channel for order-ready notifications
+(not WhatsApp) because it reaches every mobile regardless of app
+availability or data connectivity — important in a busy collection
+environment.
+
 T3-11: Menu Library — delivery and collection suitability flags ✓ COMPLETE
 Fulfilment suitability section added to the product editor in
 drop-menu.html. Three fields: travels_well checkbox,
@@ -1272,10 +1288,28 @@ T5-1: Delivery optimisation
 Route planning and batching for neighbourhood drops. Cluster addresses,
 suggest optimal route. Not needed for community drops.
 
-T5-2: Demand generation — SMS alerts
-Text previous customers when new drop announced. Triggers: drop live,
-capacity running low, new vendor in area, regular cadence reminders.
-Requires customer consent model.
+T5-2: Demand generation — SMS alerts — SUPERSEDED
+
+**Status:** SUPERSEDED by T5-C2 and T5-11 (May 2026).
+
+The original framing — SMS as the primary demand generation channel for
+drop announcements and reminders — is incorrect. Research conducted as
+part of T5-C1 establishes that WhatsApp is the correct channel for drop
+demand generation (98% open rate, 45–60% CTR, community activation
+through host groups), while SMS is the correct channel only for
+transactional notifications where guaranteed delivery matters regardless
+of app availability. The order-ready notification is the sole SMS use
+case for Hearth.
+
+Superseded by:
+- T5-C2 (WhatsApp activation system) — covers demand generation
+  broadcasts to vendor customer lists via WhatsApp
+- T5-11 (comms engine) — updated to include automated SMS for
+  order-ready notification as default transactional path
+- T3-10 (order ready notification — complete) — manual path already
+  in place; T5-11 adds the automated SMS default
+
+No build work required.
 
 T5-3: Host onboarding and contact list upload
 Hosts upload contact lists to drive demand. CSV import, consent
@@ -1365,6 +1399,43 @@ T5-11: Comms engine V1
 
 Event-driven transactional and demand generation messaging triggered by order and drop lifecycle events. Built on Supabase Edge Functions calling Postmark for email. SMS via Twilio deferred to V2 — focus V1 on getting email right.
 
+**Update (May 2026 — from T5-C1 design session):**
+
+Channel scope has been revised following the drop communications
+architecture design session. Key changes to incorporate when building:
+
+(1) WhatsApp as a parallel channel to email for drop_announced and
+drop_reminder triggers. Where the customer has provided a phone number
+with WhatsApp consent (captured at checkout per T5-C2), the platform
+should route the drop announcement and reminder to WhatsApp in addition
+to or instead of email, based on customer preference. WhatsApp
+click-through rates (45–60%) significantly outperform email (2–5%) for
+conversion-intent messages. The pre-written templates for each trigger
+are specified in T5-C2.
+
+(2) Automated SMS for order_ready as the default transactional path.
+When the vendor marks an order Ready on the Service Board, an SMS fires
+automatically to the customer's mobile number if one has been provided.
+This supplements rather than replaces the existing manual T3-10 modal.
+SMS is the correct channel here specifically because guaranteed delivery
+matters — some customers will not have WhatsApp or may miss app
+notifications in a busy collection environment.
+
+(3) The early-access email (Thursday morning, 24 hours before public
+ordering opens) to previous customers is a new trigger not currently in
+the V1 spec. Add: drop_early_access — fires when a drop's ordering
+window opens, sends only to customers who have previously ordered from
+this vendor. This is the highest-leverage retention mechanic in the
+communications architecture.
+
+(4) Post-drop thank-you email (Saturday morning) with next drop date
+is confirmed as a required trigger. This is already in the V1 spec as
+the Saturday morning send. Ensure it surfaces the next scheduled drop
+date for this vendor if one exists, with the early-access link.
+
+Reference: Hearth_Drop_Communications_Architecture.md sections 4, 5,
+and 11 for full channel rationale and trigger specifications.
+
 **GenAI integration**
 
 Email body copy is generated via the Anthropic API (Haiku 4.5) inside the Edge Function at send time, not from static string literal templates. Each trigger passes structured event data (order reference, drop name, timing, vendor name, host name where present, fulfilment mode) plus the vendor's brand voice settings from Brand Hearth to the API. The model generates the connecting prose and the framing of the message in the vendor's voice. Subject lines, CTAs, order references, times, and prices are deterministic — templated and rendered separately, never generated. See GenAI shared principles for hard rules.
@@ -1394,6 +1465,22 @@ Infrastructure required before building: T6-1 (domain — lovehearth.co.uk must 
 Dependency: T3-9 (customer capture — complete), T6-1, T6-6.
 
 T5-C1: Pre-drop customer engagement — research brief
+
+**Status:** ✓ CLOSED May 2026. Research brief delivered.
+
+**Closure note (May 2026):** Design session completed in Claude Chat.
+Full communications architecture design brief produced and saved as
+Hearth_Drop_Communications_Architecture.md in project files. Covers:
+foundational anticipation insight, channel roles and hierarchy (social /
+WhatsApp / email / SMS), nine-touchpoint weekly drop playbook with every
+message scripted and attributed, WhatsApp host/vendor activation model,
+Phase 1 vs Phase 2 WhatsApp approach and UK Coexistence constraint,
+customer segmentation model by drop origin and postcode, post-drop
+content strategy, habit formation principles, and full platform
+enablement requirements. Output has spawned five new backlog tickets:
+T5-C2, T5-C3, T5-C4, T5-C5, T5-C6. T5-11 and T5-25 updated with
+findings. T5-2 retired.
+
 Tier 5. Research ticket, not a build ticket. Should be completed before T5-11 (comms engine) is extended beyond its current transactional scope.
 
 The comms engine (T5-11) specifies what to send and when in a mechanical way: order confirmed, drop announced, drop reminder. That is the baseline. What it does not answer is the deeper question: what does the evidence say about optimal pre-event engagement strategies, and how does that apply to the Hearth context specifically?
@@ -1405,6 +1492,581 @@ Scope: review emerging evidence on pre-event engagement timing and sequencing; i
 Output: a design brief document, not code. This is a Claude Chat research task, not a Claude Code build task. Conduct as a dedicated research session using web search and synthesis.
 
 Dependency: none. Can run in parallel with ongoing platform build work. Does not block any current Tier 1–6 priorities.
+
+T5-C2: WhatsApp activation system — templates, segmentation, consent,
+and broadcast management
+
+**Status:** Open. Tier 5. Should land before Healthy Habits Cafe's
+first drop — the template system and phone number capture with WhatsApp
+consent are required before vendors can execute the communications
+architecture described in Hearth_Drop_Communications_Architecture.md.
+
+**The problem**
+
+The communications architecture specifies nine touchpoints across five
+days for each drop. Five of those touchpoints involve WhatsApp — three
+from the vendor's own number, two from the host's. Currently the
+platform provides none of the infrastructure to support these touchpoints:
+no template library, no customer WhatsApp consent capture, no broadcast
+management, no segmentation. Vendors are left to do this entirely manually
+with no guidance, no pre-written copy, and no visibility of which customers
+are relevant for which drop.
+
+**Scope — four components**
+
+**(1) Pre-written message template library**
+
+Every WhatsApp touchpoint in the drop cycle has a pre-written template
+generated automatically from drop data. Vendors and hosts never write
+from scratch. Templates are generated at the point of drop publication
+and stored against the drop record.
+
+Required templates:
+- Tuesday host community message: warm, in the host's voice, names the
+  vendor, the venue, the food description, the ordering-open time, and
+  the capacity. Reads as the host talking to their members, not a
+  platform notification.
+- Thursday ordering-open message (vendor to customers): short, direct,
+  link prominent, slot count visible, kitchen close time included.
+- Thursday host link message: second, shorter host message — just the
+  live link and remaining slot count.
+- Friday order-ready message: transactional, venue name, collection
+  window close time.
+
+All templates are surfaced in a "Communications" tab or panel on the
+drop card in Drop Studio. The vendor and host see their respective
+templates, can edit them, and can copy to clipboard with one tap.
+The platform also surfaces a prompted broadcast workflow (see component
+4 below).
+
+**(2) Phone number capture with WhatsApp consent at checkout**
+
+Extend the checkout flow on order.html to capture mobile number with an
+explicit WhatsApp consent field, distinct from the existing email
+marketing opt-in. The two consents must be captured and stored
+separately.
+
+WhatsApp consent language: "Get WhatsApp updates about upcoming drops
+from [Vendor Name] near you."
+
+The phone number field should already exist from T4-8 (order form
+enhancements). Verify that T4-8 captures phone number to the orders
+table or customers table. If not already present, add it. The WhatsApp
+consent flag should be stored on customer_relationships as a new boolean
+column: whatsapp_opt_in (default false). Schema change required — Ed
+to run via SQL editor before build begins.
+
+**(3) Customer geographic segmentation by drop origin**
+
+Every customer record must carry the drop they first ordered from and
+the outward postcode they provided. These two data points are the
+foundation of the geographic segmentation model.
+
+The drop origin tag should already be capturable from T3-9 (customer
+capture — complete) since every order belongs to a drop. Verify that
+customer_relationships stores the drop_id of the originating order.
+If not, add it.
+
+From these two fields, the platform derives: which vendor, which host,
+which geographic area, which drop type. This enables the targeting rule:
+customers who ordered from a Broadstone drop should receive
+communications about Broadstone drops; customers who ordered from a
+Canford Heath drop should receive communications about Canford Heath
+drops.
+
+Broadcast segmentation surface: when a vendor goes to send a drop
+announcement, the platform automatically filters the relevant customer
+segment based on the new drop's location and surfaces: "Based on this
+drop's location, [X] customers have ordered from nearby drops. Send
+announcement to this group?" The vendor reviews and approves before
+any message is sent. The platform does the filtering; the vendor owns
+the decision.
+
+**(4) Prompted broadcast workflow**
+
+When a drop reaches each communication trigger point, the platform
+surfaces a prompt to the vendor with the pre-drafted message ready to
+send. One tap to execute. The vendor owns the decision; the platform
+does the preparation.
+
+Trigger points:
+- Drop published → "Send your Tuesday host message?" (shows host
+  template, host contact details, copy button)
+- Ordering opens → "Send your ordering-open WhatsApp?" (shows vendor
+  customer template, customer count, copy button)
+- Drop reaches 80% capacity → "Let your audience know — almost full"
+  (shows capacity signal template for social/WhatsApp)
+- Drop completes → "Share the moment?" (shows post-drop social template,
+  prompts for a photo)
+
+The broadcast workflow surfaces in the drop card actions panel in
+Drop Studio, not as a separate page. Notifications can also be
+surfaced via the Home dashboard Today strip for live drops.
+
+**Schema changes required before build (Ed to run via SQL editor):**
+```sql
+-- WhatsApp consent on customer_relationships
+ALTER TABLE customer_relationships
+  ADD COLUMN IF NOT EXISTS whatsapp_opt_in boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS whatsapp_opted_in_at timestamptz;
+
+-- Drop origin on customer_relationships (if not already present)
+ALTER TABLE customer_relationships
+  ADD COLUMN IF NOT EXISTS source_drop_id uuid REFERENCES drops(id);
+```
+
+Verify whether source_drop_id already exists before adding.
+
+**Dependencies:** T3-9 (customer capture — complete), T4-8 (order form
+enhancements — complete). T5-11 (comms engine) will route automated
+sends through the consent model captured here.
+
+**Cross-reference:** T5-C1 (closed — design brief), T5-C3 (Phase 2
+WhatsApp API integration), T5-11 (comms engine — consumes WhatsApp
+consent data), Hearth_Drop_Communications_Architecture.md sections 7
+and 8.
+
+T5-C3: WhatsApp Business API integration — Meta Tech Provider programme
+
+**Status:** Open. Tier 5. Phase 2 infrastructure — do not build until
+Phase 1 (WhatsApp Business App broadcast lists, managed via T5-C2) has
+been proven with multiple vendors running consistently. Gated on UK
+WhatsApp Coexistence becoming available.
+
+**The problem**
+
+Phase 1 (T5-C2) enables vendor WhatsApp activation through manual
+broadcast lists using the free WhatsApp Business App. This is correct
+for the first 6–12 months. Two constraints will eventually trigger
+Phase 2:
+
+(1) WhatsApp Business App broadcast lists cap at 256 contacts. A vendor
+who builds a customer base beyond this cannot broadcast to their full
+list from within the app.
+
+(2) The Phase 1 workflow requires the vendor to manually copy and paste
+the pre-written template and send it from their own WhatsApp. Hearth
+cannot trigger the send from within the platform. Phase 2 enables the
+platform to initiate the broadcast, with the vendor approving in one
+tap, and the message arriving from the vendor's own registered number.
+
+**The mechanism — Meta Embedded Signup**
+
+Hearth becomes a Meta Tech Provider (ISV). This involves registering
+a Meta app and having it approved (typically 3–4 weeks), accepting a
+partner solution link with a Business Solution Provider (BSP) such as
+Twilio, and completing the technical Embedded Signup integration.
+
+The vendor flow: vendor clicks "Connect WhatsApp" in their Hearth
+account → a Meta-hosted OAuth popup opens → vendor connects their
+business number → Meta verifies with a one-time code → popup closes →
+Hearth is granted permission to send on the vendor's behalf via the API
+→ messages arrive from the vendor's own registered number.
+
+The vendor's WABA (WhatsApp Business Account), phone number, and
+Business Portfolio remain owned by the vendor. Hearth is granted
+access. If the vendor ever leaves, their assets stay with them.
+
+**Critical UK constraint — Coexistence**
+
+WhatsApp Coexistence — the feature allowing a vendor to use WhatsApp
+Business App for personal conversations while the API sends broadcasts
+from the same number — is not currently available in the UK. Until it
+is, Phase 2 requires vendors to use a dedicated second number for API
+broadcasts, separate from their personal WhatsApp number. This is
+significant friction and is the primary reason Phase 2 must not be
+rushed. Monitor Meta's Coexistence rollout; UK availability is expected
+within 12 months of May 2026.
+
+**Template pre-approval**
+
+WhatsApp Business API marketing messages require pre-approved templates
+from Meta. For Hearth's use cases this is not a significant constraint
+— the drop announcement messages are highly consistent. Submit the
+four core templates from T5-C2 once; every vendor uses them. Approval
+typically takes 24–48 hours.
+
+**Cost model**
+
+As of July 2025, Meta charges per delivered message for marketing
+broadcasts. UK rates approximately £0.02–0.05 per message. For a
+vendor sending to 100 customers, this is £2–5 per drop activation.
+Cost is low relative to drop GMV; pass through to vendors transparently
+rather than absorbing into platform margin.
+
+**Trigger for building Phase 2**
+
+Build when any of the following are true:
+
+- A vendor's WhatsApp customer list exceeds 256 contacts
+- UK WhatsApp Coexistence becomes available
+- Hearth has 5+ vendors running consistently and operational value of
+  platform-triggered sends is confirmed from vendor feedback
+
+Do not build ahead of this trigger. Phase 1 is sufficient until then
+and the Coexistence constraint makes Phase 2 a poor vendor experience
+in the UK market today.
+
+**Dependencies:** T5-C2 (Phase 1 WhatsApp system — Phase 2 is additive
+to Phase 1, not a replacement). UK WhatsApp Coexistence availability.
+
+**Cross-reference:** T5-C1 (closed — design brief),
+Hearth_Drop_Communications_Architecture.md section 7 (Phase 2 detail).
+
+T5-C4: Drop activation guide — vendor-facing communication playbook
+
+**Status:** Open. Tier 5. Should land before Healthy Habits Cafe goes
+live — vendors need to understand the activation model before their
+first drop, not after.
+
+**The problem**
+
+The platform gives vendors the tools to run a drop. It does not yet tell
+them how to maximise the chance that drop fills. A vendor who publishes
+a drop and shares the link once on Instagram, then waits, will likely
+underfill. That underfill will damage their confidence in the model and
+produce weak learning data. The gap is not capability — the tools are
+there. The gap is education: vendors need to understand the activation
+sequence, why each step matters, and what the platform does to help them
+execute it.
+
+This is not a marketing problem. It is an operational one. Filling a
+drop consistently is a learnable behaviour. The platform should teach it.
+
+**What the guide must cover**
+
+The guide explains the drop communication cycle in plain, practical
+language. Structured around the three-act model: anticipation (before
+ordering opens), activation (during the ordering window), and nurture
+(after the drop). For each act: what to do, which channel, why it
+works, what the platform prepares automatically versus what the vendor
+must do.
+
+The five things every vendor must understand before their first drop:
+
+(1) Announce the menu before ordering opens. Post the menu to social
+media 4–5 days before the drop — not a link to order, just the menu.
+This starts the anticipation period and seeds the algorithm. The
+platform generates a menu card image automatically (T5-25). The vendor
+just shares it.
+
+(2) Activate through the host, not around them. The host's WhatsApp
+group is the highest-quality audience for a community node drop. A
+message from the host carries more trust than any vendor broadcast.
+The platform generates the exact message for the host to copy and
+paste (T5-C2). The host's only job is one tap.
+
+(3) Give previous customers early access. The early-access email goes
+to previous customers 24 hours before the public link. They get first
+choice of limited capacity. The platform sends this automatically
+(T5-11).
+
+(4) Tell people when ordering opens via WhatsApp. When the ordering
+window opens, a WhatsApp message to opted-in customers outperforms
+every other conversion channel. The platform prepares the message; the
+vendor sends in one tap (T5-C2).
+
+(5) Close the loop after the drop. A post-drop social moment and a
+Saturday morning email with the next drop date are the most effective
+tools for building the habit that makes the next drop easier to fill.
+The platform prepares both; the vendor approves and sends (T5-11,
+T5-25).
+
+**Where the guide surfaces — three integration points**
+
+(1) Drop Studio — first-drop guidance card (extends T4-23). When a
+vendor is creating their first drop, the existing T4-23 guidance card
+is extended with a "How to fill this drop" section introducing the
+five-step activation approach in 3–4 sentences with a link to the
+full guide.
+
+(2) Drop Studio — Review pane readiness checklist. Add a "Promotion
+plan" row to the review checklist alongside Basics, Timing, Menu,
+Capacity, Commercials. Not a hard publish gate — a soft prompt. Shows:
+whether a host is assigned (host WhatsApp activation available),
+whether there are previous customers (early-access email will send),
+whether a social caption is ready (link to T5-25 copy generator).
+Each row links to the relevant platform tool.
+
+(3) Standalone guide page (drop-activation-guide.html or equivalent).
+Dedicated page explaining the full five-step sequence in depth. Written
+in Hearth's plain, vendor-first tone — not platform documentation, not
+a marketing pitch. An operational guide for a professional food
+business. Accessible from the operator nav as a utility link and
+linked from the Review pane checklist.
+
+**Tone and language principles**
+
+Feels like advice from a trusted operator, not instructions from a
+platform. Use concrete examples: "your Friday drop at the cricket club"
+not "your community node drop event." Lead with what works and why,
+not with what the platform does.
+
+Avoid: "optimise your conversion", "maximise engagement", "leverage
+your customer base", "utilise the platform."
+Use: "fill your drop", "your customers", "before ordering opens",
+"the host's group", "the morning after."
+
+**Build scope — two parts, ship independently**
+
+Part 1: Drop Studio integration (Review pane checklist row + T4-23
+first-drop guidance card extension). Client-side only. No new page,
+no Edge Function. Bounded one-session piece of work.
+
+Part 2: Standalone guide page. New HTML page, vendor-nav.js updated
+with a utility link. No Supabase queries. One session. Recommended
+after the first real drop so the guide can be reviewed against actual
+experience before being shown to subsequent vendors.
+
+**Dependencies:** T4-23 (first-drop guidance card — complete). T5-25
+(social copy generator — referenced in Review pane, not required for
+checklist to ship). T5-C2 (WhatsApp template system — referenced in
+guide, manual approach documented until T5-C2 ships).
+
+**Cross-reference:** T5-C1 (closed — this ticket is the vendor-facing
+output of that research), T5-C2, T5-C3, T5-11, T5-25, T4-23,
+Hearth_Drop_Communications_Architecture.md section 11 and the full
+weekly rhythm table.
+
+T5-C5: Cadence visibility and consistency mechanics
+
+**Status:** Open. Tier 5. Part 1 can ship early (Home dashboard and
+scorecard enhancements — no new Edge Functions). Part 2 (gap alert
+notifications) depends on T5-11 comms engine.
+
+**The problem**
+
+Research on habit formation establishes that customer habits form only
+when the same contextual cues (same vendor, same day, same time, same
+host) repeat consistently across 8–10 drops. A vendor who skips weeks,
+changes their drop day, or treats each drop as a standalone event
+actively prevents the habit from forming — regardless of how good the
+individual drops are.
+
+The platform currently has no mechanism that makes cadence visible,
+celebrates consistency, or actively nudges vendors back onto rhythm when
+they drift. Vendors who don't understand why consistency matters will
+treat drops as isolated events. This ticket changes that framing.
+
+**Six mechanics to build**
+
+(1) Drop rhythm indicator on Home dashboard. A simple, persistent
+signal showing: consecutive drops at this cadence, average gap between
+drops, and a plain-English health signal. Three states:
+
+- Strong: "You've run [X] consecutive [Friday] drops. Your customers
+  are building a habit."
+- Building: "You're [X] drops into your rhythm. Keep going — habits
+  typically form after 8 consistent drops."
+- Needs attention: "Your last drop was [X] days ago. Your customers
+  may be starting to drift. Scheduling your next drop now will protect
+  the momentum you've built."
+
+The indicator sits in the Today strip or as a dedicated card in the
+Home dashboard. It is always visible, not buried in Insights.
+
+(2) Series as default path in Drop Studio. Currently a recurring series
+is an enhancement — the vendor must choose it explicitly. Invert this.
+When a vendor creates a new drop, the first question should be "Is this
+a recurring drop or a one-off?" with recurring as the encouraged option.
+Copy: "Most vendors who build consistent customer habits start with a
+recurring series. A one-off is fine for events — for your regular drops,
+a series keeps your customers expecting you." The one-off path remains
+available but is not the default.
+
+(3) The 8-drop progress signal. Surface the "8 drops to habit"
+framework as a visible, honest progress mechanic on the Home dashboard
+and scorecard. Not gamification — just context. Show progress through
+the first 8 drops: "Drop [N] of 8 — you're building toward a rhythm
+your customers will rely on." When a vendor completes drop 8, a quiet
+acknowledgement: "Your customers have now seen you show up consistently.
+The habit is forming." After drop 8, the progress signal retires and
+the rhythm indicator takes over.
+
+(4) Next-drop CTA on every scorecard. T4-12 (scorecard — complete)
+surfaces after every completed drop. Extend it with a prominent
+"Schedule your next drop" CTA, pre-seeded with the date that would
+maintain the vendor's established cadence. If they run every Friday,
+suggest next Friday. If no cadence is established, suggest the same
+day of the following week. One tap opens Drop Studio with the date
+pre-populated. The moment immediately after a good drop is the
+highest-motivation moment for a vendor to commit to the next one.
+
+(5) Gap alerts — proactive cadence nudges. When a vendor does not have
+a drop scheduled within their typical cadence window, the Home dashboard
+surfaces a quiet but clear prompt: "You haven't scheduled your next
+[Friday] drop yet. Based on your pattern, [date] would keep your rhythm
+going. [Schedule now →]" Not alarming or aggressive — just visible.
+The platform knows the pattern; it should use it. Part 2 of this
+ticket — depends on T5-11 for email/WhatsApp delivery of the nudge
+beyond the dashboard.
+
+(6) Customer habit signals. Show vendors when individual customers are
+forming repeat habits. Surface on the Customers page and Home dashboard:
+"[N] customers have now ordered from [X] or more consecutive drops.
+Your regulars are forming a routine." Calculated from order history
+per customer. This is the moment that makes the model feel real to a
+vendor — seeing that specific people are now relying on their drops
+transforms cadence from a platform recommendation into something the
+vendor feels personal responsibility toward.
+
+**Build scope — two parts**
+
+Part 1 (no T5-11 dependency): Drop rhythm indicator (1), Series as
+default path (2), 8-drop progress signal (3), Next-drop CTA on
+scorecard (4), Customer habit signals (6). All client-side enhancements
+to Home dashboard, Drop Studio, and scorecard. No new Edge Functions.
+Two sessions estimated.
+
+Part 2 (depends on T5-11): Gap alerts delivered via email or WhatsApp
+when a vendor drifts from their cadence. One additional T5-11 trigger:
+drop_cadence_gap — fires when a vendor has no drop scheduled within
+their typical cadence window plus a 3-day grace period. One session.
+
+**Dependencies:** T4-12 (scorecard — complete), T4-4 (Home dashboard
+— complete), T4-1 (recurring series — complete), T5-11 (for Part 2
+gap alert delivery only).
+
+**Cross-reference:** T5-C1 (closed — design brief),
+Hearth_Drop_Communications_Architecture.md section 10 (habit formation
+principles), T5-C6 (vendor activation plan — sets the expectation that
+T5-C5 mechanics then reinforce throughout the vendor's journey).
+
+T5-C6: AI-powered vendor activation plan
+
+**Status:** Open. Tier 5. Should surface at the end of onboarding —
+before the vendor touches Drop Studio for the first time. Can ship
+once T5-13 (onboarding — complete) and T4-28 (intelligence engine —
+complete) are confirmed stable and Healthy Habits has been onboarded.
+
+**The problem**
+
+Onboarding captures rich, structured data about every vendor: their
+archetype, operating model, primary goal, existing host relationships,
+customer data posture, geographic area, food category, and social
+presence. This data currently feeds into archetype detection and generic
+recommendation cards.
+
+It does not produce a forward-looking activation strategy. A vendor who
+completes onboarding today receives no clear answer to: "So what exactly
+should I do first, and in what order?" The gap between onboarding
+completion and first drop is the most fragile moment in the vendor
+journey — motivation is high but direction is unclear. This ticket fills
+that gap with a tailored plan generated from the vendor's own onboarding
+answers.
+
+**What the plan contains — five sections**
+
+(1) Where to start. Which drop format to launch with first, and why.
+Specific to archetype and operating model:
+
+- Cafe/restaurant moving away from aggregators (e.g. Healthy Habits):
+  community node drop at a known host with an existing audience.
+  Start with one host you already have a relationship with.
+- Food truck: host-led drop at a pub or sports club to provide
+  guaranteed footfall context before attempting open neighbourhood drops.
+- Artisan producer (butcher, baker): seasonal or occasion-led drop
+  with high natural demand. Christmas hampers, summer BBQ box, etc.
+- Caterer: single-payer catering drop (T3-13) — simpler mechanics,
+  lower consumer behaviour change required.
+- Pop-up/chef: community fundraiser or school event context —
+  introduces the vendor to a warm, captive audience.
+
+(2) What capacity to set. A conservative starting point based on
+archetype and recommended format. First drops should always
+underpromise and overdeliver. Framing: "Start with [X] capacity.
+Better to sell out and build demand than to underfill and lose
+confidence in the model."
+
+(3) Who to approach first. Specific host types to target based on
+food category and operating model. If the vendor flagged existing host
+relationships in onboarding, those are referenced first. Otherwise,
+platform recommends relevant host types in their area. Framing:
+"Your food and your community fit [host type] audiences well. Start
+with any you already know, or explore the Hosts directory when you're
+ready."
+
+(4) The first 8 drops — milestone structure. A simple, honest
+progression:
+
+- Drops 1–2: Prove the mechanics. Fill rate matters less than
+  learning how the drop feels to run and how customers respond.
+- Drops 3–4: Repeat the same host and day. First returning customers
+  will appear. This is evidence the model is working.
+- Drops 5–6: Cadence becomes visible to customers. Some will start
+  ordering before the announcement. That is the habit forming.
+- Drops 7–8: The habit is embedding. Customer acquisition cost is
+  falling. The owned asset is growing. Now is the time to consider
+  whether to expand to a second host or increase capacity.
+
+(5) What the platform does automatically. Explicitly list the parts
+of the activation model that require no vendor action: early-access
+email to previous customers (T5-11), order confirmation email (T5-11),
+post-drop thank-you email (T5-11), customer asset building from every
+order (T3-9). Vendors should know what they don't need to think about.
+
+**Where it surfaces**
+
+Primary: End of onboarding, immediately after the vendor completes
+setup. Full-screen moment before they enter Drop Studio for the first
+time. Framing: "Here's your activation plan, built around how you
+want to operate." One CTA: "Go to Drop Studio →"
+
+Persistent: Home dashboard "Your activation plan" card, visible and
+collapsible until the vendor completes drop 8. After drop 8 the card
+retires — they've graduated.
+
+**AI architecture — follows GenAI shared principles**
+
+Client-side Anthropic API call (Haiku 4.5). Structured onboarding data
+in, plain-English plan out. The plan is generated once at onboarding
+completion and stored — not regenerated on every page load.
+
+Inputs to the API call (all deterministic, passed as structured data):
+vendor archetype from detectArchetype(), primary_goal,
+delivery_model, existing_host_contexts, customer_data_posture,
+social_handles presence (boolean), food category cues from brand
+data, geographic area from vendor address outward code.
+
+The model generates the connecting prose and framing for each of the
+five sections. Specific numbers (recommended capacity, milestone drop
+counts, host type names) are rendered deterministically from the
+structured inputs — never generated. See GenAI shared principles in
+BACKLOG.md for hard rules.
+
+The plan explicitly avoids claiming knowledge it doesn't have. Where
+the model cannot give a specific recommendation (e.g. exact drop dates,
+specific venue names), it frames the guidance in principles and defers
+to vendor judgement: "We don't know your specific area yet. Run your
+first drop and we'll start to learn together."
+
+**Storage**
+
+The generated plan is stored as a JSON blob on the vendors table
+(activation_plan jsonb, nullable) at onboarding completion. This
+avoids regenerating on every Home dashboard load and lets the plan
+be updated as the vendor progresses. Schema change required — Ed to
+run via SQL editor:
+
+```sql
+ALTER TABLE vendors
+  ADD COLUMN IF NOT EXISTS activation_plan jsonb,
+  ADD COLUMN IF NOT EXISTS activation_plan_generated_at timestamptz;
+```
+
+**Dependencies:** T5-13 (vendor onboarding — complete), T4-28
+(intelligence engine and detectArchetype() — complete), T5-C5
+(cadence mechanics — T5-C6 sets the expectation that T5-C5 then
+reinforces throughout the vendor journey). GenAI shared principles
+(BACKLOG.md) apply.
+
+**Cross-reference:** T5-C1 (closed — design brief), T5-C4 (vendor
+activation guide — the guide explains the activation model to vendors;
+this ticket generates a personalised plan from their specific situation),
+T5-C5 (cadence mechanics — the two tickets form one coherent arc from
+"here is your plan" through to "here is how you are doing against it"),
+T4-23 (first-drop guidance card — T5-C6 supersedes T4-23's first-drop
+guidance with a fully personalised plan).
 
 T5-12: Vendor customer data import — advanced
 Extend T4-14 to support connections to existing vendor systems: email
@@ -1547,7 +2209,24 @@ link manually. This ticket adds a lightweight promotion tool that generates
 ready-to-use marketing assets directly from drop data — removing the blank
 page problem and making every drop feel professionally promoted.
 
-Two output types:
+Two output types — updated to three output types following T5-C1 design session:
+
+(0) Auto-generated menu card image
+A formatted, vendor-branded menu card image generated automatically from
+the drop's published menu. Designed for the Monday reveal post — the
+moment vendors announce the menu to social media before ordering opens.
+The vendor should be able to post this to Instagram without any design
+work. Asset is generated from drop menu data and branded with the
+vendor's identity (logo, primary_color, display_name). Format: square
+(1:1) and portrait (4:5) variants for Instagram feed and Stories
+respectively. Vendor downloads or copies to clipboard. No direct posting
+integration in V1. This is the highest-priority output type in T5-25 —
+it removes the single biggest friction point in the Monday touchpoint
+and is the reason many vendors will not execute the anticipation phase
+without platform support.
+
+Reference: Hearth_Drop_Communications_Architecture.md section 5
+(Monday — The reveal) and section 11 (Auto-generated menu card image).
 
 (1) Social copy generator
 Accessible from the drop card in Drop Studio (and from the Review pane)

@@ -1130,14 +1130,12 @@ T3-13 (capacity driver multi-mode) closed 2026-05-13: Drop Studio capacity mode 
 
 ### Tier 5 — Strategic platform features
 - T5-1 — Delivery optimisation (route planning) — open
-- T5-2 — Demand generation: SMS alerts — open
 - T5-3 — Host onboarding: contact list upload — open
 - T5-4 — Marketplace evolution: host-to-vendor matching — open
 - T5-6 — Customer accounts (order history, saved addresses) — open
 - T5-8 — Interest registration: signals mechanic — open
 - T5-9 — Recommendation engine: matured intelligence — open
 - T5-11 — Comms engine V1 (transactional + demand generation email) — open
-- T5-C1 — Pre-drop customer engagement research brief — open
 - T5-12 — Vendor customer data import: advanced (POS / email / booking integrations) — open
 - T5-14 — Home page: demand orchestration dashboard — open
 - T5-15 — Insights: demand and audience intelligence layer — open
@@ -1153,6 +1151,11 @@ T3-13 (capacity driver multi-mode) closed 2026-05-13: Drop Studio capacity mode 
 - T5-25 — Drop promotion: marketing copy + print assets — open
 - T5-26 — Host discovery outreach (V1 vendor-mediated, V2 platform-mediated) — open
 - T5-27 — Host platform participation (six phases) — open
+- T5-C2 — WhatsApp activation system — templates, segmentation, phone consent, broadcast management — open
+- T5-C3 — WhatsApp Business API / Meta Tech Provider integration (Phase 2 — gated on UK Coexistence) — open
+- T5-C4 — Drop activation guide — vendor-facing communication playbook (Part 1: Drop Studio; Part 2: guide page) — open
+- T5-C5 — Cadence visibility and consistency mechanics (Part 1: dashboard/scorecard; Part 2: gap alerts via T5-11) — open
+- T5-C6 — AI-powered vendor activation plan — post-onboarding personalised first-8-drops strategy — open
 
 GenAI shared principles (model choice, hard rules, cost framing) live in
 BACKLOG.md alongside the ticket specs that depend on them — read there before
