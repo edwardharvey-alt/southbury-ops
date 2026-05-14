@@ -1019,6 +1019,16 @@
     .discountTiersError {
       color: #b91c1c;
     }
+    .savedInline {
+      display: inline-flex;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--h-good);
+      opacity: 0;
+      transition: opacity 300ms ease;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -1102,7 +1112,7 @@
       </div>
 
       <div class="stageShell">
-        <div class="stageBar">
+        <div class="stageBar" id="stageBar">
           <div class="stageBarTop">
             <div>
               <div class="sectionTitle" id="stageBarDropName">No drop selected</div>
@@ -1688,6 +1698,7 @@
               </div>
 
               <div class="stageFooterRight">
+                <span class="savedInline" id="savedInline">Saved ✓</span>
                 <button class="btnGhost" id="saveDraftBtn" type="button">Save Draft</button>
                 <button class="btnAccent" id="continueStageBtn" type="button">Continue →</button>
               </div>
@@ -1824,6 +1835,38 @@
         el.style.display = "none";
         el.textContent = "";
       }, 2500);
+    }
+
+    /* Smoothly scroll the drop title row (stageBar) into view near the top
+       of the viewport. Called from createNewDrop and the drop-card click
+       handler so the operator lands on the active drop's title rather than
+       wherever the carousel left them. */
+    function scrollToDropTitle() {
+      const el = byId("stageBar");
+      if (!el || typeof el.scrollIntoView !== "function") return;
+      try {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (_) {
+        el.scrollIntoView();
+      }
+    }
+
+    /* Inline "Saved ✓" flash next to the Save Draft button. CSS handles the
+       opacity transition; JS toggles a class. 200ms fade-in via transition,
+       1500ms hold, 300ms fade-out via a second transition. */
+    let savedInlineFadeTimer = null;
+    let savedInlineHoldTimer = null;
+    function flashSavedInline() {
+      const el = byId("savedInline");
+      if (!el) return;
+      clearTimeout(savedInlineFadeTimer);
+      clearTimeout(savedInlineHoldTimer);
+      el.style.transition = "opacity 200ms ease";
+      el.style.opacity = "1";
+      savedInlineHoldTimer = setTimeout(() => {
+        el.style.transition = "opacity 300ms ease";
+        el.style.opacity = "0";
+      }, 1700); // 200ms fade-in + 1500ms hold
     }
 
     const TIMING_FIELD_IDS = ["deliveryDate", "deliveryStartTime", "deliveryEndTime", "closesAtDate", "closesAtTime"];
@@ -4314,7 +4357,10 @@
             renderEverything();
             isDirty = false;
             setSaveState("saved");
-            if (showSuccess) showInlineSuccess(`Series created — ${totalOccurrences} drops generated`);
+            if (showSuccess) {
+              showInlineSuccess(`Series created — ${totalOccurrences} drops generated`);
+              flashSavedInline();
+            }
           } else {
             await loadDrops();
             await loadSelectedDrop();
@@ -4322,7 +4368,10 @@
             renderEverything();
             isDirty = false;
             setSaveState("saved");
-            if (showSuccess) showInlineSuccess("Changes saved successfully");
+            if (showSuccess) {
+              showInlineSuccess("Changes saved successfully");
+              flashSavedInline();
+            }
           }
         } else {
           // Standard one-off save or editing an existing series drop individually.
@@ -4345,7 +4394,10 @@
           renderEverything();
           isDirty = false;
           setSaveState("saved");
-          if (showSuccess) showInlineSuccess("Changes saved successfully");
+          if (showSuccess) {
+            showInlineSuccess("Changes saved successfully");
+            flashSavedInline();
+          }
         }
       } catch (err) {
         setSaveState("error", err.message || "Unable to save changes");
@@ -4401,6 +4453,7 @@
       state.currentStage = "basics";
       await refreshAll();
       isDirty = false;
+      scrollToDropTitle();
       showInlineSuccess("New draft drop created");
     }
 
@@ -5778,6 +5831,7 @@
             state.currentStage = "basics";
             isDirty = false;
             renderEverything();
+            scrollToDropTitle();
           } catch (err) {
             console.error(err);
             showError(err.message || "Unable to load drop.");
