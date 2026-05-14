@@ -3650,22 +3650,6 @@
       }
     }
 
-    /* T3-13b — Event slug suffix.
-       Event drops carry a -XXXX random suffix on the slug as a soft
-       obscurity layer (the link is private, so it shouldn't be easily
-       guessable). Idempotent: if the slug already ends in -e-XXXX (the
-       -e- marker plus 4 lowercase alphanumeric chars) we leave it
-       alone, so re-saving doesn't keep appending. The -e- marker
-       prevents false matches against innocent slug endings like
-       "new-drop" or "book-club". */
-    const EVENT_SLUG_SUFFIX_PATTERN = /-e-[a-z0-9]{4}$/;
-    function maybeAppendEventSlugSuffix(slug) {
-      if (!slug) return slug;
-      if (EVENT_SLUG_SUFFIX_PATTERN.test(slug)) return slug;
-      const suffix = Math.random().toString(36).replace(/[^a-z0-9]/g, "").slice(0, 4).padEnd(4, "0");
-      return `${slug}-e-${suffix}`;
-    }
-
     /* T3-13b — Bulk discount tiers. state.discountTiers is the source of
        truth while the form is open. populateForm seeds it from the drop
        row; renderDiscountTiers paints the rows; the event handlers below
@@ -4229,15 +4213,11 @@
       // Re-read after sort so dropData.discount_tiers reflects the sorted state.
       dropData = readDropFromForm();
 
-      /* T3-13b — Event slug obscurity suffix. Must run AFTER
-         buildUniqueSlug: buildUniqueSlug preserves the existing DB slug
-         for the same dropId, which would strip the -e-XXXX marker if
-         applied first. Idempotent: re-saves don't keep appending
-         because EVENT_SLUG_SUFFIX_PATTERN guards the helper. */
+      /* Client-side uniqueness check across the vendor's loaded drops.
+         The event -e-XXXX obscurity suffix is applied server-side in
+         update-drop when drop_type === 'event' and the drop is still
+         in draft status — see supabase/functions/update-drop/index.ts. */
       dropData.slug = buildUniqueSlug(dropData.slug, state.selectedDropId);
-      if (dropData.drop_type === "event") {
-        dropData.slug = maybeAppendEventSlugSuffix(dropData.slug);
-      }
       byId("dropSlug").value = dropData.slug;
 
       const isRecurring = getRepeatPattern() === "recurring";

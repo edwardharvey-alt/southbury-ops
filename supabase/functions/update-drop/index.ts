@@ -4,10 +4,13 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 // Whitelist of drops columns that can be updated via this function.
 // Anything outside this list is silently dropped from the payload.
 //
+// slug is mutable while drop.status === 'draft' (allowing rename
+// during setup) and silently stripped from the payload once the drop
+// is published. Event drops get a -e-XXXX suffix appended
+// server-side. See the slug-handling block below the whitelist.
+//
 // Intentionally excluded (must never be client-editable here):
 //   id, vendor_id (identity — never reassign a drop)
-//   slug (server-controlled identity post-creation; vendors cannot
-//     rename drops via this surface — see PR 4a build prompt)
 //   status (lifecycle — handled by transition-drop-status)
 //   created_at, updated_at, published_at, closed_at, archived_at
 //     (lifecycle timestamps — server-managed)
@@ -19,6 +22,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 // blocks below the whitelist.
 const ALLOWED_FIELDS = new Set([
   "name",
+  "slug",
   "drop_type",
   "host_id",
   "notes_internal",
@@ -130,12 +134,48 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Vendor not found or not owned by user" }, 403);
     }
 
+    // Load the existing drop — needed for the slug-mutation gate
+    // (draft-only) and the event-suffix logic (drop_type fallback
+    // when the client isn't also changing the type).
+    const { data: existingDrop, error: dropFetchError } = await serviceClient
+      .from("drops")
+      .select("status, drop_type")
+      .eq("id", drop_id)
+      .eq("vendor_id", vendor_id)
+      .maybeSingle();
+
+    if (dropFetchError) return jsonResponse({ error: "Drop fetch failed" }, 500);
+    if (!existingDrop) return jsonResponse({ error: "Drop not found" }, 404);
+
     // Whitelist filter — null is a meaningful clear (e.g. clearing
     // host_id, opens_at) so we keep nulls and only drop undefined.
     const update: Record<string, unknown> = {};
     for (const key of Object.keys(fields)) {
       if (ALLOWED_FIELDS.has(key) && fields[key] !== undefined) {
         update[key] = fields[key];
+      }
+    }
+
+    // Slug-mutation gate. Slug is mutable only while the drop is in
+    // draft; once published the column is locked and a slug in the
+    // payload is silently dropped (mirrors the whitelist's
+    // unknown-field behaviour).
+    if (existingDrop.status !== "draft" && Object.prototype.hasOwnProperty.call(update, "slug")) {
+      delete update.slug;
+    }
+
+    // Event slug obscurity suffix (T3-13b). When the post-gate slug
+    // belongs to an event drop and doesn't already carry the -e-XXXX
+    // marker, append it. effectiveDropType prefers the incoming
+    // change so a non-event → event conversion still picks up the
+    // suffix in the same save.
+    if (Object.prototype.hasOwnProperty.call(update, "slug") && typeof update.slug === "string") {
+      const effectiveDropType = Object.prototype.hasOwnProperty.call(update, "drop_type")
+        ? update.drop_type
+        : existingDrop.drop_type;
+      if (effectiveDropType === "event" && !/-e-[a-z0-9]{4}$/.test(update.slug)) {
+        const suffix = Math.random().toString(36).replace(/[^a-z0-9]/g, "").slice(0, 4).padEnd(4, "0");
+        update.slug = `${update.slug}-e-${suffix}`;
       }
     }
 
