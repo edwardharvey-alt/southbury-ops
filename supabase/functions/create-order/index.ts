@@ -79,6 +79,42 @@ function isFiniteNumber(v: unknown): v is number {
   return typeof v === "number" && Number.isFinite(v);
 }
 
+// T3-13b — bulk discount tier matcher. Mirrors the client-side helpers
+// in order.html (prompt 2) so server and customer compute the same
+// number. The matched tier is the highest tier whose threshold_pence
+// is <= the basket subtotal; nothing matches below the lowest threshold.
+type DiscountTier = {
+  threshold_pence: number;
+  discount_type: "percentage" | "amount";
+  discount_value: number;
+};
+
+function findMatchingTier(subtotalPence: number, tiers: unknown): DiscountTier | null {
+  if (!Array.isArray(tiers) || tiers.length === 0) return null;
+  if (!isFiniteNumber(subtotalPence) || subtotalPence <= 0) return null;
+  const sorted = (tiers as DiscountTier[])
+    .filter((t) => t && Number.isFinite(Number(t?.threshold_pence)))
+    .sort((a, b) => Number(a.threshold_pence) - Number(b.threshold_pence));
+  let matched: DiscountTier | null = null;
+  for (const tier of sorted) {
+    if (Number(tier.threshold_pence) <= subtotalPence) matched = tier;
+    else break;
+  }
+  return matched;
+}
+
+function calculateDiscountPence(subtotalPence: number, matchedTier: DiscountTier | null): number {
+  if (!matchedTier) return 0;
+  if (matchedTier.discount_type === "percentage") {
+    const pct = Math.max(0, Math.min(100, Number(matchedTier.discount_value) || 0));
+    return Math.round(subtotalPence * (pct / 100));
+  }
+  if (matchedTier.discount_type === "amount") {
+    return Math.max(0, Math.round(Number(matchedTier.discount_value) || 0));
+  }
+  return 0;
+}
+
 function validatePayload(body: unknown): { ok: true; data: Payload } | { ok: false; reason: string } {
   if (!body || typeof body !== "object") return { ok: false, reason: "Body must be a JSON object" };
   const b = body as Record<string, unknown>;
@@ -219,7 +255,7 @@ Deno.serve(async (req) => {
     // config can't accidentally let all orders through.
     const { data: dropAreaRow, error: dropAreaErr } = await serviceClient
       .from("drops")
-      .select("delivery_area_type, allowed_postcode_prefixes, capacity_driver, capacity_categories")
+      .select("delivery_area_type, allowed_postcode_prefixes, capacity_driver, capacity_categories, drop_type, discount_tiers")
       .eq("id", payload.drop_id)
       .maybeSingle();
     if (dropAreaErr) return jsonResponse({ error: "Drop area lookup failed" }, 500);
