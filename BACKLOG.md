@@ -363,9 +363,17 @@ Verify no Edge Function or UI references it before running.
 
 ---
 
-T3-13: Capacity driver — multi-mode support
+T3-13: Capacity driver — multi-mode support ✓ COMPLETE 2026-05-13
 
-**Status:** Open. Pre-launch critical — must land before Healthy Habits Cafe goes live. All three modes required.
+**Fix:** Shipped end-to-end on 2026-05-13. Schema migration retired the per-item decimal `capacity_units` field in favour of `drops.capacity_driver` (`'by_order'` | `'by_category'`) and `drops.capacity_categories` (jsonb), plus `counts_toward_capacity` (boolean) and `capacity_weight` (integer 1–3) on `products` and `bundles`. Drop Studio capacity mode UI (PR #251) replaced the single-category dropdown with a two-mode selector and a dedicated Capacity stage. Menu Library capacity UI (PR #252) replaced the decimal "Capacity Impact" field with a binary toggle + collapsible slots-per-item input. `create-order` rewritten as server-authoritative (PR #249) — per-item contribution computed server-side and snapshotted into `order_items.capacity_units_snapshot`, with client-supplied totals ignored; follow-up `pending_payment` fix shipped via PR #250. Eight Edge Functions redeployed in lockstep with the schema migration: `create-order`, `create-drop`, `update-drop`, `create-product`, `update-product`, `create-bundle`, `update-bundle`, `duplicate-bundle`. Legacy `capacity_units` / `capacity_category` / `capacity_category_id` fields retained for `v_drop_summary` compatibility. Polish PR #253 added a chevron CSS rule and an `applySavedRowToState` helper; T3-13-polish-2 (chip refresh) remains open as a follow-up.
+
+**Verification:** End-to-end verification on Test 11 in production for both `by_order` and `by_category` modes — capacity math correct in both.
+
+**Cross-reference:** T7-13 superseded by this ticket. T3-13b (paired event / catering workflow, see entry below) closed 2026-05-14. T3-13-polish-2 (open) and T3-13-polish-3 (open) — remaining polish items in the CLAUDE.md index.
+
+---
+
+**Original spec preserved below for historical reference.**
 
 **The problem with the current model**
 
@@ -419,6 +427,14 @@ Schema design to be agreed in Claude Chat before any build begins. Ed runs schem
 Do not ship until verified end-to-end against a real Stripe test order. The capacity check inside `create-order` is payment-critical.
 
 Supersedes T7-13.
+
+T3-13b: Event / catering workflow ✓ COMPLETE 2026-05-14 — paired follow-up to T3-13.
+
+**Fix:** Shipped via PR #254 (three-prompt split to keep each step inside the stream-idle window per operational learning #27). Schema additions applied earlier: `drops.expected_guests`, `drops.discount_tiers` (jsonb), `orders.discount_pence`, `orders.discount_breakdown` (jsonb). Drop Studio event-type behaviour merged across the T3-13b series — event-mode toggle, expected guests field, bulk discount tier editor, slug random suffix (`-e-<token>`) with server-side application after the uniqueness check, draft-rename / publish-immutable slug rules. Order page event UX — capacity chip hidden on event drops, volume discount preview at checkout. `create-order` updated to skip capacity enforcement on event drops, apply the matched discount inside the Step 7 total guard, persist `discount_pence` and `discount_breakdown` on the orders row, and apply a one-off Stripe coupon (`amount_off` + `currency: 'gbp'` + `duration: 'once'` + `max_redemptions: 1`) to the Checkout Session so the itemised breakdown remains intact on Stripe's side. `transition-drop-status` readiness gate ported the T3-13 capacity model from the frontend and skips capacity for events.
+
+**Verification:** PR #254 deploy-before-merge per Critical Rule #15. Operational learnings #43 (atomic schema-migration + Edge-Function-deploy pairing) and #44 (Stripe Connect discounts via one-off coupon, not collapsed line items) captured from this build.
+
+**Cross-reference:** T3-13 (parent ticket, closed 2026-05-13).
 
 T-ops-rls-fix ✓ COMPLETE 2026-05-15 — Healthy Habits launch gate, ran in parallel with T3-8 as equal priority.
 
