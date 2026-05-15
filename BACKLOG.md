@@ -86,9 +86,9 @@ wired to Supabase Storage upload.
 Replace URL inputs with file upload. Save to Supabase Storage under
 assets/vendors/{vendor-slug}/. Blocking proper brand setup and testing.
 
-T2-8: Replace hardcoded vendor slug across operator pages
-drop-manager.html, drop-menu.html, brand-hearth.html hardcode
-"southbury-farm-pizza". Replace with resolveVendor() pattern.
+T2-8 ✓ COMPLETE 2026-05-15 — remediated by T5-A5 (session-aware vendor resolution migration).
+
+**Closure note:** Original concern was hardcoded "southbury-farm-pizza" fallback in operator pages exposing other vendors' data if vendor resolution failed. T5-A5's rewrite of `assets/hearth-vendor.js` `resolveVendor()` eliminated all such fallbacks — module now resolves via session → URL-param-on-localhost → null, with explicit "No `.limit(1)` fallback" comment at line 19. All operator pages treat null as a hard error. Verified by audit 2026-05-15: literal slug appears in zero code files (only in BACKLOG.md, historical audit docs, and the GitHub repo name).
 
 ### Tier 3 — Should be done before regular use
 
