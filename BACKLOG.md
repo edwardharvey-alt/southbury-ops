@@ -420,6 +420,64 @@ Do not ship until verified end-to-end against a real Stripe test order. The capa
 
 Supersedes T7-13.
 
+T-ops-rls-fix ✓ COMPLETE 2026-05-15 — Healthy Habits launch gate, ran in parallel with T3-8 as equal priority.
+
+**Problem:** Service Board order status transitions (Confirm, Bake, Ready, Delivered) silently failed in production. The Kanban card moved forward optimistically on click, but the underlying `orders.status` update returned HTTP 204 with zero rows affected. The `orders` RLS policies "Orders: authenticated owner select" and "Orders: authenticated owner update" require `auth.uid()` to match `vendors.auth_user_id`. Service Board runs anonymously — there is no logged-in vendor session — so every UPDATE was rejected at the RLS layer. The optimistic UI masked the failure entirely; the bug only surfaced when refreshing the page revealed the card had snapped back. Diagnosed against order `8f56908e-3c3c-4407-b306-2a235c63d4db`, which had accumulated five silent-failure attempts in `order_status_events` before the fix.
+
+**Fix:** New `transition-order-status` Edge Function mirroring the anonymous pattern of `create-order` (not the JWT-authenticated pattern of `transition-drop-status`, which would have required wiring vendor auth into the Service Board first). The function uses `verify_jwt = false` in `supabase/config.toml` and a service-role client to bypass RLS. State machine on the server enforces adjacent-only transitions in `placed → confirmed → baking → ready → delivered` (forward and backward by one step only; rejects `pending_payment` and `cancelled` as source states; rejects no-ops). Optimistic-concurrency guard via `.eq("status", currentStatus)` returns 409 if a concurrent caller has already moved the order. Audit event written server-side to `order_status_events` with `actor: 'service_board'` and `actor_type: 'operator'`.
+
+**Migration:** `commitPending` in service-board.html replaced its direct PostgREST PATCH with `supabase.functions.invoke('transition-order-status', { body: { order_id, to_status } })` using the standard transport-vs-function-error two-check pattern. The `writeStatusEvent` helper was deleted — the Edge Function writes the event server-side. Shipped via PR #256.
+
+**Polish fix (PR #257):** The fix exposed a pre-existing race condition. Two refresh paths fire on every successful transition: the Supabase realtime subscription on `orders` filtered by `drop_id`, and `commitPending`'s explicit `refreshData()` call after function success. Before this fix the orders row never actually changed, so both paths refreshed identical stale data. With the fix working, both paths now refreshed real new data — and they raced, producing a visible flick-back on forward transitions. Solution: delete the explicit `refreshData()` call from `commitPending`, leaving the realtime subscription as the single source of truth for post-transition refresh. Closes T-ops-rls-fix-polish in the same workstream.
+
+**Verification:** OPTIONS smoke test against `transition-order-status` returned 204 with `access-control-allow-origin: https://lovehearth.co.uk`. DevTools function test returned `{ ok: true, order_id: '8f56908e...', from_status: 'placed', to_status: 'confirmed' }`. SQL confirmed `orders.status = 'confirmed'` (the row had been stuck on `placed` for months despite multiple operator clicks). Full UI clicking test on production passed all four transitions and one backward step.
+
+**Audit linkage:** The parallel T-ops-rls-audit (same day, audit report at `audit/T-ops-rls-audit-2026-05-14.md`) inventoried silent-failure RLS surfaces across the platform — bounded this fix to `service-board.html` mutations on `orders` and `order_status_events`, and surfaced three further tickets (see below).
+
+T-ops-rls-customer-import — `customer-import.html` writes silently fail in production
+
+**Status:** Open. Tier 3. Healthy Habits launch gate — must ship before her existing customer list is imported.
+
+**Problem:** Four direct PostgREST mutations on `customers` and `customer_relationships` from an anonymous client. Same silent-204/zero-rows RLS rejection pattern as T-ops-rls-fix. Surfaced by T-ops-rls-audit (2026-05-15). Until this is fixed, vendors who attempt to import a customer list during onboarding will see a "success" toast but no rows will be written.
+
+**Why this is a launch gate:** the owned customer asset is the entire compounding-value mechanism of the Hearth model. A vendor with an existing email list cannot start building on it through Hearth until import works. For Healthy Habits specifically, her existing customer base is the demand foundation for her first drop — running drops without it means burning the early opportunity to demonstrate the model's compounding effect.
+
+**Fix path:** likely a `bulk-create-customers` Edge Function batching rows in a single invocation. Per-row Edge Function calls would be unworkable on CSVs with hundreds of customers — the round-trip overhead alone would push imports past reasonable timeouts. Pattern follows the canonical T5-B16 shape (verify_jwt = false, manual JWT verification via `anonClient.auth.getUser()`, vendor ownership check via service-role client, service-role write with tenancy belt, top-level try/catch with `jsonResponse` inline closure, CORS via `getCorsHeaders()` from `_shared/cors.ts`).
+
+**Scope of writes affected (from audit):** four anonymous PostgREST mutations in customer-import.html. Two against `customers` (insert new customer rows, deduplicated by email/phone), two against `customer_relationships` (link customer to vendor with `source = 'import'` and consent metadata). All four currently silently 204.
+
+**Design notes before build:**
+- The cross-vendor customer linking pattern (same email on a new vendor's list creates a new relationship row, not a duplicate customer row) needs careful design in the Edge Function. The existing client-side dedup logic in T4-14 should be auditable against the new function to confirm parity.
+- The GDPR lawful basis confirmation step from T4-14 must run before any rows are written — the function should reject the request if `lawful_basis` is not present in the payload.
+
+**Cross-reference:** T-ops-rls-fix (parent workstream, closed 2026-05-15), T-ops-rls-audit (audit report), T4-14 (parent feature ticket, complete), operational learning #16 (canonical Edge Function migration pattern).
+
+T-ops-rls-cleanup-auth-callback — delete `auth-callback.html` dead-code backstop
+
+**Status:** Open. Tier 3. Low priority cleanup.
+
+**Problem:** `auth-callback.html` contains a dead-code backstop that writes `vendors.auth_user_id` directly via PostgREST. The write silently fails (same RLS pattern as the rest of this workstream), but more importantly, it's dead code — per operational learning #11, the `invite-vendor` Edge Function now handles `auth_user_id` linking server-side at the moment of vendor provisioning, before the vendor ever reaches auth-callback.html. The client-side write was a backstop for an earlier flow where linking was deferred to the first sign-in.
+
+**Fix path:** delete the client-side update. Do NOT migrate to a `claim-vendor` Edge Function — the backstop is obsolete, not in need of upgrade. The invite-vendor flow is the canonical linking path.
+
+**Why low priority:** the write silently fails today, but it's masked by the invite-vendor server-side link that has already happened. Removing it changes nothing functional — it just deletes confusing dead code that future investigators (or future Claude Code sessions) might mistake for active linking logic.
+
+**Cross-reference:** operational learning #11 (invite-vendor handles auth_user_id linking server-side).
+
+T-ops-rls-reads-audit — silent SELECT filtering audit
+
+**Status:** Open. Tier 3. Deferred — addressable during T5-A auth migration.
+
+**Problem:** T-ops-rls-audit covered direct PostgREST *writes* against RLS-protected tables. It did not cover *reads*. The Variant 3 failure mode in operational learning #14 is RLS silently returning zero rows on reads when the JWT isn't attached. The bug presents as "empty data" rather than "failed write" — pages look like they have nothing to show rather than failing visibly, which makes it harder to detect.
+
+**Scope:** a separate audit of SELECT paths on RLS-protected tables, identifying every read path that depends on the JWT being attached. Each finding triages into: (a) migrate to Edge Function, (b) relax SELECT policy (only where the data is genuinely public, e.g. live drops on host-view), or (c) accept current state because the read happens through an authenticated path that does correctly attach.
+
+**Why deferred:** T5-A1 through T5-A7 are the vendor auth workstream — they replace URL-param vendor resolution with session-based identity and rewrite RLS to use `auth.uid()` properly. Most read-path silent filtering will be resolved as a side-effect of T5-A3 (RLS rewrite). Running this audit before T5-A3 risks producing findings that the auth rewrite then makes obsolete.
+
+**Trigger to revisit:** start of T5-A3 build. The audit becomes a checklist for the rewrite rather than a standalone workstream.
+
+**Cross-reference:** T5-A3 (RLS rewrite, dependency), operational learning #14 (auth-not-attached symptom, Variant 3 silent SELECT filtering).
+
 ### Tier 4 — Enhancements that will impress
 
 T4-1: Recurring series — actually create drops ✓ COMPLETE
