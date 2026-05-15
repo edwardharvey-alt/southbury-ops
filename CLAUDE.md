@@ -1164,7 +1164,6 @@ index.
 ### Tier 2 — Must work before showing anyone
 - T2-1 — Global navigation: add all pages to every header — open
 - T2-2 — Service Board: remove need to scroll to reach Kanban — open
-- T2-8 — Replace hardcoded vendor slug across operator pages — open
 
 ### Tier 3 — Should be done before regular use
 - T3-8 — Stripe Connect Express: next major priority — final gate before Healthy Habits go-live. Schema (`vendors.stripe_account_id`, `vendors.stripe_onboarding_complete`) and the `create-stripe-connect-link` / `check-stripe-connect-status` Edge Functions are in place; drop publish gate is wired. Outstanding work is whatever remains to take a real vendor (Healthy Habits) through onboarding end-to-end on the live Stripe platform. See the dedicated "Stripe Connect Express (T3-8)" section above for current state.
