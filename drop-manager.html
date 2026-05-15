@@ -4978,11 +4978,11 @@
           dismissBtn.addEventListener("click", async () => {
             dismissBtn.disabled = true;
             try {
-              const { error } = await supabase
-                .from("vendors")
-                .update({ head_start_dismissed: true })
-                .eq("id", state.vendorId);
+              const { data, error } = await supabase.functions.invoke("update-vendor", {
+                body: { vendor_id: state.vendorId, fields: { head_start_dismissed: true } }
+              });
               if (error) throw error;
+              if (!data || data.error) throw new Error(data?.error || "Save failed");
               state.vendor.head_start_dismissed = true;
               el.style.display = "none";
               el.innerHTML = "";
