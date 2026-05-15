@@ -1868,22 +1868,6 @@
       state.itemDetails = await enrichItemDetailsWithProductData(items || []);
     }
 
-    async function writeStatusEvent(order, fromStatus, toStatus) {
-      const { error } = await supabase
-        .from("order_status_events")
-        .insert({
-          order_id: order.order_id,
-          drop_id: state.selectedDropId,
-          from_status: fromStatus,
-          to_status: toStatus,
-          event_type: "status_change",
-          actor: "service_board",
-          actor_type: "operator"
-        });
-
-      if (error) throw error;
-    }
-
     // ---- Optimistic status change with undo toast ----
 
     function applyStatusOptimistically(orderId, toStatus) {
@@ -1930,12 +1914,11 @@
       showError("");
 
       try {
-        const { error: updateError } = await supabase
-          .from("orders")
-          .update({ status: pc.toStatus })
-          .eq("id", pc.orderId);
-        if (updateError) throw updateError;
-        await writeStatusEvent(pc.orderSnapshot, pc.fromStatus, pc.toStatus);
+        const { data, error } = await supabase.functions.invoke('transition-order-status', {
+          body: { order_id: pc.orderId, to_status: pc.toStatus }
+        });
+        if (error) throw new Error(error.message || 'Status update failed.');
+        if (data && data.error) throw new Error(data.error);
         if (!skipRefresh) await refreshData();
       } catch (err) {
         console.error(err);
