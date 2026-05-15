@@ -118,6 +118,52 @@ Deno.serve(async (req) => {
       if (eventErr) {
         console.error("order_status_events insert (placed) failed", eventErr);
       }
+
+      // Fire-and-forget order_confirmed email. Failures NEVER propagate
+      // to Stripe — a 5xx here would cause webhook retries that would
+      // each attempt to re-place the order (idempotency above) and spam
+      // duplicate emails on partial recovery. Try/catch + log instead.
+      try {
+        const internalSecret = Deno.env.get("INTERNAL_FUNCTION_SECRET");
+        const supabaseUrl = Deno.env.get("SUPABASE_URL");
+        if (!internalSecret || !supabaseUrl) {
+          console.error(
+            JSON.stringify({
+              event: "order_confirmation_failed",
+              order_id: order.id,
+              error: "Missing INTERNAL_FUNCTION_SECRET or SUPABASE_URL",
+            })
+          );
+        } else {
+          const emailResp = await fetch(`${supabaseUrl}/functions/v1/send-order-confirmation`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Internal-Secret": internalSecret,
+            },
+            body: JSON.stringify({ order_id: order.id }),
+          });
+          if (!emailResp.ok) {
+            const errBody = await emailResp.text().catch(() => "");
+            console.error(
+              JSON.stringify({
+                event: "order_confirmation_failed",
+                order_id: order.id,
+                status: emailResp.status,
+                error: errBody,
+              })
+            );
+          }
+        }
+      } catch (emailErr) {
+        console.error(
+          JSON.stringify({
+            event: "order_confirmation_failed",
+            order_id: order.id,
+            error: (emailErr as Error).message || "unknown",
+          })
+        );
+      }
     } else if (
       event.type === "checkout.session.expired" ||
       event.type === "checkout.session.async_payment_failed"
