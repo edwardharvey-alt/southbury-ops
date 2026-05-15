@@ -396,10 +396,15 @@ on top of the coding rules above.
    `customers` table uses `name` (not `full_name`). The `orders` table
    has no `vendor_id` — filter orders by vendor by first fetching drop
    IDs from `drops` where `vendor_id = state.vendorId`, then using
-   `.in('drop_id', vendorDropIds)`. RLS: `customer_relationships` and
-   `customers` both have temporary anon SELECT policies (`USING (true)`)
-   added as pre-auth measures. Both must be replaced with
-   `auth.uid()`-based policies when T5-A lands.
+   `.in('drop_id', vendorDropIds)`. RLS state (confirmed 2026-05-15 via
+   T-ops-rls-customer-import investigation): `customers` has one policy
+   `customers_vendor_access`, SELECT-only, authenticated role only;
+   `customer_relationships` has one policy
+   `customer_relationships_vendor_access`, ALL operations, authenticated
+   role only. No anon policies exist on either table. The "temporary
+   anon SELECT policies" claim in earlier versions of this learning was
+   true at some point in the platform's history but those policies were
+   removed before 2026-05-15.
 
 7. **Auth flow routing patterns**
    - `?redirect=` pattern: before redirecting an unauthenticated user to
@@ -1122,7 +1127,7 @@ Express (T3-8)" section for the vendor onboarding scaffold.
 
 ## Production mutation/read status
 
-Snapshot of which read/write paths are working in production and which are known broken. Update whenever a PR confirms or breaks a path. Last updated 2026-05-15 after T-ops-rls-fix and T-ops-rls-fix-polish (PRs #256, #257) closed the Service Board's silent-failure RLS bug on order status transitions.
+Snapshot of which read/write paths are working in production and which are known broken. Update whenever a PR confirms or breaks a path. Last updated 2026-05-15 after T-ops-rls-customer-import shipped end-to-end (PRs #260, #261) — customer-import.html is now functional in production for the first time.
 
 - Customer order placement (orders, order_items, order_item_selections, customers, customer_relationships) — WORKING via `create-order` Edge Function. Atomic write of all five tables, Stripe Connect destination charge created, order starts at `status='pending_payment'` and flips to `'placed'` on webhook receipt. Capacity is reserved during the pending_payment window (Stripe expires_at = 1800s).
 - Stripe webhook handling — WORKING via `stripe-webhook` Edge Function. Handles `checkout.session.completed` (→ placed/paid), `checkout.session.expired` (→ cancelled/expired), `checkout.session.async_payment_failed` (→ cancelled/failed). Endpoint configured at https://tvqhhjvumgumyetvpgid.supabase.co/functions/v1/stripe-webhook (Stripe Dashboard endpoint name: "brilliant-rhythm").
@@ -1141,7 +1146,7 @@ Snapshot of which read/write paths are working in production and which are known
 - Categories INSERT / UPDATE / DELETE (drop-menu.html) — WORKING via `create-category`, `update-category`, `delete-category` Edge Functions. Shipped 2 May 2026 as T5-B16 batch 1 (PR #209).
 - Products INSERT / UPDATE / DELETE (drop-menu.html) — WORKING via `create-product`, `update-product`, `delete-product` Edge Functions. Shipped 2 May 2026 as T5-B16 batch 2 (PR #211).
 - Bundles INSERT / UPDATE / DELETE (drop-menu.html) — WORKING via `create-bundle`, `update-bundle`, `delete-bundle`, `duplicate-bundle`, `save-bundle-line`, `delete-bundle-line` Edge Functions. Shipped 2 May 2026 as T5-B16 batch 3 (PR #212). bundle_lines and bundle_line_choice_products writes are covered by the composite `save-bundle-line` and `duplicate-bundle` functions.
-- customer-import.html writes (customers, customer_relationships) — UNVERIFIED. Out of scope of 2 May 2026 audit. Investigate before any production-vendor onboarding that involves customer import.
+- customer-import.html writes — WORKING via `bulk-create-customers` Edge Function as of 2026-05-15. Anonymous gateway (`verify_jwt = false`), batched email+phone customer lookup, in-memory classification preserving four-way conflict resolution (added / linked / skipped / conflict), per-row writes for createNew (customers INSERT + customer_relationships INSERT) and linkExisting (customer_relationships INSERT + optional customers UPDATE for address backfill), demand breakdown aggregated by outward postcode in the same response. Previously broken end-to-end — both the pre-write reads and the four writes silently failed under RLS because customer-import.html used inline `window.supabase.createClient()` and the publishable-key auth-attach bug never delivered the user JWT to anon-blocked PostgREST endpoints. Closes T-ops-rls-customer-import.
 - Category creation on a fresh vendor — WORKING end-to-end as of 2026-05-03 (closes T5-B23). Verified by logging in as Test 12 and successfully creating Test Category D via the Menu Library; "All changes saved" confirmed. The publishable-key auth-attach bug no longer affects category writes because `create-category`, `update-category`, and `delete-category` all route through Edge Functions (T5-B16 batch 1).
 
 ## Development backlog
@@ -1163,7 +1168,6 @@ index.
 
 ### Tier 3 — Should be done before regular use
 - T3-8 — Stripe Connect Express: next major priority — final gate before Healthy Habits go-live. Schema (`vendors.stripe_account_id`, `vendors.stripe_onboarding_complete`) and the `create-stripe-connect-link` / `check-stripe-connect-status` Edge Functions are in place; drop publish gate is wired. Outstanding work is whatever remains to take a real vendor (Healthy Habits) through onboarding end-to-end on the live Stripe platform. See the dedicated "Stripe Connect Express (T3-8)" section above for current state.
-- T-ops-rls-customer-import — `customer-import.html` writes (4 mutations on `customers` and `customer_relationships`) silently fail in production. Surfaced by T-ops-rls-audit (2026-05-15). Healthy Habits launch gate — must ship before her existing customer list is imported. Likely needs a `bulk-create-customers` Edge Function batching rows to avoid per-row overhead. — open
 - T-ops-rls-cleanup-auth-callback — `auth-callback.html` contains a dead-code backstop that writes `vendors.auth_user_id` directly. Per operational learning #11, `invite-vendor` handles this server-side now. Delete the client-side update; do not migrate. Low priority cleanup. — open
 - T-ops-rls-reads-audit — separate audit of SELECT paths on RLS-protected tables to identify silent filtering candidates (Variant 3 failure mode in operational learning #14). Deferred — addressable during T5-A auth migration. — open
 - T3-12b — Order page: neighbourhood delivery area enforcement (radius mode) — open. T3-12a (postcode prefix mode) closed 2026-05-03: schema discriminator added (`delivery_area_type`, `allowed_postcode_prefixes`); Drop Studio UI for prefix entry; client-side onBlur validation; server-side enforcement in `create-order`; widened `update-drop` ALLOWED_FIELDS with paired-field invariants. Radius mode reserved for T3-12b.
@@ -1176,6 +1180,8 @@ T3-13b (event / catering workflow) closed 2026-05-14: schema migration (`drops.e
 
 T-ops-rls-fix closed 2026-05-15 (closes T-ops-rls-fix-polish in same workstream): built `transition-order-status` Edge Function (anonymous, `verify_jwt = false`, server-side state machine enforcing adjacent-only transitions in `placed → confirmed → baking → ready → delivered`, optimistic-concurrency guard via `.eq("status", currentStatus)`, audit event written server-side as `actor: 'service_board'`, `actor_type: 'operator'`); migrated `commitPending` in service-board.html to invoke it (PR #256). Polish PR #257 removed the redundant `refreshData()` call inside `commitPending` so the Supabase realtime subscription is the single source of truth for post-transition refresh — eliminates the visible flick-back on forward transitions. Verified end-to-end on order `8f56908e-3c3c-4407-b306-2a235c63d4db`. Parallel T-ops-rls-audit (2026-05-15) produced the inventory that bounded this fix and surfaced T-ops-rls-customer-import, T-ops-rls-cleanup-auth-callback, T-ops-rls-reads-audit (see Tier 3 backlog index). Full closure narrative and audit linkage in BACKLOG.md.
 
+T-ops-rls-customer-import closed 2026-05-15: built `bulk-create-customers` Edge Function (anonymous, `verify_jwt = false`, batched email+phone lookup, in-memory classification matching the page's existing four-way logic, sequential per-row writes for createNew + linkExisting, demand breakdown aggregation folded into the response — PR #260) and rewired customer-import.html to invoke it (286 deletions / 39 additions, removing inline `supabase.createClient()` + two pre-write reads + classification + four write loops + the now-dead `fetchDemandBreakdown` + `normalisePhone` — PR #261). Verified end-to-end on Test 12 with a 5-row CSV: stage 5 reported 5 added / 0 skipped / 0 conflicts / 0 failed; SQL count confirmed 5 customer_relationships rows for the vendor with source='import'. First successful end-to-end customer import in the platform's history. Full closure narrative and design rationale in BACKLOG.md. Audit linkage: closes the second of three RLS surfaces from T-ops-rls-audit (2026-05-15); T-ops-rls-cleanup-auth-callback and T-ops-rls-reads-audit remain open per their original framing.
+
 ### Tier 4 — Enhancements that will impress
 - T4-29 — Series intelligence in Insights — open
 - T4-31b-fu1 — Server-side HEIC conversion fallback for Mac-Photos-HEIC — open, deferred until real vendor friction.
@@ -1186,6 +1192,7 @@ T-ops-rls-fix closed 2026-05-15 (closes T-ops-rls-fix-polish in same workstream)
 - T4-35 — Multiple windows + Close Orders: duplicative timing UX — open
 - T4-36 — Multiple windows: discoverability of Create windows action — open
 - T4-37b — Host-direct terms acceptance via email confirmation — open
+- T-customers-page-import-entry — Add Import customers CTA to customers.html asset summary section; audit Home dashboard data-rich next-action coverage to confirm "Import your existing customer list" surfaces. Surfaced 2026-05-15 after T-ops-rls-customer-import made the import flow functional for the first time — pre-launch the gap didn't matter because import was broken anyway. — open
 
 ### Tier 5 — Strategic platform features
 - T5-1 — Delivery optimisation (route planning) — open

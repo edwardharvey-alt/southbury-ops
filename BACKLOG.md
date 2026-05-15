@@ -434,23 +434,32 @@ T-ops-rls-fix ✓ COMPLETE 2026-05-15 — Healthy Habits launch gate, ran in par
 
 **Audit linkage:** The parallel T-ops-rls-audit (same day, audit report at `audit/T-ops-rls-audit-2026-05-14.md`) inventoried silent-failure RLS surfaces across the platform — bounded this fix to `service-board.html` mutations on `orders` and `order_status_events`, and surfaced three further tickets (see below).
 
-T-ops-rls-customer-import — `customer-import.html` writes silently fail in production
+T-ops-rls-customer-import ✓ COMPLETE 2026-05-15 — Healthy Habits launch gate, shipped same day as T-ops-rls-fix as part of the parallel RLS-audit workstream.
 
-**Status:** Open. Tier 3. Healthy Habits launch gate — must ship before her existing customer list is imported.
+**Problem:** Four direct PostgREST mutations in customer-import.html (two on `customers`, two on `customer_relationships`) silently failed in production under RLS. Same root cause as T-ops-rls-fix (`orders` status transitions): anon caller against authenticated-only RLS policies, JWT not attached, writes returned 204 with zero rows affected. Compounded for customer-import by the fact that the two pre-write reads (the dedup classification queries) also returned empty arrays under the same RLS pattern, meaning every CSV row was classified as `createNewRows` regardless of platform state, and then every INSERT silently failed. Net result: customer-import was end-to-end non-functional — the operator saw a "success" toast but absolutely nothing landed in the database. No real vendor had ever successfully imported a customer list before this fix.
 
-**Problem:** Four direct PostgREST mutations on `customers` and `customer_relationships` from an anonymous client. Same silent-204/zero-rows RLS rejection pattern as T-ops-rls-fix. Surfaced by T-ops-rls-audit (2026-05-15). Until this is fixed, vendors who attempt to import a customer list during onboarding will see a "success" toast but no rows will be written.
+**Investigation:** Pre-build investigation produced as `audit/customer-import-investigation-2026-05-15.md` (~900 lines, read-only). Mapped the five-stage flow (Upload → Preview → GDPR confirm → Import → Done), quoted the four write call sites with surrounding context, documented the dedup logic (in-memory classification on email-then-phone with four-way conflict resolution), confirmed the GDPR lawful basis is persisted per-batch on every relationship's `lawful_basis` column (the confirm checkbox is a gate but not persisted), and surfaced 13 open questions for the design conversation. RLS dump confirmed only one policy on `customers` (`customers_vendor_access`, SELECT-only, authenticated role) and one on `customer_relationships` (`customer_relationships_vendor_access`, ALL operations, authenticated role) — no anon policies exist on either table, confirming the writes-and-reads-broken end-to-end state.
 
-**Why this is a launch gate:** the owned customer asset is the entire compounding-value mechanism of the Hearth model. A vendor with an existing email list cannot start building on it through Hearth until import works. For Healthy Habits specifically, her existing customer base is the demand foundation for her first drop — running drops without it means burning the early opportunity to demonstrate the model's compounding effect.
+**Fix — function (PR #260):** New `bulk-create-customers` Edge Function. Anonymous gateway with `verify_jwt = false`, manual JWT verification via `anonClient.auth.getUser()`, vendor resolution from `vendors.auth_user_id`, body validation (1000-row cap, lawful_basis enum check, per-row name/email validation with per-row outcome bucketing rather than aborting). Batched lookups via `.or()` + `.in()` (one round-trip for customers, one for vendor relationships, regardless of platform size) replacing the page's full-table customer SELECT. In-memory classification preserves today's four-way conflict logic (added / linked / skipped / conflict). Sequential write phases for createNew (customers INSERT + customer_relationships INSERT) and linkExisting (customer_relationships INSERT + optional customers UPDATE for address backfill). Service-role client throughout (bypasses RLS, matches `create-order` pattern). Demand breakdown query folded into the function response — aggregates this vendor's all-time imported customers by outward postcode, returns top areas plus the customers-with-postcode count. 534 lines.
 
-**Fix path:** likely a `bulk-create-customers` Edge Function batching rows in a single invocation. Per-row Edge Function calls would be unworkable on CSVs with hundreds of customers — the round-trip overhead alone would push imports past reasonable timeouts. Pattern follows the canonical T5-B16 shape (verify_jwt = false, manual JWT verification via `anonClient.auth.getUser()`, vendor ownership check via service-role client, service-role write with tenancy belt, top-level try/catch with `jsonResponse` inline closure, CORS via `getCorsHeaders()` from `_shared/cors.ts`).
+**Fix — page (PR #261):** customer-import.html rewired to invoke `bulk-create-customers` in a single call. 286 lines deleted, 39 lines added. Removed: inline `window.supabase.createClient()` (replaced by `_getHearthClient()` singleton), two pre-write reads, in-memory classification logic, two per-row write loops, address backfill UPDATE, helper functions `normalisePhone` and `fetchDemandBreakdown`, classification state arrays (`createNewRows`, `addRelationshipOnly`, `skippedRows`, `conflictRows`, `counts`). Added: single `supabase.functions.invoke('bulk-create-customers', { body: { rows, lawful_basis } })` call, conflict row derivation from `data.results.filter(r => r.outcome === 'conflict')`, `renderResults()` reading from `importResults.summary` and `importResults.demand_breakdown` instead of locally-computed state.
 
-**Scope of writes affected (from audit):** four anonymous PostgREST mutations in customer-import.html. Two against `customers` (insert new customer rows, deduplicated by email/phone), two against `customer_relationships` (link customer to vendor with `source = 'import'` and consent metadata). All four currently silently 204.
+**Verification:** End-to-end test against Test 12 fixture on 2026-05-15. 5-row test CSV (`test-import.csv`, mixed completeness — some rows with all fields, some with missing phone or address) uploaded via the live UI. Stage 5 reported 5 added, 0 skipped, 0 conflicts, 0 failed. SQL check: `SELECT COUNT(*) FROM customer_relationships WHERE owner_id = (vendor_id for test-12) AND source = 'import'` returned 5. Demand breakdown rendered the thin-data placeholder (4 customers with postcodes, under the 10-threshold). First successful end-to-end customer import in the platform's history.
 
-**Design notes before build:**
-- The cross-vendor customer linking pattern (same email on a new vendor's list creates a new relationship row, not a duplicate customer row) needs careful design in the Edge Function. The existing client-side dedup logic in T4-14 should be auditable against the new function to confirm parity.
-- The GDPR lawful basis confirmation step from T4-14 must run before any rows are written — the function should reject the request if `lawful_basis` is not present in the payload.
+**Design decisions locked during the design conversation** (full rationale in the investigation report and chat transcript):
+- Batched function call (not per-row invocations) with 1000-row request cap
+- In-function batched lookup via `.or()` + `.in()` rather than full-table scan
+- Phone-match dedup preserved (not dropped to email-only)
+- Continue-on-failure with per-row report, not abort-on-first
+- Address backfill kept as today's behaviour (best-effort fill of empty addresses on existing customer rows); cross-vendor concern noted but deferred to a future schema rationalisation
+- Lawful basis stays per-batch (mixed-source lists require split CSVs)
+- GDPR confirm checkbox remains a gate; not persisted (implicit audit via the relationship row + lawful_basis column)
+- Email lowercased on write to align dedup with storage
+- Orphan customer rows accepted on partial failure (matches `create-order`); recoverable on next import via the addRelationshipOnly path
 
-**Cross-reference:** T-ops-rls-fix (parent workstream, closed 2026-05-15), T-ops-rls-audit (audit report), T4-14 (parent feature ticket, complete), operational learning #16 (canonical Edge Function migration pattern).
+**Audit linkage:** Closes the second of three RLS surfaces flagged by T-ops-rls-audit (2026-05-15). T-ops-rls-cleanup-auth-callback and T-ops-rls-reads-audit remain open per their original framing — both are low priority or properly deferred to T5-A3.
+
+**Follow-up surfaced:** T-customers-page-import-entry (Tier 4, see below) — Customers page has no entry point to import despite being framed as "Your owned customer asset." Pre-launch gap didn't matter because import was broken; now that it works, the navigation gap is real.
 
 T-ops-rls-cleanup-auth-callback — delete `auth-callback.html` dead-code backstop
 
@@ -1339,6 +1348,26 @@ T5-11's pattern is in place.
 Cross-reference: T4-37 (parent ticket, closed), T5-11 (email
 infrastructure dependency), T5-27 (host platform participation
 follow-on workstream).
+
+T-customers-page-import-entry — surface customer import from Customers and Home
+
+**Status:** Open. Tier 4. Surfaced 2026-05-15 after T-ops-rls-customer-import shipped, making the import flow functional in production for the first time.
+
+**Problem:** The Customers page (`customers.html`) is framed as "Your owned customer asset — independent of any platform" but has no CTA to add customers via CSV import. Vendors arriving with an existing customer list have no obvious path from the page that's literally about growing their customer asset to the page that grows it. The only current entry to `customer-import.html` is via onboarding for data-rich vendors (T4-23) or by knowing the URL directly.
+
+Same likely concern on Home dashboard — "Import your existing customer list" should be a first-class next-action for data-rich vendors per T4-23 / T4-28's archetype-aware recommendation logic, but the surfacing should be audited now that the flow actually works.
+
+**Scope:**
+
+Part 1 — Customers page CTA. Add an "Import customers from a CSV" entry point to `customers.html`. Suggested placement: as a fourth tile in the asset summary section's stat grid, OR as a quiet button beneath the asset summary heading, OR as a more prominent card-style CTA when the vendor has zero imported customers yet. Design conversation before build — the right shape depends on whether the CTA should be persistent (always visible) or contextual (more prominent for vendors with empty imports). The action itself is a simple route to `customer-import.html`.
+
+Part 2 — Home dashboard audit. Verify that data-rich vendors (per `detectArchetype()` + the `customer_data_posture` field from onboarding) receive a recommendation to import their existing customer list during the first-drop phase. If the recommendation already fires correctly, no Home dashboard change needed. If it doesn't, extend `generateRecommendations()` in `assets/hearth-intelligence.js` to surface it.
+
+**Why this is Tier 4 not Tier 3:** the import flow is functional end-to-end; this is a discoverability / UX improvement, not a launch blocker. Healthy Habits can import via the URL today. The fix matters more when Hearth has multiple vendors than it does for the first.
+
+**Dependency:** T-ops-rls-customer-import (closed 2026-05-15 — prerequisite for this gap to be worth fixing).
+
+**Cross-reference:** T4-23 (first-drop guidance — already nominally routes data-rich vendors toward import), T4-27 (Customers page — this ticket extends), T4-28 (intelligence engine — Home dashboard recommendation surfacing).
 
 ### Tier 5 — Strategic platform features
 
