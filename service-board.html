@@ -1904,7 +1904,7 @@
       byId("undoToast").classList.remove("visible");
     }
 
-    async function commitPending(skipRefresh) {
+    async function commitPending() {
       if (!pendingChange || pendingChange.committed) return;
       const pc = pendingChange;
       pc.committed = true;
@@ -1919,7 +1919,6 @@
         });
         if (error) throw new Error(error.message || 'Status update failed.');
         if (data && data.error) throw new Error(data.error);
-        if (!skipRefresh) await refreshData();
       } catch (err) {
         console.error(err);
         showError(err.message || "Status update failed.");
@@ -2077,7 +2076,7 @@
     // The body-level delegation handler (lines below in attachEvents) handles the same
     // path for events that reach it, but direct listeners stop propagation before that.
     async function updateOrderStatus(orderId, toStatus) {
-      if (pendingChange) await commitPending(true);
+      if (pendingChange) await commitPending();
 
       const order = state.ordersSummary.find((o) => String(o.order_id) === String(orderId));
 
@@ -2090,7 +2089,7 @@
       applyStatusOptimistically(orderId, toStatus);
 
       const timerHandle = setTimeout(async function () {
-        await commitPending(false);
+        await commitPending();
       }, 5000);
 
       pendingChange = {
@@ -2326,7 +2325,7 @@
 
         // Commit any in-flight change immediately before starting a new one
         if (pendingChange) {
-          await commitPending(true);
+          await commitPending();
         }
 
         const order = state.ordersSummary.find((o) => o.order_id === orderId);
@@ -2341,7 +2340,7 @@
 
         // Schedule the DB write for 5 s from now
         const timerHandle = setTimeout(async function () {
-          await commitPending(false);
+          await commitPending();
         }, 5000);
 
         pendingChange = {
