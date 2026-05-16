@@ -986,6 +986,72 @@ on top of the coding rules above.
     pushing function changes straight to main — merging before
     deploy 500s every order until the function redeploys.
 
+46. **Application-level Resend integration established.** Pattern:
+    a dedicated Edge Function reads `RESEND_API_KEY` from Supabase
+    secrets and calls the Resend HTTP API directly (`POST
+    https://api.resend.com/emails`) with `Authorization: Bearer
+    ${RESEND_API_KEY}`. Success and failure both emit a single
+    structured-JSON line to `console.log` / `console.error` so the
+    Edge Function logs view is the audit trail until a real
+    `comms_log` table arrives with T5-11 full. `RESEND_API_KEY` is
+    now a required Edge Function secret in addition to the existing
+    Supabase Auth SMTP layer (which only covers auth/onboarding mail
+    — magic links, password reset, vendor invites — not
+    application-triggered transactional sends). Reference
+    implementation: `supabase/functions/send-order-confirmation`,
+    shipped as T5-11-minimum (PR #266, 2026-05-16). Future
+    transactional triggers (order_ready SMS via Twilio,
+    drop_announced, drop_reminder, drop_early_access,
+    post_drop_thank_you) should follow the same pattern: dedicated
+    Edge Function per trigger, provider HTTP API called directly,
+    structured-JSON logs.
+
+47. **Inter-Edge-Function calls use shared-secret authentication.**
+    Pattern: the caller does a direct `fetch()` to
+    `${SUPABASE_URL}/functions/v1/<name>` with an
+    `X-Internal-Secret` header containing the
+    `INTERNAL_FUNCTION_SECRET` env var value; the callee reads the
+    same env var, compares, and returns 401 on mismatch. JWT
+    verification is disabled at the gateway via
+    `verify_jwt = false` in `supabase/config.toml` for any function
+    on this pattern — the shared secret is the only auth, so the
+    function MUST refuse any request without the matching header
+    (frontend code never calls these endpoints directly). Reference
+    implementation: `stripe-webhook` → `send-order-confirmation`,
+    shipped as T5-11-minimum (PR #266). See the header comment on
+    `send-order-confirmation/index.ts` for the documented pattern.
+    Use this for any future internal-only Edge Function call paths
+    (e.g. order-ready trigger → SMS sender, scheduled-drop-reminder
+    cron → reminder sender).
+
+## Edge Function secrets
+
+Required Supabase Edge Function secrets (set via `supabase secrets set
+KEY=value` and propagated to running instances on the next deploy):
+
+- `STRIPE_SECRET_KEY` — Stripe Connect platform key (test/sandbox at
+  launch). Used by `create-order`, `cancel-order`, `stripe-webhook`,
+  `create-stripe-connect-link`, `check-stripe-connect-status`. See
+  the "Stripe Connect Express (T3-8)" section below.
+- `STRIPE_WEBHOOK_SECRET` — Stripe webhook signing secret. Used by
+  `stripe-webhook` to verify event authenticity.
+- `SUPABASE_SERVICE_ROLE_KEY` — service-role JWT for bypassing RLS
+  in privileged writes. Used by every Edge Function that writes to
+  a vendor-scoped table.
+- `RESEND_API_KEY` — Resend HTTP API key for transactional email.
+  Used by `send-order-confirmation` (T5-11-minimum) and any future
+  email-triggered Edge Functions per operational learning #46.
+- `INTERNAL_FUNCTION_SECRET` — shared secret for inter-Edge-Function
+  authentication per operational learning #47. Used by
+  `stripe-webhook` (caller) and `send-order-confirmation` (callee)
+  today, and by any future internal-only function pair.
+  Rotate by running `supabase secrets set
+  INTERNAL_FUNCTION_SECRET=$(openssl rand -hex 32)` and
+  **immediately** redeploying every function that reads the secret
+  on either side of the call (caller and callee) so the new value
+  propagates to running instances. A redeploy of only one side
+  breaks the call until the other side redeploys.
+
 ## Stripe Connect Express (T3-8)
 
 - vendors schema: `stripe_account_id` TEXT (nullable),
@@ -1127,10 +1193,11 @@ Express (T3-8)" section for the vendor onboarding scaffold.
 
 ## Production mutation/read status
 
-Snapshot of which read/write paths are working in production and which are known broken. Update whenever a PR confirms or breaks a path. Last updated 2026-05-15 after T-ops-rls-customer-import shipped end-to-end (PRs #260, #261) — customer-import.html is now functional in production for the first time.
+Snapshot of which read/write paths are working in production and which are known broken. Update whenever a PR confirms or breaks a path. Last updated 2026-05-16 after T5-11-minimum shipped (PR #266) — order_confirmed transactional email is the first application-level Resend send in production.
 
 - Customer order placement (orders, order_items, order_item_selections, customers, customer_relationships) — WORKING via `create-order` Edge Function. Atomic write of all five tables, Stripe Connect destination charge created, order starts at `status='pending_payment'` and flips to `'placed'` on webhook receipt. Capacity is reserved during the pending_payment window (Stripe expires_at = 1800s).
-- Stripe webhook handling — WORKING via `stripe-webhook` Edge Function. Handles `checkout.session.completed` (→ placed/paid), `checkout.session.expired` (→ cancelled/expired), `checkout.session.async_payment_failed` (→ cancelled/failed). Endpoint configured at https://tvqhhjvumgumyetvpgid.supabase.co/functions/v1/stripe-webhook (Stripe Dashboard endpoint name: "brilliant-rhythm").
+- Stripe webhook handling — WORKING via `stripe-webhook` Edge Function. Handles `checkout.session.completed` (→ placed/paid), `checkout.session.expired` (→ cancelled/expired), `checkout.session.async_payment_failed` (→ cancelled/failed). Endpoint configured at https://tvqhhjvumgumyetvpgid.supabase.co/functions/v1/stripe-webhook (Stripe Dashboard endpoint name: "brilliant-rhythm"). After flipping the order to placed/paid the webhook invokes `send-order-confirmation` (T5-11-minimum) via shared-secret auth; email send is wrapped in try/catch and any failure is logged but never propagated to Stripe so Resend outages cannot cause webhook retries that would re-place the order.
+- Order confirmation email (order_confirmed transactional trigger) — WORKING via `send-order-confirmation` Edge Function as of 2026-05-16 (PR #266). Invoked by `stripe-webhook` after `checkout.session.completed`. Calls Resend HTTP API directly with `RESEND_API_KEY`; inter-function call authenticated via `INTERNAL_FUNCTION_SECRET` in the `X-Internal-Secret` header (`verify_jwt = false` at gateway). First application-level Resend integration in production — see operational learnings #46 and #47 for the pattern. Other T5-11 triggers (order_ready automated SMS, drop_announced, drop_reminder, drop_early_access, post_drop_thank_you, the `comms_log` table) remain backlog per pre-launch scope decision.
 - Order read on confirmation page — WORKING via `fetch-order` Edge Function. Anonymous, matched-pair authorization (order_id + session_id). Returns order, items (including bundle line selections), drop, vendor, host. Customer-visible fields only — no email, phone, customer_id, contact_opt_in, or platform_fee_pence in response.
 - Order cancel-on-return — WORKING via `cancel-order` Edge Function. Idempotent, only flips pending_payment → cancelled. Frees capacity immediately when the customer hits Cancel on Stripe Checkout rather than waiting for Stripe's 30-minute session expiry. Does NOT call Stripe — relies on Stripe's own session expiry to clean up the unused Checkout session.
 - Service Board order status transitions (`orders.status` UPDATE and `order_status_events` INSERT) — WORKING via `transition-order-status` Edge Function as of 2026-05-15. Anonymous gateway (`verify_jwt = false`), server-side state machine enforcing adjacent-only transitions in `placed → confirmed → baking → ready → delivered` (forward and backward by one step only), optimistic-concurrency guard via `.eq("status", currentStatus)` returning 409 on concurrent writes, audit event written server-side as `actor: 'service_board'`, `actor_type: 'operator'`. Previously broken silently — direct PATCH from anonymous service-board.html returned 204 with zero rows affected because the `orders` RLS policies require `auth.uid()` to match `vendors.auth_user_id`. The bug was undiscoverable by routine testing because the optimistic UI showed success and the post-commit `refreshData()` re-fetched stale data that masked the failure on page reload.
@@ -1181,6 +1248,8 @@ T-ops-rls-fix closed 2026-05-15 (closes T-ops-rls-fix-polish in same workstream)
 
 T-ops-rls-customer-import closed 2026-05-15: built `bulk-create-customers` Edge Function (anonymous, `verify_jwt = false`, batched email+phone lookup, in-memory classification matching the page's existing four-way logic, sequential per-row writes for createNew + linkExisting, demand breakdown aggregation folded into the response — PR #260) and rewired customer-import.html to invoke it (286 deletions / 39 additions, removing inline `supabase.createClient()` + two pre-write reads + classification + four write loops + the now-dead `fetchDemandBreakdown` + `normalisePhone` — PR #261). Verified end-to-end on Test 12 with a 5-row CSV: stage 5 reported 5 added / 0 skipped / 0 conflicts / 0 failed; SQL count confirmed 5 customer_relationships rows for the vendor with source='import'. First successful end-to-end customer import in the platform's history. Full closure narrative and design rationale in BACKLOG.md. Audit linkage: closes the second of three RLS surfaces from T-ops-rls-audit (2026-05-15); T-ops-rls-cleanup-auth-callback and T-ops-rls-reads-audit remain open per their original framing.
 
+T5-11-minimum closed 2026-05-16 (parent T5-11 remains partial): built `send-order-confirmation` Edge Function and wired `stripe-webhook` to invoke it after `checkout.session.completed` transitions the order to placed/paid (PR #266). Resend HTTP API called directly with `RESEND_API_KEY`; inter-function call authenticated via shared `INTERNAL_FUNCTION_SECRET` in `X-Internal-Secret` header (`verify_jwt = false` at gateway). Webhook treats every error from the send function as non-fatal — try/catch + return 200 regardless of email outcome — so a Resend outage cannot cause Stripe to retry the webhook and double-place an order. First application-level Resend integration in production. Establishes two reusable patterns documented as operational learnings #46 (application-level Resend) and #47 (inter-Edge-Function shared-secret auth) for future T5-11 triggers (order_ready automated SMS, drop_announced, drop_reminder, drop_early_access, post_drop_thank_you), all of which remain open per pre-launch scope decision. Full closure narrative in BACKLOG.md.
+
 ### Tier 4 — Enhancements that will impress
 - T4-29 — Series intelligence in Insights — open
 - T4-31b-fu1 — Server-side HEIC conversion fallback for Mac-Photos-HEIC — open, deferred until real vendor friction.
@@ -1200,7 +1269,7 @@ T-ops-rls-customer-import closed 2026-05-15: built `bulk-create-customers` Edge 
 - T5-6 — Customer accounts (order history, saved addresses) — open
 - T5-8 — Interest registration: signals mechanic — open
 - T5-9 — Recommendation engine: matured intelligence — open
-- T5-11 — Comms engine V1 (transactional + demand generation email) — open
+- T5-11 — Comms engine V1 (transactional + demand generation email) — partial. T5-11-minimum (order_confirmed email via Resend, fired by `stripe-webhook` after Stripe success) shipped 2026-05-16 (PR #266). Remaining triggers — order_ready automated SMS, drop_announced, drop_reminder, drop_early_access, post_drop_thank_you — and the `comms_log` audit table remain open per pre-launch scope decision.
 - T5-12 — Vendor customer data import: advanced (POS / email / booking integrations) — open
 - T5-14 — Home page: demand orchestration dashboard — open
 - T5-15 — Insights: demand and audience intelligence layer — open

@@ -1498,9 +1498,40 @@ data_posture awareness: data-rich vendors receive import-first and demand-target
 
 Dependency: T4-28 (intelligence engine — complete), meaningful customer and order data from real drops. Do not build geographic scoring on synthetic test data — wait for Healthy Habits Cafe to run at least 2 drops before evaluating signal quality.
 
-T5-11: Comms engine V1
+T5-11: Comms engine V1 ✓ PARTIAL — T5-11-minimum (order_confirmed only) shipped 2026-05-16; remaining triggers and `comms_log` table open.
 
-Event-driven transactional and demand generation messaging triggered by order and drop lifecycle events. Built on Supabase Edge Functions calling Postmark for email. SMS via Twilio deferred to V2 — focus V1 on getting email right.
+**T5-11-minimum closure note (2026-05-16, PR #266):** Shipped a
+narrowly-scoped first slice — `send-order-confirmation` Edge Function
+invoked by `stripe-webhook` after `checkout.session.completed` flips
+the order to placed/paid. Sends the order_confirmed transactional
+email via Resend, calling the Resend HTTP API directly with
+`RESEND_API_KEY`. Inter-function call authenticated by a shared
+`INTERNAL_FUNCTION_SECRET` passed in the `X-Internal-Secret` header;
+`verify_jwt = false` at the gateway because Stripe → webhook → send
+has no user JWT. Email failures are non-fatal: the webhook catches,
+logs structured JSON, and returns 200 regardless of email outcome so
+a Resend outage cannot trigger Stripe webhook retries that would
+re-place the order. No `comms_log` table yet — Edge Function logs
+are the audit trail until full T5-11 ships.
+
+This slice establishes two reusable patterns documented as
+operational learnings #46 (application-level Resend integration) and
+#47 (inter-Edge-Function shared-secret auth) in CLAUDE.md. Both
+patterns are the templates for every remaining T5-11 trigger.
+
+**Remaining T5-11 scope (still open):** order_ready automated SMS
+(Twilio — supplements the existing T3-10 manual modal),
+drop_announced, drop_reminder, drop_early_access (highest-leverage
+retention mechanic per T5-C1), drop_closing_soon, post_drop_thank_you,
+the `comms_log` audit table (customer_id, drop_id, trigger, sent_at,
+channel, status — channel-agnostic from the start so SMS / WhatsApp /
+email all share one schema), per-customer per-drop frequency caps,
+consent gating, and the GenAI Haiku-4.5 body-copy generation layer
+described below.
+
+---
+
+Event-driven transactional and demand generation messaging triggered by order and drop lifecycle events. Built on Supabase Edge Functions. Email provider is Resend (live since T5-11-minimum); SMS via Twilio is the remaining V1 channel for order_ready specifically.
 
 **Update (May 2026 — from T5-C1 design session):**
 
@@ -1543,11 +1574,11 @@ and 11 for full channel rationale and trigger specifications.
 
 Email body copy is generated via the Anthropic API (Haiku 4.5) inside the Edge Function at send time, not from static string literal templates. Each trigger passes structured event data (order reference, drop name, timing, vendor name, host name where present, fulfilment mode) plus the vendor's brand voice settings from Brand Hearth to the API. The model generates the connecting prose and the framing of the message in the vendor's voice. Subject lines, CTAs, order references, times, and prices are deterministic — templated and rendered separately, never generated. See GenAI shared principles for hard rules.
 
-The Anthropic API key lives in Supabase secrets alongside STRIPE_SECRET_KEY and the Postmark credentials. The Edge Function pattern is the same as invite-vendor and create-stripe-connect-link.
+The Anthropic API key lives in Supabase secrets alongside STRIPE_SECRET_KEY, RESEND_API_KEY, and INTERNAL_FUNCTION_SECRET. The Edge Function pattern is the same as invite-vendor and create-stripe-connect-link.
 
 **Transactional triggers (V1 scope — email only)**
 
-order_confirmed: fires immediately after order insert in order.html. Sends to customer email if present. Contains order reference, items ordered, fulfilment mode, collection point or delivery address, drop timing. Vendor-branded with display_name and brand_primary_color.
+order_confirmed: ✓ SHIPPED 2026-05-16 as T5-11-minimum (PR #266). Fires from `stripe-webhook` after `checkout.session.completed` (not from order insert — the insert happens during pending_payment, before money has actually moved). Sends to customer email if present. Contains order reference, items ordered, fulfilment mode, collection point or delivery address, drop timing. Vendor-branded with display_name and brand_primary_color. Implemented in `supabase/functions/send-order-confirmation`. NOTE: implementation pre-dates the GenAI integration above — body copy is currently deterministic templated HTML, not AI-generated. The Haiku 4.5 body-copy layer is part of the remaining T5-11 work and would be retrofitted onto this trigger alongside the other triggers.
 
 order_ready: fires when Service Board operator marks order as Ready (the same event that currently opens the T3-10 notification modal). Sends to customer if email present. Supplements rather than replaces the manual modal — operator still sees the modal, email sends automatically in parallel.
 
