@@ -1065,153 +1065,84 @@
       height: 540px;
       position: relative;
       overflow: hidden;
-      background: #FAF8F4;
       box-sizing: border-box;
       font-family: 'Figtree', system-ui, sans-serif;
       transform-origin: top left;
       border-radius: 8px;
       box-shadow: 0 6px 24px rgba(0,0,0,0.12);
       --vendor-brand-primary: #8B6B3F;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Hero flexes to fill all space above the bottom cream zone, so the
-       square is always full at any item count. Soft 45% floor protects
-       the photo's presence when content in the bottom block grows. */
-    .menuCardArtwork__hero {
-      flex: 1 1 0;
-      min-height: 45%;
       background-color: var(--vendor-brand-primary);
-      background-size: cover;
-      background-position: center center;
-      background-repeat: no-repeat;
     }
 
-    /* Bottom cream zone — intrinsic height, hugs its content. */
-    .menuCardArtwork__bottom {
-      flex: 0 0 auto;
-      background: #FAF8F4;
-      border-top: 1px solid var(--vendor-brand-primary);
-      padding: 18px 36px 22px;
-      box-sizing: border-box;
-    }
-
-    /* Logo + drop/date line read as one identity lockup — tight gap. */
-    .menuCardArtwork__identityLockup {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .menuCardArtwork__logo {
-      display: none;
-      max-height: 78px;
-      max-width: 70%;
-      width: auto;
-      height: auto;
-      object-fit: contain;
-    }
-
-    .menuCardArtwork.has-logo .menuCardArtwork__logo {
+    /* The photo fills the full 540x540 square. object-fit:cover crops
+       any non-square source centred so the image always fills the
+       frame without letterboxing. */
+    .menuCardArtwork__image {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
       display: block;
     }
 
-    .menuCardArtwork__vendorName {
-      font-family: 'Cormorant Garamond', Georgia, serif;
-      font-weight: 600;
-      font-size: 36px;
-      line-height: 1.05;
-      color: var(--vendor-brand-primary);
-      margin: 0;
-      letter-spacing: 0.01em;
-      text-align: center;
-    }
-
-    .menuCardArtwork.has-logo .menuCardArtwork__vendorName {
+    .menuCardArtwork__image:not([src]),
+    .menuCardArtwork__image[src=""] {
       display: none;
     }
 
-    .menuCardArtwork__meta {
+    /* Lower-third scrim so the drop name + date stay legible over any
+       photo, light or dark. Top of the gradient is fully transparent
+       so the photo reads cleanly in the upper two thirds. */
+    .menuCardArtwork__scrim {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 38%;
+      background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 0%,
+        rgba(0, 0, 0, 0.08) 35%,
+        rgba(0, 0, 0, 0.32) 75%,
+        rgba(0, 0, 0, 0.5) 100%
+      );
+      pointer-events: none;
+    }
+
+    /* Drop name + date — quiet caption-on-image, not a headline.
+       Lower-left, generous edge margins, left-aligned editorial. */
+    .menuCardArtwork__lockup {
+      position: absolute;
+      left: 36px;
+      right: 36px;
+      bottom: 32px;
+      color: #FAF8F4;
+      text-align: left;
+    }
+
+    .menuCardArtwork__dropName {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 500;
+      font-size: 30px;
+      line-height: 1.1;
+      letter-spacing: 0.005em;
+      margin: 0;
+      color: #FAF8F4;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    }
+
+    .menuCardArtwork__dropDate {
+      margin-top: 6px;
       font-family: 'Figtree', system-ui, sans-serif;
       font-weight: 500;
       font-size: 13px;
       line-height: 1.2;
-      color: #1F2937;
-      margin: 0;
-      text-align: center;
-    }
-
-    /* Single editorial sentence in the vendor's voice. Cormorant italic
-       so it reads as a distinct beat from the meta line above and the
-       menu below. Hidden entirely when reveal_line is empty so the band
-       collapses cleanly. */
-    .menuCardArtwork__revealLine {
-      margin: 16px auto 0;
-      max-width: 84%;
-      font-family: 'Cormorant Garamond', Georgia, serif;
-      font-weight: 500;
-      font-style: italic;
-      font-size: 16px;
-      line-height: 1.4;
-      color: #4A3F33;
-      text-align: center;
-    }
-
-    .menuCardArtwork__revealLine:empty {
-      display: none;
-      margin-top: 0;
-    }
-
-    .menuCardArtwork__rule {
-      height: 1px;
-      background-color: var(--vendor-brand-primary);
-      width: 80%;
-      margin: 16px auto 0;
-    }
-
-    .menuCardArtwork__menuList {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 16px;
-    }
-
-    .menuCardArtwork__menuItem {
-      display: flex;
-      align-items: baseline;
-      gap: 14px;
-    }
-
-    .menuCardArtwork__dot {
-      display: inline-block;
-      flex-shrink: 0;
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background-color: var(--vendor-brand-primary);
-    }
-
-    .menuCardArtwork__menuItemName {
-      flex: 1;
-      font-family: 'Cormorant Garamond', Georgia, serif;
-      font-weight: 500;
-      font-size: 20px;
-      line-height: 1.3;
-      color: #1F2937;
-    }
-
-    .menuCardArtwork__overflow {
-      /* the flex-column gap already adds 12px above; this nudges
-         the overflow line just a touch further so it reads as a
-         separate utterance rather than the next list row. */
-      margin-top: 4px;
-      font-family: 'Figtree', system-ui, sans-serif;
-      font-weight: 400;
-      font-size: 13px;
-      line-height: 1.3;
-      color: #6B5D4F;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #FAF8F4;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
     }
 
     .menuCardArtwork__skeleton {
@@ -1465,12 +1396,20 @@
 
                 <div class="stageSection">
                   <h4 class="stageSectionTitle">Reveal line</h4>
-                  <p class="stageSectionSub">Optional. Shows on your reveal post card — not on the order page.</p>
+                  <p class="stageSectionSub">Optional. Saved for your Monday reveal post caption — not shown on the order page.</p>
 
                   <div class="field">
                     <label for="dropRevealLine">One short editorial line</label>
                     <input id="dropRevealLine" type="text" maxlength="100" placeholder="e.g. Hand-stretched sourdough, fired three minutes flat." />
-                    <div class="helperText">One short line for your Monday reveal card — the hook that makes people want Friday. Around 80 characters.</div>
+                    <div class="helperText">One short line for your Monday reveal post — the hook that makes people want Friday. Around 80 characters.</div>
+                  </div>
+
+                  <div class="field" style="margin-top:14px;">
+                    <label for="dropRevealProduct">Reveal dish</label>
+                    <select id="dropRevealProduct">
+                      <option value="">No dish selected</option>
+                    </select>
+                    <div class="helperText">The dish that headlines your Monday reveal post — we'll use its Menu Library photo.</div>
                   </div>
                 </div>
 
@@ -1936,25 +1875,20 @@
                   <div class="menuCardWrap">
                     <div class="menuCardArtworkFrame">
                       <div class="menuCardArtwork" id="menuCardArtwork">
-                        <div class="menuCardArtwork__hero"></div>
-                        <div class="menuCardArtwork__bottom">
-                          <div class="menuCardArtwork__identityLockup">
-                            <img class="menuCardArtwork__logo" id="menuCardLogo" alt="" crossorigin="anonymous" />
-                            <div class="menuCardArtwork__vendorName"></div>
-                            <div class="menuCardArtwork__meta"></div>
-                          </div>
-                          <div class="menuCardArtwork__revealLine" id="menuCardRevealLine"></div>
-                          <div class="menuCardArtwork__rule" aria-hidden="true"></div>
-                          <div class="menuCardArtwork__menuList"></div>
+                        <img class="menuCardArtwork__image" id="menuCardImage" alt="" crossorigin="anonymous" />
+                        <div class="menuCardArtwork__scrim" aria-hidden="true"></div>
+                        <div class="menuCardArtwork__lockup">
+                          <div class="menuCardArtwork__dropName" id="menuCardDropName"></div>
+                          <div class="menuCardArtwork__dropDate" id="menuCardDropDate"></div>
                         </div>
-                        <div class="menuCardArtwork__skeleton" id="menuCardSkeleton">Loading menu…</div>
+                        <div class="menuCardArtwork__skeleton" id="menuCardSkeleton">Loading…</div>
                       </div>
                     </div>
 
                     <div class="menuCardActions">
                       <button class="btnAccent" id="downloadMenuCardBtn" type="button" disabled>Download</button>
                       <div class="menuCardError" id="menuCardError"></div>
-                      <div class="menuCardRevealNudge" id="menuCardRevealNudge">Add a reveal line in the drop's Basics to give this card its voice.</div>
+                      <div class="menuCardRevealNudge" id="menuCardRevealNudge"></div>
                     </div>
                   </div>
                 </div>
@@ -3579,6 +3513,28 @@
       count.textContent = `${len} / 280`;
     }
 
+    // Rebuild the Reveal dish dropdown from this drop's enabled products
+    // (products only — never bundles). Option value = product id, option
+    // text = product name. selectedId is applied if it matches an option;
+    // otherwise the picker falls back to the empty placeholder.
+    function populateRevealDishPicker(selectedId) {
+      const select = byId("dropRevealProduct");
+      if (!select) return;
+      const enabledProducts = (state.menuAssignments || []).filter(
+        (it) => it.enabled && it.menu_item_type === "product" && it.product_id
+      );
+      const options = ['<option value="">No dish selected</option>'];
+      enabledProducts.forEach((row) => {
+        const id = String(row.product_id);
+        const name = escapeHtml(row.name || "");
+        options.push(`<option value="${escapeHtml(id)}">${name}</option>`);
+      });
+      select.innerHTML = options.join("");
+      const wanted = selectedId == null ? "" : String(selectedId);
+      const hasWanted = wanted !== "" && enabledProducts.some((r) => String(r.product_id) === wanted);
+      select.value = hasWanted ? wanted : "";
+    }
+
     function populateForm() {
       const d = state.drop;
       if (!d) return;
@@ -3588,6 +3544,7 @@
       byId("dropType").value = d.drop_type || "neighbourhood";
       byId("dropIntro").value = d.drop_intro || "";
       byId("dropRevealLine").value = d.reveal_line || "";
+      populateRevealDishPicker(d.reveal_product_id || null);
       updateDropIntroCount();
       byId("notesInternal").value = d.notes_internal || "";
 
