@@ -1250,6 +1250,38 @@ T-ops-rls-customer-import closed 2026-05-15: built `bulk-create-customers` Edge 
 
 T5-11-minimum closed 2026-05-16 (parent T5-11 remains partial): built `send-order-confirmation` Edge Function and wired `stripe-webhook` to invoke it after `checkout.session.completed` transitions the order to placed/paid (PR #266). Resend HTTP API called directly with `RESEND_API_KEY`; inter-function call authenticated via shared `INTERNAL_FUNCTION_SECRET` in `X-Internal-Secret` header (`verify_jwt = false` at gateway). Webhook treats every error from the send function as non-fatal — try/catch + return 200 regardless of email outcome — so a Resend outage cannot cause Stripe to retry the webhook and double-place an order. First application-level Resend integration in production. Establishes two reusable patterns documented as operational learnings #46 (application-level Resend) and #47 (inter-Edge-Function shared-secret auth) for future T5-11 triggers (order_ready automated SMS, drop_announced, drop_reminder, drop_early_access, post_drop_thank_you), all of which remain open per pre-launch scope decision. Full closure narrative in BACKLOG.md.
 
+T5-25 Part 0 — SHIPPED (prod, squash commit f95c12c). Vendor Monday
+"reveal" Instagram post asset (auto-generated 1080x1080 card).
+
+LOCKED DESIGN — do not relitigate or expand:
+- Card = ONE full-bleed photo of the drop's reveal dish + a
+  restrained drop-name/date lockup (Cormorant, near-white,
+  lower-left) over a bottom legibility scrim. NOTHING else: no menu
+  list, no logo, no tagline, no Hearth mark, no host. Vendor
+  identity comes from posting via their own Instagram (Hearth
+  frames, vendor fills).
+- Reveal dish is chosen via the "Reveal dish" picker in Drop Studio
+  Basics (lists the drop's ENABLED products only). Image fallback
+  chain: selected product image -> vendor.hero_image_url -> solid
+  brand-colour block.
+
+HARD RULE — card image geometry (regression guard):
+- The card photo uses explicit JS-computed pixel geometry
+  (cover-centre math against the 540px box, clipped by
+  .menuCardArtwork overflow:hidden). Do NOT replace this with
+  object-fit:cover or background-size:cover. html2canvas 1.4.1
+  re-implements those differently from the browser, so the exported
+  PNG diverges from the on-screen preview. The explicit-pixel
+  approach exists specifically to make preview and export
+  pixel-identical by construction. This was the root cause of the
+  stretch and crop bugs.
+
+SCHEMA/EF (live in prod): drops.reveal_line (text),
+drops.reveal_product_id (uuid -> products.id). create-drop and
+update-drop EFs carry both in ALLOWED_FIELDS and are deployed.
+reveal_line is retained to feed the future caption generator
+(T5-25 Part 1, deferred) and is NOT rendered on the card.
+
 ### Tier 4 — Enhancements that will impress
 - T4-29 — Series intelligence in Insights — open
 - T4-31b-fu1 — Server-side HEIC conversion fallback for Mac-Photos-HEIC — open, deferred until real vendor friction.
