@@ -1072,6 +1072,11 @@
       border-radius: 8px;
       box-shadow: 0 6px 24px rgba(0,0,0,0.12);
       --vendor-brand-primary: #8B6B3F;
+      --headerBandHeight: 88px;
+    }
+
+    .menuCardArtwork.has-tagline {
+      --headerBandHeight: 116px;
     }
 
     .menuCardArtwork__hero {
@@ -1088,10 +1093,10 @@
 
     .menuCardArtwork__headerBand {
       position: absolute;
-      top: calc(55% - 40px);
+      top: calc(55% - (var(--headerBandHeight) / 2));
       left: 0;
       right: 0;
-      height: 80px;
+      height: var(--headerBandHeight);
       background: #FAF8F4;
       border-top: 1px solid var(--vendor-brand-primary);
       border-bottom: 1px solid var(--vendor-brand-primary);
@@ -1099,7 +1104,7 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      padding: 0 24px;
+      padding: 0 28px;
       text-align: center;
       box-sizing: border-box;
     }
@@ -1107,11 +1112,26 @@
     .menuCardArtwork__vendorName {
       font-family: 'Cormorant Garamond', Georgia, serif;
       font-weight: 600;
-      font-size: 28px;
-      line-height: 1.1;
+      font-size: 36px;
+      line-height: 1.05;
       color: var(--vendor-brand-primary);
       margin: 0;
       letter-spacing: 0.01em;
+    }
+
+    .menuCardArtwork__tagline {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 400;
+      font-style: italic;
+      font-size: 13px;
+      line-height: 1.25;
+      color: #6B5D4F;
+      margin: 6px 0 0;
+      max-width: 100%;
+    }
+
+    .menuCardArtwork__tagline:empty {
+      display: none;
     }
 
     .menuCardArtwork__meta {
@@ -1120,7 +1140,7 @@
       font-size: 13px;
       line-height: 1.2;
       color: #1F2937;
-      margin: 6px 0 0;
+      margin: 8px 0 0;
     }
 
     .menuCardArtwork__menu {
@@ -1129,7 +1149,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      padding: 60px 32px 24px;
+      padding: calc((var(--headerBandHeight) / 2) + 18px) 36px 22px;
       box-sizing: border-box;
       overflow: hidden;
     }
@@ -1137,24 +1157,15 @@
     .menuCardArtwork__menuList {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 11px;
     }
 
     .menuCardArtwork__menuItemName {
       font-family: 'Figtree', system-ui, sans-serif;
       font-weight: 600;
-      font-size: 14px;
-      line-height: 1.25;
+      font-size: 20px;
+      line-height: 1.2;
       color: #1F2937;
-    }
-
-    .menuCardArtwork__menuItemDesc {
-      font-family: 'Figtree', system-ui, sans-serif;
-      font-weight: 400;
-      font-size: 12px;
-      line-height: 1.3;
-      color: #4B5563;
-      margin-top: 2px;
     }
 
     .menuCardArtwork.is-dense .menuCardArtwork__menuList {
@@ -1162,11 +1173,7 @@
     }
 
     .menuCardArtwork.is-dense .menuCardArtwork__menuItemName {
-      font-size: 13px;
-    }
-
-    .menuCardArtwork.is-dense .menuCardArtwork__menuItemDesc {
-      font-size: 11px;
+      font-size: 15px;
     }
 
     .menuCardArtwork__skeleton {
@@ -1858,8 +1865,8 @@
 
                 <div class="stageSection mondayRevealSection" id="mondayRevealSection" style="margin-top:18px;">
                   <div class="mondayRevealHeader">
-                    <h4 class="stageSectionTitle">Your Monday reveal</h4>
-                    <p class="stageSectionSub">Share this on Instagram four days before ordering opens.</p>
+                    <h4 class="stageSectionTitle">Your reveal post</h4>
+                    <p class="stageSectionSub" id="menuCardCaption">Share this on Instagram a few days before your drop.</p>
                   </div>
 
                   <div class="menuCardWrap">
@@ -1868,6 +1875,7 @@
                         <div class="menuCardArtwork__hero"></div>
                         <div class="menuCardArtwork__headerBand">
                           <div class="menuCardArtwork__vendorName"></div>
+                          <div class="menuCardArtwork__tagline"></div>
                           <div class="menuCardArtwork__meta"></div>
                         </div>
                         <div class="menuCardArtwork__menu">
@@ -1878,7 +1886,7 @@
                     </div>
 
                     <div class="menuCardActions">
-                      <button class="btnAccent" id="downloadMenuCardBtn" type="button" disabled>Download for Monday</button>
+                      <button class="btnAccent" id="downloadMenuCardBtn" type="button" disabled>Download</button>
                       <div class="menuCardError" id="menuCardError"></div>
                     </div>
                   </div>
@@ -4192,11 +4200,11 @@
       populateMenuCard();
     }
 
-    /* T5-25 Part 0 — Menu card image for the Monday reveal */
+    /* T5-25 Part 0 — Menu card image for the reveal post */
 
     function formatMenuCardDate(value) {
       if (!value) return "";
-      const d = new Date(value);
+      const d = value instanceof Date ? value : new Date(value);
       if (Number.isNaN(d.getTime())) return "";
       return d.toLocaleDateString("en-GB", {
         weekday: "long",
@@ -4205,11 +4213,27 @@
       });
     }
 
+    // Reveal date = drop.delivery_start minus 4 days. Returns a Date or
+    // null if the input is missing, invalid, or the computed reveal
+    // date is already in the past (in which case the framing copy
+    // falls back to generic text rather than showing a stale date).
+    function computeRevealDate(deliveryStart) {
+      if (!deliveryStart) return null;
+      const d = new Date(deliveryStart);
+      if (Number.isNaN(d.getTime())) return null;
+      const reveal = new Date(d.getTime() - 4 * 24 * 60 * 60 * 1000);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (reveal.getTime() < today.getTime()) return null;
+      return reveal;
+    }
+
     function populateMenuCard() {
       const artworkEl = byId("menuCardArtwork");
       const downloadBtn = byId("downloadMenuCardBtn");
       const skeletonEl = byId("menuCardSkeleton");
       const errorEl = byId("menuCardError");
+      const captionEl = byId("menuCardCaption");
       if (!artworkEl || !downloadBtn) return;
 
       if (errorEl) errorEl.textContent = "";
@@ -4219,8 +4243,19 @@
 
       if (!drop || !vendor) {
         if (skeletonEl) skeletonEl.style.display = "flex";
+        if (captionEl) captionEl.textContent = "Share this on Instagram a few days before your drop.";
         downloadBtn.disabled = true;
         return;
+      }
+
+      // Framing caption — derived reveal date (delivery_start − 4 days),
+      // generic fallback when missing or in the past.
+      if (captionEl) {
+        const revealDate = computeRevealDate(drop.delivery_start);
+        const revealLabel = revealDate ? formatMenuCardDate(revealDate) : "";
+        captionEl.textContent = revealLabel
+          ? `Share this on Instagram around ${revealLabel} — four days before your drop.`
+          : "Share this on Instagram a few days before your drop.";
       }
 
       artworkEl.style.setProperty("--vendor-brand-primary", vendor.brand_primary_color || "#8B6B3F");
@@ -4237,6 +4272,15 @@
       const vendorNameEl = artworkEl.querySelector(".menuCardArtwork__vendorName");
       if (vendorNameEl) vendorNameEl.textContent = vendor.display_name || vendor.name || "";
 
+      // Tagline — quiet brand line between the vendor name and the
+      // drop/date line. Absent when null / empty / whitespace; the
+      // has-tagline class toggle drives the header band height so the
+      // band stays intentional with or without it.
+      const taglineRaw = vendor.tagline == null ? "" : String(vendor.tagline).trim();
+      const taglineEl = artworkEl.querySelector(".menuCardArtwork__tagline");
+      if (taglineEl) taglineEl.textContent = taglineRaw;
+      artworkEl.classList.toggle("has-tagline", Boolean(taglineRaw));
+
       const metaParts = [];
       if (drop.name) metaParts.push(drop.name);
       const dateLabel = formatMenuCardDate(drop.delivery_start);
@@ -4247,22 +4291,25 @@
       if (metaEl) metaEl.textContent = metaParts.join(" · ");
 
       const enabledItems = (state.menuAssignments || []).filter((it) => it.enabled);
-      if (enabledItems.length >= 13) {
+      if (enabledItems.length >= 18) {
         console.warn(`[menuCard] Drop has ${enabledItems.length} menu items — card is at the visual limit. Still rendering.`);
       }
-      artworkEl.classList.toggle("is-dense", enabledItems.length >= 9);
+      // Names-only layout: base type covers small menus; the dense
+      // modifier kicks in once item count exceeds the comfortable
+      // visual fit inside the 540px menu panel.
+      artworkEl.classList.toggle("is-dense", enabledItems.length > 7);
 
       const menuListEl = artworkEl.querySelector(".menuCardArtwork__menuList");
       if (menuListEl) {
         if (enabledItems.length === 0) {
           menuListEl.innerHTML = `<div class="menuCardArtwork__menuItemName" style="color:#9CA3AF;">Menu items will appear here.</div>`;
         } else {
+          // Name only — no description, no allergens, no operational copy.
+          // The card is a social anticipation asset; legal / allergen
+          // text belongs on the order page, never here.
           menuListEl.innerHTML = enabledItems.map((item) => {
             const name = escapeHtml(item.name || "");
-            const desc = item.description
-              ? `<div class="menuCardArtwork__menuItemDesc">${escapeHtml(item.description)}</div>`
-              : "";
-            return `<div class="menuCardArtwork__menuItem"><div class="menuCardArtwork__menuItemName">${name}</div>${desc}</div>`;
+            return `<div class="menuCardArtwork__menuItem"><div class="menuCardArtwork__menuItemName">${name}</div></div>`;
           }).join("");
         }
       }
