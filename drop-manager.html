@@ -15,6 +15,7 @@
   <script src="./assets/hearth-vendor.js?v=1"></script>
   <script src="./assets/vendor-nav.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <style>
     body{
@@ -1029,6 +1030,196 @@
       transition: opacity 300ms ease;
       pointer-events: none;
     }
+
+    /* T5-25 Part 0 — Menu card image for Monday reveal */
+    .mondayRevealSection {
+      margin-bottom: 18px;
+    }
+
+    .mondayRevealHeader {
+      margin-bottom: 10px;
+    }
+
+    .mondayRevealHeader .stageSectionSub {
+      margin-top: 4px;
+    }
+
+    .menuCardWrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      padding: 6px 0 4px;
+    }
+
+    .menuCardArtworkFrame {
+      width: 100%;
+      max-width: 540px;
+      position: relative;
+      overflow: hidden;
+      align-self: center;
+    }
+
+    .menuCardArtwork {
+      width: 540px;
+      height: 540px;
+      position: relative;
+      overflow: hidden;
+      background: #FAF8F4;
+      box-sizing: border-box;
+      font-family: 'Figtree', system-ui, sans-serif;
+      transform-origin: top left;
+      border-radius: 8px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+      --vendor-brand-primary: #8B6B3F;
+    }
+
+    .menuCardArtwork__hero {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 55%;
+      background-color: var(--vendor-brand-primary);
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+    }
+
+    .menuCardArtwork__headerBand {
+      position: absolute;
+      top: calc(55% - 40px);
+      left: 0;
+      right: 0;
+      height: 80px;
+      background: #FAF8F4;
+      border-top: 1px solid var(--vendor-brand-primary);
+      border-bottom: 1px solid var(--vendor-brand-primary);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 0 24px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .menuCardArtwork__vendorName {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 600;
+      font-size: 28px;
+      line-height: 1.1;
+      color: var(--vendor-brand-primary);
+      margin: 0;
+      letter-spacing: 0.01em;
+    }
+
+    .menuCardArtwork__meta {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 13px;
+      line-height: 1.2;
+      color: #1F2937;
+      margin: 6px 0 0;
+    }
+
+    .menuCardArtwork__menu {
+      position: absolute;
+      top: 55%;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 60px 32px 24px;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    .menuCardArtwork__menuList {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .menuCardArtwork__menuItemName {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 1.25;
+      color: #1F2937;
+    }
+
+    .menuCardArtwork__menuItemDesc {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 12px;
+      line-height: 1.3;
+      color: #4B5563;
+      margin-top: 2px;
+    }
+
+    .menuCardArtwork.is-dense .menuCardArtwork__menuList {
+      gap: 7px;
+    }
+
+    .menuCardArtwork.is-dense .menuCardArtwork__menuItemName {
+      font-size: 13px;
+    }
+
+    .menuCardArtwork.is-dense .menuCardArtwork__menuItemDesc {
+      font-size: 11px;
+    }
+
+    .menuCardArtwork__skeleton {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #F3EEE6 0%, #EBE4D6 100%);
+      color: var(--h-slate);
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .menuCardActions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      max-width: 540px;
+    }
+
+    .menuCardActions .btnAccent {
+      min-width: 240px;
+      min-height: 44px;
+    }
+
+    .menuCardError {
+      color: #b91c1c;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .menuCardError:empty {
+      display: none;
+    }
+
+    /* "Drop link" section, demoted to visually secondary below the card */
+    .stageSection.is-secondary .stageSectionTitle {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--h-slate);
+    }
+
+    .stageSection.is-secondary {
+      padding-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -1665,8 +1856,36 @@
                   </div>
                 </div>
 
+                <div class="stageSection mondayRevealSection" id="mondayRevealSection" style="margin-top:18px;">
+                  <div class="mondayRevealHeader">
+                    <h4 class="stageSectionTitle">Your Monday reveal</h4>
+                    <p class="stageSectionSub">Share this on Instagram four days before ordering opens.</p>
+                  </div>
+
+                  <div class="menuCardWrap">
+                    <div class="menuCardArtworkFrame">
+                      <div class="menuCardArtwork" id="menuCardArtwork">
+                        <div class="menuCardArtwork__hero"></div>
+                        <div class="menuCardArtwork__headerBand">
+                          <div class="menuCardArtwork__vendorName"></div>
+                          <div class="menuCardArtwork__meta"></div>
+                        </div>
+                        <div class="menuCardArtwork__menu">
+                          <div class="menuCardArtwork__menuList"></div>
+                        </div>
+                        <div class="menuCardArtwork__skeleton" id="menuCardSkeleton">Loading menu…</div>
+                      </div>
+                    </div>
+
+                    <div class="menuCardActions">
+                      <button class="btnAccent" id="downloadMenuCardBtn" type="button" disabled>Download for Monday</button>
+                      <div class="menuCardError" id="menuCardError"></div>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="reviewGrid" style="margin-top:10px;">
-                  <div class="stageSection">
+                  <div class="stageSection is-secondary">
                     <h4 class="stageSectionTitle">Drop link</h4>
                     <p class="stageSectionSub">Customer ordering page for this drop.</p>
                     <div class="shareLink" id="shareLinkPreview">No drop link yet.</div>
@@ -3969,6 +4188,179 @@
       }
 
       /* Event windows visibility now managed in renderConditionalFields */
+
+      populateMenuCard();
+    }
+
+    /* T5-25 Part 0 — Menu card image for the Monday reveal */
+
+    function formatMenuCardDate(value) {
+      if (!value) return "";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "";
+      return d.toLocaleDateString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long"
+      });
+    }
+
+    function populateMenuCard() {
+      const artworkEl = byId("menuCardArtwork");
+      const downloadBtn = byId("downloadMenuCardBtn");
+      const skeletonEl = byId("menuCardSkeleton");
+      const errorEl = byId("menuCardError");
+      if (!artworkEl || !downloadBtn) return;
+
+      if (errorEl) errorEl.textContent = "";
+
+      const drop = state.drop;
+      const vendor = state.vendor;
+
+      if (!drop || !vendor) {
+        if (skeletonEl) skeletonEl.style.display = "flex";
+        downloadBtn.disabled = true;
+        return;
+      }
+
+      artworkEl.style.setProperty("--vendor-brand-primary", vendor.brand_primary_color || "#8B6B3F");
+
+      const heroEl = artworkEl.querySelector(".menuCardArtwork__hero");
+      if (heroEl) {
+        if (vendor.hero_image_url) {
+          heroEl.style.backgroundImage = `url("${String(vendor.hero_image_url).replace(/"/g, "%22")}")`;
+        } else {
+          heroEl.style.backgroundImage = "none";
+        }
+      }
+
+      const vendorNameEl = artworkEl.querySelector(".menuCardArtwork__vendorName");
+      if (vendorNameEl) vendorNameEl.textContent = vendor.display_name || vendor.name || "";
+
+      const metaParts = [];
+      if (drop.name) metaParts.push(drop.name);
+      const dateLabel = formatMenuCardDate(drop.delivery_start);
+      if (dateLabel) metaParts.push(dateLabel);
+      const host = drop.host_id ? (state.hosts || []).find((h) => h.id === drop.host_id) : null;
+      if (host && host.name) metaParts.push(host.name);
+      const metaEl = artworkEl.querySelector(".menuCardArtwork__meta");
+      if (metaEl) metaEl.textContent = metaParts.join(" · ");
+
+      const enabledItems = (state.menuAssignments || []).filter((it) => it.enabled);
+      if (enabledItems.length >= 13) {
+        console.warn(`[menuCard] Drop has ${enabledItems.length} menu items — card is at the visual limit. Still rendering.`);
+      }
+      artworkEl.classList.toggle("is-dense", enabledItems.length >= 9);
+
+      const menuListEl = artworkEl.querySelector(".menuCardArtwork__menuList");
+      if (menuListEl) {
+        if (enabledItems.length === 0) {
+          menuListEl.innerHTML = `<div class="menuCardArtwork__menuItemName" style="color:#9CA3AF;">Menu items will appear here.</div>`;
+        } else {
+          menuListEl.innerHTML = enabledItems.map((item) => {
+            const name = escapeHtml(item.name || "");
+            const desc = item.description
+              ? `<div class="menuCardArtwork__menuItemDesc">${escapeHtml(item.description)}</div>`
+              : "";
+            return `<div class="menuCardArtwork__menuItem"><div class="menuCardArtwork__menuItemName">${name}</div>${desc}</div>`;
+          }).join("");
+        }
+      }
+
+      if (skeletonEl) skeletonEl.style.display = "none";
+      downloadBtn.disabled = enabledItems.length === 0;
+
+      updateMenuCardScale();
+    }
+
+    function updateMenuCardScale() {
+      const frame = document.querySelector(".menuCardArtworkFrame");
+      const artwork = byId("menuCardArtwork");
+      if (!frame || !artwork) return;
+      const targetWidth = frame.clientWidth;
+      if (!targetWidth) return;
+      const scale = Math.min(1, targetWidth / 540);
+      artwork.style.transform = `scale(${scale})`;
+      frame.style.height = `${540 * scale}px`;
+    }
+
+    async function downloadMenuCard() {
+      const artworkEl = byId("menuCardArtwork");
+      const downloadBtn = byId("downloadMenuCardBtn");
+      const errorEl = byId("menuCardError");
+      const skeletonEl = byId("menuCardSkeleton");
+      if (!artworkEl || !downloadBtn) return;
+
+      if (errorEl) errorEl.textContent = "";
+
+      const originalText = downloadBtn.textContent;
+      const originalTransform = artworkEl.style.transform;
+      const skeletonWasVisible = skeletonEl ? skeletonEl.style.display !== "none" : false;
+
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = "Generating…";
+
+      try {
+        if (typeof window.html2canvas !== "function") {
+          throw new Error("html2canvas not loaded");
+        }
+
+        // CRITICAL: wait for Cormorant Garamond and Figtree to be fully
+        // loaded before rasterising, otherwise the export falls back to
+        // system fonts and visibly diverges from the on-screen preview.
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+
+        // The skeleton overlay is rendered inside the artwork; hide it
+        // during capture so it doesn't leak into the exported image.
+        if (skeletonEl) skeletonEl.style.display = "none";
+
+        // Reset transform so html2canvas reads the true 540×540 source
+        // dimensions; scale: 2 then produces a 1080×1080 export.
+        artworkEl.style.transform = "scale(1)";
+
+        let canvas;
+        try {
+          canvas = await window.html2canvas(artworkEl, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: null,
+            logging: false
+          });
+        } finally {
+          artworkEl.style.transform = originalTransform;
+          if (skeletonEl && skeletonWasVisible) skeletonEl.style.display = "flex";
+        }
+
+        const blob = await new Promise((resolve, reject) => {
+          canvas.toBlob((b) => {
+            if (b) resolve(b);
+            else reject(new Error("toBlob returned null"));
+          }, "image/png", 1.0);
+        });
+
+        const vendorSlug = state.vendor?.slug || "vendor";
+        const dropSlug = state.drop?.slug || slugify(state.drop?.name || "") || "drop";
+        const filename = `${vendorSlug}-${dropSlug}-menu-card.png`;
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (err) {
+        console.error("[menuCard] download failed", err);
+        if (errorEl) {
+          errorEl.textContent = "Couldn't generate the image. Refresh the page and try again.";
+        }
+      } finally {
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = originalText;
+      }
     }
 
     function renderQrCode(text) {
@@ -5730,6 +6122,19 @@
           showError(err.message || "Unable to download QR.");
         }
       });
+
+      byId("downloadMenuCardBtn").addEventListener("click", () => {
+        downloadMenuCard().catch((err) => {
+          console.error(err);
+        });
+      });
+
+      window.addEventListener("resize", () => updateMenuCardScale());
+
+      const menuCardFrame = document.querySelector(".menuCardArtworkFrame");
+      if (menuCardFrame && typeof ResizeObserver === "function") {
+        new ResizeObserver(() => updateMenuCardScale()).observe(menuCardFrame);
+      }
 
       byId("previewOrderPageBtn").addEventListener("click", () => {
         try {
