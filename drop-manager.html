@@ -5933,6 +5933,11 @@
 
       byId("dropRevealProduct").addEventListener("change", () => {
         markDirty();
+        if (state.drop) {
+          state.drop.reveal_product_id =
+            byId("dropRevealProduct").value || null;
+          populateMenuCard();
+        }
       });
 
       byId("dropSlug").addEventListener("input", () => {
