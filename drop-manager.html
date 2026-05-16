@@ -1079,12 +1079,7 @@
        frame without letterboxing. */
     .menuCardArtwork__image {
       position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
+      display: block;
     }
 
     /* Lower-third scrim so the drop name + date stay legible over any
@@ -1871,7 +1866,7 @@
                   <div class="menuCardWrap">
                     <div class="menuCardArtworkFrame">
                       <div class="menuCardArtwork" id="menuCardArtwork">
-                        <div class="menuCardArtwork__image" id="menuCardImage" aria-hidden="true"></div>
+                        <img class="menuCardArtwork__image" id="menuCardImage" alt="" crossorigin="anonymous" />
                         <div class="menuCardArtwork__scrim" aria-hidden="true"></div>
                         <div class="menuCardArtwork__lockup">
                           <div class="menuCardArtwork__dropName" id="menuCardDropName"></div>
@@ -4280,26 +4275,54 @@
           : "Share this on Instagram a few days before your drop.";
       }
 
-      // Brand-colour solid is the last-resort fallback — surfaces through
-      // an img with no src (CSS hides .menuCardArtwork__image:not([src])
-      // and reveals the artwork's background-color).
+      // Brand-colour solid is the last-resort fallback — surfaces when
+      // the image is hidden (no source resolved or load errored), via
+      // the artwork's background-color.
       artworkEl.style.setProperty("--vendor-brand-primary", vendor.brand_primary_color || "#8B6B3F");
 
       // Image fallback chain: selected reveal product photo → vendor
-      // hero → solid brand-colour block (no src set).
-      const imageEl = byId("menuCardImage");
-      if (imageEl) {
-        let imageUrl = "";
-        if (drop.reveal_product_id) {
-          const product = (state.products || []).find(
-            (p) => String(p.id) === String(drop.reveal_product_id)
-          );
-          if (product && product.image_url) imageUrl = String(product.image_url);
+      // hero → solid brand-colour block (image hidden).
+      let imageUrl = "";
+      if (drop.reveal_product_id) {
+        const product = (state.products || []).find(
+          (p) => String(p.id) === String(drop.reveal_product_id)
+        );
+        if (product && product.image_url) imageUrl = String(product.image_url);
+      }
+      if (!imageUrl && vendor.hero_image_url) imageUrl = String(vendor.hero_image_url);
+
+      // Position the photo with explicit pixel geometry computed against
+      // the 540×540 source box. html2canvas's scale:2 multiplies these
+      // uniformly, so the exported crop matches the preview exactly.
+      const img = byId("menuCardImage");
+      const S = 540;
+      if (img) {
+        if (imageUrl) {
+          img.onload = () => {
+            const iw = img.naturalWidth, ih = img.naturalHeight;
+            const sc = Math.max(S / iw, S / ih);
+            const w = iw * sc, h = ih * sc;
+            img.style.width  = w + "px";
+            img.style.height = h + "px";
+            img.style.left   = ((S - w) / 2) + "px";
+            img.style.top    = ((S - h) / 2) + "px";
+            img.style.display = "block";
+            if (skeletonEl) skeletonEl.style.display = "none";
+            downloadBtn.disabled = false;
+          };
+          img.onerror = () => {
+            img.style.display = "none";
+            if (skeletonEl) skeletonEl.style.display = "none";
+            downloadBtn.disabled = false;
+          };
+          img.crossOrigin = "anonymous";
+          img.src = imageUrl;
+        } else {
+          img.style.display = "none";
+          img.removeAttribute("src");
+          if (skeletonEl) skeletonEl.style.display = "none";
+          downloadBtn.disabled = false;
         }
-        if (!imageUrl && vendor.hero_image_url) imageUrl = String(vendor.hero_image_url);
-        imageEl.style.backgroundImage = imageUrl
-          ? `url("${String(imageUrl).replace(/"/g, "%22")}")`
-          : "none";
       }
 
       // Lockup — drop name + formatted delivery date over the photo.
@@ -4307,9 +4330,6 @@
       if (dropNameEl) dropNameEl.textContent = drop.name || "";
       const dropDateEl = byId("menuCardDropDate");
       if (dropDateEl) dropDateEl.textContent = formatMenuCardDate(drop.delivery_start);
-
-      if (skeletonEl) skeletonEl.style.display = "none";
-      downloadBtn.disabled = false;
 
       updateMenuCardScale();
     }
