@@ -4259,7 +4259,6 @@
       const skeletonEl = byId("menuCardSkeleton");
       const errorEl = byId("menuCardError");
       const captionEl = byId("menuCardCaption");
-      const nudgeEl = byId("menuCardRevealNudge");
       if (!artworkEl || !downloadBtn) return;
 
       if (errorEl) errorEl.textContent = "";
@@ -4270,13 +4269,13 @@
       if (!drop || !vendor) {
         if (skeletonEl) skeletonEl.style.display = "flex";
         if (captionEl) captionEl.textContent = "Share this on Instagram a few days before your drop.";
-        if (nudgeEl) nudgeEl.classList.remove("is-visible");
         downloadBtn.disabled = true;
         return;
       }
 
-      // Framing caption — derived reveal date (delivery_start − 4 days),
-      // generic fallback when missing or in the past.
+      // Framing caption above the card — derived reveal date
+      // (delivery_start − 4 days), generic fallback when missing or
+      // in the past.
       if (captionEl) {
         const revealDate = computeRevealDate(drop.delivery_start);
         const revealLabel = revealDate ? formatMenuCardDate(revealDate) : "";
@@ -4285,87 +4284,38 @@
           : "Share this on Instagram a few days before your drop.";
       }
 
+      // Brand-colour solid is the last-resort fallback — surfaces through
+      // an img with no src (CSS hides .menuCardArtwork__image:not([src])
+      // and reveals the artwork's background-color).
       artworkEl.style.setProperty("--vendor-brand-primary", vendor.brand_primary_color || "#8B6B3F");
 
-      const heroEl = artworkEl.querySelector(".menuCardArtwork__hero");
-      if (heroEl) {
-        if (vendor.hero_image_url) {
-          heroEl.style.backgroundImage = `url("${String(vendor.hero_image_url).replace(/"/g, "%22")}")`;
+      // Image fallback chain: selected reveal product photo → vendor
+      // hero → solid brand-colour block (no src set).
+      const imageEl = byId("menuCardImage");
+      if (imageEl) {
+        let imageUrl = "";
+        if (drop.reveal_product_id) {
+          const product = (state.products || []).find(
+            (p) => String(p.id) === String(drop.reveal_product_id)
+          );
+          if (product && product.image_url) imageUrl = String(product.image_url);
+        }
+        if (!imageUrl && vendor.hero_image_url) imageUrl = String(vendor.hero_image_url);
+        if (imageUrl) {
+          imageEl.src = imageUrl;
         } else {
-          heroEl.style.backgroundImage = "none";
+          imageEl.removeAttribute("src");
         }
       }
 
-      // Identity band — vendor logo when present, Cormorant display_name
-      // as fallback. Logo is the vendor's own brand asset so the card
-      // reads as theirs, not as a Hearth template; the name fallback is
-      // the only place Cormorant Garamond appears for the vendor identity.
-      const logoRaw = vendor.logo_url == null ? "" : String(vendor.logo_url).trim();
-      const logoEl = byId("menuCardLogo");
-      if (logoEl) {
-        if (logoRaw) {
-          logoEl.src = logoRaw;
-        } else {
-          logoEl.removeAttribute("src");
-        }
-      }
-      artworkEl.classList.toggle("has-logo", Boolean(logoRaw));
-
-      const vendorNameEl = artworkEl.querySelector(".menuCardArtwork__vendorName");
-      if (vendorNameEl) vendorNameEl.textContent = vendor.display_name || vendor.name || "";
-
-      const metaParts = [];
-      if (drop.name) metaParts.push(drop.name);
-      const dateLabel = formatMenuCardDate(drop.delivery_start);
-      if (dateLabel) metaParts.push(dateLabel);
-      const host = drop.host_id ? (state.hosts || []).find((h) => h.id === drop.host_id) : null;
-      if (host && host.name) metaParts.push(host.name);
-      const metaEl = artworkEl.querySelector(".menuCardArtwork__meta");
-      if (metaEl) metaEl.textContent = metaParts.join(" · ");
-
-      // Reveal line — one editorial sentence in the vendor's voice. Empty
-      // value collapses the element entirely (CSS :empty rule) so the
-      // brand rule sits directly under the identity lockup with no gap.
-      // The contextual nudge below the card preview prompts the vendor
-      // to fill it in via the Basics field when missing.
-      const revealLineRaw = drop.reveal_line == null ? "" : String(drop.reveal_line).trim();
-      const revealEl = byId("menuCardRevealLine");
-      if (revealEl) revealEl.textContent = revealLineRaw;
-      if (nudgeEl) nudgeEl.classList.toggle("is-visible", revealLineRaw.length === 0);
-
-      const enabledItems = (state.menuAssignments || []).filter((it) => it.enabled);
-      if (enabledItems.length >= 18) {
-        console.warn(`[menuCard] Drop has ${enabledItems.length} menu items — card is at the visual limit. Still rendering.`);
-      }
-
-      // Hard cap — render up to MENU_CARD_CAP items in sort order, then a
-      // single honest overflow line. No dense / shrink-to-fit mode; the
-      // card always renders at the comfortable Cormorant size.
-      const MENU_CARD_CAP = 6;
-      const visibleItems = enabledItems.slice(0, MENU_CARD_CAP);
-      const overflowCount = Math.max(0, enabledItems.length - MENU_CARD_CAP);
-
-      const menuListEl = artworkEl.querySelector(".menuCardArtwork__menuList");
-      if (menuListEl) {
-        if (enabledItems.length === 0) {
-          menuListEl.innerHTML = `<div class="menuCardArtwork__menuItemName" style="color:#9CA3AF;">Menu items will appear here.</div>`;
-        } else {
-          // Name only — no description, no allergens, no operational copy.
-          // The card is a social anticipation asset; legal / allergen
-          // text belongs on the order page, never here.
-          const itemRows = visibleItems.map((item) => {
-            const name = escapeHtml(item.name || "");
-            return `<div class="menuCardArtwork__menuItem"><span class="menuCardArtwork__dot" aria-hidden="true"></span><span class="menuCardArtwork__menuItemName">${name}</span></div>`;
-          }).join("");
-          const overflowRow = overflowCount > 0
-            ? `<div class="menuCardArtwork__overflow">Full menu when ordering opens</div>`
-            : "";
-          menuListEl.innerHTML = itemRows + overflowRow;
-        }
-      }
+      // Lockup — drop name + formatted delivery date over the photo.
+      const dropNameEl = byId("menuCardDropName");
+      if (dropNameEl) dropNameEl.textContent = drop.name || "";
+      const dropDateEl = byId("menuCardDropDate");
+      if (dropDateEl) dropDateEl.textContent = formatMenuCardDate(drop.delivery_start);
 
       if (skeletonEl) skeletonEl.style.display = "none";
-      downloadBtn.disabled = enabledItems.length === 0;
+      downloadBtn.disabled = false;
 
       updateMenuCardScale();
     }
@@ -4439,7 +4389,7 @@
 
         const vendorSlug = state.vendor?.slug || "vendor";
         const dropSlug = state.drop?.slug || slugify(state.drop?.name || "") || "drop";
-        const filename = `${vendorSlug}-${dropSlug}-menu-card.png`;
+        const filename = `${vendorSlug}-${dropSlug}-reveal.png`;
 
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
