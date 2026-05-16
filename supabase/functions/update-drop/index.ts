@@ -27,6 +27,8 @@ const ALLOWED_FIELDS = new Set([
   "host_id",
   "notes_internal",
   "drop_intro",
+  "reveal_line",
+  "reveal_product_id",
   "fulfilment_mode",
   "collection_point_description",
   "delivery_area_description",

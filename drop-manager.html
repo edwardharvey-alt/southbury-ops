@@ -15,6 +15,7 @@
   <script src="./assets/hearth-vendor.js?v=1"></script>
   <script src="./assets/vendor-nav.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <style>
     body{
@@ -1029,6 +1030,178 @@
       transition: opacity 300ms ease;
       pointer-events: none;
     }
+
+    /* T5-25 Part 0 — Menu card image for Monday reveal */
+    .mondayRevealSection {
+      margin-bottom: 18px;
+    }
+
+    .mondayRevealHeader {
+      margin-bottom: 10px;
+    }
+
+    .mondayRevealHeader .stageSectionSub {
+      margin-top: 4px;
+    }
+
+    .menuCardWrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      padding: 6px 0 4px;
+    }
+
+    .menuCardArtworkFrame {
+      width: 100%;
+      max-width: 540px;
+      position: relative;
+      overflow: hidden;
+      align-self: center;
+    }
+
+    .menuCardArtwork {
+      width: 540px;
+      height: 540px;
+      position: relative;
+      overflow: hidden;
+      box-sizing: border-box;
+      font-family: 'Figtree', system-ui, sans-serif;
+      transform-origin: top left;
+      border-radius: 8px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+      --vendor-brand-primary: #8B6B3F;
+      background-color: var(--vendor-brand-primary);
+    }
+
+    /* The photo fills the full 540x540 square. object-fit:cover crops
+       any non-square source centred so the image always fills the
+       frame without letterboxing. */
+    .menuCardArtwork__image {
+      position: absolute;
+      display: block;
+    }
+
+    /* Lower-third scrim so the drop name + date stay legible over any
+       photo, light or dark. Top of the gradient is fully transparent
+       so the photo reads cleanly in the upper two thirds. */
+    .menuCardArtwork__scrim {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 58%;
+      background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,0) 0%,
+        rgba(0,0,0,0) 25%,
+        rgba(0,0,0,0.38) 52%,
+        rgba(0,0,0,0.74) 76%,
+        rgba(0,0,0,0.92) 100%
+      );
+      pointer-events: none;
+    }
+
+    /* Drop name + date — quiet caption-on-image, not a headline.
+       Lower-left, generous edge margins, left-aligned editorial. */
+    .menuCardArtwork__lockup {
+      position: absolute;
+      left: 36px;
+      right: 36px;
+      bottom: 32px;
+      color: #FAF8F4;
+      text-align: left;
+    }
+
+    .menuCardArtwork__dropName {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 500;
+      font-size: 30px;
+      line-height: 1.1;
+      letter-spacing: 0.005em;
+      margin: 0;
+      color: #FAF8F4;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.45), 0 0 14px rgba(0,0,0,0.35);
+    }
+
+    .menuCardArtwork__dropDate {
+      margin-top: 6px;
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 13px;
+      line-height: 1.2;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #FAF8F4;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.45), 0 0 14px rgba(0,0,0,0.35);
+    }
+
+    .menuCardArtwork__skeleton {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #F3EEE6 0%, #EBE4D6 100%);
+      color: var(--h-slate);
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .menuCardActions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      max-width: 540px;
+    }
+
+    .menuCardActions .btnAccent {
+      min-width: 240px;
+      min-height: 44px;
+    }
+
+    .menuCardError {
+      color: #b91c1c;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .menuCardError:empty {
+      display: none;
+    }
+
+    .menuCardRevealNudge {
+      display: none;
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-style: italic;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #6B5D4F;
+      text-align: center;
+      max-width: 380px;
+    }
+
+    .menuCardRevealNudge.is-visible {
+      display: block;
+    }
+
+    /* "Drop link" section, demoted to visually secondary below the card */
+    .stageSection.is-secondary .stageSectionTitle {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--h-slate);
+    }
+
+    .stageSection.is-secondary {
+      padding-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -1209,6 +1382,25 @@
                     <label for="dropIntro">About this drop</label>
                     <textarea id="dropIntro" maxlength="280" rows="3" placeholder="e.g. Half-term means a quieter Friday — perfect time for a longer service window so families can grab dinner without the rush."></textarea>
                     <div class="helperText">What makes this drop worth joining — the occasion, not your brand story. ~280 characters. <span id="dropIntroCount" style="opacity:.7;"></span></div>
+                  </div>
+                </div>
+
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Reveal line</h4>
+                  <p class="stageSectionSub">Optional. Saved for your Monday reveal post caption — not shown on the order page.</p>
+
+                  <div class="field">
+                    <label for="dropRevealLine">One short editorial line</label>
+                    <input id="dropRevealLine" type="text" maxlength="100" placeholder="e.g. Hand-stretched sourdough, fired three minutes flat." />
+                    <div class="helperText">One short line for your Monday reveal post — the hook that makes people want Friday. Around 80 characters.</div>
+                  </div>
+
+                  <div class="field" style="margin-top:14px;">
+                    <label for="dropRevealProduct">Reveal dish</label>
+                    <select id="dropRevealProduct">
+                      <option value="">No dish selected</option>
+                    </select>
+                    <div class="helperText">The dish that headlines your Monday reveal post — we'll use its Menu Library photo.</div>
                   </div>
                 </div>
 
@@ -1665,8 +1857,35 @@
                   </div>
                 </div>
 
+                <div class="stageSection mondayRevealSection" id="mondayRevealSection" style="margin-top:18px;">
+                  <div class="mondayRevealHeader">
+                    <h4 class="stageSectionTitle">Your reveal post</h4>
+                    <p class="stageSectionSub" id="menuCardCaption">Share this on Instagram a few days before your drop.</p>
+                  </div>
+
+                  <div class="menuCardWrap">
+                    <div class="menuCardArtworkFrame">
+                      <div class="menuCardArtwork" id="menuCardArtwork">
+                        <img class="menuCardArtwork__image" id="menuCardImage" alt="" crossorigin="anonymous" />
+                        <div class="menuCardArtwork__scrim" aria-hidden="true"></div>
+                        <div class="menuCardArtwork__lockup">
+                          <div class="menuCardArtwork__dropName" id="menuCardDropName"></div>
+                          <div class="menuCardArtwork__dropDate" id="menuCardDropDate"></div>
+                        </div>
+                        <div class="menuCardArtwork__skeleton" id="menuCardSkeleton">Loading…</div>
+                      </div>
+                    </div>
+
+                    <div class="menuCardActions">
+                      <button class="btnAccent" id="downloadMenuCardBtn" type="button" disabled>Download</button>
+                      <div class="menuCardError" id="menuCardError"></div>
+                      <div class="menuCardRevealNudge" id="menuCardRevealNudge"></div>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="reviewGrid" style="margin-top:10px;">
-                  <div class="stageSection">
+                  <div class="stageSection is-secondary">
                     <h4 class="stageSectionTitle">Drop link</h4>
                     <p class="stageSectionSub">Customer ordering page for this drop.</p>
                     <div class="shareLink" id="shareLinkPreview">No drop link yet.</div>
@@ -3285,6 +3504,28 @@
       count.textContent = `${len} / 280`;
     }
 
+    // Rebuild the Reveal dish dropdown from this drop's enabled products
+    // (products only — never bundles). Option value = product id, option
+    // text = product name. selectedId is applied if it matches an option;
+    // otherwise the picker falls back to the empty placeholder.
+    function populateRevealDishPicker(selectedId) {
+      const select = byId("dropRevealProduct");
+      if (!select) return;
+      const enabledProducts = (state.menuAssignments || []).filter(
+        (it) => it.enabled && it.menu_item_type === "product" && it.product_id
+      );
+      const options = ['<option value="">No dish selected</option>'];
+      enabledProducts.forEach((row) => {
+        const id = String(row.product_id);
+        const name = escapeHtml(row.name || "");
+        options.push(`<option value="${escapeHtml(id)}">${name}</option>`);
+      });
+      select.innerHTML = options.join("");
+      const wanted = selectedId == null ? "" : String(selectedId);
+      const hasWanted = wanted !== "" && enabledProducts.some((r) => String(r.product_id) === wanted);
+      select.value = hasWanted ? wanted : "";
+    }
+
     function populateForm() {
       const d = state.drop;
       if (!d) return;
@@ -3293,6 +3534,8 @@
       byId("dropSlug").value = d.slug || "";
       byId("dropType").value = d.drop_type || "neighbourhood";
       byId("dropIntro").value = d.drop_intro || "";
+      byId("dropRevealLine").value = d.reveal_line || "";
+      populateRevealDishPicker(d.reveal_product_id || null);
       updateDropIntroCount();
       byId("notesInternal").value = d.notes_internal || "";
 
@@ -3969,6 +4212,216 @@
       }
 
       /* Event windows visibility now managed in renderConditionalFields */
+
+      populateMenuCard();
+    }
+
+    /* T5-25 Part 0 — Menu card image for the reveal post */
+
+    function formatMenuCardDate(value) {
+      if (!value) return "";
+      const d = value instanceof Date ? value : new Date(value);
+      if (Number.isNaN(d.getTime())) return "";
+      return d.toLocaleDateString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long"
+      });
+    }
+
+    // Reveal date = drop.delivery_start minus 4 days. Returns a Date or
+    // null if the input is missing, invalid, or the computed reveal
+    // date is already in the past (in which case the framing copy
+    // falls back to generic text rather than showing a stale date).
+    function computeRevealDate(deliveryStart) {
+      if (!deliveryStart) return null;
+      const d = new Date(deliveryStart);
+      if (Number.isNaN(d.getTime())) return null;
+      const reveal = new Date(d.getTime() - 4 * 24 * 60 * 60 * 1000);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (reveal.getTime() < today.getTime()) return null;
+      return reveal;
+    }
+
+    function populateMenuCard() {
+      const artworkEl = byId("menuCardArtwork");
+      const downloadBtn = byId("downloadMenuCardBtn");
+      const skeletonEl = byId("menuCardSkeleton");
+      const errorEl = byId("menuCardError");
+      const captionEl = byId("menuCardCaption");
+      if (!artworkEl || !downloadBtn) return;
+
+      if (errorEl) errorEl.textContent = "";
+
+      const drop = state.drop;
+      const vendor = state.vendor;
+
+      if (!drop || !vendor) {
+        if (skeletonEl) skeletonEl.style.display = "flex";
+        if (captionEl) captionEl.textContent = "Share this on Instagram a few days before your drop.";
+        downloadBtn.disabled = true;
+        return;
+      }
+
+      // Framing caption above the card — derived reveal date
+      // (delivery_start − 4 days), generic fallback when missing or
+      // in the past.
+      if (captionEl) {
+        const revealDate = computeRevealDate(drop.delivery_start);
+        const revealLabel = revealDate ? formatMenuCardDate(revealDate) : "";
+        captionEl.textContent = revealLabel
+          ? `Share this on Instagram around ${revealLabel} — four days before your drop.`
+          : "Share this on Instagram a few days before your drop.";
+      }
+
+      // Brand-colour solid is the last-resort fallback — surfaces when
+      // the image is hidden (no source resolved or load errored), via
+      // the artwork's background-color.
+      artworkEl.style.setProperty("--vendor-brand-primary", vendor.brand_primary_color || "#8B6B3F");
+
+      // Image fallback chain: selected reveal product photo → vendor
+      // hero → solid brand-colour block (image hidden).
+      let imageUrl = "";
+      if (drop.reveal_product_id) {
+        const product = (state.products || []).find(
+          (p) => String(p.id) === String(drop.reveal_product_id)
+        );
+        if (product && product.image_url) imageUrl = String(product.image_url);
+      }
+      if (!imageUrl && vendor.hero_image_url) imageUrl = String(vendor.hero_image_url);
+
+      // Position the photo with explicit pixel geometry computed against
+      // the 540×540 source box. html2canvas's scale:2 multiplies these
+      // uniformly, so the exported crop matches the preview exactly.
+      const img = byId("menuCardImage");
+      const S = 540;
+      if (img) {
+        if (imageUrl) {
+          img.onload = () => {
+            const iw = img.naturalWidth, ih = img.naturalHeight;
+            const sc = Math.max(S / iw, S / ih);
+            const w = iw * sc, h = ih * sc;
+            img.style.width  = w + "px";
+            img.style.height = h + "px";
+            img.style.left   = ((S - w) / 2) + "px";
+            img.style.top    = ((S - h) / 2) + "px";
+            img.style.display = "block";
+            if (skeletonEl) skeletonEl.style.display = "none";
+            downloadBtn.disabled = false;
+          };
+          img.onerror = () => {
+            img.style.display = "none";
+            if (skeletonEl) skeletonEl.style.display = "none";
+            downloadBtn.disabled = false;
+          };
+          img.crossOrigin = "anonymous";
+          img.src = imageUrl;
+        } else {
+          img.style.display = "none";
+          img.removeAttribute("src");
+          if (skeletonEl) skeletonEl.style.display = "none";
+          downloadBtn.disabled = false;
+        }
+      }
+
+      // Lockup — drop name + formatted delivery date over the photo.
+      const dropNameEl = byId("menuCardDropName");
+      if (dropNameEl) dropNameEl.textContent = drop.name || "";
+      const dropDateEl = byId("menuCardDropDate");
+      if (dropDateEl) dropDateEl.textContent = formatMenuCardDate(drop.delivery_start);
+
+      updateMenuCardScale();
+    }
+
+    function updateMenuCardScale() {
+      const frame = document.querySelector(".menuCardArtworkFrame");
+      const artwork = byId("menuCardArtwork");
+      if (!frame || !artwork) return;
+      const targetWidth = frame.clientWidth;
+      if (!targetWidth) return;
+      const scale = Math.min(1, targetWidth / 540);
+      artwork.style.transform = `scale(${scale})`;
+      frame.style.height = `${540 * scale}px`;
+    }
+
+    async function downloadMenuCard() {
+      const artworkEl = byId("menuCardArtwork");
+      const downloadBtn = byId("downloadMenuCardBtn");
+      const errorEl = byId("menuCardError");
+      const skeletonEl = byId("menuCardSkeleton");
+      if (!artworkEl || !downloadBtn) return;
+
+      if (errorEl) errorEl.textContent = "";
+
+      const originalText = downloadBtn.textContent;
+      const originalTransform = artworkEl.style.transform;
+      const skeletonWasVisible = skeletonEl ? skeletonEl.style.display !== "none" : false;
+
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = "Generating…";
+
+      try {
+        if (typeof window.html2canvas !== "function") {
+          throw new Error("html2canvas not loaded");
+        }
+
+        // CRITICAL: wait for Cormorant Garamond and Figtree to be fully
+        // loaded before rasterising, otherwise the export falls back to
+        // system fonts and visibly diverges from the on-screen preview.
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+
+        // The skeleton overlay is rendered inside the artwork; hide it
+        // during capture so it doesn't leak into the exported image.
+        if (skeletonEl) skeletonEl.style.display = "none";
+
+        // Reset transform so html2canvas reads the true 540×540 source
+        // dimensions; scale: 2 then produces a 1080×1080 export.
+        artworkEl.style.transform = "scale(1)";
+
+        let canvas;
+        try {
+          canvas = await window.html2canvas(artworkEl, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: null,
+            logging: false
+          });
+        } finally {
+          artworkEl.style.transform = originalTransform;
+          if (skeletonEl && skeletonWasVisible) skeletonEl.style.display = "flex";
+        }
+
+        const blob = await new Promise((resolve, reject) => {
+          canvas.toBlob((b) => {
+            if (b) resolve(b);
+            else reject(new Error("toBlob returned null"));
+          }, "image/png", 1.0);
+        });
+
+        const vendorSlug = state.vendor?.slug || "vendor";
+        const dropSlug = state.drop?.slug || slugify(state.drop?.name || "") || "drop";
+        const filename = `${vendorSlug}-${dropSlug}-reveal.png`;
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (err) {
+        console.error("[menuCard] download failed", err);
+        if (errorEl) {
+          errorEl.textContent = "Couldn't generate the image. Refresh the page and try again.";
+        }
+      } finally {
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = originalText;
+      }
     }
 
     function renderQrCode(text) {
@@ -4028,6 +4481,8 @@
         drop_type: byId("dropType").value,
         host_id: byId("hostSelect").value || null,
         drop_intro: byId("dropIntro").value.trim() || null,
+        reveal_line: byId("dropRevealLine").value.trim() || null,
+        reveal_product_id: byId("dropRevealProduct").value.trim() || null,
         notes_internal: byId("notesInternal").value.trim() || null,
 
         fulfilment_mode: byId("fulfilmentMode").value || null,
@@ -4103,6 +4558,8 @@
         delivery_start: dropData.delivery_start,
         delivery_end: dropData.delivery_end,
         drop_intro: dropData.drop_intro,
+        reveal_line: dropData.reveal_line,
+        reveal_product_id: dropData.reveal_product_id,
         notes_internal: dropData.notes_internal,
 
         fundraising_enabled: dropData.fundraising_enabled,
@@ -5470,6 +5927,19 @@
         markDirty();
       });
 
+      byId("dropRevealLine").addEventListener("input", () => {
+        markDirty();
+      });
+
+      byId("dropRevealProduct").addEventListener("change", () => {
+        markDirty();
+        if (state.drop) {
+          state.drop.reveal_product_id =
+            byId("dropRevealProduct").value || null;
+          populateMenuCard();
+        }
+      });
+
       byId("dropSlug").addEventListener("input", () => {
         manualSlugEdited = true;
         byId("dropSlug").value = slugify(byId("dropSlug").value);
@@ -5730,6 +6200,19 @@
           showError(err.message || "Unable to download QR.");
         }
       });
+
+      byId("downloadMenuCardBtn").addEventListener("click", () => {
+        downloadMenuCard().catch((err) => {
+          console.error(err);
+        });
+      });
+
+      window.addEventListener("resize", () => updateMenuCardScale());
+
+      const menuCardFrame = document.querySelector(".menuCardArtworkFrame");
+      if (menuCardFrame && typeof ResizeObserver === "function") {
+        new ResizeObserver(() => updateMenuCardScale()).observe(menuCardFrame);
+      }
 
       byId("previewOrderPageBtn").addEventListener("click", () => {
         try {

@@ -21,6 +21,8 @@ const ALLOWED_FIELDS = new Set([
   "drop_type",
   "status",
   "drop_intro",
+  "reveal_line",
+  "reveal_product_id",
   "fulfilment_mode",
   "centre_postcode",
   "radius_km",
