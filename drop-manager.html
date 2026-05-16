@@ -1072,46 +1072,42 @@
       border-radius: 8px;
       box-shadow: 0 6px 24px rgba(0,0,0,0.12);
       --vendor-brand-primary: #8B6B3F;
-      --headerBandHeight: 88px;
+      display: flex;
+      flex-direction: column;
     }
 
-    .menuCardArtwork.has-logo {
-      --headerBandHeight: 104px;
-    }
-
+    /* Hero flexes to fill all space above the bottom cream zone, so the
+       square is always full at any item count. Soft 45% floor protects
+       the photo's presence when content in the bottom block grows. */
     .menuCardArtwork__hero {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 60%;
+      flex: 1 1 0;
+      min-height: 45%;
       background-color: var(--vendor-brand-primary);
       background-size: cover;
       background-position: center center;
       background-repeat: no-repeat;
     }
 
-    .menuCardArtwork__headerBand {
-      position: absolute;
-      top: calc(60% - (var(--headerBandHeight) / 2));
-      left: 0;
-      right: 0;
-      height: var(--headerBandHeight);
+    /* Bottom cream zone — intrinsic height, hugs its content. */
+    .menuCardArtwork__bottom {
+      flex: 0 0 auto;
       background: #FAF8F4;
       border-top: 1px solid var(--vendor-brand-primary);
-      border-bottom: 1px solid var(--vendor-brand-primary);
+      padding: 18px 36px 22px;
+      box-sizing: border-box;
+    }
+
+    /* Logo + drop/date line read as one identity lockup — tight gap. */
+    .menuCardArtwork__identityLockup {
       display: flex;
       flex-direction: column;
-      justify-content: center;
       align-items: center;
-      padding: 0 28px;
-      text-align: center;
-      box-sizing: border-box;
+      gap: 6px;
     }
 
     .menuCardArtwork__logo {
       display: none;
-      max-height: 56px;
+      max-height: 78px;
       max-width: 70%;
       width: auto;
       height: auto;
@@ -1130,6 +1126,7 @@
       color: var(--vendor-brand-primary);
       margin: 0;
       letter-spacing: 0.01em;
+      text-align: center;
     }
 
     .menuCardArtwork.has-logo .menuCardArtwork__vendorName {
@@ -1142,24 +1139,43 @@
       font-size: 13px;
       line-height: 1.2;
       color: #1F2937;
-      margin: 10px 0 0;
+      margin: 0;
+      text-align: center;
     }
 
-    .menuCardArtwork__menu {
-      position: absolute;
-      top: 60%;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      padding: calc((var(--headerBandHeight) / 2) + 14px) 36px 18px;
-      box-sizing: border-box;
-      overflow: hidden;
+    /* Single editorial sentence in the vendor's voice. Cormorant italic
+       so it reads as a distinct beat from the meta line above and the
+       menu below. Hidden entirely when reveal_line is empty so the band
+       collapses cleanly. */
+    .menuCardArtwork__revealLine {
+      margin: 16px auto 0;
+      max-width: 84%;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 500;
+      font-style: italic;
+      font-size: 16px;
+      line-height: 1.4;
+      color: #4A3F33;
+      text-align: center;
+    }
+
+    .menuCardArtwork__revealLine:empty {
+      display: none;
+      margin-top: 0;
+    }
+
+    .menuCardArtwork__rule {
+      height: 1px;
+      background-color: var(--vendor-brand-primary);
+      width: 80%;
+      margin: 16px auto 0;
     }
 
     .menuCardArtwork__menuList {
       display: flex;
       flex-direction: column;
       gap: 12px;
+      margin-top: 16px;
     }
 
     .menuCardArtwork__menuItem {
@@ -1234,6 +1250,21 @@
 
     .menuCardError:empty {
       display: none;
+    }
+
+    .menuCardRevealNudge {
+      display: none;
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-style: italic;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #6B5D4F;
+      text-align: center;
+      max-width: 380px;
+    }
+
+    .menuCardRevealNudge.is-visible {
+      display: block;
     }
 
     /* "Drop link" section, demoted to visually secondary below the card */
@@ -1429,6 +1460,17 @@
                     <label for="dropIntro">About this drop</label>
                     <textarea id="dropIntro" maxlength="280" rows="3" placeholder="e.g. Half-term means a quieter Friday — perfect time for a longer service window so families can grab dinner without the rush."></textarea>
                     <div class="helperText">What makes this drop worth joining — the occasion, not your brand story. ~280 characters. <span id="dropIntroCount" style="opacity:.7;"></span></div>
+                  </div>
+                </div>
+
+                <div class="stageSection">
+                  <h4 class="stageSectionTitle">Reveal line</h4>
+                  <p class="stageSectionSub">Optional. Shows on your reveal post card — not on the order page.</p>
+
+                  <div class="field">
+                    <label for="dropRevealLine">One short editorial line</label>
+                    <input id="dropRevealLine" type="text" maxlength="100" placeholder="e.g. Hand-stretched sourdough, fired three minutes flat." />
+                    <div class="helperText">One short line for your Monday reveal card — the hook that makes people want Friday. Around 80 characters.</div>
                   </div>
                 </div>
 
@@ -1895,12 +1937,14 @@
                     <div class="menuCardArtworkFrame">
                       <div class="menuCardArtwork" id="menuCardArtwork">
                         <div class="menuCardArtwork__hero"></div>
-                        <div class="menuCardArtwork__headerBand">
-                          <img class="menuCardArtwork__logo" id="menuCardLogo" alt="" crossorigin="anonymous" />
-                          <div class="menuCardArtwork__vendorName"></div>
-                          <div class="menuCardArtwork__meta"></div>
-                        </div>
-                        <div class="menuCardArtwork__menu">
+                        <div class="menuCardArtwork__bottom">
+                          <div class="menuCardArtwork__identityLockup">
+                            <img class="menuCardArtwork__logo" id="menuCardLogo" alt="" crossorigin="anonymous" />
+                            <div class="menuCardArtwork__vendorName"></div>
+                            <div class="menuCardArtwork__meta"></div>
+                          </div>
+                          <div class="menuCardArtwork__revealLine" id="menuCardRevealLine"></div>
+                          <div class="menuCardArtwork__rule" aria-hidden="true"></div>
                           <div class="menuCardArtwork__menuList"></div>
                         </div>
                         <div class="menuCardArtwork__skeleton" id="menuCardSkeleton">Loading menu…</div>
@@ -1910,6 +1954,7 @@
                     <div class="menuCardActions">
                       <button class="btnAccent" id="downloadMenuCardBtn" type="button" disabled>Download</button>
                       <div class="menuCardError" id="menuCardError"></div>
+                      <div class="menuCardRevealNudge" id="menuCardRevealNudge">Add a reveal line in the drop's Basics to give this card its voice.</div>
                     </div>
                   </div>
                 </div>
@@ -3542,6 +3587,7 @@
       byId("dropSlug").value = d.slug || "";
       byId("dropType").value = d.drop_type || "neighbourhood";
       byId("dropIntro").value = d.drop_intro || "";
+      byId("dropRevealLine").value = d.reveal_line || "";
       updateDropIntroCount();
       byId("notesInternal").value = d.notes_internal || "";
 
@@ -4256,6 +4302,7 @@
       const skeletonEl = byId("menuCardSkeleton");
       const errorEl = byId("menuCardError");
       const captionEl = byId("menuCardCaption");
+      const nudgeEl = byId("menuCardRevealNudge");
       if (!artworkEl || !downloadBtn) return;
 
       if (errorEl) errorEl.textContent = "";
@@ -4266,6 +4313,7 @@
       if (!drop || !vendor) {
         if (skeletonEl) skeletonEl.style.display = "flex";
         if (captionEl) captionEl.textContent = "Share this on Instagram a few days before your drop.";
+        if (nudgeEl) nudgeEl.classList.remove("is-visible");
         downloadBtn.disabled = true;
         return;
       }
@@ -4317,6 +4365,16 @@
       if (host && host.name) metaParts.push(host.name);
       const metaEl = artworkEl.querySelector(".menuCardArtwork__meta");
       if (metaEl) metaEl.textContent = metaParts.join(" · ");
+
+      // Reveal line — one editorial sentence in the vendor's voice. Empty
+      // value collapses the element entirely (CSS :empty rule) so the
+      // brand rule sits directly under the identity lockup with no gap.
+      // The contextual nudge below the card preview prompts the vendor
+      // to fill it in via the Basics field when missing.
+      const revealLineRaw = drop.reveal_line == null ? "" : String(drop.reveal_line).trim();
+      const revealEl = byId("menuCardRevealLine");
+      if (revealEl) revealEl.textContent = revealLineRaw;
+      if (nudgeEl) nudgeEl.classList.toggle("is-visible", revealLineRaw.length === 0);
 
       const enabledItems = (state.menuAssignments || []).filter((it) => it.enabled);
       if (enabledItems.length >= 18) {
@@ -4502,6 +4560,7 @@
         drop_type: byId("dropType").value,
         host_id: byId("hostSelect").value || null,
         drop_intro: byId("dropIntro").value.trim() || null,
+        reveal_line: byId("dropRevealLine").value.trim() || null,
         notes_internal: byId("notesInternal").value.trim() || null,
 
         fulfilment_mode: byId("fulfilmentMode").value || null,
@@ -4577,6 +4636,7 @@
         delivery_start: dropData.delivery_start,
         delivery_end: dropData.delivery_end,
         drop_intro: dropData.drop_intro,
+        reveal_line: dropData.reveal_line,
         notes_internal: dropData.notes_internal,
 
         fundraising_enabled: dropData.fundraising_enabled,
@@ -5941,6 +6001,10 @@
 
       byId("dropIntro").addEventListener("input", () => {
         updateDropIntroCount();
+        markDirty();
+      });
+
+      byId("dropRevealLine").addEventListener("input", () => {
         markDirty();
       });
 
