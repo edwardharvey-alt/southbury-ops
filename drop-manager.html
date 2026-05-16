@@ -1082,14 +1082,9 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
-      object-position: center center;
-      display: block;
-    }
-
-    .menuCardArtwork__image:not([src]),
-    .menuCardArtwork__image[src=""] {
-      display: none;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
     }
 
     /* Lower-third scrim so the drop name + date stay legible over any
@@ -1876,7 +1871,7 @@
                   <div class="menuCardWrap">
                     <div class="menuCardArtworkFrame">
                       <div class="menuCardArtwork" id="menuCardArtwork">
-                        <img class="menuCardArtwork__image" id="menuCardImage" alt="" crossorigin="anonymous" />
+                        <div class="menuCardArtwork__image" id="menuCardImage" aria-hidden="true"></div>
                         <div class="menuCardArtwork__scrim" aria-hidden="true"></div>
                         <div class="menuCardArtwork__lockup">
                           <div class="menuCardArtwork__dropName" id="menuCardDropName"></div>
@@ -4302,11 +4297,9 @@
           if (product && product.image_url) imageUrl = String(product.image_url);
         }
         if (!imageUrl && vendor.hero_image_url) imageUrl = String(vendor.hero_image_url);
-        if (imageUrl) {
-          imageEl.src = imageUrl;
-        } else {
-          imageEl.removeAttribute("src");
-        }
+        imageEl.style.backgroundImage = imageUrl
+          ? `url("${String(imageUrl).replace(/"/g, "%22")}")`
+          : "none";
       }
 
       // Lockup — drop name + formatted delivery date over the photo.
