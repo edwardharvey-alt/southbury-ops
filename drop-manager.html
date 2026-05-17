@@ -1037,7 +1037,9 @@
     }
 
     .shareZoneHeader { margin: 18px 0 12px; }
-    .reviewActionsRow { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: stretch; margin-top: 10px; }
+    .reviewActionsRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: stretch; margin-top: 10px; }
+    .reviewOpsCol { display: flex; flex-direction: column; gap: 10px; }
+    .reviewOpsCol > .stageSection { flex: 1; margin-bottom: 0; }
     @media (max-width: 1180px) { .reviewActionsRow { grid-template-columns: 1fr; } }
     @media (max-width: 768px)  { .reviewActionsRow { grid-template-columns: 1fr !important; } }
     #pane-review #publishBtn { width: 280px; max-width: 100%; }
@@ -1870,6 +1872,7 @@
                 </div>
 
                 <div class="reviewActionsRow">
+                <div class="reviewOpsCol">
                 <div class="stageSection">
                   <h4 class="stageSectionTitle">Review &amp; Publish</h4>
                   <p class="stageSectionSub">Final actions for this drop.</p>
@@ -1893,6 +1896,7 @@
                     </div>
                     <div class="qrWrap" id="qrWrap"></div>
                   </div>
+                </div>
 
                   <div class="stageSection mondayRevealSection" id="mondayRevealSection">
                     <div class="mondayRevealHeader">
