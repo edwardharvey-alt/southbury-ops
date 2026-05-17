@@ -1282,6 +1282,12 @@ update-drop EFs carry both in ALLOWED_FIELDS and are deployed.
 reveal_line is retained to feed the future caption generator
 (T5-25 Part 1, deferred) and is NOT rendered on the card.
 
+Drop Studio Review-page restructure SHIPPED 2026-05-17 (PR #268, squash commit 4200d6a). Final layout: `#pane-review` → `.reviewGrid` (Drop Summary | Readiness) → `.reviewActionsRow` (merged "Publish & share" card | `mondayRevealSection`). The merged left card stacks Publish & Drop link content separated by a `.reviewCardDivider`. The reveal section internal structure is `.mondayRevealHeader` (full-width above), then `.revealBody` (`display: grid; grid-template-columns: 220px 1fr; align-items: start`) containing `.revealFields` on the left (the editorial-line textarea + reveal-dish select) and `.revealAsset` on the right (the entire `.menuCardWrap` — artwork frame + nested `.menuCardActions`). Review-pane cards are natural content height: `#pane-review .reviewGrid` and `.reviewActionsRow` both use `align-items: start`, so uneven card bottoms are INTENTIONAL (dense-not-voided) — do not "fix" them in future work.
+
+Locked reveal card update — sanctioned containment lever value is now `#pane-review .reviewActionsRow .menuCardArtworkFrame { max-width: 320px }`. The HARD RULE above remains in force unchanged: export is always 1080×1080 via the 540px base via html2canvas at scale(1); only the artwork-frame `max-width` may ever be adjusted. Never touch `#menuCardArtwork`, `updateMenuCardScale`, or the export path.
+
+Reveal hook field — `#dropRevealLine` is now a `<textarea>` (4 rows, `maxlength=100`), relabelled "Your line for this drop". `reveal_line` is still stored for the future caption composer (T5-25 Part 1, deferred — composes the hook + drop data into the full Monday post; not built).
+
 ### Tier 4 — Enhancements that will impress
 - T4-29 — Series intelligence in Insights — open
 - T4-31b-fu1 — Server-side HEIC conversion fallback for Mac-Photos-HEIC — open, deferred until real vendor friction.
