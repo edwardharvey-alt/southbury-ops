@@ -2384,7 +2384,7 @@
 
         const vendorRes = await supabase
           .from("vendors")
-          .select("id, display_name, tagline, logo_url, hero_image_url, website_url, brand_primary_color, brand_secondary_color, brand_text_on_primary")
+          .select("id, display_name, name, tagline, logo_url, hero_image_url, website_url, brand_primary_color, brand_secondary_color, brand_text_on_primary, powered_by_hearth_visible")
           .eq("id", state.drop.vendor_id)
           .single();
 
