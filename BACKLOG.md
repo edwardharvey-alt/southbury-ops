@@ -2395,6 +2395,8 @@ use the Claude-in-artifact pattern already established in the platform.
 Poster generation is pure client-side HTML/CSS — no external dependency
 beyond QR code API already in use.
 
+**Progress note (2026-05-17, PR #268):** The Monday reveal menu-card surface (output type 0) and the Drop Studio Review-pane layout that houses it shipped. Review & Publish + Drop link merged into one "Publish & share" card opposite the reveal card; review-pane cards are natural content height (uneven bottoms intentional, not a defect); reveal fields moved beside an enlarged reveal image; the reveal hook input is now a <textarea> relabelled "Your line for this drop". reveal_line is captured and stored for the Part 1 caption composer. T5-25 REMAINS OPEN — Part 1 (social copy generator) and Part 2 (drop poster) are not built; this note records the Part 0 surface + housing only.
+
 T5-26: Host discovery outreach
 
 When the intelligence engine (T5-9) surfaces a prospective host recommendation — whether via same-type geographic discovery or cross-category affinity matching — the vendor needs a way to act on it. This entry covers the outreach capability in two phases.
