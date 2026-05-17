@@ -1041,6 +1041,8 @@
     .reviewCardDivider { border-top: 1px solid var(--h-border); margin: 18px 0; }
     #pane-review .reviewGrid { align-items: start; }
     .revealBody { display: grid; grid-template-columns: 220px 1fr; gap: 18px; align-items: start; margin-top: 14px; }
+    .revealFields { display: flex; flex-direction: column; gap: 26px; }
+    #pane-review .revealFields #dropRevealLine { border: 1px solid var(--h-border); border-radius: 10px; padding: 8px 10px; background: var(--h-surface); color: var(--h-text); width: 100%; font: inherit; line-height: 1.5; resize: none; min-height: 92px; box-sizing: border-box; }
     @media (max-width: 980px) { .revealBody { grid-template-columns: 1fr; } }
     @media (max-width: 1180px) { .reviewActionsRow { grid-template-columns: 1fr; } }
     @media (max-width: 768px)  { .reviewActionsRow { grid-template-columns: 1fr !important; } }
@@ -1886,12 +1888,12 @@
                     <div class="revealBody">
                     <div class="revealFields">
                     <div class="field">
-                      <label for="dropRevealLine">One short editorial line</label>
-                      <input id="dropRevealLine" type="text" maxlength="100" placeholder="e.g. Hand-stretched sourdough, fired three minutes flat." />
-                      <div class="helperText">One short line for your Monday reveal post — the hook that makes people want Friday. Around 80 characters.</div>
+                      <label for="dropRevealLine">Your line for this drop</label>
+                      <textarea id="dropRevealLine" maxlength="100" rows="4" placeholder="e.g. Hand-stretched sourdough, fired three minutes flat."></textarea>
+                      <div class="helperText">One line for your Monday reveal post — the part that's yours to write. Around 80 characters.</div>
                     </div>
 
-                    <div class="field" style="margin-top:14px;">
+                    <div class="field">
                       <label for="dropRevealProduct">Reveal dish</label>
                       <select id="dropRevealProduct">
                         <option value="">No dish selected</option>
