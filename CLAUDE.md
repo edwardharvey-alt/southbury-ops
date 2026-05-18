@@ -1024,6 +1024,45 @@ on top of the coding rules above.
     (e.g. order-ready trigger → SMS sender, scheduled-drop-reminder
     cron → reminder sender).
 
+48. **`security_invoker` must be applied bottom-up across the view
+    dependency tree** — leaf views first, then parents. A parent
+    view stays effectively unscoped until every view beneath it is
+    invoker; otherwise the parent (which is now invoker) reads from
+    a still-definer child, and the child runs as its owner,
+    bypassing the caller's RLS context. Verify tier by tier through
+    the authenticated app path before moving to the next tier.
+    Surfaced during the T5-A3 operator view rollout (2026-05-18).
+
+49. **A definer view (`security_invoker` off) that reads an invoker
+    view runs the child as the definer's owner, bypassing the
+    child's RLS.** This is why the deliberately-held definer
+    `v_drop_summary` still functions for `host-view.html` even
+    though all its child views are now invoker — anonymous callers
+    reach `v_drop_summary` as the definer's owner, which then reads
+    the invoker children with that same elevated context. The
+    exposure is bounded only by the columns `v_drop_summary`
+    exposes; flipping it to invoker would cause the underlying RLS
+    to filter every anonymous host-view caller to zero rows.
+    Surfaced during the T5-A3 operator view rollout (2026-05-18).
+
+50. **SQL-editor queries run with privileged access and bypass RLS
+    entirely** (`rls_forced = false` on all tables), so they cannot
+    verify `invoker`/RLS scoping. Only the authenticated app/REST
+    path with a real session token exercises it. Same family as
+    the `v_drop_public` REST-path lesson: SQL-editor success does
+    not prove app-path success. Surfaced during the T5-A3 operator
+    view rollout (2026-05-18).
+
+51. **For silent-failure-mode changes (e.g. the invoker rollout,
+    where a wrong outcome is empty data with no error), canary one
+    isolated low-severity view and verify it via the authenticated
+    app path before batching the rest.** The canary protects
+    against a whole-batch regression that would manifest as "every
+    operator page renders empty" rather than as an error in any
+    single query. The T5-A3 operator view rollout used
+    `v_products_enriched` as the canary before stepping through
+    Tier 0 → Tier 1 → Tier 2+3.
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -1191,6 +1230,35 @@ Stripe cancel. See the "Production mutation/read status" section for
 current state of every read/write path, and the "Stripe Connect
 Express (T3-8)" section for the vendor onboarding scaffold.
 
+## View security model
+
+The view layer is the read boundary for both anonymous and
+authenticated callers. Two patterns are used deliberately:
+
+- **Public-facing views are column-safe definer views.**
+  `v_drop_public` is live: 29 customer-safe columns,
+  `WHERE status IN ('live','scheduled','completed')`, granted to
+  `anon` and `authenticated`. `v_vendor_public` is still to be
+  created (T5-A3 Priority 2).
+- **All 34 operator `v_*` views are `security_invoker = on`**,
+  scoped via the existing authenticated-owner base-table RLS
+  (`vendor_id IN (SELECT id FROM vendors WHERE auth_user_id =
+  auth.uid())`). Applied bottom-up and verified tier by tier
+  (see operational learnings #48 and #49 for the dependency-order
+  rule).
+- **`v_drop_summary` is deliberately left as a definer view
+  (held).** `host-view.html` reads it directly (anonymous) for
+  host-share / GMV figures; flipping it to invoker is gated on
+  the host-view authorisation sub-track (per-drop opaque host
+  token + Edge Function — canonical secured-read pattern).
+- **`order.html` anonymous drop reads use `v_drop_public`**
+  (commit 8d4c63d). `host-view.html` still reads `v_drop_summary`
+  directly until the sub-track lands.
+- **Interim hotfix:** `order.html`'s anonymous `vendors` read was
+  narrowed to safe display columns only (commits 390985e,
+  65d66c1). Interim until `vendors_select_all` is removed in
+  T5-A3 Priority 2.
+
 ## Production mutation/read status
 
 Snapshot of which read/write paths are working in production and which are known broken. Update whenever a PR confirms or breaks a path. Last updated 2026-05-16 after T5-11-minimum shipped (PR #266) — order_confirmed transactional email is the first application-level Resend send in production.
@@ -1249,6 +1317,8 @@ T-ops-rls-fix closed 2026-05-15 (closes T-ops-rls-fix-polish in same workstream)
 T-ops-rls-customer-import closed 2026-05-15: built `bulk-create-customers` Edge Function (anonymous, `verify_jwt = false`, batched email+phone lookup, in-memory classification matching the page's existing four-way logic, sequential per-row writes for createNew + linkExisting, demand breakdown aggregation folded into the response — PR #260) and rewired customer-import.html to invoke it (286 deletions / 39 additions, removing inline `supabase.createClient()` + two pre-write reads + classification + four write loops + the now-dead `fetchDemandBreakdown` + `normalisePhone` — PR #261). Verified end-to-end on Test 12 with a 5-row CSV: stage 5 reported 5 added / 0 skipped / 0 conflicts / 0 failed; SQL count confirmed 5 customer_relationships rows for the vendor with source='import'. First successful end-to-end customer import in the platform's history. Full closure narrative and design rationale in BACKLOG.md. Audit linkage: closes the second of three RLS surfaces from T-ops-rls-audit (2026-05-15); T-ops-rls-cleanup-auth-callback and T-ops-rls-reads-audit remain open per their original framing.
 
 T5-11-minimum closed 2026-05-16 (parent T5-11 remains partial): built `send-order-confirmation` Edge Function and wired `stripe-webhook` to invoke it after `checkout.session.completed` transitions the order to placed/paid (PR #266). Resend HTTP API called directly with `RESEND_API_KEY`; inter-function call authenticated via shared `INTERNAL_FUNCTION_SECRET` in `X-Internal-Secret` header (`verify_jwt = false` at gateway). Webhook treats every error from the send function as non-fatal — try/catch + return 200 regardless of email outcome — so a Resend outage cannot cause Stripe to retry the webhook and double-place an order. First application-level Resend integration in production. Establishes two reusable patterns documented as operational learnings #46 (application-level Resend) and #47 (inter-Edge-Function shared-secret auth) for future T5-11 triggers (order_ready automated SMS, drop_announced, drop_reminder, drop_early_access, post_drop_thank_you), all of which remain open per pre-launch scope decision. Full closure narrative in BACKLOG.md.
+
+T5-A3 checkpoint 2026-05-18 (in progress, not closed): operator view layer closed — all 34 vendor-scoped `v_*` views set `security_invoker = on`, applied bottom-up (canary `v_products_enriched` → Tier 0 → Tier 1 → Tier 2+3), each tier verified via the authenticated app path. Anonymous customer reads now route through column-safe `v_drop_public` (29 safe columns, status-filtered, granted `anon` + `authenticated`); `order.html` re-pointed in commit 8d4c63d. Interim narrowing of `order.html`'s anonymous `vendors` read landed in commits 390985e + 65d66c1. Section A of the T5-A3 reads audit also corrected stale handover claims: the platform has exactly one anon SELECT policy per table (not six on `drops`; not duplicate policies on `categories` / `products`); duplicate anon SELECT (`qual = true`) policies exist only on `drop_products`; `orders`, `order_items`, `order_item_selections`, `customers`, `customer_relationships` and `hosts` carry NO anon policy (already locked; T5-B39 confirmed), so their operator reads are out of T5-A3 confidentiality scope — their robustness depends on the separate auth-attach workstream, not on any policy T5-A3 changes. Open residuals: host-view authorisation sub-track (per-drop opaque host token + Edge Function before `v_drop_summary` can be flipped to invoker); T5-A3 Priority 2 — remove `vendors_select_all`, gated on remediating the `hearth-vendor.js:33` boot read, then create `v_vendor_public`; two-vendor adversarial isolation test; deferred low-severity catalog anon policies. Full DONE / OPEN narrative in BACKLOG.md.
 
 T5-25 Part 0 — SHIPPED (prod, squash commit f95c12c). Vendor Monday
 "reveal" Instagram post asset (auto-generated 1080x1080 card).
@@ -1334,7 +1404,7 @@ BACKLOG.md alongside the ticket specs that depend on them — read there before
 building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 
 ### Tier 5-A — Auth workstream
-- T5-A3 — RLS rewrite: server-side vendor scoping — open
+- T5-A3 — RLS rewrite: server-side vendor scoping — partial. Operator view layer closed (all 34 `v_*` views set `security_invoker = on`, bottom-up); anon order page re-pointed to `v_drop_public`; interim narrowing of `order.html` anon `vendors` read landed. Host-view authorisation sub-track + Priority 2 (`vendors_select_all` removal + `v_vendor_public`) + two-vendor adversarial isolation test still open. See the "View security model" standing-context section above and the BACKLOG.md T5-A3 DONE / OPEN narrative.
 
 ### Tier 5-B — Platform improvements
 - T5-B5 — Schema cleanup: legacy artefacts and missing constraints — open

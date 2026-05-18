@@ -2511,6 +2511,73 @@ this ticket removes the illegitimate ones.
 
 Reference: full RLS audit performed in session dated 27 April 2026.
 
+[Extension — 2026-05-18 checkpoint] T5-A3 partial. Operator view layer
+closed; `v_drop_public` live; anon `order.html` re-pointed. Host-view
+sub-track + Priority 2 + adversarial isolation test still open.
+
+T5-A3 DONE:
+
+- Reads audit and view-reads audit artefacts produced
+  (`audit/T5-A3-reads-audit-2026-05-17.md`,
+  `audit/T5-A3-view-reads-2026-05-17.md`).
+- `order.html` anonymous `vendors` read narrowed to safe display
+  columns (commit 390985e) + follow-up restoring non-sensitive
+  consumed fields `name`, `powered_by_hearth_visible`
+  (commit 65d66c1).
+- `v_drop_public` created: 29 safe columns, status-filtered, granted
+  `anon` + `authenticated`.
+- `order.html` re-pointed: its 3 anonymous drop reads now use
+  `v_drop_public` (commit 8d4c63d).
+- Entire operator view layer: all 34 `v_*` views set
+  `security_invoker = on`, applied bottom-up (canary
+  `v_products_enriched` → Tier 0 → Tier 1 → Tier 2+3), each tier
+  verified via the authenticated app path.
+
+T5-A3 OPEN:
+
+- **Host-view authorisation sub-track:** `host-view.html` reads
+  `v_drop_summary` directly (anonymous) and consumes
+  `drop_gmv_pence` / `host_share_*`. Needs a per-drop opaque host
+  token + Edge Function (canonical secured-read pattern) before
+  `v_drop_summary` can be flipped to invoker. Gates full closure of
+  the `v_drop_summary` anonymous exposure.
+- **Priority 2:** remove `vendors_select_all` (anon SELECT,
+  `qual = true`; exposes `stripe_account_id`, `auth_user_id`,
+  contact fields). Gated on remediating the `hearth-vendor.js:33`
+  boot read (route via authenticated path / confirm auth attaches;
+  check whether T5-A2 `resolveVendor` should own it) — dropping the
+  policy before that blanks all operator pages at boot. Then create
+  column-safe `v_vendor_public` as the anon path.
+- **Two-vendor adversarial isolation test:** residual verification —
+  needs a second real vendor or the Catering Direct fixture
+  (vendor_id `a2a757fd-6882-49f8-9a54-7e682eab1e90`).
+- **Deferred low-severity:** catalog anon policies (`categories`
+  `qual=true`; `products` / `bundles` `is_active`; `drop_menu_items`
+  `is_available`; `drop_products` duplicate `true` policies) —
+  decide keep-scoped vs route via public views. No PII.
+- **Write-side flags surfaced by the audit, for the write/auth
+  workstream (out of T5-A3 reads scope):**
+  - `order_status_events` anon+authenticated INSERT
+    `with_check = true` (unconstrained).
+  - `drop_products` two redundant anon SELECT `true` policies.
+  - `vendors` "admin insert" is authenticated `with_check = true`
+    (any authenticated user can insert vendor rows).
+
+Handover prerequisite corrections (T5-A3 Section A): the T5-A3
+handover's policy claims were stale. "`drops` has ~6 anon SELECT
+policies" and "`categories` / `products` have duplicate policies"
+were both wrong. Reality: exactly one anon SELECT policy per table;
+duplicate anon SELECT (`qual = true`) policies exist only on
+`drop_products`; `orders`, `order_items`, `order_item_selections`,
+`customers`, `customer_relationships` and `hosts` carry NO anon
+policy (already locked; T5-B39 confirmed), so their operator reads
+are out of T5-A3 confidentiality scope — their robustness depends
+on the separate auth-attach workstream, not on any policy T5-A3
+changes.
+
+PARALLEL STILL OPEN: T6-5 — upgrade Supabase to Pro and verify PITR
+active (hard gate before real customer data).
+
 T5-A4: Login page ✓ COMPLETE
 login.html created as a standalone page for returning vendors. Uses
 signInWithPassword (email + password) rather than magic link as
