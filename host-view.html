@@ -251,6 +251,31 @@
       font-weight:700;
       color:#9ca3af;
       padding-top:10px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:8px;
+    }
+
+    .hvFooterCredit{
+      margin:0;
+    }
+
+    .hvRefreshLink{
+      background:none;
+      border:none;
+      color:#6b7280;
+      font:inherit;
+      font-size:12px;
+      font-weight:700;
+      cursor:pointer;
+      padding:4px 10px;
+      text-decoration:underline;
+    }
+
+    .hvRefreshLink:disabled{
+      opacity:0.5;
+      cursor:not-allowed;
     }
 
     /* States */
@@ -312,9 +337,9 @@
   <script>
     const state = {
       dropSlug: null,
+      token: null,
       dropId: null,
       drop: null,
-      realtimeChannel: null,
       refreshInFlight: false,
     };
 
@@ -382,11 +407,12 @@
 
     async function loadDrop(){
       state.dropSlug = getQueryParam("drop");
+      state.token = getQueryParam("t");
 
-      if (!state.dropSlug){
+      if (!state.dropSlug || !state.token){
         renderEmpty(
-          "This drop couldn't be found.",
-          "Check your link and try again."
+          "This link is invalid or has expired.",
+          "Please ask your vendor for a fresh host link."
         );
         return;
       }
@@ -404,49 +430,34 @@
         return;
       }
 
-      try {
-        /* Resolve the drop directly from v_drop_summary by slug. Going
-           through the base drops table would require an RLS policy for
-           anonymous reads; the view is the read-only surface exposed
-           to unauthenticated clients. */
-        const { data: summary, error: summaryErr } = await _sb
-          .from("v_drop_summary")
-          .select("*")
-          .eq("slug", state.dropSlug)
-          .maybeSingle();
-
-        if (summaryErr) throw summaryErr;
-        if (!summary){
-          renderEmpty(
-            "This drop couldn't be found.",
-            "Check your link and try again."
-          );
-          return;
-        }
-
-        state.dropId = summary.drop_id;
-        state.drop = summary;
-
-        renderDrop(summary);
-        subscribeRealtime();
-
-      } catch (err){
-        console.error(err);
+      const summary = await fetchHostSummary();
+      if (!summary){
         renderEmpty(
-          "Something went wrong loading this drop.",
-          "Please try refreshing the page."
+          "This link is invalid or has expired.",
+          "Please ask your vendor for a fresh host link."
         );
+        return;
       }
+
+      state.dropId = summary.drop_id;
+      state.drop = summary;
+      renderDrop(summary);
     }
 
-    async function fetchDropSummary(){
-      const { data, error } = await _sb
-        .from("v_drop_summary")
-        .select("*")
-        .eq("drop_id", state.dropId)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
+    async function fetchHostSummary(){
+      try {
+        const { data, error } = await _sb.functions.invoke(
+          "host-view-summary",
+          { body: { slug: state.dropSlug, token: state.token } }
+        );
+        if (error) return null;
+        if (data?.error) return null;
+        if (!data || !data.drop_id) return null;
+        return data;
+      } catch (err){
+        console.error("host-view-summary invoke failed", err);
+        return null;
+      }
     }
 
     function computeDropState(drop){
@@ -489,7 +500,12 @@
         ? Math.min(100, Math.round((capacityUsed / capacityTotal) * 100))
         : 0;
 
-      const share = computeHostShare(drop);
+      const hostShareEnabled = drop.host_share_enabled === true;
+      const hostSharePence = Number(drop.host_share_total_pence || 0);
+      const hostShareDescriptor = drop.host_share_descriptor || null;
+      const fundraisingEnabled = drop.fundraising_enabled === true;
+      const fundraisingPence = Number(drop.fundraising_total_pence || 0);
+      const fundraisingText = drop.fundraising_display_text || null;
 
       let noteHTML = "";
       if (isPreOpen){
@@ -542,42 +558,32 @@
           </div>
         </div>
 
-        ${share.show ? `
+        ${hostShareEnabled ? `
         <div class="hvShareCard">
-          <p class="hvShareLabel">${escapeHtml(share.label)}</p>
-          <p class="hvShareValue" id="hvShareValue">${formatMoneyPence(share.pence)}</p>
-          <!-- Revenue share % placeholder: enrich with hosts.revenue_share_pct in T4-16 -->
-          ${share.live ? `<p class="hvShareHint">Updated live as orders come in.</p>` : ""}
+          <p class="hvShareLabel">Your share</p>
+          <p class="hvShareValue" id="hvShareValue">${formatMoneyPence(hostSharePence)}</p>
+          ${hostShareDescriptor ? `<p class="hvShareHint">${escapeHtml(hostShareDescriptor)}</p>` : ""}
         </div>
         ` : ""}
 
-        <div class="hvFooter">Powered by Hearth</div>
+        ${fundraisingEnabled ? `
+        <div class="hvShareCard">
+          <p class="hvShareLabel">Fundraising</p>
+          <p class="hvShareValue" id="hvFundraisingValue">${formatMoneyPence(fundraisingPence)}</p>
+          ${fundraisingText ? `<p class="hvShareHint">${escapeHtml(fundraisingText)}</p>` : ""}
+        </div>
+        ` : ""}
+
+        <div class="hvFooter">
+          <button type="button" id="hvRefreshBtn" class="hvRefreshLink">Refresh</button>
+          <p class="hvFooterCredit">Powered by Hearth</p>
+        </div>
       `;
-    }
 
-    function computeHostShare(drop){
-      // Revenue share % placeholder: enrich with hosts.revenue_share_pct in T4-16
-      const enabled = drop.host_share_enabled === true;
-      const model = drop.host_share_model;
-
-      if (!enabled || !model){
-        return { show: false };
+      const refreshBtn = document.getElementById("hvRefreshBtn");
+      if (refreshBtn){
+        refreshBtn.addEventListener("click", refreshLiveValues);
       }
-
-      if (model === "fixed"){
-        const pence = Number(drop.host_share_fixed_pence || 0);
-        // Fixed share doesn't move with order volume, so drop "so far".
-        return { show: true, pence, label: "Your share", live: false };
-      }
-
-      if (model === "percentage"){
-        const gmv = Number(drop.drop_gmv_pence || 0);
-        const pct = Number(drop.host_share_percentage || 0);
-        const pence = Math.round(gmv * pct / 100);
-        return { show: true, pence, label: "Your share so far", live: true };
-      }
-
-      return { show: false };
     }
 
     function updateLiveValues(summary){
@@ -606,10 +612,13 @@
       const metaEl = document.getElementById("hvCapacityMeta");
       if (metaEl) metaEl.textContent = `${capacityUsed} of ${capacityTotal} units taken`;
 
-      const share = computeHostShare(drop);
       const shareEl = document.getElementById("hvShareValue");
-      if (shareEl && share.show){
-        shareEl.textContent = formatMoneyPence(share.pence);
+      if (shareEl && drop.host_share_enabled === true){
+        shareEl.textContent = formatMoneyPence(drop.host_share_total_pence || 0);
+      }
+      const fundraisingEl = document.getElementById("hvFundraisingValue");
+      if (fundraisingEl && drop.fundraising_enabled === true){
+        fundraisingEl.textContent = formatMoneyPence(drop.fundraising_total_pence || 0);
       }
     }
 
@@ -617,36 +626,18 @@
       if (!state.dropId) return;
       if (state.refreshInFlight) return;
       state.refreshInFlight = true;
+      const btn = document.getElementById("hvRefreshBtn");
+      if (btn) btn.disabled = true;
       try {
-        const summary = await fetchDropSummary();
+        const summary = await fetchHostSummary();
         if (summary){
           state.drop = summary;
           updateLiveValues(summary);
         }
-      } catch (err){
-        console.error("host-view refresh failed", err);
       } finally {
         state.refreshInFlight = false;
+        if (btn) btn.disabled = false;
       }
-    }
-
-    function subscribeRealtime(){
-      if (!state.dropId) return;
-      if (state.realtimeChannel) return;
-
-      state.realtimeChannel = _sb
-        .channel(`host-view:orders:${state.dropId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "orders",
-            filter: `drop_id=eq.${state.dropId}`,
-          },
-          () => { refreshLiveValues(); }
-        )
-        .subscribe();
     }
 
     function renderEmpty(title, sub){

@@ -3324,7 +3324,7 @@
 
             <div class="dropCardActions">
               <button class="btnSmall js-duplicate-drop" type="button" data-drop-id="${drop.drop_id}">Duplicate</button>
-              ${drop.host_name ? `<button class="btnSmall js-copy-host-link" type="button" data-drop-slug="${escapeHtml(drop.drop_slug || drop.slug || "")}">Copy host link</button>` : ""}
+              ${drop.host_name ? `<button class="btnSmall js-copy-host-link" type="button" data-drop-id="${drop.drop_id}" data-drop-slug="${escapeHtml(drop.drop_slug || drop.slug || "")}">Copy host link</button>` : ""}
             </div>
             ${(drop.status || '').toLowerCase() === 'closed' ? `<a class="scorecardLink" href="${HearthNav.withVendor('./scorecard.html?drop=' + encodeURIComponent(drop.drop_id))}">Scorecard →</a>` : ''}
           </div>
@@ -6354,11 +6354,26 @@
         const copyHost = e.target.closest(".js-copy-host-link");
         if (copyHost) {
           const slug = copyHost.dataset.dropSlug;
+          const dropId = copyHost.dataset.dropId;
           if (!slug) {
             showError("This drop has no slug set, so a host link can't be built.");
             return;
           }
-          const url = `${window.location.origin}/host-view.html?drop=${encodeURIComponent(slug)}`;
+          if (!dropId) {
+            showError("This drop has no id, so a host link can't be built.");
+            return;
+          }
+          const { data: tokenRow, error: tokenErr } = await supabase
+            .from("drop_host_tokens")
+            .select("host_access_token")
+            .eq("drop_id", dropId)
+            .maybeSingle();
+          if (tokenErr || !tokenRow || !tokenRow.host_access_token) {
+            copyHost.disabled = true;
+            showError("No host access token is set for this drop, so a host link can't be built.");
+            return;
+          }
+          const url = `${window.location.origin}/host-view.html?drop=${encodeURIComponent(slug)}&t=${encodeURIComponent(tokenRow.host_access_token)}`;
           const originalLabel = copyHost.textContent;
           try {
             if (navigator.clipboard && navigator.clipboard.writeText) {
