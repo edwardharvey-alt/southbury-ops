@@ -1553,7 +1553,7 @@
     async function getPreviewDrop(vendorId) {
       let res = await supabase
         .from("drops")
-        .select("*")
+        .select("name, slug, status, host_id, delivery_start, delivery_end, fulfilment_mode, capacity_units_total, capacity_category")
         .eq("vendor_id", vendorId)
         .eq("status", "live")
         .order("delivery_start", { ascending: false })
@@ -1564,7 +1564,7 @@
 
       res = await supabase
         .from("drops")
-        .select("*")
+        .select("name, slug, status, host_id, delivery_start, delivery_end, fulfilment_mode, capacity_units_total, capacity_category")
         .eq("vendor_id", vendorId)
         .eq("status", "scheduled")
         .order("delivery_start", { ascending: false })
