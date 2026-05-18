@@ -2374,7 +2374,7 @@
         state.drop = dropRes.data;
 
         const summaryRes = await supabase
-          .from("v_drop_summary")
+          .from("v_drop_public")
           .select("*")
           .eq("drop_id", state.drop.id)
           .maybeSingle();
@@ -3735,7 +3735,7 @@ async function handoffToPayment() {
         if (!state.drop?.id) return;
         try {
           const summaryRes = await supabase
-            .from("v_drop_summary")
+            .from("v_drop_public")
             .select("*")
             .eq("drop_id", state.drop.id)
             .maybeSingle();
@@ -4047,7 +4047,7 @@ async function handoffToPayment() {
         /* Fetch capacity data for each sibling from v_drop_summary */
         const siblingIds = sittings.map((s) => s.id);
         const { data: summaries, error: sumErr } = await supabase
-          .from("v_drop_summary")
+          .from("v_drop_public")
           .select("drop_id, capacity_units_remaining")
           .in("drop_id", siblingIds);
 
