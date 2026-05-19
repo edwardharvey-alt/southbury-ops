@@ -2366,7 +2366,7 @@
 
         const dropRes = await supabase
           .from("drops")
-          .select("id, slug, name, status, drop_type, drop_intro, vendor_id, host_id, window_group_id, opens_at, closes_at, delivery_start, delivery_end, fulfilment_mode, capacity_units_total, capacity_category, capacity_category_id, allow_table_numbers, table_numbers_enabled, delivery_area_type, allowed_postcode_prefixes, discount_tiers")
+          .select("id, slug, name, status, drop_type, drop_intro, vendor_id, host_id, window_group_id, opens_at, closes_at, delivery_start, delivery_end, fulfilment_mode, capacity_units_total, capacity_category, capacity_category_id, delivery_area_type, allowed_postcode_prefixes, discount_tiers")
           .eq("slug", state.dropSlug)
           .single();
 

@@ -1172,6 +1172,36 @@ on top of the coding rules above.
     learning #52. See the BACKLOG.md operator-read-auth entry
     for the sequenced slices.
 
+54. **LOAD-BEARING — T5-A3 select-narrowing rule.** Every
+    explicit column list replacing a `select('*')` MUST be
+    validated against the LIVE `drops` / view / table schema
+    before it ships — not against SCHEMA.md, which can be
+    stale. PostgREST hard-400s the ENTIRE query on a single
+    unknown column (`column <table>.<col> does not exist`),
+    whereas `select('*')` silently tolerated missing columns
+    by simply omitting them from the response. Regression:
+    commit 69b1651 (T5-A3 host-view narrowing, 2026-05-18)
+    swept the phantom columns `allow_table_numbers` and
+    `table_numbers_enabled` (a never-built table-number
+    feature whose consumer `inferCommunityTableMode()` was
+    optional-chained) into `order.html`'s `drops` select,
+    taking the customer order path
+    (`order.html?drop=…`) hard-down for every drop from
+    2026-05-18 until the 2026-05-19 fix. Same failure mode
+    sits latent in any future select-narrowing under the
+    T5-A3 / anon-revoke track AND in the **operator-read-auth
+    REVOKE capstone** (operational learning #53), which by
+    definition removes the `select('*')` fallback safety
+    net by revoking anon SELECT once nothing reads the
+    definer views directly. Every narrowed column list shipped
+    on that track must be cross-checked against
+    `information_schema.columns` on the live DB before merge —
+    SCHEMA.md is an orientation layer, not adjudication. If
+    you cannot reach the live DB from your environment, the
+    contractual fallback (CLAUDE.md critical rule #13) is to
+    spell out the verification SQL in the PR description and
+    have the developer run it before merging.
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -1399,6 +1429,13 @@ authenticated callers. Two patterns are used deliberately:
   narrowed to safe display columns only (commits 390985e,
   65d66c1). Interim until `vendors_select_all` is removed in
   T5-A3 Priority 2.
+- **Select-narrowing validation rule.** Every explicit column
+  list shipped under the T5-A3 / anon-revoke / operator-read-auth
+  narrowing must be cross-checked against
+  `information_schema.columns` on the live DB before merge — see
+  operational learning #54 (regression: commit 69b1651 took
+  `order.html?drop=…` hard-down for 24h with two phantom
+  columns).
 
 ## Production mutation/read status
 

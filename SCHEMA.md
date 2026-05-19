@@ -16,6 +16,17 @@ Run this in the Supabase SQL Editor and export the result as CSV.
 Replace this document with a refresh whenever a meaningful migration
 lands.
 
+**Outstanding regen:** the last full SQL-driven refresh predates
+T3-12a (delivery_area_type, allowed_postcode_prefixes), T3-13b
+(expected_guests, discount_tiers, orders.discount_pence,
+orders.discount_breakdown) and the `vendors.powered_by_hearth_visible`
+addition. Those columns have been patched in surgically below from
+cross-references (Edge Function source + CLAUDE.md production-state
+documentation), but a full SQL regen is still pending and should
+catch any other drift. Run the query before relying on the
+column enumeration for any select-narrowing work (see operational
+learning #54).
+
 ```sql
 SELECT
   c.table_name,
@@ -145,7 +156,11 @@ observations" below.
 
 **Auth & lifecycle** — `auth_user_id` (uuid, nullable, links to
 `auth.users.id`), `onboarding_completed`, `terms_accepted`,
-`terms_accepted_at`, `status`, `head_start_dismissed`.
+`terms_accepted_at`, `status`, `head_start_dismissed`,
+`powered_by_hearth_visible` (boolean, nullable; controls the
+"Powered by Hearth" footer attribution on `order.html` /
+`order-confirmation.html` and the transactional confirmation
+email).
 
 **Stripe** — `stripe_account_id` (text, nullable),
 `stripe_onboarding_complete` (NOT NULL DEFAULT false). Partial index
@@ -225,7 +240,11 @@ and for capacity categorisation on drops. `vendor_id` (FK), `name`,
   `capacity_pizzas` and `max_orders` columns also still present.
 - **Geography** — `is_radius_restricted`, `radius_km`,
   `centre_postcode`, `fulfilment_mode`,
-  `collection_point_description`, `delivery_area_description`.
+  `collection_point_description`, `delivery_area_description`,
+  `delivery_area_type` (text, postcode-prefix vs radius
+  discriminator — T3-12a, 2026-05-03),
+  `allowed_postcode_prefixes` (text[], populated when
+  `delivery_area_type = 'postcode_prefix'` — T3-12a).
 - **Fundraising** — `fundraising_enabled`, `fundraising_model`,
   `fundraising_percentage`, `fundraising_per_order_pence`,
   `fundraising_display_text`, `fundraising_notes`.
@@ -240,6 +259,10 @@ and for capacity categorisation on drops. `vendor_id` (FK), `name`,
 - **Customer-facing copy** — `drop_intro` (text, nullable; ≤ 280 char
   enforced by update-drop Edge Function). Short "this week's story"
   shown above the menu on order.html.
+- **Event / catering** — `expected_guests` (integer, nullable),
+  `discount_tiers` (jsonb, nullable; tier rules consumed by
+  `create-order` to produce a one-off Stripe coupon — T3-13b,
+  2026-05-14).
 - **Misc** — `notes_internal`, `customer_notes_enabled` (default true).
 
 **drop_menu_items** — current menu-item table. `drop_id` (FK),
