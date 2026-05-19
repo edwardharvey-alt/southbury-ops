@@ -708,6 +708,9 @@
       vendor: null,
       vendorId: null,
       allCustomers: [],
+      dropStats: [],
+      itemSales: [],
+      hostPerf: [],
       segments: { loyalCore: [], occasional: [], lapsed: [] },
       activeFilter: 'all'
     };
@@ -726,31 +729,26 @@
       const _cuSubtitle = document.querySelector('.brandSubtitle');
       if (_cuSubtitle && state.vendor.display_name) _cuSubtitle.textContent = state.vendor.display_name;
 
-      /* 1. Customer relationships joined to customers */
-      const { data: rels, error: relsErr } = await sb
-        .from('customer_relationships')
-        .select('*, customers(name, email, postcode, phone)')
-        .eq('owner_id', state.vendorId)
-        .eq('owner_type', 'vendor');
-
-      if (relsErr) {
-        console.error('Failed to load customer relationships:', relsErr);
-        return;
-      }
-
-      /* 2. Per-customer order count and last order date */
-      const { data: vendorDrops } = await sb
-        .from('drops')
-        .select('id')
-        .eq('vendor_id', state.vendorId);
-      const vendorDropIds = (vendorDrops || []).map(d => d.id);
-      const { data: orderAgg, error: orderErr } = vendorDropIds.length
-        ? await sb.from('orders').select('customer_email, created_at').in('drop_id', vendorDropIds)
-        : { data: [], error: null };
-
-      if (orderErr) {
-        console.error('Failed to load order data:', orderErr);
-      }
+      /* 1+2. Customer relationships joined to customers, plus per-customer
+         order count and last order date — folded into one JWT-authenticated
+         Edge Function call (operator-read-auth Slice 4). The EF resolves the
+         vendor server-side from the caller's JWT and returns rows verbatim
+         under customer_relationships + orders. Plus the three intelligence
+         views consumed later in renderRecommendations(). */
+      const workspaceRes = await (async () => {
+        try {
+          const { data, error } = await sb.functions.invoke('get-customers-workspace', { body: {} });
+          if (error || (data && data.error)) return {};
+          return data || {};
+        } catch (e) {
+          return {};
+        }
+      })();
+      const rels = workspaceRes.customer_relationships || [];
+      const orderAgg = workspaceRes.orders || [];
+      state.dropStats = workspaceRes.hearth_drop_stats || [];
+      state.itemSales = workspaceRes.item_sales || [];
+      state.hostPerf = workspaceRes.host_performance || [];
 
       /* Aggregate orders by email client-side */
       const orderMap = {};
@@ -820,24 +818,11 @@
     async function renderRecommendations() {
       const grid = document.getElementById('recsGrid');
 
-      /* Fetch drop stats for generateRecommendations */
-      let dropStats = [];
-      let itemSales = [];
-      let hostPerf = [];
-
-      try {
-        const [dsResult, isResult, hpResult] = await Promise.all([
-          sb.from('v_hearth_drop_stats').select('*').eq('vendor_id', state.vendorId),
-          sb.from('v_item_sales').select('*').eq('vendor_id', state.vendorId),
-          sb.from('v_host_performance').select('*').eq('vendor_id', state.vendorId)
-        ]);
-
-        dropStats = dsResult.data || [];
-        itemSales = isResult.data || [];
-        hostPerf = hpResult.data || [];
-      } catch (e) {
-        console.error('Failed to load intelligence data:', e);
-      }
+      /* Intelligence-view rows are loaded once by loadData() via
+         get-customers-workspace and stashed on state. */
+      const dropStats = state.dropStats;
+      const itemSales = state.itemSales;
+      const hostPerf = state.hostPerf;
 
       if (!dropStats.length && !state.allCustomers.length) {
         grid.innerHTML = '<div class="cu-empty">No specific actions right now. Keep running drops to build your picture.</div>';
