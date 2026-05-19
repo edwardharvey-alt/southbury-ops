@@ -87,7 +87,68 @@ Deno.serve(async (req) => {
       console.error("v_drop_summary lookup failed", summaryError);
     }
 
-    return jsonResponse({ ...data, summary: summary ?? null }, 200);
+    // Operator-read-auth Slice 1: additively return the owned drop's
+    // order pipeline using the same service-role client and the same
+    // resolved, ownership-verified drop_id. Mirrors the v_drop_summary
+    // pattern above — non-fatal on query error so existing consumers
+    // are unaffected.
+    const { data: ordersSummary, error: ordersSummaryError } = await serviceClient
+      .from("v_drop_orders_summary")
+      .select("*")
+      .eq("drop_id", drop_id)
+      .order("created_at", { ascending: true });
+    if (ordersSummaryError) {
+      console.error("v_drop_orders_summary lookup failed", ordersSummaryError);
+    }
+
+    // Replicate the Service Board fallback chain
+    // (v_order_item_detail_expanded -> v_order_item_detail_v2 ->
+    // v_order_item_detail). Use whichever succeeds. All failures
+    // non-fatal: order_items becomes [] and order_items_source null.
+    let orderItems: unknown[] | null = null;
+    let orderItemsSource: "expanded" | "v2" | "legacy" | null = null;
+
+    const expanded = await serviceClient
+      .from("v_order_item_detail_expanded")
+      .select("*")
+      .eq("drop_id", drop_id)
+      .order("created_at", { ascending: true });
+    if (!expanded.error) {
+      orderItems = expanded.data ?? [];
+      orderItemsSource = "expanded";
+    } else {
+      console.error("v_order_item_detail_expanded lookup failed", expanded.error);
+      const v2 = await serviceClient
+        .from("v_order_item_detail_v2")
+        .select("*")
+        .eq("drop_id", drop_id)
+        .order("created_at", { ascending: true });
+      if (!v2.error) {
+        orderItems = v2.data ?? [];
+        orderItemsSource = "v2";
+      } else {
+        console.error("v_order_item_detail_v2 lookup failed", v2.error);
+        const legacy = await serviceClient
+          .from("v_order_item_detail")
+          .select("*")
+          .eq("drop_id", drop_id)
+          .order("created_at", { ascending: true });
+        if (!legacy.error) {
+          orderItems = legacy.data ?? [];
+          orderItemsSource = "legacy";
+        } else {
+          console.error("v_order_item_detail lookup failed", legacy.error);
+        }
+      }
+    }
+
+    return jsonResponse({
+      ...data,
+      summary: summary ?? null,
+      orders_summary: ordersSummary ?? [],
+      order_items: orderItems ?? [],
+      order_items_source: orderItemsSource ?? null,
+    }, 200);
   } catch (err) {
     return jsonResponse({ error: (err as Error).message }, 500);
   }
