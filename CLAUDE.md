@@ -1063,6 +1063,40 @@ on top of the coding rules above.
     `v_products_enriched` as the canary before stepping through
     Tier 0 → Tier 1 → Tier 2+3.
 
+52. **LOAD-BEARING — Operator pages are NOT authenticated at the
+    PostgREST layer.** `supabase-js` with the publishable key does
+    not attach the user JWT to direct table/view reads (the
+    auth-attach bug — operational learnings #12, #13, #14, #16).
+    Operator pages work today only because `v_drop_summary` (and
+    other operator views) remain definer views with anon SELECT
+    granted, and scoping is done client-side via
+    `.eq("vendor_id", state.vendorId)`. The anon role is the
+    actual role on the wire for every "authenticated" operator
+    read. Two hard implications:
+    - **(a) The previously planned `v_drop_summary
+      security_invoker` flip is UNSAFE and is ABANDONED.** Do not
+      attempt it. Flipping a view that the anon role currently
+      reads to invoker filters every operator caller to zero rows
+      — the symptom is silent empty data on every operator page,
+      not an error. Same family as operational learnings #49, #50.
+    - **(b) Closing the `v_drop_summary` cross-vendor exposure
+      requires migrating the operator reads to JWT-authenticated
+      server-side Edge Functions** (canonical pattern: extend
+      `get-drop` / `list-drops` with the summary projection, or
+      build dedicated EFs), THEN `REVOKE SELECT ON
+      v_drop_summary FROM anon`. Any RLS-gated authenticated
+      read must go via `supabase.functions.invoke`, never direct
+      PostgREST.
+    Surfaced concretely during the T5-A3 host-view sub-track
+    build (2026-05-19): `host-view.html`'s direct PostgREST read
+    against `drop_host_tokens` returned empty rows on a freshly
+    JWT-authenticated session for exactly this reason — the JWT
+    was not attached, anon hit the RLS-locked table, and the
+    rows were filtered to zero. Fix was to route via the new
+    JWT-auth `get-drop-host-token` Edge Function. The same
+    lesson applies platform-wide to every operator read
+    currently going via `v_drop_summary` and other definer views.
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -1246,14 +1280,40 @@ authenticated callers. Two patterns are used deliberately:
   auth.uid())`). Applied bottom-up and verified tier by tier
   (see operational learnings #48 and #49 for the dependency-order
   rule).
-- **`v_drop_summary` is deliberately left as a definer view
-  (held).** `host-view.html` reads it directly (anonymous) for
-  host-share / GMV figures; flipping it to invoker is gated on
-  the host-view authorisation sub-track (per-drop opaque host
-  token + Edge Function — canonical secured-read pattern).
+- **`v_drop_summary` remains a definer view (held) and is
+  currently read by the anon role from operator pages.** This
+  is structurally necessary under the auth-attach bug — operator
+  pages are not authenticated at the PostgREST layer (see
+  operational learning #52). The previously planned
+  `security_invoker` flip is ABANDONED — it would silently
+  zero-out every operator page. Closing the cross-vendor
+  exposure requires migrating operator reads to JWT-authenticated
+  Edge Functions and then `REVOKE SELECT ON v_drop_summary FROM
+  anon`. Tracked as the v_drop_summary closure track (see
+  BACKLOG.md).
 - **`order.html` anonymous drop reads use `v_drop_public`**
-  (commit 8d4c63d). `host-view.html` still reads `v_drop_summary`
-  directly until the sub-track lands.
+  (commit 8d4c63d). `host-view.html` no longer reads
+  `v_drop_summary` or `drop_host_tokens` directly — both go
+  through the new token-authenticated `host-view-summary` Edge
+  Function (T5-A3 host-view sub-track, closed 2026-05-19,
+  verified end-to-end on production).
+- **Host-view sub-track Edge Functions (closed 2026-05-19):**
+  - `host-view-summary` — token-authenticated (slug + `&t=`
+    token in query string). Returns an 18-field minimal host
+    projection. NEVER returns `drop_gmv_pence` or raw
+    host-share mechanics; `host_share_descriptor` is built
+    server-side from the underlying mechanics. Returns a
+    uniform `403 {"error":"not_authorised"}` on any failure
+    (bad token, wrong slug, missing drop) so anonymous
+    callers cannot enumerate drops.
+  - `get-drop-host-token` — JWT-authenticated operator EF
+    that mirrors `get-drop`'s auth pattern. Verifies the
+    caller owns the drop's vendor, then returns
+    `{ host_access_token }`. Used by Drop Studio's "Copy
+    host link" action — direct PostgREST against
+    `drop_host_tokens` was returning empty rows under the
+    anon role (RLS rejection), so the token is now fetched
+    through this EF and appended to the host-view URL.
 - **Interim hotfix:** `order.html`'s anonymous `vendors` read was
   narrowed to safe display columns only (commits 390985e,
   65d66c1). Interim until `vendors_select_all` is removed in
@@ -1261,7 +1321,7 @@ authenticated callers. Two patterns are used deliberately:
 
 ## Production mutation/read status
 
-Snapshot of which read/write paths are working in production and which are known broken. Update whenever a PR confirms or breaks a path. Last updated 2026-05-16 after T5-11-minimum shipped (PR #266) — order_confirmed transactional email is the first application-level Resend send in production.
+Snapshot of which read/write paths are working in production and which are known broken. Update whenever a PR confirms or breaks a path. Last updated 2026-05-19 after T5-A3 host-view sub-track closed — `host-view.html` and Drop Studio's host-link builder now route through token-authenticated and JWT-authenticated Edge Functions respectively.
 
 - Customer order placement (orders, order_items, order_item_selections, customers, customer_relationships) — WORKING via `create-order` Edge Function. Atomic write of all five tables, Stripe Connect destination charge created, order starts at `status='pending_payment'` and flips to `'placed'` on webhook receipt. Capacity is reserved during the pending_payment window (Stripe expires_at = 1800s).
 - Stripe webhook handling — WORKING via `stripe-webhook` Edge Function. Handles `checkout.session.completed` (→ placed/paid), `checkout.session.expired` (→ cancelled/expired), `checkout.session.async_payment_failed` (→ cancelled/failed). Endpoint configured at https://tvqhhjvumgumyetvpgid.supabase.co/functions/v1/stripe-webhook (Stripe Dashboard endpoint name: "brilliant-rhythm"). After flipping the order to placed/paid the webhook invokes `send-order-confirmation` (T5-11-minimum) via shared-secret auth; email send is wrapped in try/catch and any failure is logged but never propagated to Stripe so Resend outages cannot cause webhook retries that would re-place the order.
@@ -1283,6 +1343,8 @@ Snapshot of which read/write paths are working in production and which are known
 - Bundles INSERT / UPDATE / DELETE (drop-menu.html) — WORKING via `create-bundle`, `update-bundle`, `delete-bundle`, `duplicate-bundle`, `save-bundle-line`, `delete-bundle-line` Edge Functions. Shipped 2 May 2026 as T5-B16 batch 3 (PR #212). bundle_lines and bundle_line_choice_products writes are covered by the composite `save-bundle-line` and `duplicate-bundle` functions.
 - customer-import.html writes — WORKING via `bulk-create-customers` Edge Function as of 2026-05-15. Anonymous gateway (`verify_jwt = false`), batched email+phone customer lookup, in-memory classification preserving four-way conflict resolution (added / linked / skipped / conflict), per-row writes for createNew (customers INSERT + customer_relationships INSERT) and linkExisting (customer_relationships INSERT + optional customers UPDATE for address backfill), demand breakdown aggregated by outward postcode in the same response. Previously broken end-to-end — both the pre-write reads and the four writes silently failed under RLS because customer-import.html used inline `window.supabase.createClient()` and the publishable-key auth-attach bug never delivered the user JWT to anon-blocked PostgREST endpoints. Closes T-ops-rls-customer-import.
 - Category creation on a fresh vendor — WORKING end-to-end as of 2026-05-03 (closes T5-B23). Verified by logging in as Test 12 and successfully creating Test Category D via the Menu Library; "All changes saved" confirmed. The publishable-key auth-attach bug no longer affects category writes because `create-category`, `update-category`, and `delete-category` all route through Edge Functions (T5-B16 batch 1).
+- Host-view summary read (host-view.html) — WORKING via `host-view-summary` Edge Function as of 2026-05-19. Token-authenticated (slug + `&t=` token in query string), returns an 18-field minimal host projection. Never returns `drop_gmv_pence` or raw host-share mechanics — `host_share_descriptor` is built server-side from the underlying mechanics. Uniform `403 {"error":"not_authorised"}` on any failure (bad token, wrong slug, missing drop) to prevent anonymous enumeration. Replaces the previous direct read of `v_drop_summary` on host-view.html. Closes the host-view authorisation sub-track of T5-A3.
+- Operator host-token fetch (drop-manager.html "Copy host link") — WORKING via `get-drop-host-token` Edge Function as of 2026-05-19. JWT-authenticated (mirrors `get-drop`'s auth pattern), verifies the caller owns the drop's vendor, returns `{ host_access_token }`. Drop Studio's host-link builder appends the returned token to the host-view URL. Previously broken silently — direct PostgREST against `drop_host_tokens` returned empty rows because the anon role hit RLS (see operational learning #52). Part of the T5-A3 host-view sub-track closure.
 
 ## Development backlog
 
@@ -1318,7 +1380,7 @@ T-ops-rls-customer-import closed 2026-05-15: built `bulk-create-customers` Edge 
 
 T5-11-minimum closed 2026-05-16 (parent T5-11 remains partial): built `send-order-confirmation` Edge Function and wired `stripe-webhook` to invoke it after `checkout.session.completed` transitions the order to placed/paid (PR #266). Resend HTTP API called directly with `RESEND_API_KEY`; inter-function call authenticated via shared `INTERNAL_FUNCTION_SECRET` in `X-Internal-Secret` header (`verify_jwt = false` at gateway). Webhook treats every error from the send function as non-fatal — try/catch + return 200 regardless of email outcome — so a Resend outage cannot cause Stripe to retry the webhook and double-place an order. First application-level Resend integration in production. Establishes two reusable patterns documented as operational learnings #46 (application-level Resend) and #47 (inter-Edge-Function shared-secret auth) for future T5-11 triggers (order_ready automated SMS, drop_announced, drop_reminder, drop_early_access, post_drop_thank_you), all of which remain open per pre-launch scope decision. Full closure narrative in BACKLOG.md.
 
-T5-A3 checkpoint 2026-05-18 (in progress, not closed): operator view layer closed — all 34 vendor-scoped `v_*` views set `security_invoker = on`, applied bottom-up (canary `v_products_enriched` → Tier 0 → Tier 1 → Tier 2+3), each tier verified via the authenticated app path. Anonymous customer reads now route through column-safe `v_drop_public` (29 safe columns, status-filtered, granted `anon` + `authenticated`); `order.html` re-pointed in commit 8d4c63d. Interim narrowing of `order.html`'s anonymous `vendors` read landed in commits 390985e + 65d66c1. Section A of the T5-A3 reads audit also corrected stale handover claims: the platform has exactly one anon SELECT policy per table (not six on `drops`; not duplicate policies on `categories` / `products`); duplicate anon SELECT (`qual = true`) policies exist only on `drop_products`; `orders`, `order_items`, `order_item_selections`, `customers`, `customer_relationships` and `hosts` carry NO anon policy (already locked; T5-B39 confirmed), so their operator reads are out of T5-A3 confidentiality scope — their robustness depends on the separate auth-attach workstream, not on any policy T5-A3 changes. Open residuals: host-view authorisation sub-track (per-drop opaque host token + Edge Function before `v_drop_summary` can be flipped to invoker); T5-A3 Priority 2 — remove `vendors_select_all`, gated on remediating the `hearth-vendor.js:33` boot read, then create `v_vendor_public`; two-vendor adversarial isolation test; deferred low-severity catalog anon policies. Full DONE / OPEN narrative in BACKLOG.md.
+T5-A3 checkpoint 2026-05-19 (in progress, not closed): operator view layer closed — all 34 vendor-scoped `v_*` views set `security_invoker = on`, applied bottom-up (canary `v_products_enriched` → Tier 0 → Tier 1 → Tier 2+3), each tier verified via the authenticated app path. Anonymous customer reads now route through column-safe `v_drop_public` (29 safe columns, status-filtered, granted `anon` + `authenticated`); `order.html` re-pointed in commit 8d4c63d. Interim narrowing of `order.html`'s anonymous `vendors` read landed in commits 390985e + 65d66c1. **Host-view authorisation sub-track CLOSED 2026-05-19, verified end-to-end on production:** `host-view.html` no longer reads `v_drop_summary` or `drop_host_tokens` directly. The page now invokes the new token-authenticated `host-view-summary` Edge Function (slug + `&t=` token; 18-field minimal projection; never returns `drop_gmv_pence` or raw host-share mechanics — `host_share_descriptor` is built server-side; uniform `403 {"error":"not_authorised"}` on any failure to prevent enumeration). Drop Studio's "Copy host link" routes through the new JWT-authenticated `get-drop-host-token` EF (mirrors `get-drop`'s auth pattern; verifies caller owns the drop's vendor; returns `{ host_access_token }`) — direct PostgREST against `drop_host_tokens` was returning empty rows because the anon role hit RLS, see operational learning #52. Section A of the T5-A3 reads audit also corrected stale handover claims: the platform has exactly one anon SELECT policy per table (not six on `drops`; not duplicate policies on `categories` / `products`); duplicate anon SELECT (`qual = true`) policies exist only on `drop_products`; `orders`, `order_items`, `order_item_selections`, `customers`, `customer_relationships` and `hosts` carry NO anon policy (already locked; T5-B39 confirmed), so their operator reads are out of T5-A3 confidentiality scope — their robustness depends on the separate auth-attach workstream, not on any policy T5-A3 changes. **Major framing change (2026-05-19):** the planned `v_drop_summary security_invoker` flip is ABANDONED (operational learning #52) — under the auth-attach bug, operator pages read `v_drop_summary` as anon, so the flip would zero out every operator page. The closure of the `v_drop_summary` cross-vendor exposure now requires the JWT-auth EF migration documented in the new ticket T5-A14 (BACKLOG.md). Open residuals: T5-A14 (v_drop_summary closure track — supersedes the abandoned invoker flip); T5-A3 Priority 2 — remove `vendors_select_all`, gated on remediating the `hearth-vendor.js:33` boot read, then create `v_vendor_public`; two-vendor adversarial isolation test; deferred low-severity catalog anon policies. Full DONE / OPEN narrative in BACKLOG.md.
 
 T5-25 Part 0 — SHIPPED (prod, squash commit f95c12c). Vendor Monday
 "reveal" Instagram post asset (auto-generated 1080x1080 card).
@@ -1404,7 +1466,8 @@ BACKLOG.md alongside the ticket specs that depend on them — read there before
 building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 
 ### Tier 5-A — Auth workstream
-- T5-A3 — RLS rewrite: server-side vendor scoping — partial. Operator view layer closed (all 34 `v_*` views set `security_invoker = on`, bottom-up); anon order page re-pointed to `v_drop_public`; interim narrowing of `order.html` anon `vendors` read landed. Host-view authorisation sub-track + Priority 2 (`vendors_select_all` removal + `v_vendor_public`) + two-vendor adversarial isolation test still open. See the "View security model" standing-context section above and the BACKLOG.md T5-A3 DONE / OPEN narrative.
+- T5-A3 — RLS rewrite: server-side vendor scoping — partial. Operator view layer closed (all 34 `v_*` views set `security_invoker = on`, bottom-up); anon order page re-pointed to `v_drop_public`; interim narrowing of `order.html` anon `vendors` read landed; **host-view authorisation sub-track closed 2026-05-19** via the token-auth `host-view-summary` + JWT-auth `get-drop-host-token` Edge Functions, verified end-to-end on production. Priority 2 (`vendors_select_all` removal + `v_vendor_public`) + two-vendor adversarial isolation test still open. The planned `v_drop_summary` invoker flip is abandoned (see operational learning #52); closure now tracked under T5-A14. See the "View security model" standing-context section above and the BACKLOG.md T5-A3 DONE / OPEN narrative.
+- T5-A14 — `v_drop_summary` closure: migrate operator reads from direct PostgREST to JWT-authenticated Edge Functions, then `REVOKE SELECT ON v_drop_summary FROM anon`. Supersedes the abandoned invoker flip (operational learning #52). Five phases — audit operator `v_drop_summary` reads; return summary data via JWT-auth vendor-scoped EFs (prefer extending `get-drop` / `list-drops`); re-point each operator read via `functions.invoke`; revoke anon SELECT; verify. — open
 
 ### Tier 5-B — Platform improvements
 - T5-B5 — Schema cleanup: legacy artefacts and missing constraints — open
@@ -1431,6 +1494,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B37 — save-bundle-line update-path partial-failure note — open
 - T5-B40 — Audit v_*_enriched views for missing columns — open
 - T5-B41 — drop-manager.html enrichHostPreview appends rather than replaces (cosmetic) — open
+- T5-B44 — Publish-validation bug: drops can be published with `orders_close` already in the past, and `orders_close` is not re-derived when the drop date changes — so a drop saved with a future date but a stale `orders_close` is immediately classified as already-closed and disappears from the "Live" filter. No data loss; independent of T5-A3. — open
 
 ### Tier 6 — Production readiness
 - T6-2 — Local development environment — open

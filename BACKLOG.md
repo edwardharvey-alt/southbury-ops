@@ -2511,9 +2511,13 @@ this ticket removes the illegitimate ones.
 
 Reference: full RLS audit performed in session dated 27 April 2026.
 
-[Extension — 2026-05-18 checkpoint] T5-A3 partial. Operator view layer
-closed; `v_drop_public` live; anon `order.html` re-pointed. Host-view
-sub-track + Priority 2 + adversarial isolation test still open.
+[Extension — 2026-05-19 checkpoint] T5-A3 partial. Operator view layer
+closed; `v_drop_public` live; anon `order.html` re-pointed; host-view
+authorisation sub-track CLOSED 2026-05-19 (verified end-to-end on
+production). Priority 2 + adversarial isolation test still open. The
+previously planned `v_drop_summary security_invoker` flip is
+ABANDONED — closure now tracked under T5-A14 (see operational
+learning #52).
 
 T5-A3 DONE:
 
@@ -2532,15 +2536,32 @@ T5-A3 DONE:
   `security_invoker = on`, applied bottom-up (canary
   `v_products_enriched` → Tier 0 → Tier 1 → Tier 2+3), each tier
   verified via the authenticated app path.
+- **Host-view authorisation sub-track CLOSED 2026-05-19, verified
+  end-to-end on production.** Two new Edge Functions:
+  - `host-view-summary` — token-authenticated (slug + `&t=`
+    token in query string). Returns an 18-field minimal host
+    projection. NEVER returns `drop_gmv_pence` or raw
+    host-share mechanics; `host_share_descriptor` is built
+    server-side from the underlying mechanics. Returns a
+    uniform `403 {"error":"not_authorised"}` on any failure
+    (bad token, wrong slug, missing drop) so anonymous
+    callers cannot enumerate drops.
+  - `get-drop-host-token` — JWT-authenticated operator EF
+    mirroring `get-drop`'s auth pattern. Verifies the caller
+    owns the drop's vendor and returns
+    `{ host_access_token }`. Used by Drop Studio's "Copy
+    host link" action — direct PostgREST against
+    `drop_host_tokens` was returning empty rows because the
+    anon role hit RLS (operational learning #52), so the
+    token is now fetched through this EF and appended to the
+    host-view URL.
+  `host-view.html` no longer reads `v_drop_summary` or
+  `drop_host_tokens` directly. Drop Studio's host-link builder
+  now routes via `get-drop-host-token` before producing the
+  share link.
 
 T5-A3 OPEN:
 
-- **Host-view authorisation sub-track:** `host-view.html` reads
-  `v_drop_summary` directly (anonymous) and consumes
-  `drop_gmv_pence` / `host_share_*`. Needs a per-drop opaque host
-  token + Edge Function (canonical secured-read pattern) before
-  `v_drop_summary` can be flipped to invoker. Gates full closure of
-  the `v_drop_summary` anonymous exposure.
 - **Priority 2:** remove `vendors_select_all` (anon SELECT,
   `qual = true`; exposes `stripe_account_id`, `auth_user_id`,
   contact fields). Gated on remediating the `hearth-vendor.js:33`
@@ -2562,6 +2583,12 @@ T5-A3 OPEN:
   - `drop_products` two redundant anon SELECT `true` policies.
   - `vendors` "admin insert" is authenticated `with_check = true`
     (any authenticated user can insert vendor rows).
+- **`v_drop_summary` cross-vendor exposure (now T5-A14):** the
+  previously planned `security_invoker` flip is ABANDONED — under
+  the auth-attach bug, operator pages read `v_drop_summary` as
+  anon, so flipping it to invoker would silently zero out every
+  operator page. Closure now requires the JWT-auth EF migration
+  tracked as T5-A14 below.
 
 Handover prerequisite corrections (T5-A3 Section A): the T5-A3
 handover's policy claims were stale. "`drops` has ~6 anon SELECT
@@ -2655,6 +2682,91 @@ vendor-nav.js script tag and HearthNav calls removed from
 why-hearth.html. Replaced with a simple public nav pattern pointing at
 / (landing), /why-hearth.html, /signup.html and /login.html. Vendor
 slug no longer leaks into URLs unauthenticated visitors see.
+
+T5-A14: `v_drop_summary` closure — migrate operator reads to
+JWT-authenticated Edge Functions, then revoke anon SELECT.
+
+**Status:** Open. Tier 5-A. Supersedes the abandoned
+`v_drop_summary security_invoker` flip — see operational
+learning #52 for the load-bearing reason that flip is unsafe
+under the current auth-attach configuration.
+
+**Background — why the invoker flip is abandoned.** Operator
+pages are not authenticated at the PostgREST layer: `supabase-js`
+with the publishable key does not attach the user JWT to direct
+table/view reads (auth-attach bug — operational learnings #12,
+#13, #14, #16). The anon role is what reaches the database on
+every "authenticated" operator request. Operator pages function
+today only because `v_drop_summary` is a definer view with anon
+SELECT granted, and scoping is done client-side via
+`.eq("vendor_id", state.vendorId)`. Flipping `v_drop_summary` to
+`security_invoker = on` would filter every operator caller to
+zero rows — the symptom is silent empty data on every operator
+page, not an error. Same family as operational learnings #49,
+#50. Confirmed concretely during the T5-A3 host-view sub-track
+build (2026-05-19) when `host-view.html`'s direct PostgREST read
+against `drop_host_tokens` returned zero rows on a freshly
+JWT-authenticated session for exactly this reason.
+
+**Scope — close the `v_drop_summary` cross-vendor exposure by
+removing anon access entirely**, after migrating every legitimate
+operator caller to a JWT-authenticated Edge Function path.
+
+**Five phases:**
+
+1. **Audit operator `v_drop_summary` reads.** Inventory every
+   page and helper that reads `v_drop_summary` (or any direct
+   read that depends on the row set the view exposes).
+   `drop-manager.html`, `service-board.html`, `scorecard.html`,
+   `insights.html`, `home.html` are the obvious suspects.
+   Produce an audit artefact analogous to the T5-A3 reads audit
+   listing every call site, column dependencies, and filter
+   shape.
+2. **Return data via JWT-auth vendor-scoped Edge Functions.**
+   Prefer extending the existing `get-drop` and `list-drops`
+   Edge Functions with the summary projection (drop columns the
+   pages actually consume from `v_drop_summary`) rather than
+   building new EFs. Server verifies caller owns the vendor
+   via `auth.getUser()` + `vendors.auth_user_id` match. Where
+   the summary projection's column set diverges meaningfully
+   from `get-drop` / `list-drops`, a dedicated EF is
+   acceptable.
+3. **Re-point each operator read via `functions.invoke`.** No
+   direct PostgREST reads remain on operator pages for
+   `v_drop_summary`. Page change only — Edge Function bodies
+   from phase 2 land first, deploy verified, then the page
+   rewires merge.
+4. **`REVOKE SELECT ON v_drop_summary FROM anon`.** Done as a
+   single migration after phase 3 has been verified end-to-end
+   in production. The view's definer status is retained — only
+   anon access is removed, so the host-view EF (which still
+   reads `v_drop_summary` server-side under service-role) is
+   unaffected.
+5. **Verify.** Adversarial test against a second vendor
+   confirms operator pages see only their own vendor's drops
+   server-side; anonymous probes against the view itself
+   return permission denied; no operator page regresses.
+
+**Cross-reference:** operational learning #52 (load-bearing
+auth-attach + invoker-flip-abandonment rationale); T5-A3 (parent
+workstream; host-view sub-track is the canonical secured-read
+pattern reference: `host-view-summary` + `get-drop-host-token`
+Edge Functions, closed 2026-05-19); T5-B17 (underlying
+auth-attach bug — out-of-scope here because T5-A14 routes around
+it via EFs rather than fixing it at the client).
+
+**Out of scope:** the auth-attach bug itself (T5-B17). T5-A14
+takes the bug as a given and moves every operator read off the
+anon path. Fixing the bug at the supabase-js layer would, in
+principle, let operator pages read `v_drop_summary` as
+authenticated and make the invoker flip viable again — but that
+fix has not landed and is not on the critical path.
+
+**Priority:** medium-high — full closure of the
+`v_drop_summary` cross-vendor exposure. Not gating real-vendor
+go-live (client-side scoping is in place), but is the largest
+remaining read-side exposure and the natural completion of the
+T5-A3 reads workstream.
 
 ### Tier 5-B — Platform improvements
 
@@ -3733,6 +3845,71 @@ Mirror the T5-B16 sequencing — one function per session is safer than batching
 **Verified:** Test 11 and Catering Direct both open their own vendor-specific connect.stripe.com/express/... dashboard correctly.
 
 **Cross-reference:** Operational learning #17 (both apikey and Authorization headers required for Edge Function calls from operator pages).
+
+### T5-B44 — Publish-validation bug: stale `orders_close` not re-derived when drop date changes
+
+**Status:** Open. Tier 5-B. Independent of T5-A3 / T5-A14. No
+data loss.
+
+**Issue:** Publishing is allowed for drops whose `orders_close`
+timestamp is already in the past, and `orders_close` is not
+re-derived when the drop's date or service window is changed.
+A drop saved with a future drop date but a stale `orders_close`
+(left over from an earlier date that has since been moved) is
+immediately classified as already-closed by downstream filters
+and drops out of the "Live" filter on Drop Studio / service
+board lists. The operator sees a successful save, no error, and
+no published drop in the live list.
+
+**Two distinct gaps:**
+
+1. **Publish-time validation does not check `orders_close`
+   against now().** The publish action (drop status → `live`)
+   should refuse to publish — or warn and require explicit
+   override — when `orders_close <= now()`. Currently silent.
+2. **`orders_close` is not re-derived when the drop date or
+   service window changes.** When the drop date is moved
+   forward, the saved `orders_close` (which was derived from
+   the previous date) is retained verbatim. The two fields
+   drift out of sync and the drop is immediately stale.
+
+**Fix shape (not built):**
+
+- **Validation:** add a publish-time check in `update-drop`
+  (and any other path that transitions to `live`) that
+  rejects with a clear error when `orders_close <= now()`.
+  Decide whether this is a hard refusal or a confirmation
+  step — leaning hard refusal because there is no legitimate
+  reason to publish a drop that is already past its ordering
+  window.
+- **Re-derivation:** decide whether `orders_close` is a
+  derived field (computed from drop date + service window
+  offset on every save) or a stored field that gets re-derived
+  on date change. The cleanest fix is a derived column or a
+  trigger that updates `orders_close` whenever the relevant
+  source fields change. Document the policy explicitly so the
+  next change to drop scheduling does not re-introduce the
+  drift.
+- **Client surface:** Drop Studio should show the
+  `orders_close` value alongside the drop date so the operator
+  can see the relationship; today it is buried.
+
+**Verification:** create a drop with a date in the past
+(impossible via UI but reachable via the schema), edit it to
+move the date forward, save, attempt to publish — current bug
+allows publish but the drop disappears from the live filter.
+After fix, either publish refuses with a clear error, or
+`orders_close` is correctly re-derived and the drop appears in
+the live list.
+
+**Out of scope:** broader drop scheduling refactor (recurring
+drop schedules, multi-window timing). This ticket is the narrow
+publish-validation + re-derivation gap.
+
+**Priority:** medium — surfaces as silent operator confusion
+("I published it, why isn't it live?") and the workaround
+(manually editing `orders_close`) is non-obvious. Bounded
+one-session piece of work.
 
 ### Tier 6 — Production readiness
 
