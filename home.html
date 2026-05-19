@@ -1203,35 +1203,25 @@
         dropsRes,
         productsRes,
         bundlesRes,
-        summaryRes,
-        insightDropsRes,
-        relsRes,
-        ordersRes,
-        itemSalesRes,
-        hostPerfRes
+        homeRes
       ] = await Promise.all([
         (async () => { try { const { data, error } = await sb.functions.invoke('list-drops', { body: {} }); if (error || (data && data.error)) return { data: [] }; return { data: Array.isArray(data) ? data : [] }; } catch(e) { return { data: [] }; } })(),
         sb.from('products').select('*').eq('vendor_id', vendorId),
         sb.from('bundles').select('*').eq('vendor_id', vendorId),
-        (async () => { try { return await sb.from('v_hearth_summary').select('*').eq('vendor_id', vendorId).maybeSingle(); } catch(e) { return { data: null }; } })(),
-        (async () => { try { return await sb.from('v_hearth_drop_stats').select('*').eq('vendor_id', vendorId).order('delivery_start', { ascending: false }); } catch(e) { return { data: [] }; } })(),
-        (async () => { try { return await sb.from('customer_relationships').select('*, customers(name, email, postcode, phone)').eq('owner_id', vendorId).eq('owner_type', 'vendor'); } catch(e) { return { data: [] }; } })(),
-        (async () => { try { const { data: vendorDrops, error } = await sb.functions.invoke('list-drops', { body: {} }); const dropList = (!error && Array.isArray(vendorDrops)) ? vendorDrops : []; const vendorDropIds = dropList.map(d => d.id); if (vendorDropIds.length === 0) return { data: [] }; return await sb.from('orders').select('customer_email, created_at').in('drop_id', vendorDropIds); } catch(e) { return { data: [] }; } })(),
-        (async () => { try { return await sb.from('v_item_sales').select('*').eq('vendor_id', vendorId); } catch(e) { return { data: [] }; } })(),
-        (async () => { try { return await sb.from('v_host_performance').select('*').eq('vendor_id', vendorId); } catch(e) { return { data: [] }; } })()
+        (async () => { try { const { data, error } = await sb.functions.invoke('get-home-dashboard', { body: {} }); if (error || (data && data.error)) return {}; return data || {}; } catch(e) { return {}; } })()
       ]);
 
       state.drops = dropsRes.data || [];
       state.products = productsRes.data || [];
       state.bundles = bundlesRes.data || [];
-      state.summary = summaryRes.data || null;
-      state.insightsDrops = insightDropsRes.data || [];
-      state.itemSales = itemSalesRes.data || [];
-      state.hostPerformance = hostPerfRes.data || [];
+      state.summary = homeRes.hearth_summary || null;
+      state.insightsDrops = homeRes.hearth_drop_stats || [];
+      state.itemSales = homeRes.item_sales || [];
+      state.hostPerformance = homeRes.host_performance || [];
 
       /* Build enriched customer array for segmentation */
-      const rels = relsRes.data || [];
-      const orderRows = ordersRes.data || [];
+      const rels = homeRes.customer_relationships || [];
+      const orderRows = homeRes.orders || [];
       const orderMap = {};
       for (const o of orderRows) {
         const email = (o.customer_email || '').toLowerCase().trim();
