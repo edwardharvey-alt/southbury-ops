@@ -911,7 +911,9 @@
           try {
             this.onUpload(publicUrl);
           } catch (e) {
-            /* caller error — do not roll back UI */
+            // Caller error — do not roll back UI, but surface to console
+            // so a thrown applyPreview / persist path is debuggable.
+            console.error('[HearthPhotoUpload] onUpload callback threw:', e);
           }
         }
       })

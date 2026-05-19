@@ -1315,11 +1315,42 @@
         storagePath: () => `${vendor.slug}/hero`,
         initialUrl: vendor.hero_image_url || null,
         guidanceCopy: "hero",
-        onUpload: (publicUrl) => {
-          byId("vendorHeroImageUrl").value = publicUrl;
-          state.heroDisplayUrl = `${publicUrl}?t=${Date.now()}`;
+        onUpload: async (publicUrl) => {
+          // Storage path is fixed at {slug}/hero with upsert:true, so the
+          // public URL string is byte-identical across uploads. Append a
+          // version query so the persisted URL changes on every upload —
+          // otherwise browsers/CDNs serve the cached old image and the
+          // change is invisible end-to-end.
+          const versionedUrl = publicUrl + (publicUrl.includes('?') ? '&' : '?') + 'v=' + Date.now();
+
+          byId("vendorHeroImageUrl").value = versionedUrl;
+          state.heroDisplayUrl = versionedUrl;
+
+          // Paint the right-hand preview directly — defends against an
+          // applyPreview throw being swallowed by HearthPhotoUpload's
+          // onUpload try/catch.
+          const heroEl = byId("previewHero");
+          if (heroEl) {
+            heroEl.classList.add("hasImage");
+            heroEl.style.backgroundImage = `linear-gradient(135deg, rgba(32,26,18,0.18), rgba(32,26,18,0.34)), url("${versionedUrl}")`;
+          }
           applyPreview();
-          markDirty();
+
+          // Auto-persist, mirroring the logo path.
+          try {
+            const { data: updateData, error: dbError } = await supabase.functions.invoke("update-vendor", {
+              body: { vendor_id: state.vendor.id, fields: { hero_image_url: versionedUrl } }
+            });
+
+            if (dbError) throw dbError;
+            if (!updateData || updateData.error) throw new Error(updateData?.error || "Save failed");
+
+            state.vendor = { ...state.vendor, hero_image_url: versionedUrl };
+            setSaveState("saved");
+            showInlineSuccess("Image uploaded and saved");
+          } catch (err) {
+            showError(err.message || "Image upload failed.");
+          }
         },
         onRemove: () => {
           byId("vendorHeroImageUrl").value = "";
@@ -1383,18 +1414,25 @@
       try {
         const { cleanUrl, displayUrl } = await uploadAsset(file, assetType);
 
-        byId("vendorLogoUrl").value = cleanUrl;
-        state.logoDisplayUrl = displayUrl;
-        updateAssetPreview("logoPreview", displayUrl);
+        // Same cache-bust treatment as the hero path: storage path is
+        // fixed at {slug}/logo with upsert:true, so the public URL is
+        // byte-identical across uploads and browsers cache the old image.
+        // Append a version query to the URL that is both displayed and
+        // persisted so the saved value changes on every upload.
+        const versionedUrl = cleanUrl + (cleanUrl.includes('?') ? '&' : '?') + 'v=' + Date.now();
+
+        byId("vendorLogoUrl").value = versionedUrl;
+        state.logoDisplayUrl = versionedUrl;
+        updateAssetPreview("logoPreview", versionedUrl);
 
         const { data: updateData, error: dbError } = await supabase.functions.invoke("update-vendor", {
-          body: { vendor_id: state.vendor.id, fields: { logo_url: cleanUrl } }
+          body: { vendor_id: state.vendor.id, fields: { logo_url: versionedUrl } }
         });
 
         if (dbError) throw dbError;
         if (!updateData || updateData.error) throw new Error(updateData?.error || "Save failed");
 
-        state.vendor = { ...state.vendor, logo_url: cleanUrl };
+        state.vendor = { ...state.vendor, logo_url: versionedUrl };
 
         statusEl.textContent = "Uploaded";
         statusEl.className = "assetUploadStatus done";
