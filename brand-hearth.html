@@ -1577,8 +1577,8 @@
         body: { status: ['draft'], limit: 1 }
       });
 
-      if (!draftRes.error && Array.isArray(draftRes.data) && draftRes.data.length) {
-        return draftRes.data[0];
+      if (!draftRes.error && Array.isArray(draftRes.data?.drops) && draftRes.data.drops.length) {
+        return draftRes.data.drops[0];
       }
 
       return null;
@@ -1677,7 +1677,7 @@
           body: {}
         });
 
-        const dropCount = (!error && Array.isArray(data)) ? data.length : 0;
+        const dropCount = (!error && Array.isArray(data?.drops)) ? data.drops.length : 0;
         if (dropCount > 0) return;
       } catch (e) {
         return;

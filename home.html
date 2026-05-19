@@ -1205,7 +1205,7 @@
         bundlesRes,
         homeRes
       ] = await Promise.all([
-        (async () => { try { const { data, error } = await sb.functions.invoke('list-drops', { body: {} }); if (error || (data && data.error)) return { data: [] }; return { data: Array.isArray(data) ? data : [] }; } catch(e) { return { data: [] }; } })(),
+        (async () => { try { const { data, error } = await sb.functions.invoke('list-drops', { body: {} }); if (error || (data && data.error)) return { data: [] }; return { data: Array.isArray(data?.drops) ? data.drops : [] }; } catch(e) { return { data: [] }; } })(),
         sb.from('products').select('*').eq('vendor_id', vendorId),
         sb.from('bundles').select('*').eq('vendor_id', vendorId),
         (async () => { try { const { data, error } = await sb.functions.invoke('get-home-dashboard', { body: {} }); if (error || (data && data.error)) return {}; return data || {}; } catch(e) { return {}; } })()
