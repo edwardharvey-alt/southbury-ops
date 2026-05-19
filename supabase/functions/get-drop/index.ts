@@ -69,7 +69,25 @@ Deno.serve(async (req) => {
     if (error) return jsonResponse({ error: error.message }, 500);
     if (!data) return jsonResponse({ error: "Drop not found" }, 404);
 
-    return jsonResponse(data, 200);
+    // T5-A14: additively return the drop's v_drop_summary row,
+    // scoped by the drop_id already resolved and ownership-verified
+    // above. Operator pages currently read v_drop_summary directly
+    // via the anon-effective client (operational learning #52); this
+    // is the secured-read replacement. Full row, not a hand-picked
+    // subset, because all three single-drop callers use select('*')
+    // and a subset risks missing-column regressions. Failures here
+    // are non-fatal — summary becomes null and existing consumers
+    // are unaffected.
+    const { data: summary, error: summaryError } = await serviceClient
+      .from("v_drop_summary")
+      .select("*")
+      .eq("drop_id", drop_id)
+      .maybeSingle();
+    if (summaryError) {
+      console.error("v_drop_summary lookup failed", summaryError);
+    }
+
+    return jsonResponse({ ...data, summary: summary ?? null }, 200);
   } catch (err) {
     return jsonResponse({ error: (err as Error).message }, 500);
   }
