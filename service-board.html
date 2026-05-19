@@ -1709,15 +1709,15 @@
     }
 
     async function loadDrops() {
-      const { data, error } = await supabase
-        .from("v_drop_summary")
-        .select("*")
-        .eq("vendor_id", state.vendorId)
-        .order("delivery_start", { ascending: false });
-
+      // Operator-read-auth: sourced from the list-drops EF's
+      // additive drop_summaries projection (server-side service-role
+      // read of v_drop_summary, ownership enforced by the EF's JWT
+      // check). EF returns rows ordered by delivery_start desc.
+      const { data: invokeData, error } = await supabase.functions.invoke('list-drops', { body: {} });
       if (error) throw error;
+      const data = Array.isArray(invokeData?.drop_summaries) ? invokeData.drop_summaries : [];
 
-      state.drops = data || [];
+      state.drops = data;
 
       const saved = localStorage.getItem("hearth:selectedDropId");
       const savedExists = state.drops.some((d) => d.drop_id === saved);

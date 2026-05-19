@@ -2777,14 +2777,14 @@
     }
 
     async function loadDrops() {
-      const { data, error } = await supabase
-        .from("v_drop_summary")
-        .select("*")
-        .eq("vendor_id", state.vendorId);
-
+      // Operator-read-auth: sourced from the list-drops EF's additive
+      // drop_summaries projection (server-side service-role read of
+      // v_drop_summary, ownership enforced by the EF's JWT check).
+      const { data: invokeData, error } = await supabase.functions.invoke('list-drops', { body: {} });
       if (error) throw error;
+      const data = Array.isArray(invokeData?.drop_summaries) ? invokeData.drop_summaries : [];
 
-      state.drops = (data || []).sort((a, b) => {
+      state.drops = data.sort((a, b) => {
         const statusDiff = getStatusPriority(a.status) - getStatusPriority(b.status);
         if (statusDiff !== 0) return statusDiff;
         const aTime = a.delivery_start ? new Date(a.delivery_start).getTime() : Number.MAX_SAFE_INTEGER;
@@ -5017,8 +5017,9 @@
           body: { host_id: sourceDrop.host_id }
         });
 
-        if (!countError && Array.isArray(hostDrops)) {
-          windowCount = hostDrops.filter((d) => {
+        const hostDropsRows = Array.isArray(hostDrops?.drops) ? hostDrops.drops : [];
+        if (!countError && hostDropsRows.length) {
+          windowCount = hostDropsRows.filter((d) => {
             if (!d.delivery_start) return false;
             const dDate = new Date(d.delivery_start);
             const dDateStr = `${dDate.getFullYear()}-${String(dDate.getMonth() + 1).padStart(2, "0")}-${String(dDate.getDate()).padStart(2, "0")}`;
@@ -5030,8 +5031,9 @@
           body: { host_id: sourceDrop.host_id }
         });
 
-        if (!countError && Array.isArray(hostDrops)) {
-          windowCount = hostDrops.length;
+        const hostDropsRows = Array.isArray(hostDrops?.drops) ? hostDrops.drops : [];
+        if (!countError) {
+          windowCount = hostDropsRows.length;
         }
       }
 
@@ -5212,8 +5214,8 @@
 
         if (error) throw error;
 
-        const data = Array.isArray(invokeData)
-          ? invokeData.filter((d) => d.id !== state.selectedDropId)
+        const data = Array.isArray(invokeData?.drops)
+          ? invokeData.drops.filter((d) => d.id !== state.selectedDropId)
           : [];
 
         if (!data.length) {

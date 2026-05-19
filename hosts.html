@@ -552,16 +552,15 @@
       }
 
       async function loadDropStats(){
-        // v_drop_summary has no RLS — MUST filter by vendor_id to avoid
-        // leaking cross-vendor drops into host stats.
-        const { data, error } = await sb
-          .from('v_drop_summary')
-          .select('drop_id, host_id, order_count')
-          .eq('vendor_id', state.vendorId);
+        // Operator-read-auth: sourced from the list-drops EF's additive
+        // drop_summaries projection (server-side service-role read of
+        // v_drop_summary, ownership enforced by the EF's JWT check).
+        const { data: invokeData, error } = await sb.functions.invoke('list-drops', { body: {} });
         if (error) throw error;
+        const data = Array.isArray(invokeData?.drop_summaries) ? invokeData.drop_summaries : [];
 
         const stats = {};
-        for (const row of data || []){
+        for (const row of data){
           const hostId = row.host_id;
           if (!hostId) continue;
           if (!stats[hostId]) stats[hostId] = { dropCount: 0, totalOrders: 0 };

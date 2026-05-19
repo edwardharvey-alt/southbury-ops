@@ -81,7 +81,26 @@ Deno.serve(async (req) => {
     const { data, error } = await query;
 
     if (error) return jsonResponse({ error: error.message }, 500);
-    return jsonResponse(data ?? [], 200);
+
+    // Additive: per-vendor v_drop_summary projection used by operator
+    // LIST reads (service-board.html, drop-manager.html, hosts.html)
+    // under the operator-read-auth track. Non-fatal — falls back to []
+    // on error so the primary `drops` payload is unaffected.
+    let drop_summaries: unknown[] = [];
+    try {
+      const { data: summaryRows, error: summaryError } = await serviceClient
+        .from("v_drop_summary")
+        .select("*")
+        .eq("vendor_id", vendor.id)
+        .order("delivery_start", { ascending: false });
+      if (!summaryError && Array.isArray(summaryRows)) {
+        drop_summaries = summaryRows;
+      }
+    } catch {
+      drop_summaries = [];
+    }
+
+    return jsonResponse({ drops: data ?? [], drop_summaries }, 200);
   } catch (err) {
     return jsonResponse({ error: (err as Error).message }, 500);
   }
