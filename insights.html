@@ -1049,20 +1049,6 @@
     }
 
 
-    async function fetchAllPages(queryFactory, key='id'){
-      let rows = [];
-      let from = 0;
-      const pageSize = 1000;
-      while (true) {
-        const { data, error } = await queryFactory().range(from, from + pageSize - 1);
-        if (error) throw error;
-        rows = rows.concat(data || []);
-        if (!data || data.length < pageSize) break;
-        from += pageSize;
-      }
-      return rows;
-    }
-
     async function loadData(){
       state.vendor = await window.HearthVendor.resolveVendor(sb);
       if (!state.vendor) {
@@ -1077,31 +1063,15 @@
       const _insSubtitle = document.querySelector('.brandSubtitle');
       if (_insSubtitle && state.vendor.display_name) _insSubtitle.textContent = state.vendor.display_name;
 
-      const vendorId = state.vendorId;
+      const insightsRes = await (async () => { try { const { data, error } = await sb.functions.invoke('get-insights', { body: {} }); if (error || (data && data.error)) return {}; return data || {}; } catch(e) { return {}; } })();
 
-      const [drops, revenue, items, hosts] = await Promise.all([
-        fetchAllPages(() => sb.from('v_hearth_drop_stats').select('*').eq('vendor_id', vendorId).order('delivery_start', { ascending:false })),
-        fetchAllPages(() => sb.from('v_hearth_revenue_over_time').select('*').eq('vendor_id', vendorId).order('order_date', { ascending:true })),
-        fetchAllPages(() => sb.from('v_item_sales').select('*').eq('vendor_id', vendorId)),
-        fetchAllPages(() => sb.from('v_host_performance').select('*').eq('vendor_id', vendorId))
-      ]);
-
-      state.allDrops = drops || [];
-      state.allRevenue = revenue || [];
-      state.allItems = items || [];
-      state.allHosts = hosts || [];
+      state.allDrops = insightsRes.hearth_drop_stats || [];
+      state.allRevenue = insightsRes.hearth_revenue_over_time || [];
+      state.allItems = insightsRes.item_sales || [];
+      state.allHosts = insightsRes.host_performance || [];
+      state.allOrders = insightsRes.orders || [];
 
       state.hostMap = new Map((state.allHosts || []).map(h => [h.host_id || '__none__', h.host_name || 'Direct / no host']));
-
-      const dropIds = state.allDrops.map(d => d.drop_id).filter(Boolean);
-      state.allOrders = dropIds.length
-        ? await fetchAllPages(
-            () => sb.from('orders')
-              .select('id, drop_id, created_at')
-              .in('drop_id', dropIds)
-              .order('created_at', { ascending:true })
-          )
-        : [];
     }
 
     function populateFilters(){
