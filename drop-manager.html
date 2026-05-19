@@ -6363,17 +6363,13 @@
             showError("This drop has no id, so a host link can't be built.");
             return;
           }
-          const { data: tokenRow, error: tokenErr } = await supabase
-            .from("drop_host_tokens")
-            .select("host_access_token")
-            .eq("drop_id", dropId)
-            .maybeSingle();
-          if (tokenErr || !tokenRow || !tokenRow.host_access_token) {
+          const { data: tokenResp, error: tokenErr } = await supabase.functions.invoke("get-drop-host-token", { body: { drop_id: dropId } });
+          if (tokenErr || tokenResp?.error || !tokenResp?.host_access_token) {
             copyHost.disabled = true;
             showError("No host access token is set for this drop, so a host link can't be built.");
             return;
           }
-          const url = `${window.location.origin}/host-view.html?drop=${encodeURIComponent(slug)}&t=${encodeURIComponent(tokenRow.host_access_token)}`;
+          const url = `${window.location.origin}/host-view.html?drop=${encodeURIComponent(slug)}&t=${encodeURIComponent(tokenResp.host_access_token)}`;
           const originalLabel = copyHost.textContent;
           try {
             if (navigator.clipboard && navigator.clipboard.writeText) {
