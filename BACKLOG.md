@@ -2683,90 +2683,156 @@ why-hearth.html. Replaced with a simple public nav pattern pointing at
 / (landing), /why-hearth.html, /signup.html and /login.html. Vendor
 slug no longer leaks into URLs unauthenticated visitors see.
 
-T5-A14: `v_drop_summary` closure — migrate operator reads to
-JWT-authenticated Edge Functions, then revoke anon SELECT.
+operator-read-auth: migrate the entire operator
+order / capacity / production / analytics read surface to
+JWT-authenticated, ownership-verifying Edge Functions; capstone
+revokes anon SELECT on the two still-definer views.
 
-**Status:** Open. Tier 5-A. Supersedes the abandoned
-`v_drop_summary security_invoker` flip — see operational
-learning #52 for the load-bearing reason that flip is unsafe
-under the current auth-attach configuration.
+**Status:** Open (partial). Tier 5-A. **Slice 1 (service-board
+selected-drop pipeline) DONE 2026-05-19.** SUBSUMES the narrow
+T5-A14 (`v_drop_summary`-only migration) — same pattern, same
+EFs, same capstone shape; T5-A14's invoker-flip approach
+remains abandoned per operational learning #52. Load-bearing
+operational learning #53 captures the rationale.
 
-**Background — why the invoker flip is abandoned.** Operator
-pages are not authenticated at the PostgREST layer: `supabase-js`
-with the publishable key does not attach the user JWT to direct
-table/view reads (auth-attach bug — operational learnings #12,
-#13, #14, #16). The anon role is what reaches the database on
-every "authenticated" operator request. Operator pages function
-today only because `v_drop_summary` is a definer view with anon
-SELECT granted, and scoping is done client-side via
-`.eq("vendor_id", state.vendorId)`. Flipping `v_drop_summary` to
-`security_invoker = on` would filter every operator caller to
-zero rows — the symptom is silent empty data on every operator
-page, not an error. Same family as operational learnings #49,
-#50. Confirmed concretely during the T5-A3 host-view sub-track
-build (2026-05-19) when `host-view.html`'s direct PostgREST read
-against `drop_host_tokens` returned zero rows on a freshly
-JWT-authenticated session for exactly this reason.
+**Background — invoker-regression blast radius.** The T5-A3
+`security_invoker` view-layer rollout regressed the entire
+operator order / capacity / production / analytics read
+surface. Twenty `v_*` views derived from the RLS-locked tables
+(`orders`, `order_items`, `order_item_selections`, `customers`,
+`customer_relationships`, `hosts`) are `security_invoker = on`;
+aggregate views layered on them (`v_hearth_summary`,
+`v_item_sales`, `v_hearth_drop_stats`,
+`v_hearth_revenue_over_time`, `v_host_performance`,
+`v_drop_orders_summary`, the `v_order_item_detail*` family)
+inherit the same emptiness transitively. Operator pages are
+anon-at-DB (operational learning #52) so an invoker view over
+RLS-locked base tables returns `[]` to the anon-effective
+publishable-key client — operators silently saw empty Service
+Boards / Insights / Customers / scorecards / home dashboards.
+These views MUST NOT be reverted to definer: that reintroduces
+cross-vendor order / customer-PII exposure, strictly worse than
+the `v_drop_summary` economics case. The views STAY invoker.
+Inventory of record:
+`audit/order-pipeline-reads-2026-05-19.md` (commit 1b60aab).
 
-**Scope — close the `v_drop_summary` cross-vendor exposure by
-removing anon access entirely**, after migrating every legitimate
-operator caller to a JWT-authenticated Edge Function path.
+**Scope.** Close the read-side blast radius by migrating every
+legitimate operator caller to a JWT-authenticated Edge Function
+path; the capstone removes anon SELECT on the two still-definer
+views (`v_drop_summary` and `drop_capacity`) once nothing reads
+them directly.
 
-**Five phases:**
+**Proven pattern (Slice 1 reference, 2026-05-19).**
+(a) Extend the relevant existing EF additively — service-role
+read of the relevant invoker view(s), returned verbatim under
+new top-level keys, ownership already enforced by the EF's
+existing JWT check. The additive deploy is a no-op for current
+callers and ships ahead of the page change.
+(b) Re-point the page to consume the new EF keys; delete the
+direct anon reads, any dead client-side fallback chain (the EF
+replicates the fallback server-side), and the now-redundant
+client-side `vendor_id` assertion (EF enforces ownership
+server-side — its removal is a security improvement).
+(c) **Verify against a drop WITH real orders in real workflow
+states.** Empty test drops mask this exact failure mode because
+`[]` is the symptom. Standing verification-discipline rule for
+any read-path migration against RLS-gated data. Slice 1 fixture:
+drop "Neighbourhood massive"
+(`25e75db9-01bd-4847-bc6c-7f858e216898`), 1 placed + 1
+delivered.
 
-1. **Audit operator `v_drop_summary` reads.** Inventory every
-   page and helper that reads `v_drop_summary` (or any direct
-   read that depends on the row set the view exposes).
-   `drop-manager.html`, `service-board.html`, `scorecard.html`,
-   `insights.html`, `home.html` are the obvious suspects.
-   Produce an audit artefact analogous to the T5-A3 reads audit
-   listing every call site, column dependencies, and filter
-   shape.
-2. **Return data via JWT-auth vendor-scoped Edge Functions.**
-   Prefer extending the existing `get-drop` and `list-drops`
-   Edge Functions with the summary projection (drop columns the
-   pages actually consume from `v_drop_summary`) rather than
-   building new EFs. Server verifies caller owns the vendor
-   via `auth.getUser()` + `vendors.auth_user_id` match. Where
-   the summary projection's column set diverges meaningfully
-   from `get-drop` / `list-drops`, a dedicated EF is
-   acceptable.
-3. **Re-point each operator read via `functions.invoke`.** No
-   direct PostgREST reads remain on operator pages for
-   `v_drop_summary`. Page change only — Edge Function bodies
-   from phase 2 land first, deploy verified, then the page
-   rewires merge.
-4. **`REVOKE SELECT ON v_drop_summary FROM anon`.** Done as a
-   single migration after phase 3 has been verified end-to-end
-   in production. The view's definer status is retained — only
-   anon access is removed, so the host-view EF (which still
-   reads `v_drop_summary` server-side under service-role) is
-   unaffected.
-5. **Verify.** Adversarial test against a second vendor
-   confirms operator pages see only their own vendor's drops
-   server-side; anonymous probes against the view itself
-   return permission denied; no operator page regresses.
+**Sequenced slices:**
 
-**Cross-reference:** operational learning #52 (load-bearing
-auth-attach + invoker-flip-abandonment rationale); T5-A3 (parent
-workstream; host-view sub-track is the canonical secured-read
-pattern reference: `host-view-summary` + `get-drop-host-token`
-Edge Functions, closed 2026-05-19); T5-B17 (underlying
-auth-attach bug — out-of-scope here because T5-A14 routes around
-it via EFs rather than fixing it at the client).
+1. **Slice 1 — Service Board selected-drop pipeline.** ✓ DONE
+   2026-05-19. `get-drop` extended additively (commit 3b064fc
+   added `summary`; commit 9c63c5f added `orders_summary` +
+   `order_items` + `order_items_source` via service-role reads
+   of `v_drop_summary` + `v_drop_orders_summary` + the
+   `v_order_item_detail_expanded` → `_v2` → `_detail` fallback
+   chain). `service-board.html` re-pointed in commit a471990 to
+   consume those keys; the three direct anon reads and the
+   client-side `vendor_id` assertion deleted. Verified
+   end-to-end on production against the "Neighbourhood massive"
+   fixture.
+2. **Slice 2 — Home dashboard.** Build a single
+   `get-home-dashboard` EF that folds the `home.html:1212-1222`
+   cluster (`v_hearth_summary` + `v_hearth_drop_stats` +
+   `customer_relationships` + `orders` + `v_item_sales` +
+   `v_host_performance`, all already in a Promise.all
+   alongside an existing `functions.invoke('list-drops', ...)`).
+   Service-role reads of the invoker views + RLS-locked tables;
+   single response object with one top-level key per data
+   source; page re-pointed; direct anon reads deleted.
+3. **Slice 3 — Scorecard.** Per-drop performance view. Direct
+   anon reads at `scorecard.html:665` (`v_drop_summary`),
+   `:685` (`v_item_sales`), `:686` and `:687` (`orders`). Likely
+   shape: extend `get-drop` further (per-drop scorecard
+   projection) or a dedicated `get-drop-scorecard` EF.
+4. **Slice 4 — Insights.** Multi-view analytics page. Direct
+   anon reads at `insights.html:1083-1086` (`v_hearth_drop_stats`,
+   `v_hearth_revenue_over_time`, `v_item_sales`,
+   `v_host_performance`) and `:1099` (`orders`). Likely shape:
+   a `get-insights` EF (or `list-` family) that returns all
+   five datasets in one round-trip.
+5. **Slice 5 — Customers workspace.** Direct anon reads at
+   `customers.html:731` (`customer_relationships`), `:748`
+   (`orders`), `:830-832` (`v_hearth_drop_stats`, `v_item_sales`,
+   `v_host_performance`). Likely shape: a
+   `get-customers-workspace` or `list-customers` EF.
+6. **Slice 6 — Hosts / Host-profile.** Direct anon reads at
+   `hosts.html:558` (`v_drop_summary`) and `host-profile.html:1057`
+   (`v_drop_summary`). Likely fold-in to `list-hosts` (host stats
+   projection) and `get-host` respectively.
+7. **Slice 7 — Drop Studio single-drop.** Direct anon reads at
+   `drop-manager.html:2722` + `:2947` + `:2960`
+   (`customer_relationships`, `customers` — drives the demand
+   preview loop), `:2781` (`v_drop_summary` LIST), `:3057`
+   (`v_drop_summary` SINGLE). Likely fold-in: SINGLE into
+   `get-drop`; LIST into `list-drops`; the demand-preview reads
+   into a dedicated EF or `get-drop`.
+8. **Slice 8 — Service Board drop-list.** The lone Slice 1
+   leftover at `service-board.html:1713` (`v_drop_summary` LIST
+   scoped by `vendor_id`). Likely fold-in to `list-drops`.
+9. **Capstone — `REVOKE SELECT ... FROM anon`** on
+   `v_drop_summary` (after Slices 2-8 have removed all direct
+   anon reads of it) and an assessment of `drop_capacity` (still
+   definer, derived from `orders`, no known frontend reader —
+   drop / revoke / migrate as appropriate). Adversarial
+   two-vendor isolation test after each phase.
 
-**Out of scope:** the auth-attach bug itself (T5-B17). T5-A14
+Slice ordering is the suggested build order — slices are largely
+independent and may be re-ordered for sequencing convenience.
+The capstone is the only step that strictly depends on every
+prior slice landing.
+
+**Reference:** `audit/order-pipeline-reads-2026-05-19.md`
+(commit 1b60aab) is the inventory of record — 33 in-scope call
+sites across 7 operator HTML files, fold-in candidates flagged.
+The narrower T5-A14 audit
+(`audit/T5-A14-v_drop_summary-reads-2026-05-19.md`) is now a
+sub-slice index inside the larger inventory.
+
+**Cross-reference:** operational learnings #52
+(auth-attach + invoker-flip-abandonment) and #53 (LOAD-BEARING
+invoker-regression blast radius + proven pattern + verification-
+discipline rule); T5-A3 (parent workstream; host-view sub-track
+is an adjacent secured-read pattern reference); T5-B17
+(underlying auth-attach bug — out-of-scope here because the
+track routes around it via EFs rather than fixing it at the
+client).
+
+**Out of scope:** the auth-attach bug itself (T5-B17). The track
 takes the bug as a given and moves every operator read off the
 anon path. Fixing the bug at the supabase-js layer would, in
-principle, let operator pages read `v_drop_summary` as
-authenticated and make the invoker flip viable again — but that
+principle, restore direct PostgREST as a viable path, but that
 fix has not landed and is not on the critical path.
 
-**Priority:** medium-high — full closure of the
-`v_drop_summary` cross-vendor exposure. Not gating real-vendor
-go-live (client-side scoping is in place), but is the largest
-remaining read-side exposure and the natural completion of the
-T5-A3 reads workstream.
+**Priority:** medium-high — closes the full read-side blast
+radius of the T5-A3 view-layer rollout. Not gating real-vendor
+go-live (client-side scoping is in place on the still-definer
+views, and the invoker-regressed surfaces are not the customer
+order path), but is the largest remaining read-side exposure
+and the natural completion of the T5-A3 reads workstream.
 
 ### Tier 5-B — Platform improvements
 

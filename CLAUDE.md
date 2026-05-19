@@ -1097,6 +1097,81 @@ on top of the coding rules above.
     lesson applies platform-wide to every operator read
     currently going via `v_drop_summary` and other definer views.
 
+53. **LOAD-BEARING — the T5-A3 `security_invoker` view-layer
+    rollout regressed the ENTIRE operator order / capacity /
+    production / analytics read surface.** Twenty `v_*` views
+    derived from the RLS-locked tables (`orders`, `order_items`,
+    `order_item_selections`, `customers`,
+    `customer_relationships`, `hosts`) are `security_invoker =
+    on`; plus aggregate views layered on them
+    (`v_hearth_summary`, `v_item_sales`, `v_hearth_drop_stats`,
+    `v_hearth_revenue_over_time`, `v_host_performance`,
+    `v_drop_orders_summary`, the `v_order_item_detail*` family)
+    inherit the same emptiness transitively. Because operator
+    pages are anon-at-DB (operational learning #52), an invoker
+    view over RLS-locked base tables returns `[]` to the
+    anon-effective publishable-key client — operators silently
+    saw empty Service Boards, empty Insights, empty Customers
+    workspaces, empty scorecards, empty home dashboards.
+    Inventory of record:
+    `audit/order-pipeline-reads-2026-05-19.md` (commit 1b60aab).
+
+    **These order-pipeline views MUST NOT be reverted to
+    definer.** Reverting reintroduces cross-vendor order /
+    customer-PII exposure — strictly worse than the
+    `v_drop_summary` economics case, because the surface
+    includes customer email, phone, address, and order
+    contents. The views STAY invoker.
+
+    **Closure = migrate operator reads to JWT-authenticated,
+    ownership-verifying Edge Functions.**
+    `supabase.functions.invoke(...)` attaches the user JWT (the
+    auth-attach bug only affects direct PostgREST). The EF
+    verifies caller ownership via `auth.getUser()` +
+    `vendors.auth_user_id`, then reads the invoker view with a
+    service-role client (which legitimately bypasses RLS), and
+    returns the rows verbatim under additive top-level keys.
+    Pages re-point to consume the EF keys and delete the
+    direct anon reads. The capstone is `REVOKE SELECT ... FROM
+    anon` on the two still-definer views (`v_drop_summary` and
+    `drop_capacity`) once nothing reads them directly.
+
+    **Proven pattern (Slice 1, service-board, 2026-05-19):**
+    (a) extend the relevant existing EF additively — service-
+    role read of the relevant invoker view(s), returned
+    verbatim under new top-level keys, ownership already
+    enforced by the EF's existing JWT check; the additive
+    deploy is a no-op for current callers and ships ahead of
+    the page change;
+    (b) re-point the page to consume the new EF keys and
+    delete the direct anon reads plus any dead client-side
+    fallback chain (the EF replicates the fallback server-
+    side) and the now-redundant client-side `vendor_id`
+    assertion (EF enforces ownership server-side — its removal
+    is a security improvement, not a regression);
+    (c) **verify against a drop WITH real orders in real
+    workflow states.** An empty test drop masks this exact
+    failure mode because `[]` is the symptom — verification on
+    an empty surface proves nothing. This is a standing
+    verification-discipline rule for any read-path migration
+    against RLS-gated data. Slice 1 fixture: drop
+    "Neighbourhood massive"
+    (`25e75db9-01bd-4847-bc6c-7f858e216898`), 1 placed + 1
+    delivered.
+
+    **`drop_capacity`** is the open loose end — it is still
+    definer, is derived from `orders`, and has no known
+    frontend reader. To be assessed (drop, revoke from anon,
+    or migrate) as part of the capstone phase.
+
+    **Workstream framing.** The previously narrow T5-A14
+    (`v_drop_summary`-only migration) is SUBSUMED by this
+    larger operator-read-auth track — same pattern, same EFs
+    (especially `get-drop`), same capstone shape. T5-A14's
+    invoker-flip approach remains abandoned per operational
+    learning #52. See the BACKLOG.md operator-read-auth entry
+    for the sequenced slices.
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -1289,8 +1364,14 @@ authenticated callers. Two patterns are used deliberately:
   zero-out every operator page. Closing the cross-vendor
   exposure requires migrating operator reads to JWT-authenticated
   Edge Functions and then `REVOKE SELECT ON v_drop_summary FROM
-  anon`. Tracked as the v_drop_summary closure track (see
-  BACKLOG.md).
+  anon`. The narrow T5-A14 (`v_drop_summary`-only) ticket is
+  SUBSUMED by the wider **operator-read-auth** track — see
+  operational learning #53 and the BACKLOG.md operator-read-auth
+  entry. Same pattern, same EFs, same capstone.
+- **`drop_capacity`** is the other still-definer view derived
+  from `orders`. No known frontend reader. Open loose end — to
+  be assessed (drop / revoke from anon / migrate) as part of
+  the operator-read-auth capstone.
 - **`order.html` anonymous drop reads use `v_drop_public`**
   (commit 8d4c63d). `host-view.html` no longer reads
   `v_drop_summary` or `drop_host_tokens` directly — both go
@@ -1345,6 +1426,7 @@ Snapshot of which read/write paths are working in production and which are known
 - Category creation on a fresh vendor — WORKING end-to-end as of 2026-05-03 (closes T5-B23). Verified by logging in as Test 12 and successfully creating Test Category D via the Menu Library; "All changes saved" confirmed. The publishable-key auth-attach bug no longer affects category writes because `create-category`, `update-category`, and `delete-category` all route through Edge Functions (T5-B16 batch 1).
 - Host-view summary read (host-view.html) — WORKING via `host-view-summary` Edge Function as of 2026-05-19. Token-authenticated (slug + `&t=` token in query string), returns an 18-field minimal host projection. Never returns `drop_gmv_pence` or raw host-share mechanics — `host_share_descriptor` is built server-side from the underlying mechanics. Uniform `403 {"error":"not_authorised"}` on any failure (bad token, wrong slug, missing drop) to prevent anonymous enumeration. Replaces the previous direct read of `v_drop_summary` on host-view.html. Closes the host-view authorisation sub-track of T5-A3.
 - Operator host-token fetch (drop-manager.html "Copy host link") — WORKING via `get-drop-host-token` Edge Function as of 2026-05-19. JWT-authenticated (mirrors `get-drop`'s auth pattern), verifies the caller owns the drop's vendor, returns `{ host_access_token }`. Drop Studio's host-link builder appends the returned token to the host-view URL. Previously broken silently — direct PostgREST against `drop_host_tokens` returned empty rows because the anon role hit RLS (see operational learning #52). Part of the T5-A3 host-view sub-track closure.
+- Service Board selected-drop pipeline read (service-board.html `loadSelectedDropData`: summary, orders list, and order-item detail for the currently-selected drop) — WORKING via the extended `get-drop` Edge Function as of 2026-05-19 (operator-read-auth Slice 1). `get-drop` was extended additively (commit 3b064fc added the `summary` key; commit 9c63c5f added `orders_summary` + `order_items` + `order_items_source`; both reads use the service-role client against the invoker views, ownership already enforced by `get-drop`'s existing JWT verification). `service-board.html` re-pointed in commit a471990 to consume those keys; the three direct anon reads (`v_drop_summary` single, `v_drop_orders_summary`, the three-step `v_order_item_detail_expanded` → `_v2` → `_detail` fallback) and the client-side `vendor_id` assertion are deleted. Verified end-to-end in production against drop "Neighbourhood massive" (`25e75db9-01bd-4847-bc6c-7f858e216898`, 1 placed + 1 delivered) — verifying on an empty drop would not have exercised the failure mode (see operational learning #53). Previously this read surface was absent from this section — added on 2026-05-19. The vendor-scoped LIST read of `v_drop_summary` at service-board.html line 1713 (`loadDrops`) is intentionally out of scope for Slice 1 and remains a direct anon read; it is folded into a later slice of the operator-read-auth track.
 
 ## Development backlog
 
@@ -1466,8 +1548,8 @@ BACKLOG.md alongside the ticket specs that depend on them — read there before
 building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 
 ### Tier 5-A — Auth workstream
-- T5-A3 — RLS rewrite: server-side vendor scoping — partial. Operator view layer closed (all 34 `v_*` views set `security_invoker = on`, bottom-up); anon order page re-pointed to `v_drop_public`; interim narrowing of `order.html` anon `vendors` read landed; **host-view authorisation sub-track closed 2026-05-19** via the token-auth `host-view-summary` + JWT-auth `get-drop-host-token` Edge Functions, verified end-to-end on production. Priority 2 (`vendors_select_all` removal + `v_vendor_public`) + two-vendor adversarial isolation test still open. The planned `v_drop_summary` invoker flip is abandoned (see operational learning #52); closure now tracked under T5-A14. See the "View security model" standing-context section above and the BACKLOG.md T5-A3 DONE / OPEN narrative.
-- T5-A14 — `v_drop_summary` closure: migrate operator reads from direct PostgREST to JWT-authenticated Edge Functions, then `REVOKE SELECT ON v_drop_summary FROM anon`. Supersedes the abandoned invoker flip (operational learning #52). Five phases — audit operator `v_drop_summary` reads; return summary data via JWT-auth vendor-scoped EFs (prefer extending `get-drop` / `list-drops`); re-point each operator read via `functions.invoke`; revoke anon SELECT; verify. — open
+- T5-A3 — RLS rewrite: server-side vendor scoping — partial. Operator view layer closed (all 34 `v_*` views set `security_invoker = on`, bottom-up); anon order page re-pointed to `v_drop_public`; interim narrowing of `order.html` anon `vendors` read landed; **host-view authorisation sub-track closed 2026-05-19** via the token-auth `host-view-summary` + JWT-auth `get-drop-host-token` Edge Functions, verified end-to-end on production. Priority 2 (`vendors_select_all` removal + `v_vendor_public`) + two-vendor adversarial isolation test still open. The planned `v_drop_summary` invoker flip is abandoned (see operational learning #52); the wider closure of the invoker-regression blast radius across the operator order / capacity / production / analytics surface is now the **operator-read-auth** track (operational learning #53) which subsumes the narrow T5-A14. See the "View security model" standing-context section above and the BACKLOG.md T5-A3 DONE / OPEN narrative.
+- operator-read-auth — consolidated track that SUBSUMES the narrow T5-A14 (`v_drop_summary`-only). Migrate every direct anon read of the order / capacity / production / analytics view surface to JWT-authenticated, ownership-verifying Edge Functions (service-role read of the invoker views, rows returned verbatim under additive top-level keys); capstone = `REVOKE SELECT FROM anon` on the two still-definer views (`v_drop_summary` and `drop_capacity`) once nothing reads them directly. See operational learnings #52 + #53 and the BACKLOG.md operator-read-auth entry for the sequenced slices. **Slice 1 (service-board selected-drop pipeline) DONE 2026-05-19** (commits 3b064fc, 9c63c5f, a471990); remaining slices — home dashboard (fold home.html:1212-1222 into a `get-home-dashboard` EF), scorecard, insights, customers workspace, hosts / host-profile, drop-manager single-drop (folds into `get-drop`); then the capstone. — open
 
 ### Tier 5-B — Platform improvements
 - T5-B5 — Schema cleanup: legacy artefacts and missing constraints — open
