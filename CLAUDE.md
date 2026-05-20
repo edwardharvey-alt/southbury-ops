@@ -1742,6 +1742,8 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T9-8 — Menu suggestion by context — open
 - T9-9 — Drop success prediction: pre-publish confidence scoring — open
 - T9-10 — Cross-vendor pattern intelligence: transferable archetype improvements — open
+- T9-11 — Conversational drop creation: fast-path natural-language input for Drop Studio — open
+- T9-12 — Conversational brand setup: fast-path natural-language input for Brand Hearth — open
 
 ## Future architecture
 
