@@ -3051,17 +3051,15 @@
         return;
       }
 
-      const [dropRes, summaryRes, readinessRes, dropMenuItemsRes, stockRes] = await Promise.all([
+      const [dropRes, readinessRes, dropMenuItemsRes, stockRes] = await Promise.all([
         supabase.functions.invoke("get-drop", { body: { drop_id: state.selectedDropId } })
           .then(({ data, error }) => ({ data: (error || data?.error) ? null : data, error: null })),
-        supabase.from("v_drop_summary").select("*").eq("drop_id", state.selectedDropId).eq("vendor_id", state.vendorId).maybeSingle(),
         supabase.from("v_drop_readiness_v2").select("*").eq("drop_id", state.selectedDropId).maybeSingle(),
         supabase.from("drop_menu_items").select("*").eq("drop_id", state.selectedDropId),
         supabase.from("v_drop_menu_item_stock").select("*").eq("drop_id", state.selectedDropId)
       ]);
 
       if (dropRes.error) throw dropRes.error;
-      if (summaryRes.error) throw summaryRes.error;
       if (readinessRes.error) throw readinessRes.error;
       if (dropMenuItemsRes.error) throw dropMenuItemsRes.error;
       if (stockRes.error) throw stockRes.error;
@@ -3110,7 +3108,7 @@
       }
 
       state.drop = dropRes.data;
-      state.selectedDropSummary = summaryRes.data;
+      state.selectedDropSummary = dropRes.data?.summary || null;
       state.readiness = readinessRes.data;
       state.dropMenuItems = dropMenuItemsRes.data || [];
       state.dropMenuItemStock = stockRes.data || [];

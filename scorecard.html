@@ -660,21 +660,19 @@
       }
       state.vendorId = state.vendor.id;
 
-      /* Fetch drop summary */
-      const { data: dropData, error: dropErr } = await sb
-        .from('v_drop_summary')
-        .select('*')
-        .eq('drop_id', dropId)
-        .maybeSingle();
+      /* Fetch drop summary via the get-drop EF — operator-read-auth
+         mop-up. The EF resolves the drop, verifies the caller owns
+         the vendor via JWT, and additively returns the
+         v_drop_summary row under `summary`. Replaces the direct
+         anon-effective read of v_drop_summary. */
+      const { data: invokeData, error: dropErr } = await sb.functions.invoke('get-drop', {
+        body: { drop_id: dropId }
+      });
+      const efError = dropErr || invokeData?.error || null;
+      const dropData = efError ? null : (invokeData?.summary || null);
 
-      if (dropErr || !dropData) {
+      if (efError || !dropData) {
         showError('Drop not found or could not be loaded.');
-        return false;
-      }
-
-      /* Verify drop belongs to this vendor */
-      if (dropData.vendor_id !== state.vendorId) {
-        showError('This drop does not belong to your vendor account.');
         return false;
       }
 

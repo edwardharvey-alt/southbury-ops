@@ -1053,23 +1053,22 @@
         content.innerHTML = '<p class="historyEmpty">Loading drop history\u2026</p>';
 
         try {
-          var result = await _sb
-            .from("v_drop_summary")
-            .select("*")
-            .eq("vendor_id", state.vendorId)
-            .eq("host_id", state.hostId);
+          /* Operator-read-auth mop-up: source the vendor's drop
+             summaries via the list-drops EF (JWT-auth, vendor_id
+             scoped server-side). drop_summaries is the v_drop_summary
+             projection; we narrow to this host client-side. */
+          var invokeRes = await _sb.functions.invoke("list-drops", {
+            body: { host_id: state.hostId }
+          });
+          if (invokeRes.error) throw invokeRes.error;
+          if (invokeRes.data && invokeRes.data.error) throw new Error(invokeRes.data.error);
 
-          if (result.error) {
-            /* NOTE: v_drop_summary may not include host_id column yet.
-               If the error mentions an unknown column, surface a clear message. */
-            if (result.error.message && result.error.message.indexOf("host_id") !== -1) {
-              content.innerHTML = '<p class="historyEmpty">Drop history by host is not yet available.</p>';
-              return;
-            }
-            throw result.error;
-          }
-
-          var drops = result.data || [];
+          var allSummaries = Array.isArray(invokeRes.data && invokeRes.data.drop_summaries)
+            ? invokeRes.data.drop_summaries
+            : [];
+          var drops = allSummaries.filter(function (d) {
+            return d && d.host_id === state.hostId;
+          });
 
           if (!drops.length) {
             content.innerHTML = '<p class="historyEmpty">No drops yet at this host. Once you\'ve run a drop here, results will appear.</p>';
