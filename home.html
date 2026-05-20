@@ -896,7 +896,6 @@
       <section class="home-card home-pad-lg">
         <div style="font-family:'Cormorant Garamond',serif; font-size:13px; color:var(--home-muted); font-weight:400; margin:0 0 10px 0; text-transform:none; letter-spacing:normal;">Planned food moments, shared locally.</div>
         <h1 id="heroVendorHeadline" style="font-family:'Cormorant Garamond',serif; font-size:36px; font-weight:400; letter-spacing:-0.03em; margin:0;">Loading…</h1>
-        <p id="heroVendorTagline" style="font-family:'Figtree',sans-serif; font-size:14px; color:var(--home-muted); margin:6px 0 0 0; display:none;"></p>
 
         <div class="home-heroActions" style="margin-top:18px;">
           <a class="home-button" id="primaryCta" href="./drop-manager.html">Create next drop</a>
@@ -906,9 +905,9 @@
 
         <div class="home-miniStats">
           <div class="home-miniStat">
-            <div class="home-miniLabel">Workspace</div>
-            <div class="home-miniValue" id="heroVendorName">Loading…</div>
-            <div class="home-miniMeta" id="heroVendorMeta">Vendor identity and workspace context</div>
+            <div class="home-miniLabel">Drops run</div>
+            <div class="home-miniValue" id="heroDropsRun">—</div>
+            <div class="home-miniMeta" id="heroDropsRunMeta">Loading…</div>
           </div>
           <div class="home-miniStat">
             <div class="home-miniLabel">Current status</div>
@@ -1188,19 +1187,8 @@
 
       document.getElementById('topVendorSub').textContent = vendorName;
       document.getElementById('heroVendorHeadline').textContent = vendorName;
-      document.getElementById('heroVendorName').textContent = vendorName;
-      document.getElementById('heroVendorMeta').textContent =
-        state.vendor.tagline || 'Vendor-first workspace powered by Hearth';
-
-      const taglineEl = document.getElementById('heroVendorTagline');
-      const tagline = (state.vendor.tagline || '').trim();
-      if (tagline){
-        taglineEl.textContent = tagline;
-        taglineEl.style.display = '';
-      } else {
-        taglineEl.style.display = 'none';
-      }
-
+      document.getElementById('heroDropsRun').textContent = fmtNum(state.drops.length);
+      document.getElementById('heroDropsRunMeta').textContent = 'Your Hearth drop history';
       const model = getStatusModel();
       document.getElementById('heroStatus').textContent = model.label;
       document.getElementById('heroStatusMeta').textContent = model.meta;
