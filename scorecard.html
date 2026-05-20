@@ -678,17 +678,20 @@
 
       state.drop = dropData;
 
-      /* Fetch item sales and orders in parallel */
-      const [itemSalesRes, ordersRes, allOrdersRes] = await Promise.all([
-        sb.from('v_item_sales').select('*').eq('drop_id', dropId),
-        sb.from('orders').select('customer_email, drop_id').eq('drop_id', dropId),
-        sb.from('orders').select('customer_email, drop_id').eq('vendor_id', state.vendorId)
-      ]);
-
-      state.itemSales = itemSalesRes.data || [];
+      /* Operator-read-auth Slice 7a: drop-scoped item sales and
+         drop-scoped orders now come back additively on the same
+         get-drop invoke above. Only the vendor-wide orders read
+         (used to identify prior customers across the vendor's
+         drop history) remains a direct read — folded into a
+         later slice. */
+      state.itemSales = Array.isArray(invokeData?.item_sales) ? invokeData.item_sales : [];
 
       /* Determine new vs returning customers */
-      const dropOrders = ordersRes.data || [];
+      const dropOrders = Array.isArray(invokeData?.drop_orders) ? invokeData.drop_orders : [];
+      const allOrdersRes = await sb
+        .from('orders')
+        .select('customer_email, drop_id')
+        .eq('vendor_id', state.vendorId);
       const allOrders = allOrdersRes.data || [];
 
       if (dropOrders.length > 0) {

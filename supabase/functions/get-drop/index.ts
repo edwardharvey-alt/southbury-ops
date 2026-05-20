@@ -142,12 +142,43 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Operator-read-auth Slice 7a: additively return the owned drop's
+    // item sales and drop-scoped orders for the Scorecard. Same
+    // service-role client and same resolved, ownership-verified
+    // drop_id. Non-fatal on query error so existing consumers are
+    // unaffected.
+    let itemSales: unknown[] = [];
+    try {
+      const { data: itemSalesData, error: itemSalesError } = await serviceClient
+        .from("v_item_sales")
+        .select("*")
+        .eq("drop_id", drop_id);
+      if (!itemSalesError && Array.isArray(itemSalesData)) itemSales = itemSalesData;
+      if (itemSalesError) console.error("v_item_sales lookup failed", itemSalesError);
+    } catch (e) {
+      console.error("v_item_sales threw", e);
+    }
+
+    let dropOrders: unknown[] = [];
+    try {
+      const { data: dropOrdersData, error: dropOrdersError } = await serviceClient
+        .from("orders")
+        .select("*")
+        .eq("drop_id", drop_id);
+      if (!dropOrdersError && Array.isArray(dropOrdersData)) dropOrders = dropOrdersData;
+      if (dropOrdersError) console.error("orders by drop_id lookup failed", dropOrdersError);
+    } catch (e) {
+      console.error("orders by drop_id threw", e);
+    }
+
     return jsonResponse({
       ...data,
       summary: summary ?? null,
       orders_summary: ordersSummary ?? [],
       order_items: orderItems ?? [],
       order_items_source: orderItemsSource ?? null,
+      item_sales: itemSales,
+      drop_orders: dropOrders,
     }, 200);
   } catch (err) {
     return jsonResponse({ error: (err as Error).message }, 500);
