@@ -177,29 +177,51 @@ Deno.serve(async (req) => {
     // tightening vs the previous direct vendor-wide orders read on
     // scorecard.html. Non-fatal on failure: counts default to 0 and
     // customer_data_available stays false so consumers degrade quietly.
+    //
+    // Vendor's other drop IDs — orders has no vendor_id column, so vendor
+    // scope must come through drops. This mirrors get-customers-workspace
+    // and get-home-dashboard's pattern.
+    let otherDropIds: string[] = [];
+    try {
+      const { data: vendorDrops, error: dropsErr } = await serviceClient
+        .from("drops")
+        .select("id")
+        .eq("vendor_id", vendor.id)
+        .neq("id", drop_id);
+      if (!dropsErr && Array.isArray(vendorDrops)) {
+        otherDropIds = vendorDrops.map((d: any) => d.id);
+      } else if (dropsErr) {
+        console.error("[get-drop] vendor drops fetch failed:", dropsErr);
+      }
+    } catch (e) {
+      console.error("[get-drop] vendor drops fetch threw:", e);
+    }
+
     let newCustomers = 0;
     let returningCustomers = 0;
     let customerDataAvailable = false;
     try {
-      const { data: otherEmails, error: otherErr } = await serviceClient
-        .from("orders")
-        .select("customer_email")
-        .eq("vendor_id", vendor.id)
-        .neq("drop_id", drop_id);
-      if (!otherErr && Array.isArray(otherEmails)) {
-        const priorSet = new Set(
-          otherEmails.map((r: any) => r.customer_email).filter(Boolean)
-        );
-        const thisEmails = new Set(
-          (dropOrders as any[]).map((o: any) => o.customer_email).filter(Boolean)
-        );
-        customerDataAvailable = thisEmails.size > 0;
-        for (const email of thisEmails) {
-          if (priorSet.has(email)) returningCustomers++;
-          else newCustomers++;
+      let priorSet = new Set<string>();
+      if (otherDropIds.length > 0) {
+        const { data: otherEmails, error: otherErr } = await serviceClient
+          .from("orders")
+          .select("customer_email")
+          .in("drop_id", otherDropIds);
+        if (!otherErr && Array.isArray(otherEmails)) {
+          priorSet = new Set(
+            otherEmails.map((r: any) => r.customer_email).filter(Boolean)
+          );
+        } else if (otherErr) {
+          console.error("prior-customers lookup failed", otherErr);
         }
-      } else if (otherErr) {
-        console.error("prior-customers lookup failed", otherErr);
+      }
+      const thisEmails = new Set(
+        (dropOrders as any[]).map((o: any) => o.customer_email).filter(Boolean)
+      );
+      customerDataAvailable = thisEmails.size > 0;
+      for (const email of thisEmails) {
+        if (priorSet.has(email)) returningCustomers++;
+        else newCustomers++;
       }
     } catch (e) {
       console.error("[get-drop] prior-customers compute threw:", e);
