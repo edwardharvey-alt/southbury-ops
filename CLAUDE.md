@@ -1202,37 +1202,55 @@ on top of the coding rules above.
     spell out the verification SQL in the PR description and
     have the developer run it before merging.
 
-55. **LOAD-BEARING — Cartesian fan-out in views.** A view that
-    LEFT JOINs one parent row to two or more independent child
-    tables and then SUM()s across the result multiplies each
-    child's sum by the other child's row count. Regression:
-    v_drop_orders_summary joined orders→order_items AND
-    orders→v_order_item_detail_expanded, inflating Service Board
-    UNITS/TOTAL and the hero Revenue headline by each order's
-    line-item count (a real £157.50 order showed as £945), fixed
-    2026-05-19. Pattern: pre-aggregate each child to one row per
-    join key in its own CTE/subquery, then LEFT JOIN the rollups
-    1:1 — never SUM across multiple un-collapsed child joins in
-    one query. Binds the REVOKE capstone and all future view
-    authoring.
-
-56. **LOAD-BEARING — discount-blind revenue.** Revenue/GMV
-    recomputed from order_items (qty × price_pence) ignores
-    orders.discount_pence and overstates by total discounts
-    applied. The only discount-correct order total is
-    orders.total_pence (written post-discount by create-order).
-    v_order_item_enriched.revenue_pence and
-    v_drop_fundraising_summary.drop_gmv_pence are both gross, so
-    Home/Insights revenue, v_item_sales, v_host_performance and
-    percentage-based fundraising/host-share are overstated by
-    total discounts (small now, scales with discount usage).
-    Service Board total was switched to orders.total_pence on
-    2026-05-19; the v_hearth_*/GMV family was NOT fixed —
-    tracked follow-up below, with an open commercial decision on
-    whether fundraising/host-share % is computed on gross GMV or
-    net-of-discount revenue. Any revenue-bearing view/select
-    must use orders.total_pence or explicitly net out
-    discount_pence.
+55. **LOAD-BEARING — orders.total_pence is the only source of
+    truth for what was charged.** Recomputing per-order revenue
+    from order_items (sum(qty * price_pence)) carries THREE
+    distinct correctness defects, all surfaced together in the
+    May 2026 reporting pass:
+    (1) Cartesian fan-out. A view that LEFT JOINs one parent row
+    to two or more independent child tables and then SUM()s
+    across the result multiplies each child's sum by the other
+    child's row count. Regression: v_drop_orders_summary joined
+    orders→order_items AND orders→v_order_item_detail_expanded,
+    inflating Service Board UNITS/TOTAL and the hero Revenue
+    headline by each order's line-item count (a real £157.50
+    order showed as £945). Fixed 2026-05-19 by pre-aggregating
+    each child to one row per join key in its own CTE before
+    joining 1:1. Pattern: never SUM across multiple
+    un-collapsed child joins in one query.
+    (2) Discount-blindness. order_items.price_pence is the
+    pre-discount unit price; sum(qty * price_pence) ignores
+    orders.discount_pence and overstates by the total discounts
+    applied. Fixed 2026-05-20 by switching
+    v_hearth_drop_stats.revenue_pence and
+    v_drop_fundraising_summary.drop_gmv_pence (plus the
+    percentage-based fundraising_total_pence and
+    host_share_total_pence calcs) to derive from
+    sum(orders.total_pence). Commercial policy locked:
+    fundraising and host-share percentages compute on
+    net-of-discount revenue, not gross GMV — vendors retain a
+    share of what they actually earn.
+    (3) Bundle-revenue-loss. order_items rows for bundles have
+    price_pence = NULL (the price lives on the bundle, not the
+    line); qty * NULL = NULL and silently drops out of the sum.
+    Any per-order revenue computed from order_items.price_pence
+    systematically under-counts bundle sales. Verified:
+    switching v_hearth_drop_stats.revenue_pence to
+    sum(orders.total_pence) moved Healthy Habits Cafe's 30-day
+    revenue UP by ~£6.80 net of known discounts — that's bundle
+    revenue that had been invisible.
+    The unified rule: any revenue-bearing view, Edge Function,
+    or select expression must derive per-order revenue from
+    orders.total_pence (the post-discount, bundle-inclusive
+    amount create-order wrote to the row) or explicitly net and
+    bundle-correct in another way. Per-item revenue
+    (v_order_item_enriched.revenue_pence,
+    v_item_sales.revenue_pence) is deliberately left gross and
+    bundle-blind for now — line-level "what did this product
+    sell for at list price" is a defensible product-performance
+    number; revisit only if a per-item net or bundle-inclusive
+    reporting need emerges. Binds the REVOKE capstone and all
+    future view authoring.
 
 ## Edge Function secrets
 
@@ -1468,14 +1486,20 @@ authenticated callers. Two patterns are used deliberately:
   operational learning #54 (regression: commit 69b1651 took
   `order.html?drop=…` hard-down for 24h with two phantom
   columns).
-- **Cartesian fan-out + discount-blind revenue.** Two
-  view-authoring traps that bind the REVOKE capstone and every
-  future read-path migration: never SUM across two un-collapsed
-  child LEFT JOINs in one query (operational learning #55), and
-  never recompute revenue from `order_items` — only
-  `orders.total_pence` is discount-correct (operational learning
-  #56). The v_hearth_*/GMV family is still discount-blind; see
-  the revenue-discount residual in BACKLOG.md.
+- **orders.total_pence is the only source of truth for what was
+  charged.** Three distinct correctness defects collapse into one
+  rule (operational learning #55): Cartesian fan-out when SUM()ing
+  across multiple un-collapsed child LEFT JOINs; discount-blindness
+  when recomputing revenue from `order_items.price_pence` (ignores
+  `orders.discount_pence`); and bundle-revenue-loss because bundle
+  line `price_pence` is NULL (`qty * NULL` drops silently from the
+  sum). The unified rule: derive per-order revenue from
+  `orders.total_pence` (post-discount, bundle-inclusive) or
+  explicitly net and bundle-correct in another way. The
+  v_hearth_drop_stats + v_drop_fundraising_summary DDL rewrites
+  (2026-05-20) closed the GMV/fundraising family; per-item revenue
+  is deliberately left gross. Binds the REVOKE capstone and all
+  future view authoring.
 
 ## Production mutation/read status
 

@@ -2834,36 +2834,49 @@ views, and the invoker-regressed surfaces are not the customer
 order path), but is the largest remaining read-side exposure
 and the natural completion of the T5-A3 reads workstream.
 
-Revenue discount-blindness — net-of-discount correctness pass
+Revenue discount-blindness — net-of-discount correctness pass ✓ COMPLETE 2026-05-20
 
-**Status:** Open. Surfaced 2026-05-19 alongside the Cartesian
-fan-out fix on `v_drop_orders_summary`. Cross-reference:
-operational learning #56 (LOAD-BEARING — discount-blind revenue).
+Fixed in `v_hearth_drop_stats` + `v_drop_fundraising_summary` DDL
+rewrites; net-revenue commercial policy locked; per-item revenue
+deliberately left gross. Cross-reference: operational learning #55
+(LOAD-BEARING — orders.total_pence is the only source of truth for
+what was charged) which absorbed the three defects — Cartesian
+fan-out, discount-blindness, and bundle-revenue-loss — into a
+single rule. Verification: switching
+`v_hearth_drop_stats.revenue_pence` to `sum(orders.total_pence)`
+moved Healthy Habits Cafe's 30-day revenue UP by ~£6.80 net of
+known discounts (bundle revenue that had been invisible because
+`order_items.price_pence` is NULL for bundle lines).
 
-`v_order_item_enriched.revenue_pence` and
-`v_drop_fundraising_summary.drop_gmv_pence` both recompute
-revenue/GMV from `order_items` (`qty × price_pence`) and ignore
-`orders.discount_pence`. Every downstream consumer of those
-columns is therefore overstated by the total discounts applied:
-Home/Insights revenue, `v_item_sales`, `v_host_performance`, and
-any percentage-based fundraising/host-share calculation that
-runs against `drop_gmv_pence`. Service Board total was switched
-to `orders.total_pence` on 2026-05-19 and is correct; the
-`v_hearth_*`/GMV family was NOT fixed in that pass.
+Operator-read-auth mop-up — v_drop_summary SINGLE-read fold-ins
 
-**Scope.** Audit every revenue-bearing view and select to ensure
-it either reads `orders.total_pence` directly or explicitly nets
-`order_items` totals against `orders.discount_pence`. Open
-commercial decision: whether fundraising/host-share percentages
-are computed on gross GMV (the volume the host delivered) or
-net-of-discount revenue (what actually settled). Document the
-choice before fixing the views — it is not a pure engineering
-call.
+**Status:** Open. The remaining direct anon reads of
+`v_drop_summary` that the larger operator-read-auth slices don't
+already cover, queued ahead of the REVOKE capstone:
+- `scorecard.html:665` (v_drop_summary SINGLE) → fold into
+  `get-drop` summary projection (overlaps Slice 3).
+- `drop-manager.html:3057` (v_drop_summary SINGLE) → fold into
+  `get-drop` summary projection (overlaps Slice 7 SINGLE).
+- `host-profile.html:1057` (v_drop_summary) → fold into `get-host`
+  (overlaps Slice 6).
+- `drop-manager.html:2722` + `:2947` + `:2960` demand-preview
+  reads (`customer_relationships`, `customers`) — dedicated EF or
+  fold into `get-drop` (overlaps Slice 7 demand-preview).
 
-**Priority:** ahead of operator-read-auth mop-up. Small absolute
-error today (discount usage is low) but scales linearly with
-discount usage and corrupts the analytics surface in a way that
-is hard to reconcile after the fact.
+Then **REVOKE capstone** — `REVOKE SELECT ON v_drop_summary FROM
+anon` once nothing reads it directly, plus the `drop_capacity`
+assessment.
+
+Governed by operational learning #54 (every narrowed column list
+validated against `information_schema.columns` on the live DB
+before merge — SCHEMA.md is orientation, not adjudication) and
+the orders.total_pence rule above (operational learning #55) —
+any revenue-bearing EF projection must derive per-order revenue
+from `orders.total_pence`.
+
+**Priority:** queued after the larger operator-read-auth slices
+land. The fold-ins above are the natural completion before the
+REVOKE flips on.
 
 SCHEMA.md ↔ live information_schema reconciliation
 
