@@ -1087,8 +1087,7 @@
 
           var rowsHtml = drops.map(function (d) {
             var orders = Number(d.order_count || 0);
-            /* total_revenue_pence is the field name in v_drop_summary */
-            var revPence = Number(d.total_revenue_pence || d.revenue_pence || 0);
+            var revPence = Number(d.drop_gmv_pence || 0);
             var capTotal = Number(d.capacity_units_total || 0);
             var capUsed = Number(d.capacity_units_used || 0);
             var fill = capTotal > 0 ? Math.round((capUsed / capTotal) * 100) : 0;

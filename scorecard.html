@@ -744,7 +744,7 @@
         capacity_units_used: capacityUsed,
         capacity_utilisation_pct: utilPct,
         order_count: Number(drop.order_count || 0),
-        total_revenue_pence: Number(drop.total_revenue_pence || 0)
+        drop_gmv_pence: Number(drop.drop_gmv_pence || 0)
       };
 
       return true;
@@ -767,7 +767,7 @@
       const capacityUsed = stats.capacity_units_used;
       const orderCount = stats.order_count;
       const fillPct = stats.capacity_utilisation_pct;
-      const revenuePence = stats.total_revenue_pence;
+      const revenuePence = stats.drop_gmv_pence;
 
       document.getElementById('statOrders').textContent = `${fmtNum(orderCount)} / ${fmtNum(capacityTotal)}`;
       document.getElementById('statOrdersMeta').textContent = `${fmtNum(orderCount)} orders placed`;
