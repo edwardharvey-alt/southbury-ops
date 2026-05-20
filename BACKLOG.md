@@ -1434,35 +1434,192 @@ with name and email. Writes to customer_relationships with source =
 interest. Vendor sees interest count in Drop Studio labelled "Signals
 building". Dependency: T3-9.
 
-### GenAI use cases — shared principles
+## Hearth AI Strategy
 
-Five confirmed GenAI use cases are planned across the platform. All follow the same architectural pattern and must observe the hard rules below.
+### Why AI is central to Hearth's competitive position
 
-**The five use cases**
+Hearth's structural advantage over aggregators is that it returns the
+customer relationship to the vendor. Every order through Hearth builds
+something the vendor owns: a named, located, opted-in customer who can
+be reached again. That owned asset is the moat.
 
-| Entry | Use case | When it fires | Where | Model |
-|---|---|---|---|---|
-| T4-33 | Brand copy generation | Post-onboarding, on demand | Client-side | Haiku 4.5 |
-| T5-9 | Recommendation copy | Nightly pre-compute | Edge Function / Batch API | Haiku 4.5 |
-| T5-11 | Email body copy | Event-triggered | Edge Function | Haiku 4.5 |
-| T5-25 | Social copy generator | On demand, drop published | Client-side | Haiku 4.5 |
-| T5-26 | Host introduction copy | On demand, vendor-triggered | Client-side | Haiku 4.5 |
+AI is what makes that moat compound. Without an intelligence layer,
+customer data is just a list. With one, it becomes a demand engine —
+telling vendors where to drop next, which customers to reach, which
+menu items to lead with, when their cadence is drifting, and what their
+next eight drops should look like. An aggregator cannot offer this
+because they own the customer relationship and will never return it.
+Hearth can offer it precisely because it does.
 
-Haiku 4.5 is the default for all five. Sonnet 4.6 is only worth considering if copy quality is demonstrably flat after real vendor testing. Opus is not appropriate for any of these use cases.
+The strategic framing: **Hearth is not an AI platform. It is a platform
+that uses AI to make vendors significantly smarter than they could be
+alone.** That distinction protects the brand (no AI-for-its-own-sake
+features) and sharpens the product (every AI surface must answer a
+question a vendor actually has).
 
-**Hard rules — apply to every GenAI call across the platform**
+The compounding principle: **every drop should make the platform smarter,
+not just bigger.** A vendor on their tenth drop should have materially
+better guidance than on their first — not because the UI changed, but
+because the system has learned their customers, their geography, their
+capacity patterns, and their best-performing menu items. This is
+Hearth's answer to "why not just use a spreadsheet."
 
-- SQL and structured data own the facts. Prices, times, order counts, fill rates, references, and postcodes are always passed as structured data and rendered deterministically. They are never left to the model to recall, infer, or generate. A model hallucinating an order total or a wrong collection time inside copy is a trust-destroying failure.
-- LLM owns the framing only. The model's job is to turn structured signal data into plain-English copy that matches vendor voice and Hearth tone. Nothing more.
-- System prompts explaining Hearth's vocabulary, tone, and the vendor's archetype are fixed per call type and should be prompt-cached. Variable signal data goes in the user message. This reduces cost and latency on every subsequent call.
-- Client-side calls (T4-33, T5-25, T5-26) use the existing Anthropic API pattern established in the platform. The API key is handled by the infrastructure — do not expose it in client code.
-- Server-side calls (T5-9, T5-11) run inside Supabase Edge Functions. The Anthropic API key lives in Supabase secrets alongside STRIPE_SECRET_KEY and Postmark credentials.
-- Batch API should be used for T5-9 nightly pre-computation. 50% cost reduction, no quality tradeoff, latency is irrelevant for overnight jobs.
-- Never use GenAI to make capacity, pricing, or fulfilment decisions. Copy generation only.
+### The three layers of AI in Hearth
 
-**Cost framing**
+**Layer 1 — Intelligence (signals → recommendations)**
+SQL computes signals from structured drop, order, and customer data.
+LLM turns those signals into plain-English recommendations the vendor
+can act on. This is the core loop: data in, language out, vendor
+decides. Examples: T5-9 (recommendation engine), T9-4 (drop
+optimisation), T9-7 (capacity intelligence).
 
-At current Haiku 4.5 pricing ($1/$5 per million input/output tokens), a typical recommendation or copy call costs under $0.000005. Even at 1,000 active vendors running multiple sessions daily, API cost is not a meaningful constraint. Architectural decisions should be driven by copy quality, latency, and maintainability — not cost optimisation.
+**Layer 2 — Generation (structured data → assets)**
+Drop and vendor data is passed to an LLM to generate ready-to-use
+assets — social copy, email body text, menu card images, host
+introduction drafts. Removes the blank-page problem for vendors who
+are food people, not copywriters. Examples: T5-25 (promotion assets),
+T5-26 (host outreach copy), T5-11 (email body copy), T5-C6 (activation
+plan).
+
+**Layer 3 — Conversation (natural language → structured records)**
+Vendor describes what they want in plain English; the platform
+extracts structured field values and pre-populates the relevant form.
+The form stays canonical; conversation is the fast path in. Removes
+form-filling friction for repeat actions (new drop creation) and
+blank-page paralysis for first-time setup (brand identity). Examples:
+T9-11 (conversational drop creation), T9-12 (conversational brand
+setup), T9-2-positioning (brand AI from uploaded assets).
+
+Future direction — **Layer 4 — Ambient / voice input**: vendor speaks
+or sends a voice note; platform transcribes, extracts intent, creates
+a draft record. Closest near-term use case: post-service drop
+scheduling ("same as last Friday, shift capacity to 45"). Not on the
+immediate roadmap but architecturally continuous with Layer 3.
+
+### The data foundation everything builds on
+
+None of the intelligence layer works without clean data captured from
+the first real order. Four fields are load-bearing:
+
+1. **Customer postcode** — captured at checkout, stored on both
+   `orders.customer_postcode` and the customer record. Enables all
+   geographic demand scoring.
+2. **Drop origin tag** — every `customer_relationships` row carries
+   the `drop_id` of the originating order. Enables geographic
+   segmentation ("customers who ordered from a Broadstone drop should
+   hear about Broadstone drops").
+3. **Recency** — `customer_relationships.created_at` plus
+   `orders.created_at`. Enables lapsed/at-risk detection.
+4. **Frequency** — order count per customer per vendor, derivable
+   from `customer_relationships` + `orders`. Enables loyal core
+   identification and habit-formation signals.
+
+These four fields are already captured by the platform as of the T3-9
+and T5-A3 workstreams. The intelligence layer can be built on them
+without schema changes.
+
+**Do not build geographic scoring or recommendation features on
+synthetic test data.** Wait for Healthy Habits Cafe to run at least
+two real drops before evaluating signal quality. The risk is building
+a system that appears to work on test data but produces nonsense
+recommendations in production because the signals are too thin.
+
+### AI phasing principles
+
+**Phase 0 (now — pre real data):** Generation layer only. Assets and
+copy can be generated from structured drop data with no order history
+required. T5-25 (menu card image), T5-C6 (activation plan), T9-12
+(brand setup), T9-11 (drop creation fast-path) all belong here.
+Build these now.
+
+**Phase 1 (after first real drops, ~2–5 vendors):** Intelligence layer
+V1. Geographic demand scoring, cadence signals, at-risk customer
+flagging. T5-9, T5-C5, T9-6. Build once Healthy Habits has meaningful
+order history and signal quality can be assessed against real data.
+
+**Phase 2 (growing vendor base, ~10+ vendors):** Intelligence layer V2.
+Cross-vendor patterns, archetype-aware recommendations, predictive
+capacity scoring. T9-9, T9-10. Requires minimum cluster sizes to be
+statistically meaningful. Do not build ahead of evidence.
+
+**Phase 3 (scale, ~20+ vendors):** Ambient / voice input, fully
+automated drop drafting, proactive host matching at platform scale.
+T9-1 (auto-draft drops), T9-3 (proactive host identification). Gated
+on the intelligence layer producing credible signals consistently.
+
+### Conversational interface — governing principle
+
+Conversational input is an **accelerant, not a replacement**. The form
+stays canonical; the conversation is the fast path in. This distinction
+is critical for three reasons:
+
+1. **Editability.** Vendors need to correct what the AI got wrong.
+   A pre-populated form is easy to adjust. A conversation that
+   produced a wrong answer is awkward to undo.
+2. **Latency tolerance.** A vendor who knows what they want does not
+   want to wait for a conversation. The form is always faster for
+   confident users. Conversation helps uncertain or first-time users.
+3. **Auditability.** The record created by a conversation is identical
+   to one created by form. No special handling required downstream.
+
+The pattern for every conversational surface: natural-language input →
+structured field extraction → vendor lands in the normal editor with
+fields pre-populated → vendor reviews, adjusts, saves. The AI does the
+first draft; the vendor owns the final state.
+
+### Hard rules — apply to every AI feature across the platform
+
+**SQL owns the facts. LLM owns the framing only.**
+Prices, times, order counts, fill rates, references, postcodes, and
+any other deterministic fact are computed by SQL and passed as
+structured data to the LLM. They are never left to the model to
+recall, infer, or generate. A model hallucinating an order total or
+a wrong collection time inside copy is a trust-destroying failure.
+
+**Never use AI to make capacity, pricing, or fulfilment decisions.**
+These are vendor decisions. AI can surface signals and suggest options;
+it cannot decide. The vendor is always the decision-maker.
+
+**Output is always a draft pending vendor approval.**
+No AI feature applies anything automatically. Every generated asset,
+recommendation, or pre-populated record is presented for review before
+being saved. The vendor's explicit action is required to commit.
+
+**System prompts are fixed per call type; variable data goes in the
+user message.**
+System prompts explaining Hearth's vocabulary, tone, and the vendor's
+archetype are stable per call type and should be prompt-cached. This
+reduces cost and latency on every subsequent call of the same type.
+
+**Client-side calls use the Anthropic API pattern established in the
+platform.**
+T5-25 Part 0 is the reference implementation. The API key is handled
+by infrastructure — never exposed in client code.
+
+**Server-side calls run inside Supabase Edge Functions.**
+The Anthropic API key lives in Supabase secrets. Batch API should be
+used for nightly pre-computation (T5-9). 50% cost reduction, no
+quality tradeoff, latency is irrelevant for overnight jobs.
+
+**Model selection: Haiku 4.5 for generation; Sonnet 4.6 for
+reasoning-heavy tasks.**
+Haiku 4.5 is the default for copy generation, template filling, and
+structured extraction. Sonnet 4.6 for tasks requiring genuine
+reasoning — brand positioning analysis, complex recommendation
+synthesis, conversational intent extraction. Opus is not appropriate
+for any current use case.
+
+**Cost framing.**
+At current Haiku 4.5 pricing, a typical generation call costs under
+$0.000005. Even at 1,000 active vendors running multiple sessions
+daily, API cost is not a meaningful constraint. Architecture decisions
+should be driven by output quality, latency, and maintainability —
+not cost optimisation.
+
+*The GenAI shared principles block previously in this location is
+superseded by this strategy document. Individual ticket specs
+reference the Hearth AI Strategy section rather than restating
+the principles.*
 
 T5-9: Recommendation engine — matured intelligence
 
@@ -4795,6 +4952,220 @@ LLM role: same as T9-9 — SQL owns the signal computation, Haiku 4.5 owns the p
 Privacy consideration: no vendor sees another vendor's data directly. Recommendations are framed as "vendors like you" patterns, never as named comparisons.
 
 Dependency: T9-9 (establishes the pattern computation infrastructure this ticket extends), minimum ~20 active vendors with meaningful drop history across at least two archetypes. Phase 3 roadmap item — do not build until the validation and early cohort stages are well established.
+
+T9-11: Conversational drop creation — fast-path input for Drop Studio
+
+**Status:** Open. Tier 9. Phase 0 — no drop history required.
+Can ship once T9-12 (brand setup) has validated the conversational
+pattern with real vendors.
+
+**The problem**
+
+A vendor creating their sixth Friday drop at The Bell already knows
+exactly what they want. They have to click through five panes —
+Basics, Timing, Menu, Capacity, Commercials — to say something they
+could describe in one sentence. The form is the right canonical
+representation; it is a poor input interface for a confident,
+repeat user.
+
+At the same time, a first-time vendor staring at a blank drop form
+has the opposite problem: they do not know what fields mean, what
+values are sensible, or where to start. Neither user is well served
+by the current blank form as the only entry point.
+
+**The solution**
+
+A natural-language fast-path into Drop Studio. An optional "Describe
+your drop" input appears at the top of the create-new-drop flow —
+above the pane structure, before any field is touched. The vendor
+types a sentence or two: "Friday evening at The Cricket Club, 40
+pizzas, my usual menu, orders open Wednesday." Claude extracts
+structured field values from the description and pre-populates the
+drop form. The vendor lands on the Review pane with a draft ready
+to inspect, adjust, and publish. The form stays canonical; the
+conversation is the fast path in.
+
+**Extraction scope**
+
+The LLM extracts the following from the vendor's input, mapping to
+existing drop fields:
+
+- Day and time → `delivery_start`, `delivery_end` (inferred from
+  vendor's typical window if not specified)
+- Host name → `host_id` (matched against vendor's existing hosts
+  by name)
+- Capacity → `capacity_units_total` or the appropriate capacity
+  mode fields
+- Menu intent → pre-selects the vendor's most recently used menu
+  items, or all items if "usual menu" is specified
+- Orders open timing → `opens_at` (inferred from drop date if not
+  specified)
+
+Fields that cannot be confidently extracted from the description
+are left blank for the vendor to complete. The system never guesses
+at ambiguous values — it surfaces them as "we need a bit more
+detail" prompts rather than filling with defaults that might be
+wrong.
+
+**Architecture**
+
+Client-side Anthropic API call (Haiku 4.5). Input: vendor's
+natural-language description plus structured context (vendor's
+existing hosts as a lookup table, vendor's available menu items,
+vendor's historical drop timing patterns). Output: a JSON object
+mapping drop fields to extracted values, with a confidence flag
+per field and a short explanation of any ambiguity. The page-side
+JS applies the extracted values to the form state and renders the
+pre-populated drop in the Review pane.
+
+Follows the conversational interface governing principle in the
+Hearth AI Strategy section: the form stays canonical; conversation
+is the fast path in. The vendor's explicit save action is always
+required to commit the record.
+
+**UX**
+
+A quiet "Describe your drop →" link or button on the Drop Studio
+landing state (when no drop is selected and "Create new drop" is
+the primary action). Vendor types into a single textarea. Platform
+responds with a pre-populated draft and a plain-English summary of
+what it understood: "I've set up a Friday evening drop at The Bell
+with 40 capacity and your usual menu. Ordering opens Wednesday at
+5pm — check the details below and adjust anything I got wrong."
+Vendor reviews, edits if needed, publishes.
+
+The fast-path is optional and dismissible. Vendors who prefer the
+form directly are not impeded.
+
+**Failure mode handling**
+
+If the vendor's description is too vague to extract any meaningful
+values, the platform surfaces a brief clarifying question rather
+than pre-populating nothing: "Sounds good — what date are you
+thinking, and which host?" One round of clarification maximum.
+After that, open the blank form.
+
+**Sequencing rationale**
+
+Gated on two conditions: (1) T9-12 has validated the extraction
+pattern with real vendors on a lower-stakes surface before applying
+it to drop creation; (2) at least one real vendor has run multiple
+drops so the historical timing pattern context is meaningful.
+
+**Dependencies:** T9-12 (pattern validation), meaningful vendor
+drop history. Vendor's hosts must be populated in the hosts table
+for host matching to work.
+
+**Cross-reference:** T9-12 (sibling conversational surface),
+Hearth AI Strategy section (governing principles), T5-C6
+(activation plan — same structured extraction pattern at a
+different lifecycle stage).
+
+T9-12: Conversational brand setup — fast-path input for Brand Hearth
+
+**Status:** Open. Tier 9. Phase 0 — no drop history required.
+High priority within Tier 9: should surface at the end of
+onboarding as the entry point into Brand Hearth for every new
+vendor.
+
+**The problem**
+
+A vendor completing onboarding arrives at Brand Hearth facing a
+set of blank inputs: display name, tagline, about paragraph, accent
+colour, hero image. Most food vendors are confident about their
+food and uncertain about how to describe it in writing. The blank
+page is the problem. A tagline field labelled "Tagline" does not
+help a baker figure out what their tagline should be.
+
+The result is one of two failure modes: vendors skip brand setup
+entirely (their order page looks unbranded), or they fill in the
+first thing that comes to mind and never revisit it (their copy is
+generic and does not represent them well).
+
+**The solution**
+
+A guided conversation as the entry point into Brand Hearth for new
+vendors. Three to four natural-language questions surface what the
+vendor needs to communicate; Claude drafts their brand copy from
+the answers. The vendor lands on Brand Hearth with tagline and
+about paragraph pre-filled, and reviews, edits, and saves.
+
+**The conversation — three questions maximum**
+
+1. "What do you make, and what makes it worth ordering?" — opens
+   the vendor's voice. Surfaces food type, quality signals,
+   occasion context.
+2. "Who do you mostly sell to, and where?" — surfaces audience
+   and geographic identity.
+3. "Is there anything specific you want people to know about how
+   you work or what you care about?" — optional. Surfaces
+   provenance, sourcing, ethos, or operational pride points.
+
+Three questions. No more. The platform asks the minimum needed to
+generate a credible first draft, not a brand strategy workshop.
+
+**Extraction and generation scope**
+
+From the vendor's answers, Claude generates:
+
+- **Tagline** — two or three options, each under 8 words, in the
+  vendor's voice. Warm, specific, not generic. "Wood-fired and
+  worth waiting for" not "Delicious food for everyone."
+- **About paragraph** — two to three sentences. Describes what
+  the vendor makes, for whom, and what distinguishes them.
+  Written in first person, calm and proud.
+- **Accent colour suggestion** — if the vendor has uploaded a
+  logo, palette extraction surfaces 2–3 dominant colours as
+  options. If not, a category-informed suggestion with rationale.
+
+All outputs are presented as editable drafts. The vendor accepts
+each independently, edits inline, or discards and writes their
+own. Nothing saves until the vendor explicitly confirms.
+
+**Architecture**
+
+Client-side Anthropic API call (Haiku 4.5 for copy generation;
+Sonnet 4.6 if logo image is provided and colour extraction requires
+vision). Structured context passed to the model: vendor category
+and archetype from onboarding answers, food type inferred from
+brand data where available, Hearth tone principles as system
+prompt.
+
+Follows the governing principle in the Hearth AI Strategy section:
+conversation is the fast path in; the Brand Hearth form stays
+canonical. The vendor's explicit save via the existing
+`update-vendor` Edge Function is required to commit.
+
+**Where it surfaces**
+
+**Primary:** end of onboarding, intercepting the "Set up your
+brand →" CTA. T9-12 runs the three-question conversation, then
+routes the vendor into Brand Hearth with fields pre-filled.
+
+**Secondary:** an optional "Re-generate a starting point →" link
+on Brand Hearth for returning vendors who want to revisit their
+copy. Surfaces the same conversation with existing answers
+pre-loaded for editing.
+
+**Relationship to T5-C6**
+
+T5-C6 generates a personalised activation plan from onboarding
+answers. T9-12 generates brand copy from a short conversation.
+Both are Phase 0 AI features that make the early vendor experience
+feel intelligent and personal. Together they define what it feels
+like to complete onboarding on Hearth: not a form-filling exercise,
+but a platform that understood you and got you ready.
+
+**Dependencies:** T5-C6 (establishes the onboarding completion
+moment this ticket extends). T2-7 (logo upload — optional; enables
+colour extraction if present). Onboarding archetype data (complete).
+
+**Cross-reference:** T9-11 (sibling conversational surface —
+validate pattern here first), T9-2-positioning (complementary;
+T9-12 handles copy, T9-2-positioning handles visual brand
+analysis), T4-20 (onboarding to Brand Hearth continuity — T9-12
+supersedes the current quiet confirmation bar), Hearth AI Strategy
+section (governing principles).
 
 Recommended build sequence for Tier 9:
 First: T9-6 (at-risk flagging) and T9-5 (promotion copy) —
