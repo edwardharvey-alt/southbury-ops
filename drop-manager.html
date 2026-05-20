@@ -2718,13 +2718,10 @@
     async function loadVendorCustomerCount() {
       if (!state.vendorId) { state.vendorCustomerCount = 0; return; }
       try {
-        const { count, error } = await supabase
-          .from("customer_relationships")
-          .select("customer_id", { count: "exact", head: true })
-          .eq("owner_id", state.vendorId)
-          .eq("owner_type", "vendor");
+        const { data, error } = await supabase.functions.invoke('get-vendor-customer-count');
         if (error) throw error;
-        state.vendorCustomerCount = typeof count === "number" ? count : 0;
+        const count = data && typeof data.count === "number" ? data.count : 0;
+        state.vendorCustomerCount = count;
       } catch (err) {
         console.error("loadVendorCustomerCount failed", err);
         state.vendorCustomerCount = 0;
@@ -2940,34 +2937,19 @@
       showDemandPreviewLoading(outwardCode);
 
       try {
-        /* Customer count — relationships + customers join done client-side */
+        /* Operator-read-auth Slice 7b: customer count is now computed
+           server-side by get-demand-preview, which mirrors
+           extractOutwardCode and collapses the previous two-step
+           relationships → customers client-side join into a single
+           service-role aggregate. Zero PII over the wire — only the
+           integer count crosses the boundary. */
         let customerCount = 0;
         if (state.vendorId) {
-          const relRes = await supabase
-            .from("customer_relationships")
-            .select("customer_id")
-            .eq("owner_id", state.vendorId)
-            .eq("owner_type", "vendor");
-
-          if (relRes.error) throw relRes.error;
-
-          const customerIds = Array.from(
-            new Set((relRes.data || []).map((r) => r.customer_id).filter(Boolean))
-          );
-
-          if (customerIds.length > 0) {
-            const custRes = await supabase
-              .from("customers")
-              .select("id, postcode")
-              .in("id", customerIds);
-
-            if (custRes.error) throw custRes.error;
-
-            customerCount = (custRes.data || []).filter((c) => {
-              const cOutward = extractOutwardCode(c.postcode);
-              return cOutward && cOutward === outwardCode;
-            }).length;
-          }
+          const { data, error } = await supabase.functions.invoke('get-demand-preview', {
+            body: { outward_code: outwardCode }
+          });
+          if (error) throw error;
+          customerCount = data && typeof data.customer_count === "number" ? data.customer_count : 0;
         }
 
         /* Historical drops — from already-loaded state.drops */

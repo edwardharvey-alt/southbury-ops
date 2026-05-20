@@ -171,6 +171,40 @@ Deno.serve(async (req) => {
       console.error("orders by drop_id threw", e);
     }
 
+    // Operator-read-auth Slice 7b: additively compute new-vs-returning
+    // customer counts for the Scorecard's audience section. Server-side
+    // compute means zero customer emails leave the EF — strict PII
+    // tightening vs the previous direct vendor-wide orders read on
+    // scorecard.html. Non-fatal on failure: counts default to 0 and
+    // customer_data_available stays false so consumers degrade quietly.
+    let newCustomers = 0;
+    let returningCustomers = 0;
+    let customerDataAvailable = false;
+    try {
+      const { data: otherEmails, error: otherErr } = await serviceClient
+        .from("orders")
+        .select("customer_email")
+        .eq("vendor_id", vendor.id)
+        .neq("drop_id", drop_id);
+      if (!otherErr && Array.isArray(otherEmails)) {
+        const priorSet = new Set(
+          otherEmails.map((r: any) => r.customer_email).filter(Boolean)
+        );
+        const thisEmails = new Set(
+          (dropOrders as any[]).map((o: any) => o.customer_email).filter(Boolean)
+        );
+        customerDataAvailable = thisEmails.size > 0;
+        for (const email of thisEmails) {
+          if (priorSet.has(email)) returningCustomers++;
+          else newCustomers++;
+        }
+      } else if (otherErr) {
+        console.error("prior-customers lookup failed", otherErr);
+      }
+    } catch (e) {
+      console.error("[get-drop] prior-customers compute threw:", e);
+    }
+
     return jsonResponse({
       ...data,
       summary: summary ?? null,
@@ -179,6 +213,9 @@ Deno.serve(async (req) => {
       order_items_source: orderItemsSource ?? null,
       item_sales: itemSales,
       drop_orders: dropOrders,
+      new_customers: newCustomers,
+      returning_customers: returningCustomers,
+      customer_data_available: customerDataAvailable,
     }, 200);
   } catch (err) {
     return jsonResponse({ error: (err as Error).message }, 500);

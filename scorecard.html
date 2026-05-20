@@ -686,47 +686,14 @@
          later slice. */
       state.itemSales = Array.isArray(invokeData?.item_sales) ? invokeData.item_sales : [];
 
-      /* Determine new vs returning customers */
-      const dropOrders = Array.isArray(invokeData?.drop_orders) ? invokeData.drop_orders : [];
-      const allOrdersRes = await sb
-        .from('orders')
-        .select('customer_email, drop_id')
-        .eq('vendor_id', state.vendorId);
-      const allOrders = allOrdersRes.data || [];
-
-      if (dropOrders.length > 0) {
-        /* Build set of emails from other drops for this vendor */
-        const priorCustomers = new Set();
-        for (const o of allOrders) {
-          if (o.drop_id !== dropId && o.customer_email) {
-            priorCustomers.add(o.customer_email.toLowerCase().trim());
-          }
-        }
-
-        /* Unique customers in this drop */
-        const thisDropEmails = new Set();
-        for (const o of dropOrders) {
-          if (o.customer_email) {
-            thisDropEmails.add(o.customer_email.toLowerCase().trim());
-          }
-        }
-
-        let newCount = 0;
-        let returningCount = 0;
-        for (const email of thisDropEmails) {
-          if (priorCustomers.has(email)) {
-            returningCount++;
-          } else {
-            newCount++;
-          }
-        }
-
-        state.newCustomers = newCount;
-        state.returningCustomers = returningCount;
-        state.customerDataAvailable = true;
-      } else {
-        state.customerDataAvailable = false;
-      }
+      /* Operator-read-auth Slice 7b: new-vs-returning customer counts
+         now come back additively on the same get-drop invoke above —
+         server-computed against the vendor's other-drop orders so zero
+         customer emails cross the boundary. Replaces the previous
+         direct vendor-wide orders read. */
+      state.newCustomers = invokeData?.new_customers ?? 0;
+      state.returningCustomers = invokeData?.returning_customers ?? 0;
+      state.customerDataAvailable = invokeData?.customer_data_available ?? false;
 
       /* Build drop stats object for HearthIntelligence */
       const drop = state.drop;
