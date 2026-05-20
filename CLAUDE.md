@@ -1202,6 +1202,38 @@ on top of the coding rules above.
     spell out the verification SQL in the PR description and
     have the developer run it before merging.
 
+55. **LOAD-BEARING — Cartesian fan-out in views.** A view that
+    LEFT JOINs one parent row to two or more independent child
+    tables and then SUM()s across the result multiplies each
+    child's sum by the other child's row count. Regression:
+    v_drop_orders_summary joined orders→order_items AND
+    orders→v_order_item_detail_expanded, inflating Service Board
+    UNITS/TOTAL and the hero Revenue headline by each order's
+    line-item count (a real £157.50 order showed as £945), fixed
+    2026-05-19. Pattern: pre-aggregate each child to one row per
+    join key in its own CTE/subquery, then LEFT JOIN the rollups
+    1:1 — never SUM across multiple un-collapsed child joins in
+    one query. Binds the REVOKE capstone and all future view
+    authoring.
+
+56. **LOAD-BEARING — discount-blind revenue.** Revenue/GMV
+    recomputed from order_items (qty × price_pence) ignores
+    orders.discount_pence and overstates by total discounts
+    applied. The only discount-correct order total is
+    orders.total_pence (written post-discount by create-order).
+    v_order_item_enriched.revenue_pence and
+    v_drop_fundraising_summary.drop_gmv_pence are both gross, so
+    Home/Insights revenue, v_item_sales, v_host_performance and
+    percentage-based fundraising/host-share are overstated by
+    total discounts (small now, scales with discount usage).
+    Service Board total was switched to orders.total_pence on
+    2026-05-19; the v_hearth_*/GMV family was NOT fixed —
+    tracked follow-up below, with an open commercial decision on
+    whether fundraising/host-share % is computed on gross GMV or
+    net-of-discount revenue. Any revenue-bearing view/select
+    must use orders.total_pence or explicitly net out
+    discount_pence.
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -1436,6 +1468,14 @@ authenticated callers. Two patterns are used deliberately:
   operational learning #54 (regression: commit 69b1651 took
   `order.html?drop=…` hard-down for 24h with two phantom
   columns).
+- **Cartesian fan-out + discount-blind revenue.** Two
+  view-authoring traps that bind the REVOKE capstone and every
+  future read-path migration: never SUM across two un-collapsed
+  child LEFT JOINs in one query (operational learning #55), and
+  never recompute revenue from `order_items` — only
+  `orders.total_pence` is discount-correct (operational learning
+  #56). The v_hearth_*/GMV family is still discount-blind; see
+  the revenue-discount residual in BACKLOG.md.
 
 ## Production mutation/read status
 

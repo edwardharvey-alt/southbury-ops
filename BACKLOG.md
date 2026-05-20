@@ -2834,6 +2834,58 @@ views, and the invoker-regressed surfaces are not the customer
 order path), but is the largest remaining read-side exposure
 and the natural completion of the T5-A3 reads workstream.
 
+Revenue discount-blindness — net-of-discount correctness pass
+
+**Status:** Open. Surfaced 2026-05-19 alongside the Cartesian
+fan-out fix on `v_drop_orders_summary`. Cross-reference:
+operational learning #56 (LOAD-BEARING — discount-blind revenue).
+
+`v_order_item_enriched.revenue_pence` and
+`v_drop_fundraising_summary.drop_gmv_pence` both recompute
+revenue/GMV from `order_items` (`qty × price_pence`) and ignore
+`orders.discount_pence`. Every downstream consumer of those
+columns is therefore overstated by the total discounts applied:
+Home/Insights revenue, `v_item_sales`, `v_host_performance`, and
+any percentage-based fundraising/host-share calculation that
+runs against `drop_gmv_pence`. Service Board total was switched
+to `orders.total_pence` on 2026-05-19 and is correct; the
+`v_hearth_*`/GMV family was NOT fixed in that pass.
+
+**Scope.** Audit every revenue-bearing view and select to ensure
+it either reads `orders.total_pence` directly or explicitly nets
+`order_items` totals against `orders.discount_pence`. Open
+commercial decision: whether fundraising/host-share percentages
+are computed on gross GMV (the volume the host delivered) or
+net-of-discount revenue (what actually settled). Document the
+choice before fixing the views — it is not a pure engineering
+call.
+
+**Priority:** ahead of operator-read-auth mop-up. Small absolute
+error today (discount usage is low) but scales linearly with
+discount usage and corrupts the analytics surface in a way that
+is hard to reconcile after the fact.
+
+SCHEMA.md ↔ live information_schema reconciliation
+
+**Status:** Open. Surfaced 2026-05-19 — SCHEMA.md was proven
+stale during the select-narrowing regression captured in
+operational learning #54. The 2026-05-19 hotfix surgically
+patched four columns into SCHEMA.md but a curated full
+regeneration from `information_schema` is still pending.
+
+**Interim contract.** Until SCHEMA.md is regenerated, every
+select-narrowing under the T5-A3 / anon-revoke /
+operator-read-auth track must be validated against
+`information_schema.columns` on the live DB — not against
+SCHEMA.md, which is an orientation layer, not adjudication.
+Critical rule #13 / operational learning #54 spell out the
+verification-SQL fallback when the live DB is not reachable
+from the build environment.
+
+**Priority:** parked behind the revenue discount-blindness pass
+and the operator-read-auth slices. Documentation hygiene, not a
+production-correctness gate while the interim contract holds.
+
 ### Tier 5-B — Platform improvements
 
 Smaller cleanups and onboarding enrichments that don't gate anything
