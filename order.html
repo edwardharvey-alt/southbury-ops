@@ -4044,7 +4044,7 @@ async function handoffToPayment() {
           return true; /* single window — skip selection */
         }
 
-        /* Fetch capacity data for each sibling from v_drop_summary */
+        /* Fetch capacity data for each sibling from v_drop_public */
         const siblingIds = sittings.map((s) => s.id);
         const { data: summaries, error: sumErr } = await supabase
           .from("v_drop_public")

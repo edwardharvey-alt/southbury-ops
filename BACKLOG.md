@@ -4199,6 +4199,36 @@ publish-validation + re-derivation gap.
 (manually editing `orders_close`) is non-obvious. Bounded
 one-session piece of work.
 
+T-demand-preview-prefix-trigger — postcode prefix chip changes don't fire the demand preview
+
+**Status:** Open. Tier 5-B. Surfaced during operator-read-auth track wrap-up (2026-05-20). Independent of T5-A3.
+
+**Problem:** In drop-manager.html, the demand preview (`loadDemandPreview()`) only fires on host selection or on changes to the hidden `centre_postcode` field. T3-12a replaced the legacy `centre_postcode + radius` pair with `allowed_postcode_prefixes` as the delivery-area-restriction mechanism, but never migrated the trigger that drives the demand preview. Result: editing the prefix chips does not re-fetch demand, so the operator sees stale demand counts that don't reflect the actual delivery area being configured.
+
+**Fix shape (not built):** wire the prefix chip add/remove handlers to call `loadDemandPreview()`. Needs a product call on which prefix's outward code to use when multiple are entered (use the first? aggregate across all? take the most-specific?). Until that call is made, the trigger can't ship.
+
+**Cross-reference:** T3-12a (closed 2026-05-03 — the migration that orphaned this trigger).
+
+T-dead-centre-postcode-cleanup — remove dead centrePostcode input from drop-manager.html
+
+**Status:** Open. Tier 5-B. Cosmetic / dead-code cleanup. Surfaced during operator-read-auth track wrap-up (2026-05-20).
+
+**Problem:** drop-manager.html still contains a `centrePostcode` input element in the DOM, marked `display:none` and never un-hidden by any code path. Dead code from the T3-12a transition that replaced `centre_postcode + radius` with `allowed_postcode_prefixes`. The element and any remaining JS references (event handlers, value reads, `byId('centrePostcode')` calls) should be removed.
+
+**Fix shape (not built):** grep for `centrePostcode` and `centre_postcode` in drop-manager.html, remove the hidden input and any references that are no longer reachable. Verify no Edge Function or view still expects `centre_postcode` on save payloads (T3-12a-fu2 closed the equivalent for the radius pair).
+
+**Cross-reference:** T3-12a (closed 2026-05-03), T3-12a-fu2 (closed 2026-05-04 — equivalent cleanup for the radius inputs).
+
+T-hearth-intelligence-revenue-field-audit — audit hearth-intelligence.js for stale revenue field names
+
+**Status:** Open. Tier 5-B. Surfaced during operator-read-auth track wrap-up (2026-05-20).
+
+**Problem:** `hearth-intelligence.js` reads `d.revenue_pence` in at least one place. This is a third field name in the same family as the canonical `drop_gmv_pence` (current) and the legacy `total_revenue_pence` (removed under operational learning #56(d)). If `revenue_pence` is not actually present on whatever object `d` is at the call site, the intelligence module's revenue-related helpers may be rendering empty or zero values without throwing — same silent-failure mode as the rest of the revenue/scope-source family.
+
+**Fix shape (not built):** grep `revenue_pence` across `assets/hearth-intelligence.js`, identify every read site, trace `d` back to its source (raw row from which view? from which EF response?), confirm the field is actually populated. For each broken read, switch to the canonical field name. Verify against the same surfaces the intelligence module renders into (insights.html, customers.html, home.html).
+
+**Cross-reference:** operational learning #56 (the consolidated revenue/scope-source correctness rule).
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live

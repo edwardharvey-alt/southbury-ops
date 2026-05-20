@@ -1252,6 +1252,32 @@ on top of the coding rules above.
     reporting need emerges. Binds the REVOKE capstone and all
     future view authoring.
 
+56. **Revenue and scope-source correctness (composite learning, 5
+    facets).** Any code reading or computing per-order revenue,
+    customer counts, or vendor-scoped aggregates must respect:
+    (a) read `orders.total_pence` for per-order revenue, never
+    recompute from `order_items` — joining items + selections
+    produces Cartesian fan-out;
+    (b) use NET-of-discount semantics in views the operator UI
+    consumes (`drop_gmv_pence`, `fundraising_total_pence`,
+    `host_share_total_pence` subtract `discount_pence`
+    proportionally);
+    (c) include bundle parents in item-sales views via LEFT JOIN
+    through `parent_item_id` with `COALESCE` so bundle headers
+    surface;
+    (d) match view column names exactly in client code —
+    `drop_gmv_pence` is the canonical revenue field on
+    `v_drop_summary`, NOT `total_revenue_pence`;
+    (e) `orders` has no `vendor_id` column — vendor scope on
+    `orders` derives via `drop_id IN (vendor's drops)`, mirroring
+    the `get-customers-workspace` two-step pattern.
+    Symptoms across all five are silent: zero revenue, zero
+    counts, undefined flags, no errors. Corollary for future
+    migrations: when moving direct PostgREST reads into an Edge
+    Function, validate column references against
+    `information_schema` before copying the pattern — original
+    code might already be silently broken.
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -1500,6 +1526,12 @@ authenticated callers. Two patterns are used deliberately:
   (2026-05-20) closed the GMV/fundraising family; per-item revenue
   is deliberately left gross. Binds the REVOKE capstone and all
   future view authoring.
+- **Operator-read-auth track closed 20 May 2026.**
+  `v_drop_summary` and `drop_capacity` REVOKEd from `anon`. All
+  vendor-scoped reads now flow through JWT-authed Edge Functions.
+  Six EFs in the family: `get-drop`, `get-home-dashboard`,
+  `get-insights`, `get-customers-workspace`,
+  `get-vendor-customer-count`, `get-demand-preview`.
 
 ## Production mutation/read status
 
@@ -1527,7 +1559,7 @@ Snapshot of which read/write paths are working in production and which are known
 - Category creation on a fresh vendor — WORKING end-to-end as of 2026-05-03 (closes T5-B23). Verified by logging in as Test 12 and successfully creating Test Category D via the Menu Library; "All changes saved" confirmed. The publishable-key auth-attach bug no longer affects category writes because `create-category`, `update-category`, and `delete-category` all route through Edge Functions (T5-B16 batch 1).
 - Host-view summary read (host-view.html) — WORKING via `host-view-summary` Edge Function as of 2026-05-19. Token-authenticated (slug + `&t=` token in query string), returns an 18-field minimal host projection. Never returns `drop_gmv_pence` or raw host-share mechanics — `host_share_descriptor` is built server-side from the underlying mechanics. Uniform `403 {"error":"not_authorised"}` on any failure (bad token, wrong slug, missing drop) to prevent anonymous enumeration. Replaces the previous direct read of `v_drop_summary` on host-view.html. Closes the host-view authorisation sub-track of T5-A3.
 - Operator host-token fetch (drop-manager.html "Copy host link") — WORKING via `get-drop-host-token` Edge Function as of 2026-05-19. JWT-authenticated (mirrors `get-drop`'s auth pattern), verifies the caller owns the drop's vendor, returns `{ host_access_token }`. Drop Studio's host-link builder appends the returned token to the host-view URL. Previously broken silently — direct PostgREST against `drop_host_tokens` returned empty rows because the anon role hit RLS (see operational learning #52). Part of the T5-A3 host-view sub-track closure.
-- Service Board selected-drop pipeline read (service-board.html `loadSelectedDropData`: summary, orders list, and order-item detail for the currently-selected drop) — WORKING via the extended `get-drop` Edge Function as of 2026-05-19 (operator-read-auth Slice 1). `get-drop` was extended additively (commit 3b064fc added the `summary` key; commit 9c63c5f added `orders_summary` + `order_items` + `order_items_source`; both reads use the service-role client against the invoker views, ownership already enforced by `get-drop`'s existing JWT verification). `service-board.html` re-pointed in commit a471990 to consume those keys; the three direct anon reads (`v_drop_summary` single, `v_drop_orders_summary`, the three-step `v_order_item_detail_expanded` → `_v2` → `_detail` fallback) and the client-side `vendor_id` assertion are deleted. Verified end-to-end in production against drop "Neighbourhood massive" (`25e75db9-01bd-4847-bc6c-7f858e216898`, 1 placed + 1 delivered) — verifying on an empty drop would not have exercised the failure mode (see operational learning #53). Previously this read surface was absent from this section — added on 2026-05-19. The vendor-scoped LIST read of `v_drop_summary` at service-board.html line 1713 (`loadDrops`) is intentionally out of scope for Slice 1 and remains a direct anon read; it is folded into a later slice of the operator-read-auth track.
+- Service Board selected-drop pipeline read (service-board.html `loadSelectedDropData`: summary, orders list, and order-item detail for the currently-selected drop) — WORKING via the extended `get-drop` Edge Function as of 2026-05-19 (operator-read-auth Slice 1). `get-drop` was extended additively (commit 3b064fc added the `summary` key; commit 9c63c5f added `orders_summary` + `order_items` + `order_items_source`; both reads use the service-role client against the invoker views, ownership already enforced by `get-drop`'s existing JWT verification). `service-board.html` re-pointed in commit a471990 to consume those keys; the three direct anon reads (`v_drop_summary` single, `v_drop_orders_summary`, the three-step `v_order_item_detail_expanded` → `_v2` → `_detail` fallback) and the client-side `vendor_id` assertion are deleted. Verified end-to-end in production against drop "Neighbourhood massive" (`25e75db9-01bd-4847-bc6c-7f858e216898`, 1 placed + 1 delivered) — verifying on an empty drop would not have exercised the failure mode (see operational learning #53). Previously this read surface was absent from this section — added on 2026-05-19. All four `loadDrops` sites (service-board.html, drop-manager.html, hosts.html, host-profile.html) migrated to `list-drops` EF; scorecard.html uses `get-drop`. No direct anon reads of `v_drop_summary` remain.
 
 ## Development backlog
 
