@@ -16,43 +16,35 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { email } = await req.json();
-
-    if (!email || typeof email !== "string") {
-      return new Response(JSON.stringify({ error: "email is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
     if (!token) {
-      return new Response(JSON.stringify({ error: "Missing bearer token" }), {
+      return new Response(JSON.stringify({ error: "Unauthorised" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabaseAuth = createClient(
+    const anonClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: `Bearer ${token}` } } }
     );
-    const { data: userData, error: userErr } = await supabaseAuth.auth.getUser(token);
+
+    const { data: userData, error: userErr } = await anonClient.auth.getUser(token);
     if (userErr || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
+      return new Response(JSON.stringify({ error: "Unauthorised" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabaseAdmin = createClient(
+    const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data: adminRow, error: adminErr } = await supabaseAdmin
+    const { data: adminRow, error: adminErr } = await serviceClient
       .from("admins")
       .select("id")
       .eq("auth_user_id", userData.user.id)
@@ -74,38 +66,35 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: "https://lovehearth.co.uk/set-password.html",
-    });
+    let body: { drop_id?: string } = {};
+    try {
+      body = await req.json();
+    } catch (_) {
+      body = {};
+    }
 
-    if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
+    const dropId = typeof body?.drop_id === "string" ? body.drop_id.trim() : "";
+    if (!dropId) {
+      return new Response(JSON.stringify({ error: "Missing drop_id" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = data?.user?.id;
-    if (!userId) {
-      return new Response(JSON.stringify({ error: "Invite succeeded but no user id returned" }), {
+    const { data: orders, error: ordersErr } = await serviceClient
+      .from("v_admin_drop_orders")
+      .select("*")
+      .eq("drop_id", dropId)
+      .order("created_at", { ascending: false });
+
+    if (ordersErr) {
+      return new Response(JSON.stringify({ error: ordersErr.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { error: linkError } = await supabaseAdmin
-      .from("vendors")
-      .update({ auth_user_id: userId })
-      .eq("email", email);
-
-    if (linkError) {
-      return new Response(JSON.stringify({ error: "Invite sent but vendor link failed: " + linkError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ orders: orders ?? [] }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

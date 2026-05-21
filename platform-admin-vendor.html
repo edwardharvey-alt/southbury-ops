@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hearth — Platform admin — Vendor</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=31" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --pa-bg: var(--h-chalk, #faf8f5);
+      --pa-text: var(--h-coal, #0f0b08);
+      --pa-muted: var(--h-stone, #8c7b6e);
+      --pa-border: var(--h-cinder, #e8ddd5);
+      --pa-accent: var(--h-fire, #c4511a);
+      --pa-surface: #ffffff;
+    }
+
+    body {
+      margin: 0;
+      background: var(--pa-bg);
+      color: var(--pa-text);
+      font-family: var(--h-font-ui, 'Figtree', system-ui, sans-serif);
+      font-size: 15px;
+      line-height: 1.5;
+      padding: 32px 48px;
+    }
+
+    .pa-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 22px 32px;
+      border-bottom: 1px solid var(--pa-border);
+      background: var(--pa-surface);
+      margin: -32px -48px 32px -48px;
+    }
+
+    .pa-headerBrand {
+      font-family: var(--h-font-display, 'Cormorant Garamond', serif);
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+    }
+
+    .pa-headerWho {
+      font-size: 13px;
+      color: var(--pa-muted);
+    }
+
+    .pa-headerWho strong {
+      color: var(--pa-text);
+      font-weight: 600;
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .pa-state {
+      padding: 24px 0;
+    }
+
+    .pa-loading {
+      font-size: 14px;
+      color: var(--pa-muted);
+    }
+
+    .pa-state h1 {
+      font-family: var(--h-font-display, 'Cormorant Garamond', serif);
+      font-size: 36px;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin: 0 0 12px 0;
+    }
+
+    .pa-state p {
+      color: var(--pa-muted);
+      margin: 0 0 16px 0;
+    }
+
+    .pa-state a {
+      color: var(--pa-accent);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .pa-state a:hover {
+      text-decoration: underline;
+    }
+
+    .muted {
+      color: var(--h-stone);
+      opacity: 0.7;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      border: 1px solid;
+      background: transparent;
+      white-space: nowrap;
+    }
+    .pillPositive {
+      color: var(--h-coal);
+      border-color: var(--h-cinder);
+    }
+    .pillNeutral {
+      color: var(--h-stone);
+      border-color: var(--h-cinder);
+    }
+    .pillAttention {
+      color: var(--h-fire);
+      border-color: var(--h-fire);
+    }
+
+    .numCol {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .vendorPageHeader { margin-bottom: 32px; }
+
+    .backLink {
+      display: inline-block;
+      margin-bottom: 16px;
+      color: var(--h-stone);
+      text-decoration: none;
+      font-size: 0.875rem;
+    }
+    .backLink:hover { color: var(--h-coal); }
+
+    .vendorIdentity h1 {
+      font-family: var(--h-font-display, 'Cormorant Garamond', serif);
+      margin: 0 0 8px 0;
+    }
+    .vendorMeta {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 12px;
+      color: var(--h-stone);
+      font-size: 0.875rem;
+      flex-wrap: wrap;
+    }
+    .metaSlug { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+    .vendorPills { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .dropsSection, .ordersSection { margin-bottom: 40px; }
+    .dropsSection h2, .ordersSection h2 {
+      font-family: var(--h-font-display, 'Cormorant Garamond', serif);
+      margin: 0 0 4px 0;
+    }
+    .sectionSubhead {
+      margin: 0 0 16px 0;
+      color: var(--h-stone);
+      font-size: 0.875rem;
+    }
+
+    .dropsTableWrap, .ordersTableWrap {
+      background: var(--h-chalk);
+      border: 1px solid var(--h-cinder);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .dropsTable, .ordersTable {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: auto;
+    }
+    .dropsTable th, .dropsTable td,
+    .ordersTable th, .ordersTable td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--h-cinder);
+      font-size: 0.9375rem;
+      vertical-align: middle;
+    }
+    .dropsTable thead th, .ordersTable thead th {
+      background: var(--h-chalk);
+      font-weight: 600;
+      font-size: 0.8125rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--h-stone);
+    }
+    .dropsTable tbody tr:last-child td,
+    .ordersTable tbody tr:last-child td { border-bottom: none; }
+
+    .dropRow { cursor: pointer; transition: background 0.12s ease; }
+    .dropRow:hover { background: var(--h-bone, #f8f5ef); }
+    .dropRowSelected, .dropRowSelected:hover {
+      background: var(--h-bone, #f8f5ef);
+      box-shadow: inset 3px 0 0 var(--h-fire);
+    }
+
+    .dropName { font-weight: 600; color: var(--h-coal); }
+    .dropSlug {
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 0.75rem;
+      color: var(--h-stone);
+      margin-top: 2px;
+    }
+    .statusBreakdown { font-size: 0.8125rem; color: var(--h-stone); white-space: nowrap; }
+
+    .dropsEmpty, .ordersEmpty,
+    .dropsError, .ordersError {
+      padding: 24px;
+      background: var(--h-chalk);
+      border: 1px solid var(--h-cinder);
+      border-radius: 12px;
+      color: var(--h-stone);
+      text-align: center;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <header class="pa-header">
+    <div class="pa-headerBrand">Hearth — Platform admin</div>
+    <div class="pa-headerWho">Signed in as <strong id="adminEmail">…</strong></div>
+  </header>
+
+  <main>
+    <section id="loadingState" class="pa-state pa-loading">
+      Verifying access…
+    </section>
+
+    <section id="notAuthorisedState" class="pa-state" hidden>
+      <h1>Not authorised</h1>
+      <p>You don't have platform admin access.</p>
+      <a href="home.html">Return to home</a>
+    </section>
+
+    <section id="adminContent" class="pa-state" hidden>
+      <header class="vendorPageHeader">
+        <a href="platform-admin.html" class="backLink">← Back to vendors</a>
+
+        <div class="vendorIdentity">
+          <h1 id="vendorDisplayName">Loading…</h1>
+          <div class="vendorMeta">
+            <span class="metaSlug" id="vendorSlug"></span>
+            <span class="metaEmail" id="vendorEmail"></span>
+          </div>
+          <div class="vendorPills" id="vendorPills"></div>
+        </div>
+      </header>
+
+      <section class="dropsSection">
+        <h2>Drops</h2>
+        <p class="sectionSubhead" id="dropsSubhead">Loading…</p>
+
+        <div class="dropsTableWrap" id="dropsTableWrap" hidden>
+          <table class="dropsTable">
+            <thead>
+              <tr>
+                <th>Drop</th>
+                <th>Status</th>
+                <th>Delivery</th>
+                <th class="numCol">Capacity</th>
+                <th class="numCol">Orders</th>
+                <th>Status breakdown</th>
+                <th class="numCol">Revenue</th>
+              </tr>
+            </thead>
+            <tbody id="dropsTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="dropsEmpty" id="dropsEmpty" hidden>
+          <p>This vendor has no drops yet.</p>
+        </div>
+
+        <div class="dropsError" id="dropsError" hidden>
+          <p>Couldn't load drops. Try refreshing the page.</p>
+        </div>
+      </section>
+
+      <section class="ordersSection" id="ordersSection" hidden>
+        <h2 id="ordersSectionHeader">Orders</h2>
+        <p class="sectionSubhead" id="ordersSubhead"></p>
+
+        <div class="ordersTableWrap" id="ordersTableWrap" hidden>
+          <table class="ordersTable">
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Status</th>
+                <th>Fulfilment</th>
+                <th class="numCol">Total</th>
+                <th>Placed</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="ordersEmpty" id="ordersEmpty" hidden>
+          <p>This drop has no orders yet.</p>
+        </div>
+
+        <div class="ordersError" id="ordersError" hidden>
+          <p>Couldn't load orders. Try refreshing the page.</p>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    (async function init() {
+      const loadingEl = document.getElementById('loadingState');
+      const notAuthorisedEl = document.getElementById('notAuthorisedState');
+      const adminContentEl = document.getElementById('adminContent');
+      const adminEmailEl = document.getElementById('adminEmail');
+
+      const vendorDisplayNameEl = document.getElementById('vendorDisplayName');
+      const vendorSlugEl = document.getElementById('vendorSlug');
+      const vendorEmailEl = document.getElementById('vendorEmail');
+      const vendorPillsEl = document.getElementById('vendorPills');
+
+      const dropsSubheadEl = document.getElementById('dropsSubhead');
+      const dropsTableWrapEl = document.getElementById('dropsTableWrap');
+      const dropsTableBodyEl = document.getElementById('dropsTableBody');
+      const dropsEmptyEl = document.getElementById('dropsEmpty');
+      const dropsErrorEl = document.getElementById('dropsError');
+
+      const ordersSectionEl = document.getElementById('ordersSection');
+      const ordersSectionHeaderEl = document.getElementById('ordersSectionHeader');
+      const ordersSubheadEl = document.getElementById('ordersSubhead');
+      const ordersTableWrapEl = document.getElementById('ordersTableWrap');
+      const ordersTableBodyEl = document.getElementById('ordersTableBody');
+      const ordersEmptyEl = document.getElementById('ordersEmpty');
+      const ordersErrorEl = document.getElementById('ordersError');
+
+      let currentSession = null;
+
+      function showNotAuthorised() {
+        loadingEl.hidden = true;
+        adminContentEl.hidden = true;
+        notAuthorisedEl.hidden = false;
+      }
+
+      function showAdminContent(email) {
+        adminEmailEl.textContent = email;
+        loadingEl.hidden = true;
+        notAuthorisedEl.hidden = true;
+        adminContentEl.hidden = false;
+      }
+
+      function renderInlineError(messageText, linkText, linkHref) {
+        adminContentEl.textContent = '';
+        const wrap = document.createElement('div');
+        wrap.className = 'pa-state';
+        const h = document.createElement('h1');
+        h.textContent = messageText;
+        const p = document.createElement('p');
+        const a = document.createElement('a');
+        a.href = linkHref;
+        a.textContent = linkText;
+        p.appendChild(a);
+        wrap.appendChild(h);
+        wrap.appendChild(p);
+        adminContentEl.appendChild(wrap);
+      }
+
+      function formatRelativeTime(iso) {
+        if (!iso) return '';
+        const then = new Date(iso).getTime();
+        if (Number.isNaN(then)) return '';
+        const now = Date.now();
+        const diffMs = now - then;
+        const minute = 60 * 1000;
+        const hour = 60 * minute;
+        const day = 24 * hour;
+
+        if (diffMs < minute) return 'Just now';
+        if (diffMs < hour) {
+          const n = Math.floor(diffMs / minute);
+          return `${n} minute${n === 1 ? '' : 's'} ago`;
+        }
+        if (diffMs < day) {
+          const n = Math.floor(diffMs / hour);
+          return `${n} hour${n === 1 ? '' : 's'} ago`;
+        }
+        const days = Math.floor(diffMs / day);
+        if (days === 1) return 'Yesterday';
+        if (days < 7) return `${days} days ago`;
+
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const d = new Date(iso);
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+      }
+
+      function formatTimePart(d) {
+        let hours = d.getHours();
+        const minutes = d.getMinutes();
+        const ampm = hours >= 12 ? 'pm' : 'am';
+        hours = hours % 12;
+        if (hours === 0) hours = 12;
+        if (minutes === 0) return `${hours}${ampm}`;
+        const mm = minutes < 10 ? `0${minutes}` : String(minutes);
+        return `${hours}:${mm}${ampm}`;
+      }
+
+      function formatDeliveryRange(startIso, endIso) {
+        if (!startIso) return null;
+        const start = new Date(startIso);
+        if (Number.isNaN(start.getTime())) return null;
+        const dayFmt = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+        const dayPart = dayFmt.format(start);
+        const startTime = formatTimePart(start);
+        if (!endIso) return `${dayPart}, ${startTime}`;
+        const end = new Date(endIso);
+        if (Number.isNaN(end.getTime())) return `${dayPart}, ${startTime}`;
+        const endTime = formatTimePart(end);
+        return `${dayPart}, ${startTime}–${endTime}`;
+      }
+
+      function formatPence(pence) {
+        const n = Number(pence) || 0;
+        return `£${(n / 100).toFixed(2)}`;
+      }
+
+      function capitalise(s) {
+        if (!s) return '';
+        return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+      }
+
+      function makePillCell(type, label) {
+        const td = document.createElement('td');
+        const span = document.createElement('span');
+        span.className = `pill ${type}`;
+        span.textContent = label;
+        td.appendChild(span);
+        return td;
+      }
+
+      function makeTextCell(text, className) {
+        const td = document.createElement('td');
+        if (className) td.className = className;
+        td.textContent = text;
+        return td;
+      }
+
+      function makeMutedCell(label, className, title) {
+        const td = document.createElement('td');
+        if (className) td.className = className;
+        const span = document.createElement('span');
+        span.className = 'muted';
+        span.textContent = label;
+        if (title) span.setAttribute('title', title);
+        td.appendChild(span);
+        return td;
+      }
+
+      function appendPill(parent, type, label) {
+        const span = document.createElement('span');
+        span.className = `pill ${type}`;
+        span.textContent = label;
+        parent.appendChild(span);
+      }
+
+      function dropStatusPill(status) {
+        const s = String(status || '').toLowerCase();
+        if (s === 'live') return { type: 'pillPositive', label: 'Live' };
+        if (s === 'draft') return { type: 'pillNeutral', label: 'Draft' };
+        if (s === 'closed') return { type: 'pillNeutral', label: 'Closed' };
+        if (s === 'archived') return { type: 'pillNeutral', label: 'Archived' };
+        return { type: 'pillNeutral', label: capitalise(s) };
+      }
+
+      function orderStatusPill(status) {
+        const s = String(status || '').toLowerCase();
+        if (s === 'placed') return { type: 'pillNeutral', label: 'Placed' };
+        if (s === 'confirmed') return { type: 'pillNeutral', label: 'Confirmed' };
+        if (s === 'baking') return { type: 'pillNeutral', label: 'Baking' };
+        if (s === 'ready') return { type: 'pillPositive', label: 'Ready' };
+        if (s === 'delivered') return { type: 'pillPositive', label: 'Delivered' };
+        if (s === 'cancelled') return { type: 'pillAttention', label: 'Cancelled' };
+        return { type: 'pillNeutral', label: capitalise(s) };
+      }
+
+      function renderVendorHeader(vendor) {
+        const displayName = vendor.display_name || vendor.name || '';
+        vendorDisplayNameEl.textContent = displayName || '—';
+        document.title = `Hearth — Platform admin — ${displayName || 'Vendor'}`;
+
+        vendorSlugEl.textContent = vendor.slug || '';
+
+        vendorEmailEl.textContent = '';
+        if (vendor.email) {
+          vendorEmailEl.textContent = vendor.email;
+        } else {
+          const mutedSpan = document.createElement('span');
+          mutedSpan.className = 'muted';
+          mutedSpan.textContent = '—';
+          mutedSpan.setAttribute('title', 'No auth email recorded');
+          vendorEmailEl.appendChild(mutedSpan);
+        }
+
+        vendorPillsEl.textContent = '';
+        if (vendor.onboarding_completed === true) {
+          appendPill(vendorPillsEl, 'pillPositive', 'Onboarding: Complete');
+        } else {
+          appendPill(vendorPillsEl, 'pillNeutral', 'Onboarding: In progress');
+        }
+        if (vendor.stripe_onboarding_complete === true) {
+          appendPill(vendorPillsEl, 'pillPositive', 'Stripe: Ready');
+        } else {
+          appendPill(vendorPillsEl, 'pillAttention', 'Stripe: Not ready');
+        }
+      }
+
+      function buildStatusBreakdown(td, d) {
+        const entries = [
+          ['delivered', d.orders_delivered],
+          ['ready', d.orders_ready],
+          ['baking', d.orders_baking],
+          ['confirmed', d.orders_confirmed],
+          ['placed', d.orders_placed],
+          ['cancelled', d.orders_cancelled]
+        ];
+        const parts = [];
+        for (const [label, value] of entries) {
+          const n = Number(value) || 0;
+          if (n > 0) parts.push(`${n} ${label}`);
+        }
+        td.className = 'statusBreakdown';
+        if (parts.length === 0) {
+          const span = document.createElement('span');
+          span.className = 'muted';
+          span.textContent = '—';
+          td.appendChild(span);
+        } else {
+          td.textContent = parts.join(' · ');
+        }
+      }
+
+      function renderDropRow(d) {
+        const tr = document.createElement('tr');
+        tr.className = 'dropRow';
+        if (d.id) tr.dataset.dropId = d.id;
+        tr.dataset.dropName = d.name || '';
+
+        const nameTd = document.createElement('td');
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'dropName';
+        nameDiv.textContent = d.name || '';
+        const slugDiv = document.createElement('div');
+        slugDiv.className = 'dropSlug';
+        slugDiv.textContent = d.slug || '';
+        nameTd.appendChild(nameDiv);
+        nameTd.appendChild(slugDiv);
+        tr.appendChild(nameTd);
+
+        const sp = dropStatusPill(d.status);
+        tr.appendChild(makePillCell(sp.type, sp.label));
+
+        const deliveryStr = formatDeliveryRange(d.delivery_start, d.delivery_end);
+        if (deliveryStr) {
+          tr.appendChild(makeTextCell(deliveryStr));
+        } else {
+          tr.appendChild(makeMutedCell('—'));
+        }
+
+        tr.appendChild(makeTextCell(String(d.capacity_units_total ?? 0), 'numCol'));
+        tr.appendChild(makeTextCell(String(d.order_count ?? 0), 'numCol'));
+
+        const breakdownTd = document.createElement('td');
+        buildStatusBreakdown(breakdownTd, d);
+        tr.appendChild(breakdownTd);
+
+        tr.appendChild(makeTextCell(formatPence(d.total_pence), 'numCol'));
+
+        return tr;
+      }
+
+      function renderOrderRow(o) {
+        const tr = document.createElement('tr');
+
+        if (o.customer_name) {
+          tr.appendChild(makeTextCell(o.customer_name));
+        } else {
+          tr.appendChild(makeMutedCell('—'));
+        }
+
+        const sp = orderStatusPill(o.status);
+        tr.appendChild(makePillCell(sp.type, sp.label));
+
+        if (o.fulfilment_mode) {
+          tr.appendChild(makeTextCell(capitalise(o.fulfilment_mode)));
+        } else {
+          tr.appendChild(makeMutedCell('—'));
+        }
+
+        tr.appendChild(makeTextCell(formatPence(o.total_pence), 'numCol'));
+        tr.appendChild(makeTextCell(formatRelativeTime(o.created_at)));
+
+        return tr;
+      }
+
+      async function callAdminEf(name, body) {
+        const res = await fetch(`${window.HEARTH_CONFIG.SUPABASE_URL}/functions/v1/${name}`, {
+          method: 'POST',
+          headers: {
+            'apikey': window.HEARTH_CONFIG.SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${currentSession.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body || {})
+        });
+        return res;
+      }
+
+      async function loadVendor(vendorId) {
+        try {
+          const res = await callAdminEf('admin-get-vendor', { vendor_id: vendorId });
+          if (res.status === 404) {
+            renderInlineError('Vendor not found', '← Back to vendors', 'platform-admin.html');
+            return null;
+          }
+          if (res.status !== 200) {
+            console.error('admin-get-vendor returned', res.status);
+            renderInlineError("Couldn't load vendor", '← Back to vendors', 'platform-admin.html');
+            return null;
+          }
+          const data = await res.json();
+          if (!data?.vendor) {
+            renderInlineError('Vendor not found', '← Back to vendors', 'platform-admin.html');
+            return null;
+          }
+          return data.vendor;
+        } catch (err) {
+          console.error('loadVendor failed:', err);
+          renderInlineError("Couldn't load vendor", '← Back to vendors', 'platform-admin.html');
+          return null;
+        }
+      }
+
+      async function loadDrops(vendorId) {
+        try {
+          const res = await callAdminEf('admin-list-vendor-drops', { vendor_id: vendorId });
+          if (res.status !== 200) {
+            console.error('admin-list-vendor-drops returned', res.status);
+            dropsSubheadEl.hidden = true;
+            dropsTableWrapEl.hidden = true;
+            dropsEmptyEl.hidden = true;
+            dropsErrorEl.hidden = false;
+            return;
+          }
+          const data = await res.json();
+          const drops = Array.isArray(data?.drops) ? data.drops : [];
+
+          const n = drops.length;
+          dropsSubheadEl.textContent = `${n} drop${n === 1 ? '' : 's'}`;
+
+          if (n === 0) {
+            dropsTableWrapEl.hidden = true;
+            dropsErrorEl.hidden = true;
+            dropsEmptyEl.hidden = false;
+            return;
+          }
+
+          dropsTableBodyEl.textContent = '';
+          for (const d of drops) {
+            dropsTableBodyEl.appendChild(renderDropRow(d));
+          }
+          dropsEmptyEl.hidden = true;
+          dropsErrorEl.hidden = true;
+          dropsTableWrapEl.hidden = false;
+        } catch (err) {
+          console.error('loadDrops failed:', err);
+          dropsSubheadEl.hidden = true;
+          dropsTableWrapEl.hidden = true;
+          dropsEmptyEl.hidden = true;
+          dropsErrorEl.hidden = false;
+        }
+      }
+
+      async function loadOrders(dropId, dropName) {
+        ordersSectionHeaderEl.textContent = `Orders — ${dropName || ''}`.trim();
+        ordersSectionEl.hidden = false;
+        ordersSubheadEl.textContent = 'Loading…';
+        ordersTableWrapEl.hidden = true;
+        ordersEmptyEl.hidden = true;
+        ordersErrorEl.hidden = true;
+
+        ordersSectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        try {
+          const res = await callAdminEf('admin-list-drop-orders', { drop_id: dropId });
+          if (res.status !== 200) {
+            console.error('admin-list-drop-orders returned', res.status);
+            ordersSubheadEl.textContent = '';
+            ordersErrorEl.hidden = false;
+            return;
+          }
+          const data = await res.json();
+          const orders = Array.isArray(data?.orders) ? data.orders : [];
+
+          const n = orders.length;
+          ordersSubheadEl.textContent = `${n} order${n === 1 ? '' : 's'}`;
+
+          if (n === 0) {
+            ordersEmptyEl.hidden = false;
+            return;
+          }
+
+          ordersTableBodyEl.textContent = '';
+          for (const o of orders) {
+            ordersTableBodyEl.appendChild(renderOrderRow(o));
+          }
+          ordersTableWrapEl.hidden = false;
+        } catch (err) {
+          console.error('loadOrders failed:', err);
+          ordersSubheadEl.textContent = '';
+          ordersErrorEl.hidden = false;
+        }
+      }
+
+      dropsTableBodyEl.addEventListener('click', (e) => {
+        const row = e.target.closest('.dropRow');
+        if (!row) return;
+        const dropId = row.dataset.dropId;
+        if (!dropId) return;
+
+        for (const sel of dropsTableBodyEl.querySelectorAll('.dropRowSelected')) {
+          sel.classList.remove('dropRowSelected');
+        }
+        row.classList.add('dropRowSelected');
+
+        loadOrders(dropId, row.dataset.dropName || '');
+      });
+
+      try {
+        const supabase = window.supabase.createClient(
+          window.HEARTH_CONFIG.SUPABASE_URL,
+          window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+        );
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        const session = sessionData?.session;
+
+        if (!session) {
+          showNotAuthorised();
+          return;
+        }
+        currentSession = session;
+
+        const res = await fetch(`${window.HEARTH_CONFIG.SUPABASE_URL}/functions/v1/admin-verify`, {
+          method: 'POST',
+          headers: {
+            'apikey': window.HEARTH_CONFIG.SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: '{}'
+        });
+
+        if (res.status !== 200) {
+          showNotAuthorised();
+          return;
+        }
+
+        const data = await res.json();
+        if (!data?.isAdmin) {
+          showNotAuthorised();
+          return;
+        }
+
+        showAdminContent(data.email || '');
+
+        const params = new URLSearchParams(window.location.search);
+        const vendorId = params.get('id');
+        if (!vendorId) {
+          renderInlineError('No vendor selected', '← Back to vendors', 'platform-admin.html');
+          return;
+        }
+
+        const vendor = await loadVendor(vendorId);
+        if (!vendor) return;
+
+        renderVendorHeader(vendor);
+        loadDrops(vendor.id);
+      } catch (err) {
+        console.error('platform-admin-vendor auth gate failed:', err);
+        showNotAuthorised();
+      }
+    })();
+  </script>
+</body>
+</html>
