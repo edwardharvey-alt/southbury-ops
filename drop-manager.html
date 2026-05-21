@@ -3338,6 +3338,7 @@
       preview.innerHTML = `
         <strong>${escapeHtml(host.name)}</strong>
         ${escapeHtml(host.host_type)}${host.postcode ? ` • ${escapeHtml(host.postcode)}` : ""}
+        <div id="hostPreviewEnrichment"></div>
       `;
 
       enrichHostPreview(host.id);
@@ -3406,7 +3407,8 @@
         }
 
         if (enrichHtml) {
-          preview.innerHTML += enrichHtml;
+          const enrichContainer = preview.querySelector('#hostPreviewEnrichment') || preview;
+          enrichContainer.innerHTML = enrichHtml;
         }
       } catch (err) {
         /* Silently fail — basic preview already rendered */
