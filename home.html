@@ -280,6 +280,10 @@
       grid-template-columns:repeat(2,minmax(0,1fr));
     }
 
+    .home-workGrid > .home-work:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
+
     .home-flowGrid{
       grid-template-columns:repeat(3,minmax(0,1fr));
     }
@@ -887,6 +891,11 @@
         <div class="home-today" id="todayContent"></div>
       </section>
 
+      <!-- GETTING STARTED CARD -->
+      <section class="home-card home-pad" id="gettingStartedCard" style="display:none;">
+        <div id="gettingStartedContent"></div>
+      </section>
+
       <!-- RECENT DROPS STRIP -->
       <section class="home-card home-pad" id="recentDropsStrip" style="display:none;">
         <div id="recentDropsContent"></div>
@@ -1269,6 +1278,121 @@
       `;
     }
 
+    function renderGettingStarted(){
+      const card = document.getElementById('gettingStartedCard');
+      const content = document.getElementById('gettingStartedContent');
+      if (!card || !content) return;
+
+      if (!state.vendor.onboarding_completed) {
+        card.style.display = 'none';
+        return;
+      }
+
+      const dismissKey = 'hearth:getting-started-dismissed:' + state.vendor.id;
+      if (localStorage.getItem(dismissKey) === '1') {
+        card.style.display = 'none';
+        return;
+      }
+
+      const steps = [
+        {
+          label: 'Set up your brand',
+          href: './brand-hearth.html',
+          complete: Boolean(state.vendor.logo_url && state.vendor.brand_primary_color && state.vendor.display_name)
+        },
+        {
+          label: 'Build your offer',
+          href: './drop-menu.html',
+          complete: [...state.products, ...state.bundles].some(i => i.is_active !== false)
+        },
+        {
+          label: 'Create your first drop',
+          href: './drop-manager.html',
+          complete: state.drops.length > 0
+        },
+        {
+          label: 'Publish your first drop',
+          href: './drop-manager.html',
+          complete: state.drops.some(d => (d.status || '').toLowerCase() !== 'draft')
+        },
+        {
+          label: 'Run a live drop',
+          href: './service-board.html',
+          complete: state.drops.some(d => (d.status || '').toLowerCase() === 'completed')
+        }
+      ];
+
+      const completedCount = steps.filter(s => s.complete).length;
+
+      if (completedCount === steps.length) {
+        localStorage.setItem(dismissKey, '1');
+        card.style.display = 'none';
+        return;
+      }
+
+      const currentIdx = steps.findIndex(s => !s.complete);
+
+      const dotStyleCompleted = 'width:8px; height:8px; border-radius:50%; background:#166534; flex-shrink:0;';
+      const dotStyleCurrent = 'width:8px; height:8px; border-radius:50%; background:var(--home-accent); flex-shrink:0;';
+      const dotStyleFuture = 'width:8px; height:8px; border-radius:50%; border:1.5px solid var(--home-border); flex-shrink:0; box-sizing:border-box;';
+
+      const labelBase = 'flex:1; font-family:Figtree,sans-serif; font-size:14px;';
+      const labelCompleted = labelBase + ' color:var(--home-muted); text-decoration:line-through;';
+      const labelCurrent = labelBase + ' font-weight:700; color:var(--home-text);';
+      const labelFuture = labelBase + ' color:var(--home-muted);';
+
+      const rows = steps.map((step, idx) => {
+        const labelText = escapeHtml(step.label);
+        if (step.complete) {
+          return `
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="${dotStyleCompleted}"></div>
+              <div style="${labelCompleted}">${labelText}</div>
+              <div style="width:18px; flex-shrink:0;"></div>
+            </div>
+          `;
+        }
+        if (idx === currentIdx) {
+          const href = HearthNav.withVendor(step.href);
+          return `
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="${dotStyleCurrent}"></div>
+              <div style="${labelCurrent}">${labelText}</div>
+              <a href="${href}" style="font-family:Figtree,sans-serif; font-size:14px; color:var(--home-accent); text-decoration:none; flex-shrink:0;">→</a>
+            </div>
+          `;
+        }
+        return `
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="${dotStyleFuture}"></div>
+            <div style="${labelFuture}">${labelText}</div>
+            <div style="width:18px; flex-shrink:0;"></div>
+          </div>
+        `;
+      }).join('');
+
+      content.innerHTML = `
+        <div style="display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px; margin-bottom:14px;">
+          <div style="font-family:Figtree,sans-serif; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:var(--home-muted);">GETTING STARTED</div>
+          <div style="font-family:Figtree,sans-serif; font-size:13px; color:var(--home-muted); text-align:center;">${completedCount} of 5 complete</div>
+          <button type="button" id="gettingStartedDismiss" aria-label="Dismiss" style="font-family:Figtree,sans-serif; font-size:16px; color:var(--home-muted); background:none; border:none; cursor:pointer; min-width:44px; min-height:44px; line-height:1; padding:0;">×</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${rows}
+        </div>
+      `;
+
+      card.style.display = '';
+
+      const dismissBtn = document.getElementById('gettingStartedDismiss');
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', () => {
+          localStorage.setItem(dismissKey, '1');
+          card.style.display = 'none';
+        });
+      }
+    }
+
     function renderRecentDrops(){
       const strip = document.getElementById('recentDropsStrip');
       const content = document.getElementById('recentDropsContent');
@@ -1511,7 +1635,7 @@
           status: state.customers.length ? pill('good', `${fmtNum(state.customers.length)} known`) : pill('neutral','Building'),
           description:`Everyone who's ordered from you. Who's loyal, who's lapsed, where to go next.`,
           meta: state.customers.length
-            ? `${fmtNum(state.customers.length)} customer${state.customers.length === 1 ? '' : 's'} in your owned asset — independent of any platform.`
+            ? `${fmtNum(state.customers.length)} customer${state.customers.length === 1 ? '' : 's'} in your audience.`
             : 'Your audience builds with every drop and every import.',
           primaryLabel: state.customers.length ? 'View customers' : 'Learn more',
           primaryHref:HearthNav.withVendor('./customers.html')
@@ -1997,6 +2121,7 @@
     function render(){
       renderSetupNotice();
       renderToday();
+      renderGettingStarted();
       renderRecentDrops();
       renderHero();
       renderPulse();
