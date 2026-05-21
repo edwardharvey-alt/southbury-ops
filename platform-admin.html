@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hearth — Platform admin</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=31" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --pa-bg: var(--h-chalk, #faf8f5);
+      --pa-text: var(--h-coal, #0f0b08);
+      --pa-muted: var(--h-stone, #8c7b6e);
+      --pa-border: var(--h-cinder, #e8ddd5);
+      --pa-accent: var(--h-fire, #c4511a);
+      --pa-surface: #ffffff;
+    }
+
+    body {
+      margin: 0;
+      background: var(--pa-bg);
+      color: var(--pa-text);
+      font-family: var(--h-font-ui, 'Figtree', system-ui, sans-serif);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .pa-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 22px 32px;
+      border-bottom: 1px solid var(--pa-border);
+      background: var(--pa-surface);
+    }
+
+    .pa-headerBrand {
+      font-family: var(--h-font-display, 'Cormorant Garamond', serif);
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+    }
+
+    .pa-headerWho {
+      font-size: 13px;
+      color: var(--pa-muted);
+    }
+
+    .pa-headerWho strong {
+      color: var(--pa-text);
+      font-weight: 600;
+    }
+
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 48px 32px 80px;
+    }
+
+    .pa-state {
+      padding: 24px 0;
+    }
+
+    .pa-loading {
+      font-size: 14px;
+      color: var(--pa-muted);
+    }
+
+    .pa-state h1 {
+      font-family: var(--h-font-display, 'Cormorant Garamond', serif);
+      font-size: 36px;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin: 0 0 12px 0;
+    }
+
+    .pa-state p {
+      color: var(--pa-muted);
+      margin: 0 0 16px 0;
+    }
+
+    .pa-state a {
+      color: var(--pa-accent);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .pa-state a:hover {
+      text-decoration: underline;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <header class="pa-header">
+    <div class="pa-headerBrand">Hearth — Platform admin</div>
+    <div class="pa-headerWho">Signed in as <strong id="adminEmail">…</strong></div>
+  </header>
+
+  <main>
+    <section id="loadingState" class="pa-state pa-loading">
+      Verifying access…
+    </section>
+
+    <section id="notAuthorisedState" class="pa-state" hidden>
+      <h1>Not authorised</h1>
+      <p>You don't have platform admin access.</p>
+      <a href="home.html">Return to home</a>
+    </section>
+
+    <section id="adminContent" class="pa-state" hidden>
+      <h1>Platform admin</h1>
+      <p>Vendor list will appear here.</p>
+    </section>
+  </main>
+
+  <script>
+    (async function init() {
+      const loadingEl = document.getElementById('loadingState');
+      const notAuthorisedEl = document.getElementById('notAuthorisedState');
+      const adminContentEl = document.getElementById('adminContent');
+      const adminEmailEl = document.getElementById('adminEmail');
+
+      function showNotAuthorised() {
+        loadingEl.hidden = true;
+        adminContentEl.hidden = true;
+        notAuthorisedEl.hidden = false;
+      }
+
+      function showAdminContent(email) {
+        adminEmailEl.textContent = email;
+        loadingEl.hidden = true;
+        notAuthorisedEl.hidden = true;
+        adminContentEl.hidden = false;
+      }
+
+      try {
+        const supabase = window.supabase.createClient(
+          window.HEARTH_CONFIG.SUPABASE_URL,
+          window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+        );
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        const session = sessionData?.session;
+
+        if (!session) {
+          showNotAuthorised();
+          return;
+        }
+
+        const res = await fetch(`${window.HEARTH_CONFIG.SUPABASE_URL}/functions/v1/admin-verify`, {
+          method: 'POST',
+          headers: {
+            'apikey': window.HEARTH_CONFIG.SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: '{}'
+        });
+
+        if (res.status !== 200) {
+          showNotAuthorised();
+          return;
+        }
+
+        const data = await res.json();
+        if (!data?.isAdmin) {
+          showNotAuthorised();
+          return;
+        }
+
+        showAdminContent(data.email || '');
+      } catch (err) {
+        console.error('platform-admin auth gate failed:', err);
+        showNotAuthorised();
+      }
+    })();
+  </script>
+</body>
+</html>
