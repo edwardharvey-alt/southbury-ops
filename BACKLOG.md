@@ -4769,6 +4769,8 @@ Platform-wide review for:
 Output: per-page copy recommendations plus a glossary/style guide
 checkpoint.
 
+**Closure note (2026-05-21):** All operator pages audited and copy pass complete. Pages covered: home.html (PR #270), onboarding.html (PR #271), drop-manager.html, brand-hearth.html, drop-menu.html, insights.html, scorecard.html, service-board.html. Key outcomes: ~45% word count reduction on home; governing principle "show rather than tell" applied throughout; nav renamed (Brand Hearth → Brand, Menu Library → Offer); Commercials terminology standardised (Community Contribution → Community fundraising, Host share → Host fee); Setup section → Fulfilment in Drop Studio; all brandTitle elements standardised to Hearth; T5-B41 enrichHostPreview duplicate rendering bug fixed in same branch. All changes accumulated on feature/t8-3-home-copy before single merge.
+
 T8-3-sub1: Operator pages — "menu" language consistency audit
 Tier 8. Open — pre-identified gap, does not wait for full T8 sweep.
 
