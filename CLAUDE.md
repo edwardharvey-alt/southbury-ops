@@ -1758,7 +1758,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 ### Tier 8 — Platform audit and design system consolidation
 - T8-1 — Brand and visual consistency audit — open
 - T8-2 — Vendor journey experience audit — open
-- T8-3 — Language, copy, and tone audit — open
+- T8-3 — ~~Language, copy and tone audit (all operator pages)~~ ✓ COMPLETE
 - T8-3-sub1 — Operator pages: "menu" vs "offer" language consistency audit — open
 - T8-4 — Design system consolidation — open (depends on T8-1 → T8-3)
 
