@@ -279,8 +279,6 @@
   </div>
 
   <script>
-    const ADMIN_UID = "ea983928-2fc5-4de1-8d96-642a98c4c156";
-
     const _sb = supabase.createClient(
       window.HEARTH_CONFIG.SUPABASE_URL,
       window.HEARTH_CONFIG.SUPABASE_ANON_KEY
@@ -344,7 +342,26 @@
           return;
         }
 
-        if (session.user.id !== ADMIN_UID) {
+        var verifyRes = await fetch(
+          window.HEARTH_CONFIG.SUPABASE_URL + "/functions/v1/admin-verify",
+          {
+            method: "POST",
+            headers: {
+              "apikey": window.HEARTH_CONFIG.SUPABASE_ANON_KEY,
+              "Authorization": "Bearer " + session.access_token,
+              "Content-Type": "application/json"
+            },
+            body: "{}"
+          }
+        );
+
+        if (verifyRes.status !== 200) {
+          unauthorisedEl.hidden = false;
+          return;
+        }
+
+        var verifyData = await verifyRes.json();
+        if (!verifyData || !verifyData.isAdmin) {
           unauthorisedEl.hidden = false;
           return;
         }

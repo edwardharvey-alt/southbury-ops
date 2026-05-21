@@ -47,18 +47,32 @@ Deno.serve(async (req) => {
       });
     }
 
-    const ADMIN_UID = "ea983928-2fc5-4de1-8d96-642a98c4c156";
-    if (userData.user.id !== ADMIN_UID) {
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: adminRow, error: adminErr } = await supabaseAdmin
+      .from("admins")
+      .select("id")
+      .eq("auth_user_id", userData.user.id)
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+
+    if (adminErr) {
+      return new Response(JSON.stringify({ error: adminErr.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!adminRow) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
 
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       redirectTo: "https://lovehearth.co.uk/set-password.html",
