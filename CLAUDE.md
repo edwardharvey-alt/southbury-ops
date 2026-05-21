@@ -1708,7 +1708,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B36 — duplicate-bundle rollback verification — open
 - T5-B37 — save-bundle-line update-path partial-failure note — open
 - T5-B40 — Audit v_*_enriched views for missing columns — open
-- T5-B41 — drop-manager.html enrichHostPreview appends rather than replaces (cosmetic) — open
+- T5-B41 — ~~drop-manager.html enrichHostPreview appends rather than replaces (cosmetic)~~ ✓ COMPLETE
 - T5-B44 — Publish-validation bug: drops can be published with `orders_close` already in the past, and `orders_close` is not re-derived when the drop date changes — so a drop saved with a future date but a stale `orders_close` is immediately classified as already-closed and disappears from the "Live" filter. No data loss; independent of T5-A3. — open
 
 ### Tier 6 — Production readiness

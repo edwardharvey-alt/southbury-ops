@@ -4016,6 +4016,8 @@ work.
 
 Cross-reference: T4-37 (parent verification surfaced this).
 
+**Closure note (2026-05-21):** Fixed in feature/t8-3-home-copy. renderHostPreview() now includes a dedicated #hostPreviewEnrichment div; enrichHostPreview() replaces its innerHTML rather than appending to the outer preview container. Surfaced during T8-3 Drop Studio copy audit.
+
 ### T5-B42 — Edge Function migration for authenticated drops table reads ✓ COMPLETE
 
 **Status update (2026-05-12):** ✓ COMPLETE. Shipped across three PRs:

@@ -54,8 +54,8 @@
   // Canonical list of operator pages shown in the platform nav bar.
   var NAV_ITEMS = [
     { file: "home.html", label: "Home" },
-    { file: "brand-hearth.html", label: "Brand Hearth" },
-    { file: "drop-menu.html", label: "Menu Library" },
+    { file: "brand-hearth.html", label: "Brand" },
+    { file: "drop-menu.html", label: "Offer" },
     { file: "drop-manager.html", label: "Drop Studio" },
     { file: "service-board.html", label: "Service Board" },
     { file: "insights.html", label: "Insights" },
