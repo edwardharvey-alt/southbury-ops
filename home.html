@@ -280,6 +280,10 @@
       grid-template-columns:repeat(2,minmax(0,1fr));
     }
 
+    .home-workGrid > .home-work:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
+
     .home-flowGrid{
       grid-template-columns:repeat(3,minmax(0,1fr));
     }
@@ -862,7 +866,7 @@
           <div class="home-brandLockup">
             <div class="home-brandMark">H</div>
             <div class="home-brandText">
-              <h1 class="home-brandTitle">Hearth — Home</h1>
+              <h1 class="home-brandTitle">Hearth</h1>
               <p class="home-brandSub" id="topVendorSub">Loading workspace…</p>
             </div>
           </div>
@@ -876,10 +880,9 @@
       <section class="home-card home-pad" id="setupNotice" style="display:none;">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;">
           <div>
-            <div style="font-size:15px; font-weight:800; color:var(--home-text); margin-bottom:4px;">Complete your workspace setup</div>
-            <div style="font-size:13px; color:var(--home-muted); font-weight:700;">Tell us how you operate so Hearth can work the way you do.</div>
+            <div style="font-size:15px; font-weight:800; color:var(--home-text); margin-bottom:4px;">Finish setting up before your first drop</div>
           </div>
-          <a href="./onboarding.html" class="home-button" style="white-space:nowrap;">Get started →</a>
+          <a href="./onboarding.html" class="home-button" style="white-space:nowrap;">Continue setup →</a>
         </div>
       </section>
 
@@ -888,68 +891,42 @@
         <div class="home-today" id="todayContent"></div>
       </section>
 
-      <!-- SCORECARD PROMPT -->
-      <section class="home-card home-pad" id="scorecardPrompt" style="display:none;">
-        <div class="home-today" id="scorecardPromptContent"></div>
+      <!-- GETTING STARTED CARD -->
+      <section class="home-card home-pad" id="gettingStartedCard" style="display:none;">
+        <div id="gettingStartedContent"></div>
+      </section>
+
+      <!-- RECENT DROPS STRIP -->
+      <section class="home-card home-pad" id="recentDropsStrip" style="display:none;">
+        <div id="recentDropsContent"></div>
       </section>
 
       <!-- HERO -->
-      <section class="home-hero">
-        <div class="home-card home-pad-lg home-heroMain">
-          <h1>Planned food moments, shared locally.</h1>
-          <p class="home-lead">
-            Built with and for the communities vendors serve.
-          </p>
-          <p class="home-subLead">
-            Hearth is built around planned moments — we call them drops. Each drop has a set menu, a fixed window, a real capacity, and often a community host. Every order builds something more valuable than revenue: a customer relationship you own directly, independent of any platform.
-          </p>
+      <section class="home-card home-pad-lg">
+        <div style="font-family:'Cormorant Garamond',serif; font-size:13px; color:var(--home-muted); font-weight:400; margin:0 0 10px 0; text-transform:none; letter-spacing:normal;">Planned food moments, shared locally.</div>
+        <h1 id="heroVendorHeadline" style="font-family:'Cormorant Garamond',serif; font-size:36px; font-weight:400; letter-spacing:-0.03em; margin:0;">Loading…</h1>
 
-          <div class="home-heroActions">
-            <a class="home-button" id="primaryCta" href="./drop-manager.html">Create next drop</a>
-            <a class="home-button-secondary" href="#workspaces">Explore workspaces</a>
-          </div>
-
-          <div class="home-miniStats">
-            <div class="home-miniStat">
-              <div class="home-miniLabel">Workspace</div>
-              <div class="home-miniValue" id="heroVendorName">Loading…</div>
-              <div class="home-miniMeta" id="heroVendorMeta">Vendor identity and workspace context</div>
-            </div>
-            <div class="home-miniStat">
-              <div class="home-miniLabel">Current status</div>
-              <div class="home-miniValue" id="heroStatus">—</div>
-              <div class="home-miniMeta" id="heroStatusMeta">Checking drop status</div>
-            </div>
-            <div class="home-miniStat">
-              <div class="home-miniLabel">Next best move</div>
-              <div class="home-miniValue" id="heroNextMove">—</div>
-              <div class="home-miniMeta" id="heroNextMoveMeta">Loading recommendations</div>
-            </div>
-          </div>
+        <div class="home-heroActions" style="margin-top:18px;">
+          <a class="home-button" id="primaryCta" href="./drop-manager.html">Create next drop</a>
         </div>
 
-        <div class="home-sidePanel">
-          <div class="home-card home-pad">
-            <div class="home-panelTitle">How Hearth works</div>
-            <div class="home-panelValue">Brand → Offer → Drop → Run → Learn</div>
-            <p class="home-panelText">
-              Build your identity, define your offer, create a drop, run it calmly, then learn what is working over time. Each drop compounds the next.
-            </p>
-          </div>
+        <p id="signalText" style="font-family:'Figtree',sans-serif; font-size:13px; color:var(--home-muted); margin:10px 0 0 0;">Loading recent platform signal…</p>
 
-          <div class="home-card home-pad">
-            <div class="home-panelTitle">Why it feels different</div>
-            <p class="home-panelText">
-              No marketplace feed. No always-open pressure. No aggregator dependency. Just well-run moments, shaped by the vendor and hosted in real places that bring their own audience. Every customer who orders is yours — not rented, not shared with competitors, not lost behind an algorithm. And with every drop, the next one gets easier to fill.
-            </p>
-            <a href="javascript:void(0)" onclick="location.href=HearthNav.withVendor('why-hearth.html')" style="font-size:12px;color:#8C8480;text-decoration:none;border-bottom:1px solid transparent;" onmouseover="this.style.borderBottomColor='#8C8480'" onmouseout="this.style.borderBottomColor='transparent'">Why Hearth feels different &rarr;</a>
+        <div class="home-miniStats">
+          <div class="home-miniStat">
+            <div class="home-miniLabel">Drops run</div>
+            <div class="home-miniValue" id="heroDropsRun">—</div>
+            <div class="home-miniMeta" id="heroDropsRunMeta">Loading…</div>
           </div>
-
-          <div class="home-card home-pad">
-            <div class="home-panelTitle">Current signal</div>
-            <p class="home-panelText" id="signalText">
-              Loading recent platform signal…
-            </p>
+          <div class="home-miniStat">
+            <div class="home-miniLabel">Current status</div>
+            <div class="home-miniValue" id="heroStatus">—</div>
+            <div class="home-miniMeta" id="heroStatusMeta">Checking drop status</div>
+          </div>
+          <div class="home-miniStat">
+            <div class="home-miniLabel">Next best move</div>
+            <div class="home-miniValue" id="heroNextMove">—</div>
+            <div class="home-miniMeta" id="heroNextMoveMeta">Loading recommendations</div>
           </div>
         </div>
       </section>
@@ -959,9 +936,9 @@
         <div class="home-sectionHead">
           <div>
             <h2 class="home-sectionTitle">Business pulse</h2>
-            <p class="home-sectionSub">How Hearth is contributing over the last 30 days.</p>
+            <p class="home-sectionSub">Last 30 days.</p>
           </div>
-          <a class="home-button-secondary" href="./insights.html" style="font-size:13px;">View full insights</a>
+          <a class="home-button-secondary" href="./insights.html" style="font-size:13px;">View insights</a>
         </div>
 
         <div class="home-pulseGrid" id="pulseGrid">
@@ -974,9 +951,9 @@
         <div class="home-sectionHead">
           <div>
             <h2 class="home-sectionTitle">Your audience</h2>
-            <p class="home-sectionSub">The customer asset you own — independent of any platform.</p>
+            <p class="home-sectionSub">Yours — not rented, not shared.</p>
           </div>
-          <a class="home-button-secondary" href="./customers.html" style="font-size:13px;">View all customers</a>
+          <a class="home-button-secondary" href="./customers.html" style="font-size:13px;">View customers</a>
         </div>
 
         <div class="home-assetGrid" id="assetGrid">
@@ -989,7 +966,6 @@
         <div class="home-sectionHead">
           <div>
             <h2 class="home-sectionTitle">Workspaces</h2>
-            <p class="home-sectionSub">Everything Hearth is built around: prepare, publish, run and improve.</p>
           </div>
         </div>
 
@@ -998,113 +974,17 @@
         </div>
       </section>
 
-      <!-- HOW HEARTH WORKS -->
-      <section class="home-card home-pad-lg">
-        <div class="home-sectionHead">
-          <div>
-            <h2 class="home-sectionTitle">How Hearth works</h2>
-            <p class="home-sectionSub">Why the model is different — and why that matters.</p>
-          </div>
-        </div>
-
-        <div class="home-how">
-          <div class="home-howText">
-            <p>
-              Hearth is built around planned drops — moments you announce rather than a channel you keep open. Each drop has a clear menu, a fixed window, and real capacity, so food can be prepared with intent, not pressure.
-            </p>
-            <p>
-              Every drop adds to something that grows: a customer base you own, host relationships that deepen, intelligence that sharpens. That's what makes the next drop easier to fill than the last.
-            </p>
-            <p>
-              By removing the need for expensive third-party aggregators, vendors retain more of what they earn — while hosts can use regular drops to bring people together and, where relevant, raise funds locally.
-            </p>
-            <p>
-              Over time, this creates something more valuable than a series of good services. Each drop makes the next easier to plan and fill — more targeted customers, better-fitting menus, stronger host partnerships, less guesswork.
-            </p>
-          </div>
-
-          <div class="home-bulletList">
-            <div class="home-bullet">
-              <div class="home-bulletDot"></div>
-              <div>
-                <strong>Your customers</strong><br />
-                Every drop adds to an owned customer asset. Loyal core, occasional, lapsed — Hearth shows you who's who.
-              </div>
-            </div>
-            <div class="home-bullet">
-              <div class="home-bulletDot"></div>
-              <div>
-                <strong>Your host relationships</strong><br />
-                Community hosts are first-class. Their audience, their benefit, their share in your success.
-              </div>
-            </div>
-            <div class="home-bullet">
-              <div class="home-bulletDot"></div>
-              <div>
-                <strong>Your decision intelligence</strong><br />
-                What to sell, to whom, when, and how to communicate. The system gets sharper with every drop.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- FLOW -->
-      <section class="home-card home-pad-lg">
-        <div class="home-sectionHead">
-          <div>
-            <h2 class="home-sectionTitle">The Hearth flow</h2>
-            <p class="home-sectionSub">A simple operating rhythm for building repeatable local moments.</p>
-          </div>
-        </div>
-
-        <div class="home-flowGrid">
-          <div class="home-flow">
-            <h4>Brand</h4>
-            <p>Set your identity, imagery and customer-facing feel.</p>
-          </div>
-          <div class="home-flow">
-            <h4>Offer</h4>
-            <p>Build your offer — products, hampers, bundles and pre-order items.</p>
-          </div>
-          <div class="home-flow">
-            <h4>Drop</h4>
-            <p>Create a defined moment with timing, capacity and host context.</p>
-          </div>
-          <div class="home-flow">
-            <h4>Run</h4>
-            <p>Use Service Board to manage orders and fulfilment calmly.</p>
-          </div>
-          <div class="home-flow">
-            <h4>Learn & Grow</h4>
-            <p>Insights turns drop history into recommendations. Your customer asset turns orders into an audience you can reach again — before your next drop opens.</p>
-          </div>
-          <div class="home-flow">
-            <h4>Compound</h4>
-            <p>Each drop makes the next easier to fill. Smarter targeting. Stronger host relationships. A customer base that grows without starting from zero.</p>
-          </div>
-        </div>
-      </section>
-
       <!-- ACTIONS -->
       <section class="home-card home-pad-lg">
         <div class="home-sectionHead">
           <div>
-            <h2 class="home-sectionTitle">Recommended next actions</h2>
-            <p class="home-sectionSub">Personalised suggestions based on your drop history and operating pattern.</p>
+            <h2 class="home-sectionTitle">What to do next</h2>
           </div>
         </div>
 
         <div class="home-actionGrid" id="actionsGrid">
           <div class="home-loading">Loading recommendations…</div>
         </div>
-      </section>
-
-      <!-- FOOTER NOTE -->
-      <section class="home-card home-pad">
-        <p class="home-footerNote">
-          Hearth is designed to help vendors create structured, repeatable food moments — and to make those moments easy for communities to organise, return to and benefit from over time.
-        </p>
       </section>
 
     </div>
@@ -1274,8 +1154,8 @@
           key:'live',
           label:'Live now',
           meta:`${live.name || 'Active drop'} is currently running.`,
-          ctaLabel:'Open Service Board',
-          ctaHref:HearthNav.withVendor('./service-board.html')
+          ctaLabel:'View insights',
+          ctaHref:HearthNav.withVendor('./insights.html')
         };
       }
 
@@ -1315,10 +1195,9 @@
         'Vendor workspace';
 
       document.getElementById('topVendorSub').textContent = vendorName;
-      document.getElementById('heroVendorName').textContent = vendorName;
-      document.getElementById('heroVendorMeta').textContent =
-        state.vendor.tagline || 'Vendor-first workspace powered by Hearth';
-
+      document.getElementById('heroVendorHeadline').textContent = vendorName;
+      document.getElementById('heroDropsRun').textContent = fmtNum(state.drops.length);
+      document.getElementById('heroDropsRunMeta').textContent = 'Your Hearth drop history';
       const model = getStatusModel();
       document.getElementById('heroStatus').textContent = model.label;
       document.getElementById('heroStatusMeta').textContent = model.meta;
@@ -1357,7 +1236,7 @@
             <div class="home-todayDot live"></div>
             <div>
               <div class="home-todayLabel">Live now — ${name}</div>
-              <div class="home-todayMeta">Orders are coming in. Manage fulfilment from the Service Board.</div>
+              <div class="home-todayMeta">Orders are coming in.</div>
             </div>
           </div>
           <a class="home-button" href="${HearthNav.withVendor('./service-board.html')}">Open Service Board</a>
@@ -1372,13 +1251,13 @@
         const startTime = drop.delivery_start
           ? new Date(drop.delivery_start).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' })
           : '';
-        const timeNote = startTime ? ` at ${startTime}` : ' later today';
+        const timeNote = startTime ? ` at ${startTime}` : '';
         content.innerHTML = `
           <div class="home-todayLeft">
             <div class="home-todayDot scheduled"></div>
             <div>
-              <div class="home-todayLabel">${name} — scheduled${escapeHtml(timeNote)}</div>
-              <div class="home-todayMeta">Check timing, capacity and menu before it goes live.</div>
+              <div class="home-todayLabel">${name} — on today${escapeHtml(timeNote)}</div>
+              <div class="home-todayMeta">Going live later today.</div>
             </div>
           </div>
           <a class="home-button-secondary" href="${HearthNav.withVendor('./drop-manager.html')}">Open Drop Studio</a>
@@ -1392,55 +1271,163 @@
         <div class="home-todayLeft">
           <div class="home-todayDot quiet"></div>
           <div>
-            <div class="home-todayLabel">No drops today</div>
-            <div class="home-todayMeta">A good time to plan the next moment or review recent performance.</div>
+            <div class="home-todayLabel">Nothing live today</div>
           </div>
         </div>
         <a class="home-button-secondary" href="${HearthNav.withVendor('./drop-manager.html')}">Create next drop</a>
       `;
     }
 
-    function renderScorecardPrompt(){
-      const prompt = document.getElementById('scorecardPrompt');
-      const content = document.getElementById('scorecardPromptContent');
-      if (!prompt || !content) return;
+    function renderGettingStarted(){
+      const card = document.getElementById('gettingStartedCard');
+      const content = document.getElementById('gettingStartedContent');
+      if (!card || !content) return;
 
-      const now = new Date();
-      const cutoff = new Date(now.getTime() - 48 * 60 * 60 * 1000);
-
-      /* Find the most recently closed drop within the last 48 hours */
-      const recentClosed = state.drops
-        .filter(d => {
-          const status = (d.status || '').toLowerCase();
-          if (status !== 'closed') return false;
-          const closedAt = d.closes_at ? new Date(d.closes_at) : null;
-          return closedAt && closedAt >= cutoff && closedAt <= now;
-        })
-        .sort((a, b) => new Date(b.closes_at) - new Date(a.closes_at))[0];
-
-      if (!recentClosed) {
-        prompt.style.display = 'none';
+      if (!state.vendor.onboarding_completed) {
+        card.style.display = 'none';
         return;
       }
 
-      prompt.style.display = '';
-      const name = escapeHtml(recentClosed.name || recentClosed.drop_name || 'Your drop');
-      const dropId = encodeURIComponent(recentClosed.drop_id || recentClosed.id);
+      const dismissKey = 'hearth:getting-started-dismissed:' + state.vendor.id;
+      if (localStorage.getItem(dismissKey) === '1') {
+        card.style.display = 'none';
+        return;
+      }
+
+      const steps = [
+        {
+          label: 'Set up your brand',
+          href: './brand-hearth.html',
+          complete: Boolean(state.vendor.logo_url && state.vendor.brand_primary_color && state.vendor.display_name)
+        },
+        {
+          label: 'Build your offer',
+          href: './drop-menu.html',
+          complete: [...state.products, ...state.bundles].some(i => i.is_active !== false)
+        },
+        {
+          label: 'Create your first drop',
+          href: './drop-manager.html',
+          complete: state.drops.length > 0
+        },
+        {
+          label: 'Publish your first drop',
+          href: './drop-manager.html',
+          complete: state.drops.some(d => (d.status || '').toLowerCase() !== 'draft')
+        },
+        {
+          label: 'Run a live drop',
+          href: './service-board.html',
+          complete: state.drops.some(d => (d.status || '').toLowerCase() === 'completed')
+        }
+      ];
+
+      const completedCount = steps.filter(s => s.complete).length;
+
+      if (completedCount === steps.length) {
+        localStorage.setItem(dismissKey, '1');
+        card.style.display = 'none';
+        return;
+      }
+
+      const currentIdx = steps.findIndex(s => !s.complete);
+
+      const dotStyleCompleted = 'width:8px; height:8px; border-radius:50%; background:#166534; flex-shrink:0;';
+      const dotStyleCurrent = 'width:8px; height:8px; border-radius:50%; background:var(--home-accent); flex-shrink:0;';
+      const dotStyleFuture = 'width:8px; height:8px; border-radius:50%; border:1.5px solid var(--home-border); flex-shrink:0; box-sizing:border-box;';
+
+      const labelBase = 'flex:1; font-family:Figtree,sans-serif; font-size:14px;';
+      const labelCompleted = labelBase + ' color:var(--home-muted); text-decoration:line-through;';
+      const labelCurrent = labelBase + ' font-weight:700; color:var(--home-text);';
+      const labelFuture = labelBase + ' color:var(--home-muted);';
+
+      const rows = steps.map((step, idx) => {
+        const labelText = escapeHtml(step.label);
+        if (step.complete) {
+          return `
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="${dotStyleCompleted}"></div>
+              <div style="${labelCompleted}">${labelText}</div>
+              <div style="width:18px; flex-shrink:0;"></div>
+            </div>
+          `;
+        }
+        if (idx === currentIdx) {
+          const href = HearthNav.withVendor(step.href);
+          return `
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="${dotStyleCurrent}"></div>
+              <div style="${labelCurrent}">${labelText}</div>
+              <a href="${href}" style="font-family:Figtree,sans-serif; font-size:14px; color:var(--home-accent); text-decoration:none; flex-shrink:0;">→</a>
+            </div>
+          `;
+        }
+        return `
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="${dotStyleFuture}"></div>
+            <div style="${labelFuture}">${labelText}</div>
+            <div style="width:18px; flex-shrink:0;"></div>
+          </div>
+        `;
+      }).join('');
 
       content.innerHTML = `
-        <div class="home-todayLeft">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="flex-shrink:0;">
-            <rect x="2" y="4" width="16" height="13" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/>
-            <path d="M6 9h3v4H6z" fill="currentColor" opacity="0.3"/>
-            <path d="M11 7h3v6h-3z" fill="currentColor" opacity="0.3"/>
-            <line x1="2" y1="14" x2="18" y2="14" stroke="currentColor" stroke-width="1" opacity="0.2"/>
-          </svg>
-          <div>
-            <div class="home-todayLabel">${name} just closed</div>
-            <div class="home-todayMeta">Your scorecard is ready.</div>
-          </div>
+        <div style="display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px; margin-bottom:14px;">
+          <div style="font-family:Figtree,sans-serif; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:var(--home-muted);">GETTING STARTED</div>
+          <div style="font-family:Figtree,sans-serif; font-size:13px; color:var(--home-muted); text-align:center;">${completedCount} of 5 complete</div>
+          <button type="button" id="gettingStartedDismiss" aria-label="Dismiss" style="font-family:Figtree,sans-serif; font-size:16px; color:var(--home-muted); background:none; border:none; cursor:pointer; min-width:44px; min-height:44px; line-height:1; padding:0;">×</button>
         </div>
-        <a class="home-button" href="${HearthNav.withVendor('./scorecard.html?drop=' + encodeURIComponent(dropId))}">View scorecard</a>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${rows}
+        </div>
+      `;
+
+      card.style.display = '';
+
+      const dismissBtn = document.getElementById('gettingStartedDismiss');
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', () => {
+          localStorage.setItem(dismissKey, '1');
+          card.style.display = 'none';
+        });
+      }
+    }
+
+    function renderRecentDrops(){
+      const strip = document.getElementById('recentDropsStrip');
+      const content = document.getElementById('recentDropsContent');
+      if (!strip || !content) return;
+
+      const closedDrops = state.drops
+        .filter(d => (d.status || '').toLowerCase() === 'closed')
+        .sort((a, b) => new Date(b.closes_at || 0) - new Date(a.closes_at || 0))
+        .slice(0, 3);
+
+      if (!closedDrops.length) {
+        strip.style.display = 'none';
+        return;
+      }
+
+      strip.style.display = '';
+      const entries = closedDrops.map(d => {
+        const name = escapeHtml(d.name || d.drop_name || 'Drop');
+        const dateLabel = d.closes_at ? escapeHtml(fmtDate(d.closes_at)) : '';
+        const dropId = d.drop_id || d.id;
+        const href = HearthNav.withVendor('./scorecard.html?drop=' + encodeURIComponent(dropId));
+        return `
+          <div style="display:flex; align-items:center; gap:14px;">
+            <div style="min-width:0; flex:1;">
+              <div class="home-todayLabel">${name}</div>
+              <div class="home-todayMeta">${dateLabel}</div>
+            </div>
+            <a href="${href}" style="font-size:13px; color:var(--home-muted); text-decoration:none; white-space:nowrap;">Scorecard →</a>
+          </div>
+        `;
+      }).join('<div style="height:1px; background:var(--home-border); margin:10px 0;"></div>');
+
+      content.innerHTML = `
+        <div class="home-todayLabel" style="margin-bottom:10px;">Recent drops</div>
+        ${entries}
       `;
     }
 
@@ -1459,7 +1446,7 @@
           : `<a class="home-recCta" href="${HearthNav.withVendor('./drop-manager.html')}">Run your first drop</a>`;
         grid.innerHTML = `
           <div class="home-empty" style="grid-column:1/-1;">
-            Your customer asset starts building with your first drop. Every order adds a customer you own directly — no aggregator in the way.<br><br>
+            Every order adds someone to your audience. Run your first drop to start.<br><br>
             ${importCta}
           </div>
         `;
@@ -1600,7 +1587,7 @@
           icon:'SB',
           title:'Service Board',
           status: liveDrop ? pill('good','Live now') : pill('neutral','Operations'),
-          description:'Run active drops calmly, track orders, monitor capacity and keep fulfilment clear.',
+          description:'Manage orders and fulfilment while a drop is live.',
           meta: liveDrop
             ? 'A live drop is active — this is the place to manage it.'
             : 'Use this workspace when a drop is live or approaching service.',
@@ -1611,7 +1598,7 @@
           icon:'DS',
           title:'Drop Studio',
           status: scheduledCount ? pill('good', `${scheduledCount} scheduled`) : draftCount ? pill('warn', `${draftCount} draft`) : pill('neutral','Planning'),
-          description:'Create and manage drops, assign menus, set timing, capacity, host context and sharing links.',
+          description:'Create drops, set timing, capacity and host context.',
           meta: scheduledCount
             ? `${scheduledCount} upcoming drop${scheduledCount === 1 ? '' : 's'} currently in the system.`
             : draftCount
@@ -1624,7 +1611,7 @@
           icon:'ML',
           title:'Menu Library',
           status: activeProducts || activeBundles ? pill('good','Catalogue active') : pill('warn','Needs setup'),
-          description:'Build your offer — products, hampers, bundles and pre-order items that can be reused across drops.',
+          description:'Products, bundles and items — ready to assign to any drop.',
           meta: activeProducts || activeBundles
             ? `${fmtNum(activeProducts)} active product${activeProducts === 1 ? '' : 's'} and ${fmtNum(activeBundles)} active bundle${activeBundles === 1 ? '' : 's'}.`
             : 'Build the catalogue before publishing drops.',
@@ -1635,7 +1622,7 @@
           icon:'BH',
           title:'Brand Hearth',
           status: brandComplete ? pill('good','Brand complete') : pill('warn','Needs attention'),
-          description:'Shape how the vendor appears across customer pages, with logo, imagery, colours and identity.',
+          description:'Logo, imagery and colours — how you appear to customers.',
           meta: brandComplete
             ? 'Core identity assets are in place.'
             : 'Complete key identity fields so the platform and order pages feel polished.',
@@ -1646,9 +1633,9 @@
           icon:'CU',
           title:'Customers',
           status: state.customers.length ? pill('good', `${fmtNum(state.customers.length)} known`) : pill('neutral','Building'),
-          description:'Your owned customer asset — built from real orders, independent of any platform. Understand who is loyal, who needs re-engaging, and where your next drop should go.',
+          description:`Everyone who's ordered from you. Who's loyal, who's lapsed, where to go next.`,
           meta: state.customers.length
-            ? `${fmtNum(state.customers.length)} customer${state.customers.length === 1 ? '' : 's'} in your owned asset — independent of any platform.`
+            ? `${fmtNum(state.customers.length)} customer${state.customers.length === 1 ? '' : 's'} in your audience.`
             : 'Your audience builds with every drop and every import.',
           primaryLabel: state.customers.length ? 'View customers' : 'Learn more',
           primaryHref:HearthNav.withVendor('./customers.html')
@@ -1657,7 +1644,7 @@
           icon:'IN',
           title:'Insights',
           status: insightSignal ? pill('good','Signals building') : pill('neutral','Early signal'),
-          description:'Understand how Hearth is contributing to the business through drop performance, rhythm and context.',
+          description:'Drop performance, fill rates and patterns over time.',
           meta: insightSignal
             ? 'Enough data exists to start spotting meaningful patterns.'
             : 'This becomes more valuable as more drops run.',
@@ -2134,7 +2121,8 @@
     function render(){
       renderSetupNotice();
       renderToday();
-      renderScorecardPrompt();
+      renderGettingStarted();
+      renderRecentDrops();
       renderHero();
       renderPulse();
       renderAssetSnapshot();
