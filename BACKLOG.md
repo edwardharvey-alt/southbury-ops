@@ -1385,6 +1385,22 @@ Part 2 — Home dashboard audit. Verify that data-rich vendors (per `detectArche
 
 **Cross-reference:** T4-23 (first-drop guidance — already nominally routes data-rich vendors toward import), T4-27 (Customers page — this ticket extends), T4-28 (intelligence engine — Home dashboard recommendation surfacing).
 
+T-intelligence-engine-import-recommendation: Recommendation engine threading for data-rich vendor import nudge
+
+Status: Open. Tier 4. Surfaced 2026-05-22 during T-customers-page-import-entry Part 2 audit.
+
+Problem: The recommendation engine in assets/hearth-intelligence.js does not currently thread customer_data_posture or imported-customer count into generateRecommendations(). detectArchetype() returns { type, label, goals, deliveryModel, vendorType } only. Adding a data-rich-vendor import-first nudge per T-customers-page-import-entry Part 2 requires extending both the archetype output and the signals input shape.
+
+Scope:
+1. Extend detectArchetype() in hearth-intelligence.js to expose customerDataPosture from vendorPreferences.customer_data_posture.
+2. Add importedCount (or equivalent) to the signals parameter shape consumed by generateRecommendations().
+3. Update every caller of generateRecommendations() (Home dashboard, Customers page, Insights) to compute and pass the new signal.
+4. Add a new recommendation branch alongside archetype_grow_customer_base for data-rich vendors with < 5 imported customers, with ctaTarget: 'customer-import'.
+
+Defer until at least one real data-rich vendor is onboarded. Building speculatively for an audience that doesn't exist is the wrong call.
+
+Cross-reference: T-customers-page-import-entry (parent, closed via CTA-only fix), T4-28 (intelligence engine).
+
 ### Tier 5 — Strategic platform features
 
 T5-1: Delivery optimisation
