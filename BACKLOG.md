@@ -3512,11 +3512,22 @@ wrapped in a transaction (both insert and invite succeed or neither
 does) or the invite should happen before the vendor row insert.
 Medium priority refactor.
 
-T5-B26: admin.html — ADMIN_UID hardcoded in two places
-ADMIN_UID is duplicated in admin.html and
-supabase/functions/invite-vendor/index.ts. Should be moved to a single
-source of truth — options include an environment variable, a config
-table, or an admins table with RLS. Low priority cleanup.
+T5-B26: admin.html — ADMIN_UID hardcoded in two places ✓ COMPLETE 2026-05-21
+
+Retired across all three sites: admin.html,
+supabase/functions/invite-vendor/index.ts, and
+supabase/functions/create-vendor/index.ts. The third site was caught
+by grep against the actual repo — the handover named two sites; see
+operational learning #57. All three now call the admin-verify Edge
+Function or check the admins table via service role; the literal UID
+string is gone.
+
+Closes alongside T7-14 (multi-admin access — the admins table is the
+replacement). See CLAUDE.md "Platform admin MVP" section for the
+schema, Edge Functions, and canonical admin EF auth pattern.
+
+Cross-reference: T7-14 (admins table), T7-1 (MVP cockpit closure that
+landed in the same workstream).
 
 T5-B27: Edge Function `.single()` vs `.maybeSingle()` consistency sweep ✓ COMPLETE
 Confirmed complete. All audited Edge Functions use .maybeSingle() for
@@ -4521,14 +4532,25 @@ server-side verification via `supabase.auth.getUser()`.
 
 **Phase 1 — needed before vendor count reaches ~10**
 
-T7-1: Platform health cockpit
-Single-screen daily overview showing active vendors by state
-(onboarded, active, paused, at risk), upcoming drops with fill rates,
-last-24h orders and revenue across the platform, live drops in
-progress, underfilled drops (below capacity threshold with closes_at
-approaching), vendors without upcoming drops, and a recent events
-timeline (new vendors, new hosts, drops created, drops closed).
-Read-only. The first thing Ed opens each morning.
+T7-1: Platform health cockpit ✓ COMPLETE 2026-05-21
+
+MVP fulfilled by platform-admin.html (vendor list) and
+platform-admin-vendor.html (vendor drill-down with drops and orders).
+The original spec's core daily-overview function — see active vendors,
+upcoming and live drops, last-24h orders and revenue — is met by the
+two pages: vendor list with onboarding/Stripe state, drop count, and
+last activity; drill-down with drops table (status, order rollup,
+revenue) and orders table (customer details). Read-only throughout.
+
+Deferred to a future ticket if needed: recent-events timeline,
+no-upcoming-drops alerts, underfilled-drop warnings (closes_at
+approaching with capacity below threshold), explicit at-risk
+classification. These were in the original maximal spec but did not
+make the MVP cut. Reopen — or open a fresh ticket — if Ed's daily
+admin workflow surfaces a gap the current pages don't cover.
+
+See CLAUDE.md "Platform admin MVP" section for the full schema, Edge
+Functions, views, and canonical admin EF auth pattern.
 
 T7-2: Vendor profile page
 Consolidated per-vendor view: identity (name, contact, address,
@@ -4606,15 +4628,25 @@ at scale without direct trust in every participant.
 T7-13: Capacity driver concept and modelling — SUPERSEDED
 Promoted to Tier 3 as T3-13. See T3-13 for full spec.
 
-T7-14: Multi-admin access
-Platform-level admin access is currently gated to a single hardcoded
-UID. As the platform adds partners or staff, a proper admins table is
-required: id, auth_user_id, name, role (owner/admin/support),
-granted_at, granted_by. Admin pages query this table server-side via
-supabase.auth.getUser() rather than comparing against a hardcoded UID.
-Prerequisite for adding a business partner to the admin surface.
-Unblocks T5-B25 and T5-B26. Build before any second person needs
-admin access.
+T7-14: Multi-admin access ✓ COMPLETE 2026-05-21
+
+The admins table replaces the hardcoded ADMIN_UID. Columns: id,
+auth_user_id (UNIQUE FK to auth.users), email, granted_at, is_active.
+RLS enabled with no policies — only service_role reads, so membership
+is authoritative. Indexed on auth_user_id WHERE is_active = true. To
+add a new admin: Supabase Auth invite + INSERT INTO admins
+(auth_user_id, email).
+
+Closes T5-B26 (hardcoded UID retired across admin.html, invite-vendor,
+create-vendor — three sites, not two as the handover suggested; see
+operational learning #57). Unblocks T7-16 (business partner admin
+access) — Robin can now be added via the standard flow. T5-B25
+(admin.html vendor creation atomicity) remains open and is not
+addressed by this work, but the admin-verify pattern is now in place
+to support a future atomic flow.
+
+See CLAUDE.md "Platform admin MVP" section for the full schema, Edge
+Functions, views, pages, and canonical admin EF auth pattern.
 
 T7-15: Admin write capability — vendor and drop data amendment
 T7-1 through T7-7 cover read-only oversight. A write surface is needed
@@ -4627,9 +4659,31 @@ Dependency: T7-7.
 
 T7-16: Business partner admin access
 Specific instance of T7-14. Add business partner as platform admin
-with owner-level access. Requires T7-14 admins table and Supabase
-Auth invite. Do not build until T7-14 is in place — do not add their
-UID to the hardcoded list as a temporary measure.
+with owner-level access. T7-14 closed 2026-05-21 so the admins table
+is in place — adding Robin is now a one-line Supabase Auth invite +
+INSERT INTO admins (auth_user_id, email). Do not add their UID to any
+hardcoded list as a shortcut; the admins table is the only sanctioned
+path.
+
+T7-17: Vendor configuration inspector (post-launch)
+Read-only view of a vendor's full configuration on
+platform-admin-vendor.html: menu items (products, bundles, capacity
+drivers), brand setup (logo, hero, colours, copy), drop config
+details, onboarding answers. Built after first real support cases
+reveal what's actually needed. Defer until at least one real vendor
+has been live for 2+ weeks and support questions have been logged
+(see T-support-issue-log). Avoids building speculative inspector UI
+that does not match the questions Ed actually has when supporting a
+vendor in practice.
+
+T7-18: Vendor impersonation / "act as vendor" (post-launch)
+Admin capability to view the platform from a specific vendor's
+perspective. High-trust feature requiring explicit security and audit
+design before any code: session token minting from an admin Edge
+Function, in-page banner whenever impersonation is active, full audit
+log of impersonation sessions (into T7-7), scoped read-only mode by
+default. Do not begin until the audit and security shape is agreed in
+Claude Chat. Not for launch.
 
 #### Monitoring track
 
@@ -4708,6 +4762,33 @@ Vendor-facing status page showing current platform health and
 historical incidents. Builds trust by being transparent about
 outages rather than hiding them. Depends on T7-M1 and T7-M3 as data
 sources.
+
+### Support & operations
+
+Operational tooling and documentation that supports running the
+platform alongside the build work. Not feature work; not in any
+tier's critical path. Lives here because the items have lifecycle
+and traceability concerns that belong in BACKLOG.md even though
+they're not strictly product tickets.
+
+T-support-dryrun-checklist: Pre-drop dry-run checklist (document, not code)
+Written sequence to run with Healthy Habits Cafe before their first
+real drop: create test drop → publish → place test order from a
+separate device → mark order through full lifecycle (placed →
+confirmed → baking → ready → delivered) → review scorecard. Goal:
+build muscle memory before live customers arrive. Document lives in
+repo as docs/support/dryrun-checklist.md or equivalent. No code
+change; the deliverable is the checklist itself plus the lessons
+captured from running it once.
+
+T-support-issue-log: Internal vendor issue log
+Running markdown file or Google Doc capturing every question, bug,
+or confusion from real vendors. Each entry: date, vendor,
+question/issue, resolution (or "unresolved → ticket X"). Source of
+truth for what to build next and what to document. Lightweight —
+text-only, no tooling. Source of upcoming tickets and onboarding
+documentation. Feeds T7-17 priority and many post-launch Tier 4/5
+tickets.
 
 ### Tier 8 — Platform audit and design system consolidation
 

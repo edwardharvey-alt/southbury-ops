@@ -51,7 +51,14 @@ Core belief: great local food should strengthen communities, not bypass them.
 - hosts.html — Host Directory (vendor-facing host management page)
 - host-profile.html — Host Profile (editable profile and drop history per host)
 - host-view.html — Read-only host-facing drop view (no login)
-- admin.html — Admin vendor provisioning page (auth-gated to Ed's UID)
+- admin.html — Admin vendor provisioning page. Auth-gated via the
+  admins table (no longer a hardcoded UID — see "Platform admin MVP"
+  section). Calls admin-verify on load.
+- platform-admin.html — Platform admin vendor list. URL-only access
+  (not linked from any nav). Auth-gated via admin-verify.
+- platform-admin-vendor.html — Platform admin vendor drill-down:
+  header, drops table, orders table. Reached via
+  ?id=<vendor_uuid> from platform-admin.html. Same gate.
 - assets/hearth.css — shared platform stylesheet
 - assets/config.js — Supabase config
 - assets/hearth-intelligence.js — shared intelligence engine module
@@ -111,6 +118,22 @@ Core belief: great local food should strengthen communities, not bypass them.
 Load any vendor's workspace via the ?vendor=<slug> URL param on any
 operator page (see the Operational learnings section on resolveVendor
 and HearthNav.withVendor).
+
+## Pre-launch sequence
+
+The remaining sequence before the first real drop with Healthy Habits
+Cafe. Items marked ✓ are complete; everything else is open.
+
+1. ✓ Platform admin MVP — COMPLETE 2026-05-21
+2. T-customers-page-import-entry (next)
+3. Healthy Habits Cafe dry run
+4. T1-3 closure
+5. T3-8 Stripe live mode conversion
+6. T6-5 Supabase Pro PITR upgrade (parallel — Ed completes
+   independently)
+7. Go live
+
+Post-launch: T5-25 Part 0 (Instagram menu card image).
 
 ## Database — key tables
 
@@ -1278,6 +1301,16 @@ on top of the coding rules above.
     `information_schema` before copying the pattern — original
     code might already be silently broken.
 
+57. **Handover documents drift from code.** Any handover assertion
+    about file locations, file counts, schema column names, or enum
+    values must be verified by grep against the actual repo or by
+    SQL against the actual database before being treated as a build
+    instruction. The T5-B26 closure caught a three-file scope when
+    the handover named two — Claude Code surfaced the discrepancy
+    via grep before making changes, and the scope was corrected in
+    conversation. The same prompt would have shipped broken if the
+    handover had been trusted verbatim.
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -1338,6 +1371,81 @@ KEY=value` and propagated to running instances on the next deploy):
   single Stripe platform. If platform ownership changes, all
   `stripe_account_id` values must be nulled and affected vendors
   re-onboard. Document this as a known migration task.
+
+## Platform admin MVP
+
+Platform-level admin surface for Ed (and future business partners),
+shipped 2026-05-21 across the platform-admin workstream. URL-only
+access read-only views of every vendor on the platform, with
+drill-down into a vendor's drops and orders. Not linked from any nav
+— bookmarked or typed directly. Retires the hardcoded ADMIN_UID
+across admin.html, invite-vendor, and create-vendor (T5-B26 closed)
+and fulfils the T7-1 cockpit MVP and T7-14 multi-admin enabler.
+
+**New table:**
+
+- `admins` — `id` uuid PK, `auth_user_id` uuid UNIQUE FK to
+  `auth.users`, `email` text, `granted_at` timestamptz, `is_active`
+  boolean. RLS enabled with no policies — only `service_role` reads,
+  so membership is authoritative. Indexed on `auth_user_id WHERE
+  is_active = true`. To add a new admin: Supabase Auth invite +
+  `INSERT INTO admins (auth_user_id, email)`. No frontend write path.
+
+**New Edge Functions** (all `verify_jwt = false`, all use the
+canonical admin auth check pattern documented below):
+
+- `admin-verify` — identity check. Returns
+  `{ isAdmin, email, authUserId }`. Used by every admin page on load
+  to gate access.
+- `admin-list-vendors` — full vendor list with onboarding and Stripe
+  state, drop count, last activity. Backs platform-admin.html.
+- `admin-get-vendor` — single vendor row by id. Backs the header of
+  platform-admin-vendor.html.
+- `admin-list-vendor-drops` — drops for a vendor with order rollup
+  and revenue. Backs the drops table on platform-admin-vendor.html.
+- `admin-list-drop-orders` — orders for a drop with customer
+  details. Backs the orders table on platform-admin-vendor.html.
+
+**New database views** (service_role read only — `anon` has no SELECT
+grant; admin Edge Functions read these via a service-role client):
+
+- `v_admin_vendor_list` — vendors joined with drop count and
+  MAX(drops.created_at) as last activity.
+- `v_admin_vendor_drops` — drops with order count, status breakdown,
+  total_pence.
+- `v_admin_drop_orders` — orders for the drop drill-down.
+
+**New pages** (URL-only access; not linked from any nav):
+
+- `platform-admin.html` — vendor list. Gated by `admin-verify`.
+- `platform-admin-vendor.html?id=<vendor_uuid>` — vendor drill-down:
+  header, drops table, orders table. Same gate.
+
+**Canonical admin EF auth check pattern.** Same shape as the
+canonical vendor EF auth check (operational learning #16:
+`anonClient.auth.getUser()` then service-role `.maybeSingle()` on the
+owning table) but checks the `admins` table instead of `vendors`:
+
+```ts
+const { data: { user } } = await anonClient.auth.getUser(jwt);
+if (!user) return jsonResponse({ error: 'unauthenticated' }, 401);
+
+const { data: admin } = await serviceClient
+  .from('admins')
+  .select('id')
+  .eq('auth_user_id', user.id)
+  .eq('is_active', true)
+  .maybeSingle();
+
+if (!admin) return jsonResponse({ error: 'not_authorised' }, 403);
+```
+
+Used by all five admin Edge Functions and by the in-page gates on
+platform-admin.html, platform-admin-vendor.html, and admin.html
+(which calls `admin-verify` rather than checking the admins table
+directly from the page). Any new admin Edge Function or admin page
+MUST use this pattern — no frontend UID check is sufficient on its
+own.
 
 ## Admin and monitoring design principles
 
@@ -1702,7 +1810,6 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B31 — Legacy capacity columns cleanup — open. `orders.pizzas` (NOT NULL CHECK >= 1), `drops.capacity_pizzas`, `drops.max_orders` are still being populated as `Math.max(1, capacity_units)`. Audit all read sites for these columns; remove those reads; then drop the columns. Currently written-only by the create-order Edge Function (line marked with `// LEGACY: see SCHEMA.md — orders.pizzas column slated for removal`). Bounded one-session piece of work.
 - T5-B24 — Password reset page: button stuck on "Sending..." — open (cosmetic)
 - T5-B25 — admin.html: vendor creation is not atomic — open
-- T5-B26 — ADMIN_UID hardcoded in two places — open
 - T5-B32 — Duplicate anon SELECT policies on products — open
 - T5-B33 — Restore missing T5-B29 / T5-B30 / T5-B31 ticket bodies in BACKLOG.md — open
 - T5-B36 — duplicate-bundle rollback verification — open
@@ -1720,7 +1827,6 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T6-8 — Dev workflow tooling — Claude Code skills, MCP integrations, knowledge base — open
 
 ### Tier 7 — Platform oversight (Phase 1, before ~10 vendors)
-- T7-1 — Platform health cockpit — open
 - T7-2 — Vendor profile page — open
 - T7-3 — Vendor list view — open
 - T7-4 — Drop oversight page — open
@@ -1736,9 +1842,10 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T7-11 — Platform economics dashboard — open
 - T7-12 — Moderation and intervention tooling — open
 - T7-13: SUPERSEDED by T3-13 (closed 2026-05-13). Capacity driver multi-mode now in production.
-- T7-14 — Multi-admin access (admins table) — open
 - T7-15 — Admin write capability — open
-- T7-16 — Business partner admin access — open
+- T7-16 — Business partner admin access — open (unblocked by T7-14 closing 2026-05-21)
+- T7-17 — Vendor configuration inspector (post-launch) — open
+- T7-18 — Vendor impersonation / "act as vendor" (post-launch) — open
 
 ### Tier 7 — Monitoring (Phase 1, build soon)
 - T7-M1 — External uptime monitoring — open
@@ -1754,6 +1861,10 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T7-M9 — Synthetic transaction monitoring — open
 - T7-M10 — Documented incident response runbooks — open
 - T7-M11 — Public status page at status.lovehearth.co.uk — open
+
+### Support & operations
+- T-support-dryrun-checklist — Pre-drop dry-run checklist (document, not code) — open
+- T-support-issue-log — Internal vendor issue log — open
 
 ### Tier 8 — Platform audit and design system consolidation
 - T8-1 — Brand and visual consistency audit — open
@@ -1776,6 +1887,22 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T9-10 — Cross-vendor pattern intelligence: transferable archetype improvements — open
 - T9-11 — Conversational drop creation: fast-path natural-language input for Drop Studio — open
 - T9-12 — Conversational brand setup: fast-path natural-language input for Brand Hearth — open
+
+## Recent updates
+
+Append-only dated log of platform-level closures and rollouts. Older
+entries live in the per-ticket BACKLOG.md narratives; this surface is
+for quick chronological recall across the whole platform.
+
+- 2026-05-21: Platform admin MVP complete and merged. `admins` table
+  + 5 admin Edge Functions (admin-verify, admin-list-vendors,
+  admin-get-vendor, admin-list-vendor-drops, admin-list-drop-orders)
+  + 3 service-role views (v_admin_vendor_list, v_admin_vendor_drops,
+  v_admin_drop_orders) + 2 pages (platform-admin.html,
+  platform-admin-vendor.html). ADMIN_UID retired from admin.html,
+  invite-vendor, create-vendor (T5-B26 closed). T7-1 cockpit MVP and
+  T7-14 multi-admin enabler both closed in the same workstream. Next
+  pre-launch item: T-customers-page-import-entry.
 
 ## Future architecture
 
