@@ -489,7 +489,7 @@
         const s = String(status || '').toLowerCase();
         if (s === 'placed') return { type: 'pillNeutral', label: 'Placed' };
         if (s === 'confirmed') return { type: 'pillNeutral', label: 'Confirmed' };
-        if (s === 'baking') return { type: 'pillNeutral', label: 'Baking' };
+        if (s === 'preparing') return { type: 'pillNeutral', label: 'Preparing' };
         if (s === 'ready') return { type: 'pillPositive', label: 'Ready' };
         if (s === 'delivered') return { type: 'pillPositive', label: 'Delivered' };
         if (s === 'cancelled') return { type: 'pillAttention', label: 'Cancelled' };
@@ -531,7 +531,7 @@
         const entries = [
           ['delivered', d.orders_delivered],
           ['ready', d.orders_ready],
-          ['baking', d.orders_baking],
+          ['preparing', d.orders_preparing],
           ['confirmed', d.orders_confirmed],
           ['placed', d.orders_placed],
           ['cancelled', d.orders_cancelled]

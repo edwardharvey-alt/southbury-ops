@@ -321,7 +321,7 @@
       }
       .boardGrid[data-active-tab="placed"]    .boardCol.placed,
       .boardGrid[data-active-tab="confirmed"] .boardCol.confirmed,
-      .boardGrid[data-active-tab="baking"]    .boardCol.baking,
+      .boardGrid[data-active-tab="preparing"] .boardCol.preparing,
       .boardGrid[data-active-tab="ready"]     .boardCol.ready,
       .boardGrid[data-active-tab="delivered"] .boardCol.delivered {
         display: flex !important;
@@ -769,9 +769,9 @@
               <span class="label">Confirmed</span>
               <span class="value" id="countConfirmed">0</span>
             </div>
-            <div class="statusTile baking">
-              <span class="label">Baking</span>
-              <span class="value" id="countBaking">0</span>
+            <div class="statusTile preparing">
+              <span class="label">Preparing</span>
+              <span class="value" id="countPreparing">0</span>
             </div>
             <div class="statusTile ready">
               <span class="label">Ready</span>
@@ -812,7 +812,7 @@
       <div class="mobileBoardTabs" id="mobileBoardTabs" role="tablist" aria-label="Order status tabs">
         <button class="mobileTab" data-tab="placed" role="tab" type="button">Placed <span class="mobileTabBadge" id="mobileTabBadgePlaced">0</span></button>
         <button class="mobileTab" data-tab="confirmed" role="tab" type="button">Confirmed <span class="mobileTabBadge" id="mobileTabBadgeConfirmed">0</span></button>
-        <button class="mobileTab" data-tab="baking" role="tab" type="button">Baking <span class="mobileTabBadge" id="mobileTabBadgeBaking">0</span></button>
+        <button class="mobileTab" data-tab="preparing" role="tab" type="button">Preparing <span class="mobileTabBadge" id="mobileTabBadgePreparing">0</span></button>
         <button class="mobileTab" data-tab="ready" role="tab" type="button">Ready <span class="mobileTabBadge" id="mobileTabBadgeReady">0</span></button>
         <button class="mobileTab" data-tab="delivered" role="tab" type="button">Delivered <span class="mobileTabBadge" id="mobileTabBadgeDelivered">0</span></button>
       </div>
@@ -836,12 +836,12 @@
           <div class="boardColFooter"></div>
         </div>
 
-        <div class="boardCol baking">
+        <div class="boardCol preparing">
           <div class="boardColHead">
-            <span>Baking</span>
-            <span class="colCount" id="badgeBaking">0</span>
+            <span>Preparing</span>
+            <span class="colCount" id="badgePreparing">0</span>
           </div>
-          <div class="boardColBody" id="colBaking"></div>
+          <div class="boardColBody" id="colPreparing"></div>
           <div class="boardColFooter"></div>
         </div>
 
@@ -879,7 +879,7 @@
               <button class="filterChip active" type="button" data-status-filter="all">All</button>
               <button class="filterChip" type="button" data-status-filter="placed">Placed</button>
               <button class="filterChip" type="button" data-status-filter="confirmed">Confirmed</button>
-              <button class="filterChip" type="button" data-status-filter="baking">Baking</button>
+              <button class="filterChip" type="button" data-status-filter="preparing">Preparing</button>
               <button class="filterChip" type="button" data-status-filter="ready">Ready</button>
               <button class="filterChip" type="button" data-status-filter="delivered">Delivered</button>
             </div>
@@ -939,7 +939,7 @@
     const SUPABASE_URL = CONFIG.SUPABASE_URL;
     const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
 
-    const STATUS_ORDER = ["placed", "confirmed", "baking", "ready", "delivered"];
+    const STATUS_ORDER = ["placed", "confirmed", "preparing", "ready", "delivered"];
     const ACTIVE_DEFAULT_STATUSES = ["live", "scheduled", "draft"];
     const ALL_DROP_STATUSES = ["live", "scheduled", "draft", "closed", "completed", "cancelled", "archived"];
 
@@ -1134,7 +1134,7 @@
 
     function getActionLabelForNextStatus(nextStatus) {
       if (nextStatus === "confirmed") return "Confirm ▶";
-      if (nextStatus === "baking") return "Bake ▶";
+      if (nextStatus === "preparing") return "Prepare ▶";
       if (nextStatus === "ready") return "Ready ▶";
       if (nextStatus === "delivered") return "Deliver ▶";
       return "Next ▶";
@@ -1371,7 +1371,7 @@
       const counts = {
         placed: 0,
         confirmed: 0,
-        baking: 0,
+        preparing: 0,
         ready: 0,
         delivered: 0
       };
@@ -1383,13 +1383,13 @@
 
       byId("countPlaced").textContent = counts.placed;
       byId("countConfirmed").textContent = counts.confirmed;
-      byId("countBaking").textContent = counts.baking;
+      byId("countPreparing").textContent = counts.preparing;
       byId("countReady").textContent = counts.ready;
       byId("countDelivered").textContent = counts.delivered;
 
       byId("badgePlaced").textContent = counts.placed;
       byId("badgeConfirmed").textContent = counts.confirmed;
-      byId("badgeBaking").textContent = counts.baking;
+      byId("badgePreparing").textContent = counts.preparing;
       byId("badgeReady").textContent = counts.ready;
       byId("badgeDelivered").textContent = counts.delivered;
     }
@@ -1654,7 +1654,7 @@
       const cols = {
         placed: byId("colPlaced"),
         confirmed: byId("colConfirmed"),
-        baking: byId("colBaking"),
+        preparing: byId("colPreparing"),
         ready: byId("colReady"),
         delivered: byId("colDelivered")
       };
@@ -1827,7 +1827,7 @@
 
       const labelMap = {
         confirmed: "Confirmed",
-        baking: "Preparing",
+        preparing: "Preparing",
         ready: "Ready",
         delivered: "Delivered",
         placed: "Placed"
@@ -1894,14 +1894,14 @@
       const map = {
         placed:    "mobileTabBadgePlaced",
         confirmed: "mobileTabBadgeConfirmed",
-        baking:    "mobileTabBadgeBaking",
+        preparing: "mobileTabBadgePreparing",
         ready:     "mobileTabBadgeReady",
         delivered: "mobileTabBadgeDelivered"
       };
       const src = {
         placed:    "countPlaced",
         confirmed: "countConfirmed",
-        baking:    "countBaking",
+        preparing: "countPreparing",
         ready:     "countReady",
         delivered: "countDelivered"
       };
