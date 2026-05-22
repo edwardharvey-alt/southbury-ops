@@ -396,6 +396,36 @@
         const storedRedirect = sessionStorage.getItem("hearth:redirect");
         sessionStorage.removeItem("hearth:redirect");
 
+        // Admin-aware routing: if the signed-in user is a platform admin,
+        // route them to platform-admin.html (or back to the admin page they
+        // were trying to reach). A failed check must never block a vendor
+        // sign-in, so any error here falls through to the vendor lookup.
+        try {
+          const adminResp = await fetch(
+            `${window.HEARTH_CONFIG.SUPABASE_URL}/functions/v1/admin-verify`,
+            {
+              method: "POST",
+              headers: {
+                "apikey": window.HEARTH_CONFIG.SUPABASE_ANON_KEY,
+                "Authorization": "Bearer " + session.access_token,
+                "Content-Type": "application/json"
+              },
+              body: "{}"
+            }
+          );
+
+          if (adminResp.status === 200){
+            if (storedRedirect && typeof storedRedirect === "string" && storedRedirect.indexOf("platform-admin") === 0){
+              redirectTo(storedRedirect);
+            } else {
+              redirectTo("./platform-admin.html");
+            }
+            return;
+          }
+        } catch (adminErr) {
+          console.warn("admin-verify check failed; continuing to vendor lookup:", adminErr);
+        }
+
         const { data: vendor, error: vendorError } = await _sb
           .from("vendors")
           .select("id, onboarding_completed")
