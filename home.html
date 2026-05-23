@@ -1932,10 +1932,12 @@
         const growth = HI.analyseGrowthSignals(state.insightsDrops, state.customers, null);
         const bestHost = (state.hostPerformance || [])
           .sort((a, b) => Number(b.avg_revenue_per_drop_pence || 0) - Number(a.avg_revenue_per_drop_pence || 0))[0] || null;
+        const importedCount = state.customers.filter(c => c.source === 'import').length;
 
         const recs = HI.generateRecommendations(archetype, {
           capacity, rhythm, menu, growth,
-          hosts: { bestHost }
+          hosts: { bestHost },
+          importedCount
         });
 
         const topRecs = recs.slice(0, 3);
@@ -1946,6 +1948,7 @@
             'drop-menu': HearthNav.withVendor('./drop-menu.html'),
             'insights': HearthNav.withVendor('./insights.html'),
             'customers': HearthNav.withVendor('./customers.html'),
+            'customer-import': HearthNav.withVendor('./customer-import.html'),
             'onboarding': HearthNav.withVendor('./onboarding.html'),
             'brand-hearth': HearthNav.withVendor('./brand-hearth.html')
           };

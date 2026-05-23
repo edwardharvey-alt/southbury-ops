@@ -53,8 +53,9 @@
    * recommendation generation.
    *
    * @param {Object} vendorPreferences — vendor row or subset with
-   *   primary_goal (array), delivery_model (string), vendor_type (string)
-   * @returns {{ type: string, label: string, goals: string[], deliveryModel: string, vendorType: string }}
+   *   primary_goal (array), delivery_model (string), vendor_type (string),
+   *   customer_data_posture (string)
+   * @returns {{ type: string, label: string, goals: string[], deliveryModel: string, vendorType: string, customerDataPosture: string }}
    */
   function detectArchetype(vendorPreferences) {
     const goals = Array.isArray(vendorPreferences?.primary_goal)
@@ -62,6 +63,7 @@
       : [];
     const deliveryModel = vendorPreferences?.delivery_model || '';
     const vendorType = vendorPreferences?.vendor_type || '';
+    const customerDataPosture = vendorPreferences?.customer_data_posture || '';
 
     let type, label;
 
@@ -91,7 +93,7 @@
       label = 'General operator';
     }
 
-    return { type, label, goals, deliveryModel, vendorType };
+    return { type, label, goals, deliveryModel, vendorType, customerDataPosture };
   }
 
   /* ================================================================
@@ -311,12 +313,18 @@
    * Takes archetype and all signals, returns an array of action card objects.
    *
    * @param {Object} archetype — return value of detectArchetype()
-   * @param {Object} signals — { capacity, rhythm, menu, growth, hosts }
-   *   capacity: return of analyseCapacitySignals()
-   *   rhythm:   return of analyseRhythmSignals()
-   *   menu:     return of analyseMenuSignals()
-   *   growth:   return of analyseGrowthSignals()
-   *   hosts:    { bestHost: Object|null }
+   * @param {Object} signals — { capacity, rhythm, menu, growth, hosts, importedCount }
+   *   capacity:      return of analyseCapacitySignals()
+   *   rhythm:        return of analyseRhythmSignals()
+   *   menu:          return of analyseMenuSignals()
+   *   growth:        return of analyseGrowthSignals()
+   *   hosts:         { bestHost: Object|null }
+   *   importedCount: optional number — count of customer_relationships
+   *                  rows with source = 'import' for this vendor. Used
+   *                  to suppress the import-existing-customers branch
+   *                  once a vendor has already imported. Defaults to
+   *                  undefined (treated as "don't gate") so pages that
+   *                  haven't been updated yet still render correctly.
    * @returns {Array<{ id: string, priority: number, title: string, body: string, cta: string, ctaTarget: string|null, label: string, tone: string }>}
    */
   function generateRecommendations(archetype, signals) {
@@ -427,6 +435,23 @@
     /* --- Archetype-aware recommendations from vendor onboarding --- */
     const goals = archetype?.goals || [];
     const deliveryModel = archetype?.deliveryModel || '';
+
+    if (
+      (archetype?.customerDataPosture === 'rich' || archetype?.customerDataPosture === 'partial') &&
+      (signals.importedCount === undefined || signals.importedCount < 5) &&
+      actions.length < 6
+    ) {
+      actions.push({
+        id: 'archetype_import_existing_customers',
+        priority: priority++,
+        title: 'Bring your existing customers into Hearth',
+        body: 'Your existing customers are your strongest first audience. Importing them lets Hearth understand who\'s where, so the right people hear about the right drops.',
+        cta: 'Import customers',
+        ctaTarget: 'customer-import',
+        label: 'Growth',
+        tone: 'good'
+      });
+    }
 
     if (goals.includes('grow_customer_base') && actions.length < 6) {
       actions.push({

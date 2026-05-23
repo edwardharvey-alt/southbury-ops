@@ -848,12 +848,14 @@
       const capacitySignals = HearthIntelligence.analyseCapacitySignals(dropStats);
       const menuSignals = HearthIntelligence.analyseMenuSignals(itemSales);
       const growthSignals = HearthIntelligence.analyseGrowthSignals(dropStats, state.allCustomers, null);
+      const importedCount = state.allCustomers.filter(c => c.source === 'import').length;
 
       const allActions = HearthIntelligence.generateRecommendations(archetype, {
         capacity: capacitySignals,
         menu: menuSignals,
         growth: growthSignals,
-        hosts: { bestHost: hostPerf[0] || null }
+        hosts: { bestHost: hostPerf[0] || null },
+        importedCount
       });
 
       /* Filter to customer-relevant recommendations */

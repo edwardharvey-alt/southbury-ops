@@ -1469,7 +1469,7 @@
       ].join('');
     }
 
-    function renderActions(){
+    async function renderActions(){
       const grid = document.getElementById('actionsGrid');
       const drops = state.filtered.drops;
       if (!drops.length) {
@@ -1480,10 +1480,18 @@
       const archetype = HearthIntelligence.detectArchetype(state.vendor);
       const capacitySignals = HearthIntelligence.analyseCapacitySignals(drops);
       const menuSignals = HearthIntelligence.analyseMenuSignals(state.filtered.items);
+
+      let importedCount;
+      try {
+        const { data, error } = await sb.functions.invoke('get-vendor-customer-count', { body: { source: 'import' } });
+        if (!error && data && typeof data.count === 'number') importedCount = data.count;
+      } catch (_) { /* defensive: leave importedCount undefined so engine doesn't gate */ }
+
       const actions = HearthIntelligence.generateRecommendations(archetype, {
         capacity: capacitySignals,
         menu: menuSignals,
-        hosts: { bestHost: state.filtered.hosts[0] || null }
+        hosts: { bestHost: state.filtered.hosts[0] || null },
+        importedCount
       });
 
       grid.innerHTML = actions.map(a => `

@@ -10,6 +10,14 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 // resolution via vendors.auth_user_id, service-role read after auth).
 // Non-fatal: any error returns { count: 0, 200 } so the consumer
 // degrades to the cold-start CTA rather than erroring.
+//
+// Optional body: { source?: string }. When provided, the count is
+// scoped to customer_relationships where source = <value> — used by
+// insights.html to fetch the imported-only count for the engine's
+// import-existing-customers recommendation gate
+// (T-intelligence-engine-import-recommendation). Callers that pass
+// no body get the unfiltered total count exactly as before
+// (backward-compatible).
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   const jsonResponse = (body: unknown, status: number) =>
@@ -49,11 +57,24 @@ Deno.serve(async (req) => {
     if (vendorError) return jsonResponse({ count: 0 }, 200);
     if (!vendor) return jsonResponse({ count: 0 }, 200);
 
-    const { count, error } = await serviceClient
+    // Optional body — backward-compatible with no-body callers.
+    let source: string | null = null;
+    try {
+      const body = await req.json();
+      if (body && typeof body.source === "string" && body.source) {
+        source = body.source;
+      }
+    } catch (_) { /* no body — leave source unfiltered */ }
+
+    let query = serviceClient
       .from("customer_relationships")
       .select("customer_id", { count: "exact", head: true })
       .eq("owner_id", vendor.id)
       .eq("owner_type", "vendor");
+
+    if (source) query = query.eq("source", source);
+
+    const { count, error } = await query;
 
     if (error) {
       console.error("customer_relationships count failed", error);
