@@ -801,7 +801,7 @@
               <div class="summaryList" id="summaryCapacityList"></div>
             </div>
 
-            <div class="summaryBox">
+            <div class="summaryBox" id="otherItemsBox">
               <h4 class="summaryBoxTitle">Other items</h4>
               <div class="summaryList" id="summaryOtherList"></div>
             </div>
@@ -897,7 +897,7 @@
                   <th>Status</th>
                   <th>Total</th>
                   <th id="thCapacityItems">Capacity items</th>
-                  <th>Other items</th>
+                  <th id="thOtherItems">Other items</th>
                 </tr>
               </thead>
               <tbody id="allOrdersBody">
@@ -1120,6 +1120,20 @@
       return `${count} × ${label}`;
     }
 
+    // T-sb-2: a drop drives capacity either by_order (every order = one slot,
+    // no category distinction) or by_category (specific categories drive
+    // capacity). The capacity/non-capacity item split is only meaningful in
+    // by_category mode. Treat anything that isn't an explicit 'by_category' —
+    // including an absent or unrecognised value — as by_order.
+    function isCategoryCapacityDriver() {
+      const driver = String(
+        state.drop?.capacity_driver ||
+        state.dropSummary?.capacity_driver ||
+        ""
+      ).trim().toLowerCase();
+      return driver === "by_category";
+    }
+
     function getNextStatus(status) {
       const idx = STATUS_ORDER.indexOf(status);
       if (idx < 0 || idx >= STATUS_ORDER.length - 1) return null;
@@ -1325,6 +1339,18 @@
         ? `Confirmed ${capacityLabel} items queued for preparation`
         : "Items driving the current drop's operational capacity";
       byId("thCapacityItems").textContent = `${capacityLabel || "Capacity"} items`;
+
+      // T-sb-2: by_order drops have no capacity/non-capacity distinction —
+      // relabel the consolidated list "Items", neutralise the queue subtitle,
+      // and hide the now-empty "Other items" box.
+      const otherItemsBox = byId("otherItemsBox");
+      if (!isCategoryCapacityDriver()) {
+        byId("capacitySummaryTitle").textContent = "Items";
+        byId("queueSectionSub").textContent = "Confirmed items queued for preparation";
+        if (otherItemsBox) otherItemsBox.style.display = "none";
+      } else if (otherItemsBox) {
+        otherItemsBox.style.display = "";
+      }
     }
 
     function renderQueue() {
@@ -1337,9 +1363,12 @@
       }
 
       const capacityCategoryLabel = getCapacityCategoryLabel();
+      const byCategory = isCategoryCapacityDriver();
 
+      // by_category: only items from the capacity category are queued.
+      // by_order: every enabled item is equally relevant to prepare.
       const relevant = state.itemDetails.filter((row) =>
-        normaliseStatus(row.status) === "confirmed" && isCapacityItem(row)
+        normaliseStatus(row.status) === "confirmed" && (!byCategory || isCapacityItem(row))
       );
 
       const counts = new Map();
@@ -1352,7 +1381,8 @@
       const ordered = [...counts.entries()].sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]));
 
       if (!ordered.length) {
-        queueGrid.innerHTML = `<div class="emptyState">No confirmed ${capacityCategoryLabel} items waiting.</div>`;
+        const noun = byCategory ? `${capacityCategoryLabel} items` : "items";
+        queueGrid.innerHTML = `<div class="emptyState">No confirmed ${noun} waiting.</div>`;
         return;
       }
 
@@ -1415,6 +1445,21 @@
     }
 
     function renderConsolidatedView() {
+      const sortEntries = (map) => [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+      // by_order: no capacity/non-capacity distinction — roll every item into
+      // a single unified list. The "Other items" box is hidden by renderHeader.
+      if (!isCategoryCapacityDriver()) {
+        const allMap = new Map();
+        state.itemDetails.forEach((line) => {
+          const name = getItemName(line);
+          const qty = getItemQty(line);
+          allMap.set(name, (allMap.get(name) || 0) + qty);
+        });
+        renderSummaryList("summaryCapacityList", sortEntries(allMap));
+        return;
+      }
+
       const capacityMap = new Map();
       const otherMap = new Map();
 
@@ -1428,8 +1473,6 @@
           otherMap.set(name, (otherMap.get(name) || 0) + qty);
         }
       });
-
-      const sortEntries = (map) => [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 
       renderSummaryList("summaryCapacityList", sortEntries(capacityMap));
       renderSummaryList("summaryOtherList", sortEntries(otherMap));
@@ -1472,6 +1515,18 @@
       const body = byId("allOrdersBody");
       body.innerHTML = "";
 
+      // T-sb-2: by_order drops have no capacity/non-capacity distinction —
+      // collapse the two item columns into a single "Items" column and hide
+      // the "Other items" heading. by_category keeps the existing split.
+      const byCategory = isCategoryCapacityDriver();
+      const thOtherItems = byId("thOtherItems");
+      if (byCategory) {
+        if (thOtherItems) thOtherItems.style.display = "";
+      } else {
+        byId("thCapacityItems").textContent = "Items";
+        if (thOtherItems) thOtherItems.style.display = "none";
+      }
+
       const models = getFilteredOrderModels();
 
       if (!models.length) {
@@ -1487,18 +1542,26 @@
 
       models.forEach((order) => {
         const tr = document.createElement("tr");
+        const itemCells = byCategory
+          ? `
+          <td class="tableItems">
+            ${renderItemsBlock(order.grouped.capacity, "None")}
+          </td>
+          <td class="tableItems">
+            ${renderItemsBlock(order.grouped.extras, "None")}
+          </td>`
+          : `
+          <td class="tableItems">
+            ${renderItemsBlock(order.lines, "None")}
+          </td>
+          <td class="tableItems" style="display:none"></td>`;
         tr.innerHTML = `
           <td class="mono">${formatShortTime(order.created_at)}</td>
           <td>${order.customer_name || "—"}</td>
           <td>${Number(order.capacity_units_in_order || 0)}</td>
           <td><span class="badgeStatus ${normaliseStatus(order.status)}">${normaliseStatus(order.status)}</span></td>
           <td>${formatMoneyPence(order.total_price_pence)}</td>
-          <td class="tableItems">
-            ${renderItemsBlock(order.grouped.capacity, "None")}
-          </td>
-          <td class="tableItems">
-            ${renderItemsBlock(order.grouped.extras, "None")}
-          </td>
+          ${itemCells}
         `;
         body.appendChild(tr);
       });
