@@ -11,7 +11,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 // server-side validation is the only thing we trust. T5-A will add
 // in-function auth.getUser() later without architectural rework.
 
-const STATUS_ORDER = ["placed", "confirmed", "baking", "ready", "delivered"] as const;
+const STATUS_ORDER = ["placed", "confirmed", "preparing", "ready", "delivered"] as const;
 type OperatorStatus = (typeof STATUS_ORDER)[number];
 const VALID_TO_STATUSES = new Set<string>(STATUS_ORDER);
 
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     }
     if (typeof toStatus !== "string" || !VALID_TO_STATUSES.has(toStatus)) {
       return jsonResponse(
-        { error: "to_status must be one of placed | confirmed | baking | ready | delivered" },
+        { error: "to_status must be one of placed | confirmed | preparing | ready | delivered" },
         400
       );
     }
