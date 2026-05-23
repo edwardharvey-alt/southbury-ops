@@ -643,9 +643,10 @@
       color: var(--h-fire, #c4511a);
       vertical-align: middle;
     }
-    /* Off-screen container the branded prep sheet is built into before
-       html2canvas captures it (A4 portrait, 794px @ 96dpi). */
-    #prepSheetPrint {
+    /* Off-screen container the branded prep sheet / delivery manifest are
+       built into before html2canvas captures (A4 portrait, 794px @ 96dpi). */
+    #prepSheetPrint,
+    #deliveryManifestPrint {
       position: fixed;
       left: -10000px;
       top: 0;
@@ -656,6 +657,80 @@
       color: #2b2b2b;
       font-family: 'Figtree', system-ui, sans-serif;
     }
+
+    /* T-sb-4: Ready-for-delivery overlay — phone-first, full-screen scrollable
+       panel. Large text, generous padding, tap-to-call links, 44px close. */
+    .deliveryOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+    }
+    .deliveryOverlayHeader {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(0,0,0,.1);
+    }
+    .deliveryOverlayTitle {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.6rem;
+      margin: 0;
+      color: #2b2b2b;
+    }
+    .deliveryOverlayClose {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      border: none;
+      background: transparent;
+      font-size: 28px;
+      line-height: 1;
+      color: #6b4f2f;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+    .deliveryOverlayClose:hover { background: rgba(0,0,0,.05); }
+    .deliveryOverlayBody {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 16px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .deliveryOverlayEmpty {
+      padding: 48px 8px;
+      text-align: center;
+      color: #8a8276;
+      font-size: 16px;
+    }
+    .deliveryCard {
+      border: 1px solid rgba(0,0,0,.12);
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .deliveryCardName { font-size: 20px; font-weight: 700; color: #2b2b2b; }
+    .deliveryCardAddress { font-size: 16px; color: #2b2b2b; line-height: 1.4; }
+    .deliveryCardPhone {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--h-fire, #c4511a);
+      text-decoration: none;
+    }
+    .deliveryCardPhone.muted { color: #8a8276; font-weight: 400; }
+    .deliveryCardItems { font-size: 16px; color: #5b5b5b; }
+    .deliveryCardTotal { font-size: 16px; font-weight: 600; color: #2b2b2b; }
+    /* Persistent action row at the bottom of the Ready Kanban column */
+    .readyDeliveryBtn { width: 100%; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -894,7 +969,7 @@
             <span class="colCount" id="badgeReady">0</span>
           </div>
           <div class="boardColBody" id="colReady"></div>
-          <div class="boardColFooter"></div>
+          <div class="boardColFooter" id="readyColFooter"></div>
         </div>
 
         <div class="boardCol delivered">
@@ -990,6 +1065,45 @@
           </div>
         </div>
       </div>
+
+      <!-- T-sb-4: Delivery run — full manifest of every delivery order with
+           address, phone and items, sorted by postcode, plus a branded PNG
+           export. Hidden entirely on collection-only drops (visibility is
+           re-evaluated on every renderEverything via renderDeliveryRunSection). -->
+      <div class="card pad deliveryRunSection" id="deliveryRunSection" style="display:none;">
+        <div class="row space">
+          <div>
+            <h3 class="sectionTitle">Delivery run</h3>
+            <p class="sectionSub">All orders with delivery addresses</p>
+          </div>
+          <div class="row" style="gap:8px;">
+            <button class="btnSmall" id="downloadDeliveryManifest" type="button">Download delivery manifest</button>
+            <button class="sectionToggle" id="toggleDeliveryRunPanel" type="button">Hide</button>
+          </div>
+        </div>
+
+        <div class="deliveryRunPanelBody" id="deliveryRunPanelBody">
+          <div class="tableWrap">
+            <table class="tableTight deliveryRunTable">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Address</th>
+                  <th>Phone</th>
+                  <th>Items</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="deliveryRunBody">
+                <tr>
+                  <td colspan="6" class="muted">Loading…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -997,6 +1111,17 @@
     <span id="undoToastMsg"></span>
     <button type="button" id="undoToastBtn">Undo</button>
     <div id="undoToastProgress"></div>
+  </div>
+
+  <!-- T-sb-4: Ready-for-delivery overlay — phone-first focused view of only
+       Ready-status delivery orders. Full-screen scrollable panel (not a modal).
+       Auto-updates via the Realtime subscription (renderBoard → renderDeliveryOverlay). -->
+  <div id="deliveryOverlay" class="deliveryOverlay" style="display:none;" role="dialog" aria-label="Ready for delivery" aria-modal="true">
+    <div class="deliveryOverlayHeader">
+      <h2 class="deliveryOverlayTitle">Ready for delivery</h2>
+      <button type="button" id="closeDeliveryOverlay" class="deliveryOverlayClose" aria-label="Close delivery run">×</button>
+    </div>
+    <div class="deliveryOverlayBody" id="deliveryOverlayBody"></div>
   </div>
 
   <!-- T3-10: Order notification modal — must be before <script> so buttons exist when attachEvents() runs -->
@@ -1052,6 +1177,8 @@
       tableSearch: "",
       ordersPanelOpen: false,
       allItemsPanelOpen: false,
+      deliveryRunPanelOpen: true,
+      deliveryOverlayOpen: false,
       summaryPanelOpen: true,
       heroCollapsed: false,
       boardStatusFilters: [...ACTIVE_DEFAULT_STATUSES],
@@ -1942,6 +2069,340 @@
       }
     }
 
+    // ---- T-sb-4: Delivery run + ready-for-delivery overlay ----
+
+    function dropFulfilmentMode() {
+      return String(state.drop?.fulfilment_mode || state.dropSummary?.fulfilment_mode || "")
+        .trim().toLowerCase();
+    }
+
+    // Drop is delivery-capable for delivery / mixed / both. Collection-only
+    // drops hide every delivery surface entirely.
+    function dropHasDelivery() {
+      const m = dropFulfilmentMode();
+      return m === "delivery" || m === "mixed" || m === "both";
+    }
+
+    function dropIsDeliveryOnly() {
+      return dropFulfilmentMode() === "delivery";
+    }
+
+    // An order counts as a delivery order when its own fulfilment_mode is
+    // 'delivery', or — on a delivery-only drop — when the order row carries no
+    // fulfilment_mode (treat absent as delivery in that case, per spec).
+    function isDeliveryOrder(order) {
+      const m = String(order.fulfilment_mode || "").trim().toLowerCase();
+      if (m === "delivery") return true;
+      if (!m && dropIsDeliveryOnly()) return true;
+      return false;
+    }
+
+    // Extract the last UK postcode found in a free-text address, normalised to
+    // uppercase with a single space (e.g. "BH18 8AB"). Returns null when no
+    // recognisable postcode is present so those rows can sort to the end.
+    function extractPostcode(address) {
+      if (!address) return null;
+      const re = /([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})/gi;
+      let m, last = null;
+      while ((m = re.exec(address)) !== null) {
+        last = (m[1] + " " + m[2]).toUpperCase();
+      }
+      return last;
+    }
+
+    // Compact "Name ×2, Other ×1" string for an order model, grouping the
+    // order's item lines by name and summing quantities (same getItemName/
+    // getItemQty helpers as the rest of the page).
+    function compactItemsForOrder(orderModel) {
+      const map = new Map();
+      (orderModel.lines || []).forEach((line) => {
+        const name = line._item_name || getItemName(line);
+        const qty = (line._item_qty != null) ? Number(line._item_qty) : getItemQty(line);
+        map.set(name, (map.get(name) || 0) + qty);
+      });
+      return [...map.entries()]
+        .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]))
+        .map(([name, qty]) => `${name} ×${qty}`)
+        .join(", ");
+    }
+
+    // Delivery order models, optionally filtered to a single status, decorated
+    // with _postcode + _itemsCompact and sorted by postcode asc then customer
+    // name. Rows without a recognisable postcode sort last.
+    function buildDeliveryOrderModels(statusFilter) {
+      let models = buildOrderModels().filter(isDeliveryOrder);
+      if (statusFilter) {
+        models = models.filter((o) => normaliseStatus(o.status) === statusFilter);
+      }
+      return models
+        .map((o) => ({
+          ...o,
+          _postcode: extractPostcode(o.delivery_address),
+          _itemsCompact: compactItemsForOrder(o)
+        }))
+        .sort((a, b) => {
+          if (a._postcode && b._postcode) {
+            return a._postcode.localeCompare(b._postcode) ||
+              (a.customer_name || "").localeCompare(b.customer_name || "");
+          }
+          if (a._postcode) return -1;
+          if (b._postcode) return 1;
+          return (a.customer_name || "").localeCompare(b.customer_name || "");
+        });
+    }
+
+    function orderPhone(order) {
+      return String(order.customer_phone || order.phone || "").trim();
+    }
+
+    // SURFACE 1 — Delivery run section. Hidden entirely on collection-only
+    // drops; otherwise renders the postcode-sorted manifest and panel state.
+    function renderDeliveryRunSection() {
+      const section = byId("deliveryRunSection");
+      if (!section) return;
+
+      if (!dropHasDelivery()) {
+        section.style.display = "none";
+        return;
+      }
+      section.style.display = "";
+
+      const body = byId("deliveryRunPanelBody");
+      const toggleBtn = byId("toggleDeliveryRunPanel");
+      if (body) body.classList.toggle("hidden", !state.deliveryRunPanelOpen);
+      if (toggleBtn) toggleBtn.textContent = state.deliveryRunPanelOpen ? "Hide" : "Show";
+
+      const tbody = byId("deliveryRunBody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      const models = buildDeliveryOrderModels();
+      if (!models.length) {
+        tbody.innerHTML = `<tr><td colspan="6"><div class="emptyState">No delivery orders in this drop yet.</div></td></tr>`;
+        return;
+      }
+
+      models.forEach((o) => {
+        const phone = orderPhone(o);
+        const phoneCell = phone ? `<a href="tel:${phone}">${phone}</a>` : "—";
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${o.customer_name || "—"}</td>
+          <td>${o.delivery_address || "—"}</td>
+          <td>${phoneCell}</td>
+          <td>${o._itemsCompact || "—"}</td>
+          <td>${formatMoneyPence(o.total_price_pence)}</td>
+          <td><span class="badgeStatus ${normaliseStatus(o.status)}">${normaliseStatus(o.status)}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // SURFACE 2 — "View delivery run →" action in the Ready Kanban column.
+    // Rendered from renderBoard so it stays in sync on optimistic + realtime
+    // changes. Shown only when there is at least one Ready delivery order.
+    function renderReadyDeliveryAction() {
+      const footer = byId("readyColFooter");
+      if (!footer) return;
+      footer.innerHTML = "";
+      if (!dropHasDelivery()) return;
+
+      const readyDeliveries = buildDeliveryOrderModels("ready");
+      if (!readyDeliveries.length) return;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.id = "openDeliveryRunBtn";
+      btn.className = "btnAccent readyDeliveryBtn";
+      btn.textContent = "View delivery run →";
+      btn.addEventListener("click", openDeliveryOverlay);
+      footer.appendChild(btn);
+    }
+
+    function openDeliveryOverlay() {
+      state.deliveryOverlayOpen = true;
+      const ov = byId("deliveryOverlay");
+      if (ov) ov.style.display = "flex";
+      renderDeliveryOverlay();
+    }
+
+    function closeDeliveryOverlay() {
+      state.deliveryOverlayOpen = false;
+      const ov = byId("deliveryOverlay");
+      if (ov) ov.style.display = "none";
+    }
+
+    // Render (or refresh) the overlay's Ready-delivery card list. Called from
+    // renderBoard, so when an order leaves Ready it disappears here without a
+    // manual refresh. Auto-closes if the drop is no longer delivery-capable.
+    function renderDeliveryOverlay() {
+      if (!state.deliveryOverlayOpen) return;
+      const body = byId("deliveryOverlayBody");
+      if (!body) return;
+
+      if (!dropHasDelivery()) {
+        closeDeliveryOverlay();
+        return;
+      }
+
+      const models = buildDeliveryOrderModels("ready");
+      if (!models.length) {
+        body.innerHTML = `<div class="deliveryOverlayEmpty">No orders are ready for delivery right now.</div>`;
+        return;
+      }
+
+      body.innerHTML = models.map((o) => {
+        const phone = orderPhone(o);
+        const phoneHtml = phone
+          ? `<a href="tel:${phone}" class="deliveryCardPhone">${phone}</a>`
+          : `<span class="deliveryCardPhone muted">—</span>`;
+        return `
+          <div class="deliveryCard">
+            <div class="deliveryCardName">${o.customer_name || "Customer"}</div>
+            <div class="deliveryCardAddress">${o.delivery_address || "—"}</div>
+            ${phoneHtml}
+            <div class="deliveryCardItems">${o._itemsCompact || "—"}</div>
+            <div class="deliveryCardTotal">${formatMoneyPence(o.total_price_pence)}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // Branded delivery manifest print layout — mirrors buildPrepSheetMarkup
+    // (same header / divider / footer), columns Name / Address / Phone / Items
+    // / Total, one row per delivery order sorted by postcode.
+    function buildDeliveryManifestMarkup() {
+      const vendor = state.vendor || {};
+      const accent = vendor.primary_color || "#8B6B3F";
+      const vendorName = vendor.display_name || vendor.name || "Vendor";
+      const logoUrl = vendor.logo_url || "";
+      const dropName = state.dropSummary?.drop_name || state.drop?.name || "Drop";
+      const dropDate = state.drop?.delivery_start
+        ? new Date(state.drop.delivery_start).toLocaleDateString("en-GB", {
+            weekday: "long", day: "numeric", month: "long", year: "numeric"
+          })
+        : "";
+      const models = buildDeliveryOrderModels();
+
+      const th = "padding:0 8px 8px 0; font-family:'Figtree',sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#8a8276; text-align:left;";
+      const td = "padding:8px 8px 8px 0; font-family:'Figtree',sans-serif; font-size:13px; vertical-align:top; border-bottom:1px solid rgba(0,0,0,.06);";
+      const tdMuted = "padding:8px 8px; font-family:'Figtree',sans-serif; font-size:13px; color:#5b5b5b; vertical-align:top; border-bottom:1px solid rgba(0,0,0,.06);";
+
+      const headerHtml = `
+        <div style="display:flex; align-items:center; gap:16px;">
+          ${logoUrl ? `<img src="${logoUrl}" alt="" crossorigin="anonymous" style="max-height:48px; width:auto; display:block;" />` : ""}
+          <div style="flex:1; min-width:0;">
+            <div style="font-family:'Cormorant Garamond',Georgia,serif; font-size:24px; line-height:1.1; color:#2b2b2b;">${vendorName}</div>
+            <div style="font-family:'Figtree',sans-serif; font-size:14px; color:#8a8276; margin-top:2px;">${dropName}</div>
+            ${dropDate ? `<div style="font-family:'Figtree',sans-serif; font-size:12px; color:#8a8276;">${dropDate}</div>` : ""}
+          </div>
+        </div>
+        <div style="height:2px; background:${accent}; margin:18px 0 22px;"></div>
+      `;
+
+      const rowsHtml = models.map((o) => {
+        const phone = orderPhone(o) || "—";
+        return `
+          <tr>
+            <td style="${td}">${o.customer_name || "—"}</td>
+            <td style="${tdMuted}">${o.delivery_address || "—"}</td>
+            <td style="${tdMuted}">${phone}</td>
+            <td style="${tdMuted}">${o._itemsCompact || "—"}</td>
+            <td style="padding:8px 0 8px 8px; font-family:'Figtree',sans-serif; font-size:13px; font-weight:600; vertical-align:top; border-bottom:1px solid rgba(0,0,0,.06);">${formatMoneyPence(o.total_price_pence)}</td>
+          </tr>
+        `;
+      }).join("");
+
+      const bodyRows = rowsHtml ||
+        `<tr><td colspan="5" style="${tdMuted}">No delivery orders in this drop.</td></tr>`;
+
+      const tableHtml = `
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:2px solid #2b2b2b;">
+              <th style="${th}">Name</th>
+              <th style="${th}">Address</th>
+              <th style="${th}">Phone</th>
+              <th style="${th}">Items</th>
+              <th style="${th}">Total</th>
+            </tr>
+          </thead>
+          <tbody>${bodyRows}</tbody>
+        </table>
+      `;
+
+      const footerHtml = `
+        <div style="display:flex; align-items:center; margin-top:28px; padding-top:12px;">
+          <div style="width:32px; height:2px; background:${accent};"></div>
+          <div style="flex:1; text-align:right; font-family:'Figtree',sans-serif; font-size:12px; color:#8a8276;">Generated by Hearth · lovehearth.co.uk</div>
+        </div>
+      `;
+
+      return headerHtml + tableHtml + footerHtml;
+    }
+
+    async function downloadDeliveryManifest() {
+      const btn = byId("downloadDeliveryManifest");
+      if (!btn) return;
+      if (!dropHasDelivery() || !buildDeliveryOrderModels().length) {
+        showError("No delivery orders to export for this drop yet.");
+        return;
+      }
+
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Generating…";
+
+      const container = document.createElement("div");
+      container.id = "deliveryManifestPrint";
+      container.innerHTML = buildDeliveryManifestMarkup();
+      document.body.appendChild(container);
+
+      try {
+        if (typeof window.html2canvas !== "function") {
+          throw new Error("html2canvas not loaded");
+        }
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+
+        const canvas = await window.html2canvas(container, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false
+        });
+
+        const blob = await new Promise((resolve, reject) => {
+          canvas.toBlob(
+            (b) => (b ? resolve(b) : reject(new Error("toBlob returned null"))),
+            "image/png",
+            1.0
+          );
+        });
+
+        const vendorSlug = prepSheetSlug(state.vendor?.slug || state.vendor?.display_name, "vendor");
+        const dropSlug = prepSheetSlug(state.drop?.slug || state.dropSummary?.drop_name || state.drop?.name, "drop");
+        const filename = `${vendorSlug}-${dropSlug}-delivery-manifest.png`;
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (err) {
+        console.error("[deliveryManifest] download failed", err);
+        showError("Couldn't generate the delivery manifest. Refresh the page and try again.");
+      } finally {
+        container.remove();
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+
     function renderCompactBlock(title, lines) {
       if (!lines.length) {
         return `
@@ -2115,6 +2576,11 @@
           cols[status].appendChild(renderOrderCard(order));
         });
       });
+
+      // T-sb-4: keep the Ready-column delivery action and the open overlay in
+      // sync with the board on every render (optimistic + realtime + full).
+      renderReadyDeliveryAction();
+      renderDeliveryOverlay();
     }
 
     function renderOrdersPanelState() {
@@ -2390,6 +2856,7 @@
       renderAllOrders();
       renderAllItemsPanelState();
       renderAllItems();
+      renderDeliveryRunSection();
       renderBoard();
       maybeSelectDefaultMobileTab();
     }
@@ -2659,6 +3126,19 @@
 
       byId("downloadPrepSheet").addEventListener("click", function () {
         downloadPrepSheet();
+      });
+
+      byId("toggleDeliveryRunPanel").addEventListener("click", function () {
+        state.deliveryRunPanelOpen = !state.deliveryRunPanelOpen;
+        renderDeliveryRunSection();
+      });
+
+      byId("downloadDeliveryManifest").addEventListener("click", function () {
+        downloadDeliveryManifest();
+      });
+
+      byId("closeDeliveryOverlay").addEventListener("click", function () {
+        closeDeliveryOverlay();
       });
 
       byId("toggleSummaryPanel").addEventListener("click", function () {
