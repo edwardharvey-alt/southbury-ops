@@ -340,6 +340,23 @@
 
     let priority = 1;
 
+    if (
+      (archetype?.customerDataPosture === 'rich' || archetype?.customerDataPosture === 'partial') &&
+      (signals.importedCount === undefined || signals.importedCount < 5) &&
+      actions.length < 6
+    ) {
+      actions.push({
+        id: 'archetype_import_existing_customers',
+        priority: priority++,
+        title: 'Bring your existing customers into Hearth',
+        body: 'Your existing customers are your strongest first audience. Importing them lets Hearth understand who\'s where, so the right people hear about the right drops.',
+        cta: 'Import customers',
+        ctaTarget: 'customer-import',
+        label: 'Growth',
+        tone: 'good'
+      });
+    }
+
     /* --- Capacity-based recommendation --- */
     if (avgCap != null && avgCap >= 90) {
       actions.push({
@@ -435,23 +452,6 @@
     /* --- Archetype-aware recommendations from vendor onboarding --- */
     const goals = archetype?.goals || [];
     const deliveryModel = archetype?.deliveryModel || '';
-
-    if (
-      (archetype?.customerDataPosture === 'rich' || archetype?.customerDataPosture === 'partial') &&
-      (signals.importedCount === undefined || signals.importedCount < 5) &&
-      actions.length < 6
-    ) {
-      actions.push({
-        id: 'archetype_import_existing_customers',
-        priority: priority++,
-        title: 'Bring your existing customers into Hearth',
-        body: 'Your existing customers are your strongest first audience. Importing them lets Hearth understand who\'s where, so the right people hear about the right drops.',
-        cta: 'Import customers',
-        ctaTarget: 'customer-import',
-        label: 'Growth',
-        tone: 'good'
-      });
-    }
 
     if (goals.includes('grow_customer_base') && actions.length < 6) {
       actions.push({
