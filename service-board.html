@@ -14,6 +14,8 @@
   <script src="./assets/hearth-vendor.js?v=1"></script>
   <script src="./assets/vendor-nav.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- T-sb-3: html2canvas for the branded prep-sheet PNG export (same CDN pin as drop-manager.html) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     body{ font-family: 'Figtree', system-ui, sans-serif; }
 
@@ -613,6 +615,47 @@
       text-align: center;
       text-decoration: none;
     }
+
+    /* T-sb-3: All items table — category group headings, capacity badge,
+       bundle sub-rows. Page-scoped per CLAUDE.md rule #9 (no hearth.css). */
+    #allItemsBody .catGroupRow td {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.05rem;
+      color: #6b4f2f;
+      padding-top: 16px;
+      border-bottom: 1px solid rgba(0,0,0,.08);
+    }
+    #allItemsBody .bundleSubRow td {
+      padding-left: 26px;
+      color: #8a8276;
+      font-size: .9em;
+    }
+    #allItemsBody .capacityBadge {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 1px 7px;
+      font-size: .66rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      border-radius: 999px;
+      background: rgba(196,81,26,.1);
+      color: var(--h-fire, #c4511a);
+      vertical-align: middle;
+    }
+    /* Off-screen container the branded prep sheet is built into before
+       html2canvas captures it (A4 portrait, 794px @ 96dpi). */
+    #prepSheetPrint {
+      position: fixed;
+      left: -10000px;
+      top: 0;
+      width: 794px;
+      padding: 48px;
+      box-sizing: border-box;
+      background: #ffffff;
+      color: #2b2b2b;
+      font-family: 'Figtree', system-ui, sans-serif;
+    }
   </style>
 </head>
 <body>
@@ -909,6 +952,44 @@
           </div>
         </div>
       </div>
+
+      <!-- T-sb-3: All items prep sheet — item-centric roll-up of the whole drop
+           (total quantity of each item across all orders), plus a branded PNG
+           export the vendor takes into the kitchen. Sits alongside "All orders
+           in this drop" as a parallel surface, it does not replace it. -->
+      <div class="card pad allItemsSection">
+        <div class="row space">
+          <div>
+            <h3 class="sectionTitle">All items in this drop</h3>
+            <p class="sectionSub">Total quantity of each item across all orders</p>
+          </div>
+          <div class="row" style="gap:8px;">
+            <button class="btnSmall" id="downloadPrepSheet" type="button">Download prep sheet</button>
+            <button class="sectionToggle" id="toggleAllItemsPanel" type="button">Show</button>
+          </div>
+        </div>
+
+        <div class="allItemsPanelBody hidden" id="allItemsPanelBody">
+          <div class="tableWrap">
+            <table class="tableTight allItemsTable">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Category</th>
+                  <th>Type</th>
+                  <th>Quantity</th>
+                  <th>Stock limit</th>
+                </tr>
+              </thead>
+              <tbody id="allItemsBody">
+                <tr>
+                  <td colspan="5" class="muted">Loading…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -970,6 +1051,7 @@
       tableStatusFilter: "all",
       tableSearch: "",
       ordersPanelOpen: false,
+      allItemsPanelOpen: false,
       summaryPanelOpen: true,
       heroCollapsed: false,
       boardStatusFilters: [...ACTIVE_DEFAULT_STATUSES],
@@ -1567,6 +1649,299 @@
       });
     }
 
+    // ---- T-sb-3: All items prep sheet ----
+
+    // Type label for the All items table. v_order_item_detail_expanded breaks
+    // bundles into their selected component products, so in practice most rows
+    // resolve to "Product"; an explicit bundle marker on the row (if present)
+    // wins. Defensive: the order-item view does not currently guarantee these
+    // fields, so default to "Product".
+    function getItemType(row) {
+      const t = String(row.item_type || row.menu_item_type || "").toLowerCase();
+      if (t === "bundle") return "Bundle";
+      if (t === "product") return "Product";
+      if (row.bundle_id && !row.product_id) return "Bundle";
+      return "Product";
+    }
+
+    // Per-item stock limit if the loaded row carries one, else null.
+    // NOTE: state.itemDetails comes from the order-item view (get-drop's
+    // order_items projection), which does not carry the drop_menu_item stock
+    // limit (that lives on v_drop_menu_item_stock). Until get-drop is extended
+    // to project it, this resolves to null → rendered as "—".
+    function getItemStockLimit(row) {
+      const v = row.stock_limit ?? row.stock ?? null;
+      return (v === null || v === undefined || v === "") ? null : Number(v);
+    }
+
+    // Aggregate state.itemDetails into one entry per distinct item, grouped by
+    // category. Mirrors renderConsolidatedView's getItemName/getItemQty pattern
+    // so prep-sheet totals match the Consolidated drop view exactly. Returns
+    // an array of { category, sort, items:[{name,type,category,qty,isCapacity,
+    // stockLimit}] } sorted by category sort asc (alpha fallback).
+    function buildAllItemsModel() {
+      const byCategory = isCategoryCapacityDriver();
+      const items = new Map(); // key: type|name -> entry
+
+      state.itemDetails.forEach((row) => {
+        const name = getItemName(row);
+        const type = getItemType(row);
+        const key = type + "|" + name;
+        let entry = items.get(key);
+        if (!entry) {
+          entry = {
+            name,
+            type,
+            category: getItemCategory(row) || "Uncategorised",
+            categorySort: Number.POSITIVE_INFINITY,
+            qty: 0,
+            isCapacity: false,
+            stockLimit: null
+          };
+          items.set(key, entry);
+        }
+        entry.qty += getItemQty(row);
+        // capacity flag is true if ANY contributing row is a capacity item
+        if (byCategory && isCapacityItem(row)) entry.isCapacity = true;
+        // first non-null stock limit seen wins
+        if (entry.stockLimit === null) {
+          const s = getItemStockLimit(row);
+          if (s !== null) entry.stockLimit = s;
+        }
+        // capture an explicit category sort order if the row carries one
+        const cs = Number(row.category_sort_order ?? row.sort_order);
+        if (Number.isFinite(cs) && cs < entry.categorySort) entry.categorySort = cs;
+      });
+
+      const catMap = new Map();
+      items.forEach((entry) => {
+        let cat = catMap.get(entry.category);
+        if (!cat) {
+          cat = { category: entry.category, sort: entry.categorySort, items: [] };
+          catMap.set(entry.category, cat);
+        }
+        if (entry.categorySort < cat.sort) cat.sort = entry.categorySort;
+        cat.items.push(entry);
+      });
+
+      const categories = [...catMap.values()].sort((a, b) =>
+        (a.sort - b.sort) || a.category.localeCompare(b.category)
+      );
+      categories.forEach((cat) => {
+        cat.items.sort((a, b) => (b.qty - a.qty) || a.name.localeCompare(b.name));
+      });
+      return categories;
+    }
+
+    function renderAllItems() {
+      const body = byId("allItemsBody");
+      if (!body) return;
+      body.innerHTML = "";
+
+      if (!state.dropSummary || !state.itemDetails.length) {
+        body.innerHTML = `<tr><td colspan="5"><div class="emptyState">No items in this drop yet.</div></td></tr>`;
+        return;
+      }
+
+      const byCategory = isCategoryCapacityDriver();
+      const categories = buildAllItemsModel();
+
+      categories.forEach((cat) => {
+        const catRow = document.createElement("tr");
+        catRow.className = "catGroupRow";
+        catRow.innerHTML = `<td colspan="5">${cat.category}</td>`;
+        body.appendChild(catRow);
+
+        cat.items.forEach((entry) => {
+          // On by_order drops there is no capacity distinction (consistent with
+          // T-sb-2) so the badge is suppressed; on by_category drops it flags
+          // items that drive the capacity pool.
+          const badge = (byCategory && entry.isCapacity)
+            ? `<span class="capacityBadge">Capacity</span>`
+            : "";
+          const stock = entry.stockLimit === null ? "—" : String(entry.stockLimit);
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${entry.name}${badge}</td>
+            <td>${cat.category}</td>
+            <td>${entry.type}</td>
+            <td>×${entry.qty}</td>
+            <td>${stock}</td>
+          `;
+          body.appendChild(tr);
+
+          // T-sb-3 bundle selection detail: state.itemDetails
+          // (v_order_item_detail_expanded) carries no reliable bundle→selection
+          // linkage, and there is no state.orderItemSelections in the loaded
+          // data, so bundle parent rows are rendered standalone (parent-only
+          // fallback). When selection detail becomes available (e.g. get-drop
+          // extended to return order_item_selections, or a
+          // v_order_item_selections_detail projection), inject indented
+          // `.bundleSubRow` <tr>s here — one per selection option with its
+          // count, e.g.
+          //   <tr class="bundleSubRow"><td colspan="5">— Chicken option ×7</td></tr>
+        });
+      });
+    }
+
+    function renderAllItemsPanelState() {
+      const body = byId("allItemsPanelBody");
+      const btn = byId("toggleAllItemsPanel");
+      if (!body || !btn) return;
+      body.classList.toggle("hidden", !state.allItemsPanelOpen);
+      btn.textContent = state.allItemsPanelOpen ? "Hide" : "Show";
+    }
+
+    // Build the off-screen, branded print layout markup for the prep sheet.
+    // Inline styles throughout so html2canvas rasterises deterministically
+    // regardless of page CSS (same discipline as drop-manager's export).
+    function buildPrepSheetMarkup() {
+      const vendor = state.vendor || {};
+      const accent = vendor.primary_color || "#8B6B3F";
+      const vendorName = vendor.display_name || vendor.name || "Vendor";
+      const logoUrl = vendor.logo_url || "";
+      const dropName = state.dropSummary?.drop_name || state.drop?.name || "Drop";
+      const dropDate = state.drop?.delivery_start
+        ? new Date(state.drop.delivery_start).toLocaleDateString("en-GB", {
+            weekday: "long", day: "numeric", month: "long", year: "numeric"
+          })
+        : "";
+      const byCategory = isCategoryCapacityDriver();
+      const categories = buildAllItemsModel();
+
+      const th = "padding:0 8px 8px 0; font-family:'Figtree',sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#8a8276; text-align:left;";
+      const td = "padding:6px 8px 6px 0; font-family:'Figtree',sans-serif; font-size:13px;";
+      const tdMuted = "padding:6px 8px; font-family:'Figtree',sans-serif; font-size:13px; color:#8a8276;";
+
+      const headerHtml = `
+        <div style="display:flex; align-items:center; gap:16px;">
+          ${logoUrl ? `<img src="${logoUrl}" alt="" crossorigin="anonymous" style="max-height:48px; width:auto; display:block;" />` : ""}
+          <div style="flex:1; min-width:0;">
+            <div style="font-family:'Cormorant Garamond',Georgia,serif; font-size:24px; line-height:1.1; color:#2b2b2b;">${vendorName}</div>
+            <div style="font-family:'Figtree',sans-serif; font-size:14px; color:#8a8276; margin-top:2px;">${dropName}</div>
+            ${dropDate ? `<div style="font-family:'Figtree',sans-serif; font-size:12px; color:#8a8276;">${dropDate}</div>` : ""}
+          </div>
+        </div>
+        <div style="height:2px; background:${accent}; margin:18px 0 22px;"></div>
+      `;
+
+      const rowsHtml = categories.map((cat) => {
+        const catHeading = `<tr><td colspan="5" style="font-family:'Cormorant Garamond',Georgia,serif; font-size:18px; color:${accent}; padding:16px 0 6px; border-bottom:1px solid rgba(0,0,0,.1);">${cat.category}</td></tr>`;
+        const itemRows = cat.items.map((entry) => {
+          const badge = (byCategory && entry.isCapacity)
+            ? ` <span style="font-size:10px; letter-spacing:.04em; text-transform:uppercase; color:${accent};">· capacity</span>`
+            : "";
+          const stock = entry.stockLimit === null ? "—" : String(entry.stockLimit);
+          // Bundle selection sub-rows would be injected beneath each Bundle
+          // parent here when selection detail is available (see renderAllItems).
+          return `
+            <tr>
+              <td style="${td}">${entry.name}${badge}</td>
+              <td style="${tdMuted}">${cat.category}</td>
+              <td style="${tdMuted}">${entry.type}</td>
+              <td style="padding:6px 8px; font-family:'Figtree',sans-serif; font-size:13px; font-weight:600;">×${entry.qty}</td>
+              <td style="padding:6px 0 6px 8px; font-family:'Figtree',sans-serif; font-size:13px; color:#8a8276;">${stock}</td>
+            </tr>
+          `;
+        }).join("");
+        return catHeading + itemRows;
+      }).join("");
+
+      const tableHtml = `
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:2px solid #2b2b2b;">
+              <th style="${th}">Item</th>
+              <th style="${th}">Category</th>
+              <th style="${th}">Type</th>
+              <th style="${th}">Qty</th>
+              <th style="${th}">Stock</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      `;
+
+      const footerHtml = `
+        <div style="display:flex; align-items:center; margin-top:28px; padding-top:12px;">
+          <div style="width:32px; height:2px; background:${accent};"></div>
+          <div style="flex:1; text-align:right; font-family:'Figtree',sans-serif; font-size:12px; color:#8a8276;">Generated by Hearth · lovehearth.co.uk</div>
+        </div>
+      `;
+
+      return headerHtml + tableHtml + footerHtml;
+    }
+
+    function prepSheetSlug(value, fallback) {
+      const s = String(value || "").toLowerCase().trim()
+        .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      return s || fallback;
+    }
+
+    async function downloadPrepSheet() {
+      const btn = byId("downloadPrepSheet");
+      if (!btn) return;
+      if (!state.dropSummary || !state.itemDetails.length) {
+        showError("No items to export for this drop yet.");
+        return;
+      }
+
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Generating…";
+
+      const container = document.createElement("div");
+      container.id = "prepSheetPrint";
+      container.innerHTML = buildPrepSheetMarkup();
+      document.body.appendChild(container);
+
+      try {
+        if (typeof window.html2canvas !== "function") {
+          throw new Error("html2canvas not loaded");
+        }
+        // Wait for Cormorant Garamond / Figtree so the export doesn't fall back
+        // to system fonts (same discipline as drop-manager's menu-card export).
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+
+        const canvas = await window.html2canvas(container, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false
+        });
+
+        const blob = await new Promise((resolve, reject) => {
+          canvas.toBlob(
+            (b) => (b ? resolve(b) : reject(new Error("toBlob returned null"))),
+            "image/png",
+            1.0
+          );
+        });
+
+        const vendorSlug = prepSheetSlug(state.vendor?.slug || state.vendor?.display_name, "vendor");
+        const dropSlug = prepSheetSlug(state.drop?.slug || state.dropSummary?.drop_name || state.drop?.name, "drop");
+        const filename = `${vendorSlug}-${dropSlug}-prep-sheet.png`;
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (err) {
+        console.error("[prepSheet] download failed", err);
+        showError("Couldn't generate the prep sheet. Refresh the page and try again.");
+      } finally {
+        container.remove();
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+
     function renderCompactBlock(title, lines) {
       if (!lines.length) {
         return `
@@ -2013,6 +2388,8 @@
       renderSummaryPanelState();
       renderOrdersPanelState();
       renderAllOrders();
+      renderAllItemsPanelState();
+      renderAllItems();
       renderBoard();
       maybeSelectDefaultMobileTab();
     }
@@ -2273,6 +2650,15 @@
       byId("toggleOrdersPanel").addEventListener("click", function () {
         state.ordersPanelOpen = !state.ordersPanelOpen;
         renderOrdersPanelState();
+      });
+
+      byId("toggleAllItemsPanel").addEventListener("click", function () {
+        state.allItemsPanelOpen = !state.allItemsPanelOpen;
+        renderAllItemsPanelState();
+      });
+
+      byId("downloadPrepSheet").addEventListener("click", function () {
+        downloadPrepSheet();
       });
 
       byId("toggleSummaryPanel").addEventListener("click", function () {
