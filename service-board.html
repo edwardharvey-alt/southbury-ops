@@ -897,7 +897,7 @@
                   <th>Status</th>
                   <th>Total</th>
                   <th id="thCapacityItems">Capacity items</th>
-                  <th>Other items</th>
+                  <th id="thOtherItems">Other items</th>
                 </tr>
               </thead>
               <tbody id="allOrdersBody">
@@ -1515,6 +1515,18 @@
       const body = byId("allOrdersBody");
       body.innerHTML = "";
 
+      // T-sb-2: by_order drops have no capacity/non-capacity distinction —
+      // collapse the two item columns into a single "Items" column and hide
+      // the "Other items" heading. by_category keeps the existing split.
+      const byCategory = isCategoryCapacityDriver();
+      const thOtherItems = byId("thOtherItems");
+      if (byCategory) {
+        if (thOtherItems) thOtherItems.style.display = "";
+      } else {
+        byId("thCapacityItems").textContent = "Items";
+        if (thOtherItems) thOtherItems.style.display = "none";
+      }
+
       const models = getFilteredOrderModels();
 
       if (!models.length) {
@@ -1530,18 +1542,26 @@
 
       models.forEach((order) => {
         const tr = document.createElement("tr");
+        const itemCells = byCategory
+          ? `
+          <td class="tableItems">
+            ${renderItemsBlock(order.grouped.capacity, "None")}
+          </td>
+          <td class="tableItems">
+            ${renderItemsBlock(order.grouped.extras, "None")}
+          </td>`
+          : `
+          <td class="tableItems">
+            ${renderItemsBlock(order.lines, "None")}
+          </td>
+          <td class="tableItems" style="display:none"></td>`;
         tr.innerHTML = `
           <td class="mono">${formatShortTime(order.created_at)}</td>
           <td>${order.customer_name || "—"}</td>
           <td>${Number(order.capacity_units_in_order || 0)}</td>
           <td><span class="badgeStatus ${normaliseStatus(order.status)}">${normaliseStatus(order.status)}</span></td>
           <td>${formatMoneyPence(order.total_price_pence)}</td>
-          <td class="tableItems">
-            ${renderItemsBlock(order.grouped.capacity, "None")}
-          </td>
-          <td class="tableItems">
-            ${renderItemsBlock(order.grouped.extras, "None")}
-          </td>
+          ${itemCells}
         `;
         body.appendChild(tr);
       });
