@@ -64,7 +64,21 @@ Core belief: great local food should strengthen communities, not bypass them.
 - assets/hearth-intelligence.js — shared intelligence engine module
   (archetype detection, capacity/rhythm/menu/growth signals, recommendation
   generation, customer segmentation) consumed by insights.html,
-  customers.html and home.html
+  customers.html and home.html.
+  The recommendation engine threads `customer_data_posture` (exposed by
+  `detectArchetype()` as `customerDataPosture`) and `importedCount` (on the
+  `signals` object) through `generateRecommendations()`. The
+  `archetype_import_existing_customers` branch fires at the top of
+  recommendation priority for vendors where `customer_data_posture` is
+  `'rich'` or `'partial'` AND `importedCount < 5`, and suppresses
+  automatically once the vendor imports 5+ customers via the
+  `bulk-create-customers` flow. Callers compute `importedCount` before
+  invoking: home.html and customers.html derive it from in-memory state
+  (`state.customers` / `state.allCustomers` filtered by
+  `source === 'import'`), avoiding extra queries; insights.html calls the
+  extended `get-vendor-customer-count` Edge Function (which now accepts an
+  optional `source` filter — backward compatible; existing callers without
+  `source` get unchanged behaviour) and reads back the count. (T-intelligence-engine-import-recommendation, 2026-05-23.)
 - assets/vendor-nav.js — HearthNav helper module exposing
   withVendor(href), renderNav(container, activeFile), and decorateLinks(root).
   Loaded synchronously in every operator page's <head>. Used to build nav
@@ -125,13 +139,15 @@ The remaining sequence before the first real drop with Healthy Habits
 Cafe. Items marked ✓ are complete; everything else is open.
 
 1. ✓ Platform admin MVP — COMPLETE 2026-05-21
-2. T-customers-page-import-entry (next)
-3. Healthy Habits Cafe dry run
-4. T1-3 closure
-5. T3-8 Stripe live mode conversion
-6. T6-5 Supabase Pro PITR upgrade (parallel — Ed completes
+2. ✓ T-customers-page-import-entry — COMPLETE 2026-05-22
+3. ✓ T-intelligence-engine-import-recommendation — COMPLETE 2026-05-23
+4. ✓ Admin-aware login routing (auth-callback.html) — COMPLETE 2026-05-22
+5. Healthy Habits Cafe dry run (next)
+6. T1-3 closure
+7. T3-8 Stripe live mode conversion
+8. T6-5 Supabase Pro PITR upgrade (parallel — Ed completes
    independently)
-7. Go live
+9. Go live
 
 Post-launch: T5-25 Part 0 (Instagram menu card image).
 
@@ -441,6 +457,13 @@ on top of the coding rules above.
    - `?vendor=` param: retained as a localhost-only dev override after auth
      ships. resolveVendor() checks window.location.hostname === 'localhost'
      before honouring it. On production, session is the only identity source.
+   - Admin-aware routing (auth-callback.html, 2026-05-22): once the session
+     is established and before vendor resolution, auth-callback.html calls
+     `admin-verify`. If it returns 200, the user is routed to
+     platform-admin.html (respecting `storedRedirect` only if it begins with
+     `platform-admin`). Non-admins fall through to the existing vendor lookup
+     flow unchanged. Admins and vendors share a single login surface at
+     login.html — there is no separate admin login page.
 
 8. **PRs from claude/ branches must be verified — not all files always merge**
    PR #133 from branch claude/add-privacy-policy-V4lvq merged only
@@ -1311,6 +1334,28 @@ on top of the coding rules above.
     conversation. The same prompt would have shipped broken if the
     handover had been trusted verbatim.
 
+58. **Extending the recommendation engine to surface a new
+    archetype-driven nudge means extending the engine's input signal
+    contract too — and a direct PostgREST query is never the way to
+    populate that signal from an RLS-locked table.** Operator pages
+    cannot count RLS-locked tables (`customer_relationships`, etc.)
+    via direct PostgREST because the publishable-key auth-attach
+    pattern never delivers the user JWT (operational learnings #12,
+    #14, #52). The T-intelligence-engine-import-recommendation build
+    initially proposed a direct count query that would have silently
+    returned 0 in production, making the import recommendation fire
+    indefinitely (the suppression condition `importedCount >= 5`
+    could never be met). Three correct paths: (a) read from in-memory
+    state if the data is already loaded server-side via JWT-authed EFs
+    (home.html, customers.html derive `importedCount` from
+    `state.customers` / `state.allCustomers` filtered by
+    `source === 'import'`); (b) extend an existing `get-vendor-*` EF
+    with an optional filter parameter (insights.html →
+    `get-vendor-customer-count` widened with an optional `source`
+    filter); (c) build a new dedicated EF. Direct PostgREST counts on
+    RLS-locked tables are never the right path. (Learned from
+    T-intelligence-engine-import-recommendation, 2026-05-23.)
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -1753,7 +1798,6 @@ Reveal hook field — `#dropRevealLine` is now a `<textarea>` (4 rows, `maxlengt
 - T4-35 — Multiple windows + Close Orders: duplicative timing UX — open
 - T4-36 — Multiple windows: discoverability of Create windows action — open
 - T4-37b — Host-direct terms acceptance via email confirmation — open
-- T-customers-page-import-entry — Add Import customers CTA to customers.html asset summary section; audit Home dashboard data-rich next-action coverage to confirm "Import your existing customer list" surfaces. Surfaced 2026-05-15 after T-ops-rls-customer-import made the import flow functional for the first time — pre-launch the gap didn't matter because import was broken anyway. — open
 
 ### Tier 5 — Strategic platform features
 - T5-1 — Delivery optimisation (route planning) — open
@@ -1903,6 +1947,17 @@ for quick chronological recall across the whole platform.
   invite-vendor, create-vendor (T5-B26 closed). T7-1 cockpit MVP and
   T7-14 multi-admin enabler both closed in the same workstream. Next
   pre-launch item: T-customers-page-import-entry.
+
+- 2026-05-23: T-intelligence-engine-import-recommendation complete and
+  verified. Recommendation engine extended to thread
+  `customer_data_posture` and `importedCount` through
+  `generateRecommendations()`. Edge Function `get-vendor-customer-count`
+  widened with optional `source` filter. Recommendation surfaces
+  correctly across Home, Customers, and Insights for data-rich vendors
+  with no imports yet; suppresses cleanly once the vendor imports 5+
+  customers. Admin-aware routing also landed in auth-callback.html —
+  admins and vendors share login.html as the platform's single entry
+  point. Pre-launch sequence: four items complete, dry-run next.
 
 ## Future architecture
 

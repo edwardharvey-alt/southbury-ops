@@ -1365,9 +1365,11 @@ Cross-reference: T4-37 (parent ticket, closed), T5-11 (email
 infrastructure dependency), T5-27 (host platform participation
 follow-on workstream).
 
-T-customers-page-import-entry — surface customer import from Customers and Home
+T-customers-page-import-entry — surface customer import from Customers and Home ✓ COMPLETE 2026-05-22
 
-**Status:** Open. Tier 4. Surfaced 2026-05-15 after T-ops-rls-customer-import shipped, making the import flow functional in production for the first time.
+**Status:** ✓ COMPLETE 2026-05-22. Tier 4. Surfaced 2026-05-15 after T-ops-rls-customer-import shipped, making the import flow functional in production for the first time.
+
+**Closure:** CTA-only fix landed 2026-05-22 on customers.html. Engine threading (Part 2 audit findings) spun off as T-intelligence-engine-import-recommendation (now closed).
 
 **Problem:** The Customers page (`customers.html`) is framed as "Your owned customer asset — independent of any platform" but has no CTA to add customers via CSV import. Vendors arriving with an existing customer list have no obvious path from the page that's literally about growing their customer asset to the page that grows it. The only current entry to `customer-import.html` is via onboarding for data-rich vendors (T4-23) or by knowing the URL directly.
 
@@ -1385,9 +1387,11 @@ Part 2 — Home dashboard audit. Verify that data-rich vendors (per `detectArche
 
 **Cross-reference:** T4-23 (first-drop guidance — already nominally routes data-rich vendors toward import), T4-27 (Customers page — this ticket extends), T4-28 (intelligence engine — Home dashboard recommendation surfacing).
 
-T-intelligence-engine-import-recommendation: Recommendation engine threading for data-rich vendor import nudge
+T-intelligence-engine-import-recommendation: Recommendation engine threading for data-rich vendor import nudge ✓ COMPLETE 2026-05-23
 
-Status: Open. Tier 4. Surfaced 2026-05-22 during T-customers-page-import-entry Part 2 audit.
+Status: ✓ COMPLETE 2026-05-23. Tier 4. Surfaced 2026-05-22 during T-customers-page-import-entry Part 2 audit.
+
+Closure: Shipped 2026-05-23 across two commits. Engine extended (detectArchetype exposes customerDataPosture; signals shape adds importedCount; new archetype_import_existing_customers branch). EF get-vendor-customer-count widened with optional source filter (backward compatible). home.html and customers.html compute importedCount from in-memory state; insights.html calls the extended EF. Branch position promoted to top of recommendation priority so it surfaces on Home (which slices to top 3) for the pre-import data-rich audience, suppressing naturally once importedCount >= 5. Verified end-to-end on production by flipping test-11 customer_data_posture to 'rich' and confirming surface on all three pages with correct CTA routing to customer-import.html. New operational learning surfaced: direct PostgREST counts on RLS-locked tables silently return 0 due to the publishable-key auth-attach pattern — extending the engine's signal contract requires reading from in-memory state or routing through JWT-authed EFs, never a direct count query.
 
 Problem: The recommendation engine in assets/hearth-intelligence.js does not currently thread customer_data_posture or imported-customer count into generateRecommendations(). detectArchetype() returns { type, label, goals, deliveryModel, vendorType } only. Adding a data-rich-vendor import-first nudge per T-customers-page-import-entry Part 2 requires extending both the archetype output and the signals input shape.
 
@@ -1400,6 +1404,14 @@ Scope:
 Defer until at least one real data-rich vendor is onboarded. Building speculatively for an audience that doesn't exist is the wrong call.
 
 Cross-reference: T-customers-page-import-entry (parent, closed via CTA-only fix), T4-28 (intelligence engine).
+
+T-auth-callback-admin-routing: Admin-aware login routing in auth-callback.html ✓ COMPLETE 2026-05-22
+
+Status: ✓ COMPLETE 2026-05-22. Retrospective ticket — no ticket previously existed; logged at docs-sweep time to record the closure.
+
+Closure: After a successful login and before the existing vendor resolution flow, auth-callback.html now calls admin-verify. If it returns 200, the user is routed to platform-admin.html (respecting storedRedirect only when it begins with 'platform-admin'). Non-admins fall through to the unchanged vendor lookup flow. Result: admins and vendors share a single entry point at login.html with no separate admin login page. Verified for both admin and vendor sign-ins. Builds on the platform admin MVP (admin-verify Edge Function, 2026-05-21).
+
+Cross-reference: Platform admin MVP (admin-verify EF), operational learning #7 (auth flow routing patterns).
 
 ### Tier 5 — Strategic platform features
 
