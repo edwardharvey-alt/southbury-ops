@@ -1714,6 +1714,46 @@ Snapshot of which read/write paths are working in production and which are known
 - Operator host-token fetch (drop-manager.html "Copy host link") — WORKING via `get-drop-host-token` Edge Function as of 2026-05-19. JWT-authenticated (mirrors `get-drop`'s auth pattern), verifies the caller owns the drop's vendor, returns `{ host_access_token }`. Drop Studio's host-link builder appends the returned token to the host-view URL. Previously broken silently — direct PostgREST against `drop_host_tokens` returned empty rows because the anon role hit RLS (see operational learning #52). Part of the T5-A3 host-view sub-track closure.
 - Service Board selected-drop pipeline read (service-board.html `loadSelectedDropData`: summary, orders list, and order-item detail for the currently-selected drop) — WORKING via the extended `get-drop` Edge Function as of 2026-05-19 (operator-read-auth Slice 1). `get-drop` was extended additively (commit 3b064fc added the `summary` key; commit 9c63c5f added `orders_summary` + `order_items` + `order_items_source`; both reads use the service-role client against the invoker views, ownership already enforced by `get-drop`'s existing JWT verification). `service-board.html` re-pointed in commit a471990 to consume those keys; the three direct anon reads (`v_drop_summary` single, `v_drop_orders_summary`, the three-step `v_order_item_detail_expanded` → `_v2` → `_detail` fallback) and the client-side `vendor_id` assertion are deleted. Verified end-to-end in production against drop "Neighbourhood massive" (`25e75db9-01bd-4847-bc6c-7f858e216898`, 1 placed + 1 delivered) — verifying on an empty drop would not have exercised the failure mode (see operational learning #53). Previously this read surface was absent from this section — added on 2026-05-19. All four `loadDrops` sites (service-board.html, drop-manager.html, hosts.html, host-profile.html) migrated to `list-drops` EF; scorecard.html uses `get-drop`. No direct anon reads of `v_drop_summary` remain.
 
+## Strategic principles (updated May 2026)
+
+**Positioning**
+Hearth complements however a vendor already operates — shop front, food truck, catering, market stall, pop-up. It adds a controlled, planned demand channel alongside whatever they already do. It does not ask them to change their primary operation.
+
+Hearth competes with and aims to displace the aggregator habit specifically — always-on, reactive, commission-heavy delivery. These are two different relationships and must not be conflated.
+
+Internal framing: "complement today, displace the aggregator habit over time."
+
+**Commercial alignment**
+Hearth has no alternative growth mechanism. Its only measure of success is whether individual vendors are building deeper customer relationships and driving more controlled revenue. If vendors don't succeed, Hearth doesn't succeed.
+
+Draft expression for platform use: "Hearth grows only when you do."
+
+**The demand-side challenge — the hardest problem Hearth has to solve**
+The aggregator model wins on convenience. Hearth asks customers to plan ahead — a genuine behavioural shift. It only works if two conditions are simultaneously true:
+
+1. The drop pattern is reliable enough to plan around. Vendor cadence consistency is a communication requirement, not just an operational preference. Every deviation weakens customer habit formation.
+2. The moment feels worth anticipating. Research shows 40–50% of product enjoyment comes from the anticipation phase. Hearth should design this window deliberately, not minimise it.
+
+Habit formation typically takes 8–10 consistent, high-quality drops.
+
+**The vendor confidence gap**
+The causal chain is: vendor confidence → cadence consistency → customer habit formation. Breaking the first link breaks the whole chain. The platform needs explicit mechanisms to support vendors through the early drop period (drops 1–10) before habits are established.
+
+**The intelligence layer**
+The Insights page is not a reporting dashboard. It is a demand visibility and cadence coaching engine. Its job:
+- Monitor vendor cadence and flag drift before it breaks customer habit loops
+- Surface demand signals that give vendors confidence to commit to regular drops
+- Identify the right moment, context, and customer segment for each drop
+- Prompt the right communications at the right moment
+
+**Key phrases — locked**
+- "Sell before you serve" — the core shift Hearth enables
+- "Complement today, displace the aggregator habit over time" — the positioning
+- "Hearth grows only when you do" — the commercial alignment
+- "Vendor confidence → cadence consistency → customer habit formation" — the causal chain the platform must protect
+- "We don't just fill drops. We build the demand that fills the next one" — the intelligence layer in one line
+- "Economic captivity" — the documented state of aggregator-dependent vendors
+
 ## Development backlog
 
 Open tickets are tracked in `BACKLOG.md` — see that file when working a specific
