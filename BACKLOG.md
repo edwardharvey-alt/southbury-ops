@@ -2634,6 +2634,56 @@ Dependency chain: T5-A (vendor auth — complete) provides the auth pattern to f
 
 Relationship to T5-4 (marketplace evolution): T5-27 is the infrastructure T5-4 assumes. T5-4 should not be built until at least Phases 1–3 of T5-27 are complete and validated with real hosts.
 
+**T-STRATEGY-1: Aggregator Evidence File**
+Tier: Strategy/Content. Not a build ticket.
+
+A standalone, shareable document summarising documented aggregator sales and operational practices — drawn from research conducted May 2026. Intended for three audiences: internal team reference, vendor onboarding conversations, future investor or partner materials.
+
+Must distinguish clearly between documented fact, cited analysis, and industry-reported claims. Must not read as a polemic — factual, sourced, and calm in tone.
+
+Content to include:
+- Commission rates and margin impact (20–30%, vs 3–5% net margins)
+- Forced always-on behaviour and contractual acceptance rate requirements (95% minimum documented)
+- Customer data ownership and lock-in as the primary platform mechanism
+- Price parity clauses and algorithmic enforcement
+- Pay-to-appear: visibility sold back to vendors on top of commission
+- Exit penalties and contract terms
+- Listing without consent (Uber settlement documented)
+- Ratings manipulation — CMA investigation into Just Eat opened March 2026 (live, UK-specific)
+- The "impossible choice" framing and "economic captivity" analysis
+
+Status: Open. Priority: complete before first external investor or partner conversation.
+
+**T5-C7: Vendor early cadence support — drops 1 to 10**
+Tier: 5. Strategic platform feature. Depends on real drop data existing.
+
+Note: closely related to the existing T5-C5 (cadence visibility and consistency mechanics). T5-C5 covers the visible cadence mechanics across Home/scorecard/Drop Studio; this ticket (originally drafted as a second "T5-C5" in the May 2026 strategy session, renumbered to avoid an ID collision) frames the early-drop support programme specifically. The two should be built as one coherent arc.
+
+The causal chain vendor confidence → cadence consistency → customer habit formation means the platform must actively support vendors through the early drop period before habits are established. One underfilled drop, a skipped week, or a changed day can break the loop before it forms.
+
+This ticket covers the mechanics of that support. Not a single feature — a programme of signals, prompts, and honest expectation-setting built into the platform experience for vendors in their first 10 drops.
+
+Design requirements:
+- Cadence drift detection: surface a prompt when a vendor's drop pattern becomes inconsistent. Tone: observational and coaching, never punitive. Example: "Your last three drops ran on different days. Customers find it easier to plan around a consistent schedule."
+- Fill rate feedback: after each drop, show the vendor their fill rate in context — not just as a number but framed against what's typical for drops at this stage.
+- Early expectation-setting: during onboarding, be honest that habit formation takes 8–10 consistent drops. Frame the early period as investment, not immediate payoff.
+- Milestone markers: acknowledge when a vendor reaches drop 5, drop 10 — small signals that reinforce continuity.
+
+Dependencies: T5-8 (interest registration), T5-9 (recommendation engine V1), real drop data.
+Cross-reference: T5-C5 (cadence visibility and consistency mechanics — overlapping scope), T5-C6 (vendor activation plan).
+Status: Open. Post-launch.
+
+**T-CONTENT-1: Landing page proof quote — Healthy Habits Cafe**
+Tier: Content. Not a build ticket.
+
+The landing page currently carries a placeholder proof statement in place of a genuine vendor quote. A real quote from Healthy Habits Cafe — even an informal one — would significantly strengthen the page.
+
+Action: obtain a genuine quote during or immediately after the vendor onboarding dry run. The quote should speak to the experience of using Hearth, the control it gives them, or the difference in how it feels to operate this way. It does not need to be polished — authentic is better than constructed.
+
+Once obtained, update the proof section of landing.html to replace the placeholder with the real quote and correct attribution.
+
+Status: Open. Blocked on dry run completion.
+
 ### Tier 5-A — Auth workstream
 
 Must complete before any real vendor enters live data. The current
