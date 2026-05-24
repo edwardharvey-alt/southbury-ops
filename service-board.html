@@ -1432,7 +1432,19 @@
           }
         });
 
-        return { ...order, lines, grouped };
+        // The orders-summary view (v_drop_orders_summary) does not reliably
+        // carry the delivery address, so source it from the base orders rows
+        // get-drop returns under drop_orders. The base row id matches the
+        // summary row's order_id. Exposed as camelCase deliveryAddress to
+        // distinguish from the view's uncertain snake_case field.
+        const baseRow = (state.dropOrders || []).find(
+          (r) => r.id === order.order_id
+        );
+        const deliveryAddress = baseRow?.delivery_address
+          || order.delivery_address
+          || null;
+
+        return { ...order, lines, grouped, deliveryAddress };
       });
     }
 
@@ -2137,7 +2149,7 @@
       return models
         .map((o) => ({
           ...o,
-          _postcode: extractPostcode(o.delivery_address),
+          _postcode: extractPostcode(o.deliveryAddress),
           _itemsCompact: compactItemsForOrder(o)
         }))
         .sort((a, b) => {
@@ -2188,7 +2200,7 @@
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${o.customer_name || "—"}</td>
-          <td>${o.delivery_address || "—"}</td>
+          <td>${o.deliveryAddress || "—"}</td>
           <td>${phoneCell}</td>
           <td>${o._itemsCompact || "—"}</td>
           <td>${formatMoneyPence(o.total_price_pence)}</td>
@@ -2259,7 +2271,7 @@
         return `
           <div class="deliveryCard">
             <div class="deliveryCardName">${o.customer_name || "Customer"}</div>
-            <div class="deliveryCardAddress">${o.delivery_address || "—"}</div>
+            <div class="deliveryCardAddress">${o.deliveryAddress || "—"}</div>
             ${phoneHtml}
             <div class="deliveryCardItems">${o._itemsCompact || "—"}</div>
             <div class="deliveryCardTotal">${formatMoneyPence(o.total_price_pence)}</div>
@@ -2305,7 +2317,7 @@
         return `
           <tr>
             <td style="${td}">${o.customer_name || "—"}</td>
-            <td style="${tdMuted}">${o.delivery_address || "—"}</td>
+            <td style="${tdMuted}">${o.deliveryAddress || "—"}</td>
             <td style="${tdMuted}">${phone}</td>
             <td style="${tdMuted}">${o._itemsCompact || "—"}</td>
             <td style="padding:8px 0 8px 8px; font-family:'Figtree',sans-serif; font-size:13px; font-weight:600; vertical-align:top; border-bottom:1px solid rgba(0,0,0,.06);">${formatMoneyPence(o.total_price_pence)}</td>
@@ -2458,8 +2470,9 @@
 
       let html = `<div class="orderFulfilmentRow"><span class="orderFulfilmentBadge ${badgeClass}">${label}</span>`;
 
-      if (mode === "delivery" && order.delivery_address) {
-        html += `<span class="orderDeliveryAddress">${order.delivery_address}</span>`;
+      const deliveryAddress = order.deliveryAddress || order.delivery_address || "";
+      if (mode === "delivery" && deliveryAddress) {
+        html += `<span class="orderDeliveryAddress">${deliveryAddress}</span>`;
       }
 
       html += `</div>`;
@@ -2684,6 +2697,7 @@
         state.drop = null;
         state.dropSummary = null;
         state.ordersSummary = [];
+        state.dropOrders = [];
         state.itemDetails = [];
         return;
       }
@@ -2701,6 +2715,7 @@
         state.drop = null;
         state.dropSummary = null;
         state.ordersSummary = [];
+        state.dropOrders = [];
         state.itemDetails = [];
         await loadDrops();
         return;
@@ -2711,6 +2726,9 @@
       state.drop = dropData;
       state.dropSummary = dropData.summary || null;
       state.ordersSummary = dropData.orders_summary || [];
+      state.dropOrders = Array.isArray(dropData.drop_orders)
+        ? dropData.drop_orders
+        : [];
       state.itemDetails = await enrichItemDetailsWithProductData(dropData.order_items || []);
     }
 
