@@ -731,6 +731,11 @@
     .deliveryCardTotal { font-size: 16px; font-weight: 600; color: #2b2b2b; }
     /* Persistent action row at the bottom of the Ready Kanban column */
     .readyDeliveryBtn { width: 100%; margin-top: 8px; }
+    #readyColFooter:not(:empty) {
+      height: auto;
+      flex: 0 0 auto;
+      padding: 8px;
+    }
   </style>
 </head>
 <body>
@@ -2600,7 +2605,6 @@
 
       // T-sb-4: keep the Ready-column delivery action and the open overlay in
       // sync with the board on every render (optimistic + realtime + full).
-      console.log('[T-sb-4 debug] dropOrders count:', (state.dropOrders||[]).length, 'ready delivery models:', buildDeliveryOrderModels('ready').length);
       renderReadyDeliveryAction();
       renderDeliveryOverlay();
     }
