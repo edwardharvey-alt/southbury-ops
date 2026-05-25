@@ -1447,11 +1447,11 @@
         // v_drop_orders_summary does not reliably carry fulfilment_mode
         // either, so source it from the base orders row like deliveryAddress.
         // isDeliveryOrder() reads this to gate the delivery surfaces.
-        const fulfilment_mode = baseRow?.fulfilment_mode
+        const fulfilmentMode = baseRow?.fulfilment_mode
           || order.fulfilment_mode
           || null;
 
-        return { ...order, lines, grouped, deliveryAddress, fulfilment_mode };
+        return { ...order, lines, grouped, deliveryAddress, fulfilmentMode };
       });
     }
 
@@ -2110,7 +2110,8 @@
     // 'delivery', or — on a delivery-only drop — when the order row carries no
     // fulfilment_mode (treat absent as delivery in that case, per spec).
     function isDeliveryOrder(order) {
-      const m = String(order.fulfilment_mode || "").trim().toLowerCase();
+      const m = String(order.fulfilmentMode || order.fulfilment_mode || "")
+        .trim().toLowerCase();
       if (m === "delivery") return true;
       if (!m && dropIsDeliveryOnly()) return true;
       return false;
