@@ -1444,7 +1444,14 @@
           || order.delivery_address
           || null;
 
-        return { ...order, lines, grouped, deliveryAddress };
+        // v_drop_orders_summary does not reliably carry fulfilment_mode
+        // either, so source it from the base orders row like deliveryAddress.
+        // isDeliveryOrder() reads this to gate the delivery surfaces.
+        const fulfilment_mode = baseRow?.fulfilment_mode
+          || order.fulfilment_mode
+          || null;
+
+        return { ...order, lines, grouped, deliveryAddress, fulfilment_mode };
       });
     }
 
@@ -2738,6 +2745,7 @@
       const order = state.ordersSummary.find((o) => String(o.order_id) === String(orderId));
       if (order) order.status = toStatus;
       renderBoard();
+      renderDeliveryRunSection();
       renderWorkflowCounts();
       maybeSelectDefaultMobileTab();
     }
@@ -2806,6 +2814,7 @@
         state.expandedOrders.add(orderId);
       }
       renderBoard();
+      renderDeliveryRunSection();
     }
 
     // ---- Mobile Kanban tab state ----
