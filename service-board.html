@@ -2600,6 +2600,7 @@
 
       // T-sb-4: keep the Ready-column delivery action and the open overlay in
       // sync with the board on every render (optimistic + realtime + full).
+      console.log('[T-sb-4 debug] dropOrders count:', (state.dropOrders||[]).length, 'ready delivery models:', buildDeliveryOrderModels('ready').length);
       renderReadyDeliveryAction();
       renderDeliveryOverlay();
     }
