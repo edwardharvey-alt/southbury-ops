@@ -731,17 +731,16 @@
     .deliveryCardItems { font-size: 16px; color: #5b5b5b; }
     .deliveryCardTotal { font-size: 16px; font-weight: 600; color: #2b2b2b; }
     /* Persistent action row at the bottom of the Ready Kanban column */
+    .readyDeliveryBar {
+      padding: 8px;
+      border-top: 1px solid rgba(0,0,0,.08);
+      background: rgba(255,255,255,0.95);
+    }
     .readyDeliveryBtn {
       width: 100%;
-      margin-top: 4px;
       font-size: 13px;
-      min-height: 36px;
-      height: 36px;
-    }
-    #readyColFooter:not(:empty) {
-      height: auto;
-      flex: 0 0 auto;
-      padding: 6px 8px 8px;
+      min-height: 34px;
+      height: 34px;
     }
   </style>
 </head>
@@ -981,6 +980,7 @@
             <span class="colCount" id="badgeReady">0</span>
           </div>
           <div class="boardColBody" id="colReady"></div>
+          <div class="readyDeliveryBar" id="readyDeliveryBar" style="display:none;"></div>
           <div class="boardColFooter" id="readyColFooter"></div>
         </div>
 
@@ -2237,21 +2237,26 @@
     // Rendered from renderBoard so it stays in sync on optimistic + realtime
     // changes. Shown only when there is at least one Ready delivery order.
     function renderReadyDeliveryAction() {
-      const footer = byId("readyColFooter");
-      if (!footer) return;
-      footer.innerHTML = "";
-      if (!dropHasDelivery()) return;
-
+      const bar = byId("readyDeliveryBar");
+      if (!bar) return;
+      bar.innerHTML = "";
+      if (!dropHasDelivery()) {
+        bar.style.display = "none";
+        return;
+      }
       const readyDeliveries = buildDeliveryOrderModels("ready");
-      if (!readyDeliveries.length) return;
-
+      if (!readyDeliveries.length) {
+        bar.style.display = "none";
+        return;
+      }
       const btn = document.createElement("button");
       btn.type = "button";
       btn.id = "openDeliveryRunBtn";
       btn.className = "btnGhost readyDeliveryBtn";
       btn.textContent = "View delivery run →";
       btn.addEventListener("click", openDeliveryOverlay);
-      footer.appendChild(btn);
+      bar.appendChild(btn);
+      bar.style.display = "";
     }
 
     function openDeliveryOverlay() {
