@@ -731,14 +731,16 @@
     .deliveryCardItems { font-size: 16px; color: #5b5b5b; }
     .deliveryCardTotal { font-size: 16px; font-weight: 600; color: #2b2b2b; }
     /* Persistent action row at the bottom of the Ready Kanban column */
-    #colReady {
-      flex: 1 1 auto;
-      min-height: 0;
-    }
+    .boardCol { position: relative; }
     .readyDeliveryBar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
       padding: 8px;
+      background: rgba(255,255,255,0.97);
       border-top: 1px solid rgba(0,0,0,.08);
-      background: rgba(255,255,255,0.95);
+      z-index: 1;
     }
     .readyDeliveryBtn {
       width: 100%;
