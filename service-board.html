@@ -646,7 +646,8 @@
     /* Off-screen container the branded prep sheet / delivery manifest are
        built into before html2canvas captures (A4 portrait, 794px @ 96dpi). */
     #prepSheetPrint,
-    #deliveryManifestPrint {
+    #deliveryManifestPrint,
+    #readyManifestPrint {
       position: fixed;
       left: -10000px;
       top: 0;
@@ -730,11 +731,17 @@
     .deliveryCardItems { font-size: 16px; color: #5b5b5b; }
     .deliveryCardTotal { font-size: 16px; font-weight: 600; color: #2b2b2b; }
     /* Persistent action row at the bottom of the Ready Kanban column */
-    .readyDeliveryBtn { width: 100%; margin-top: 8px; }
+    .readyDeliveryBtn {
+      width: 100%;
+      margin-top: 4px;
+      font-size: 13px;
+      min-height: 36px;
+      height: 36px;
+    }
     #readyColFooter:not(:empty) {
       height: auto;
       flex: 0 0 auto;
-      padding: 8px;
+      padding: 6px 8px 8px;
     }
   </style>
 </head>
@@ -1124,7 +1131,10 @@
   <div id="deliveryOverlay" class="deliveryOverlay" style="display:none;" role="dialog" aria-label="Ready for delivery" aria-modal="true">
     <div class="deliveryOverlayHeader">
       <h2 class="deliveryOverlayTitle">Ready for delivery</h2>
-      <button type="button" id="closeDeliveryOverlay" class="deliveryOverlayClose" aria-label="Close delivery run">×</button>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button type="button" id="downloadReadyManifest" class="btnSmall">Download</button>
+        <button type="button" id="closeDeliveryOverlay" class="deliveryOverlayClose" aria-label="Close delivery run">×</button>
+      </div>
     </div>
     <div class="deliveryOverlayBody" id="deliveryOverlayBody"></div>
   </div>
@@ -2238,7 +2248,7 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.id = "openDeliveryRunBtn";
-      btn.className = "btnAccent readyDeliveryBtn";
+      btn.className = "btnGhost readyDeliveryBtn";
       btn.textContent = "View delivery run →";
       btn.addEventListener("click", openDeliveryOverlay);
       footer.appendChild(btn);
@@ -2421,6 +2431,137 @@
       } catch (err) {
         console.error("[deliveryManifest] download failed", err);
         showError("Couldn't generate the delivery manifest. Refresh the page and try again.");
+      } finally {
+        container.remove();
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+
+    function buildReadyManifestMarkup() {
+      const vendor = state.vendor || {};
+      const accent = vendor.primary_color || "#8B6B3F";
+      const vendorName = vendor.display_name || vendor.name || "Vendor";
+      const logoUrl = vendor.logo_url || "";
+      const dropDate = state.drop?.delivery_start
+        ? new Date(state.drop.delivery_start).toLocaleDateString("en-GB", {
+            weekday: "long", day: "numeric", month: "long", year: "numeric"
+          })
+        : "";
+      const models = buildDeliveryOrderModels("ready");
+
+      const th = "padding:0 8px 8px 0; font-family:'Figtree',sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#8a8276; text-align:left;";
+      const td = "padding:8px 8px 8px 0; font-family:'Figtree',sans-serif; font-size:13px; vertical-align:top; border-bottom:1px solid rgba(0,0,0,.06);";
+      const tdMuted = "padding:8px 8px; font-family:'Figtree',sans-serif; font-size:13px; color:#5b5b5b; vertical-align:top; border-bottom:1px solid rgba(0,0,0,.06);";
+
+      const headerHtml = `
+        <div style="display:flex; align-items:center; gap:16px;">
+          ${logoUrl ? `<img src="${logoUrl}" alt="" crossorigin="anonymous" style="max-height:48px; width:auto; display:block;" />` : ""}
+          <div style="flex:1; min-width:0;">
+            <div style="font-family:'Cormorant Garamond',Georgia,serif; font-size:24px; line-height:1.1; color:#2b2b2b;">${vendorName}</div>
+            <div style="font-family:'Figtree',sans-serif; font-size:14px; color:#8a8276; margin-top:2px;">Ready for delivery</div>
+            ${dropDate ? `<div style="font-family:'Figtree',sans-serif; font-size:12px; color:#8a8276;">${dropDate}</div>` : ""}
+          </div>
+        </div>
+        <div style="height:2px; background:${accent}; margin:18px 0 22px;"></div>
+      `;
+
+      const rowsHtml = models.map((o) => {
+        const phone = orderPhone(o) || "—";
+        return `
+          <tr>
+            <td style="${td}">${o.customer_name || "—"}</td>
+            <td style="${tdMuted}">${o.deliveryAddress || "—"}</td>
+            <td style="${tdMuted}">${phone}</td>
+            <td style="${tdMuted}">${o._itemsCompact || "—"}</td>
+            <td style="padding:8px 0 8px 8px; font-family:'Figtree',sans-serif; font-size:13px; font-weight:600; vertical-align:top; border-bottom:1px solid rgba(0,0,0,.06);">${formatMoneyPence(o.total_price_pence)}</td>
+          </tr>
+        `;
+      }).join("");
+
+      const bodyRows = rowsHtml ||
+        `<tr><td colspan="5" style="${tdMuted}">No delivery orders in this drop.</td></tr>`;
+
+      const tableHtml = `
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:2px solid #2b2b2b;">
+              <th style="${th}">Name</th>
+              <th style="${th}">Address</th>
+              <th style="${th}">Phone</th>
+              <th style="${th}">Items</th>
+              <th style="${th}">Total</th>
+            </tr>
+          </thead>
+          <tbody>${bodyRows}</tbody>
+        </table>
+      `;
+
+      const footerHtml = `
+        <div style="display:flex; align-items:center; margin-top:28px; padding-top:12px;">
+          <div style="width:32px; height:2px; background:${accent};"></div>
+          <div style="flex:1; text-align:right; font-family:'Figtree',sans-serif; font-size:12px; color:#8a8276;">Generated by Hearth · lovehearth.co.uk</div>
+        </div>
+      `;
+
+      return headerHtml + tableHtml + footerHtml;
+    }
+
+    async function downloadReadyManifest() {
+      const btn = byId("downloadReadyManifest");
+      if (!btn) return;
+      if (!dropHasDelivery() || !buildDeliveryOrderModels("ready").length) {
+        showError("No ready delivery orders to export.");
+        return;
+      }
+
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Generating…";
+
+      const container = document.createElement("div");
+      container.id = "readyManifestPrint";
+      container.innerHTML = buildReadyManifestMarkup();
+      document.body.appendChild(container);
+
+      try {
+        if (typeof window.html2canvas !== "function") {
+          throw new Error("html2canvas not loaded");
+        }
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+
+        const canvas = await window.html2canvas(container, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false
+        });
+
+        const blob = await new Promise((resolve, reject) => {
+          canvas.toBlob(
+            (b) => (b ? resolve(b) : reject(new Error("toBlob returned null"))),
+            "image/png",
+            1.0
+          );
+        });
+
+        const vendorSlug = prepSheetSlug(state.vendor?.slug || state.vendor?.display_name, "vendor");
+        const dropSlug = prepSheetSlug(state.drop?.slug || state.dropSummary?.drop_name || state.drop?.name, "drop");
+        const filename = `${vendorSlug}-${dropSlug}-ready-manifest.png`;
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (err) {
+        console.error("[readyManifest] download failed", err);
+        showError("Couldn't generate the ready manifest. Refresh the page and try again.");
       } finally {
         container.remove();
         btn.disabled = false;
@@ -3168,6 +3309,10 @@
 
       byId("downloadDeliveryManifest").addEventListener("click", function () {
         downloadDeliveryManifest();
+      });
+
+      byId("downloadReadyManifest").addEventListener("click", function () {
+        downloadReadyManifest();
       });
 
       byId("closeDeliveryOverlay").addEventListener("click", function () {
