@@ -143,7 +143,7 @@ Cafe. Items marked ✓ are complete; everything else is open.
 3. ✓ T-intelligence-engine-import-recommendation — COMPLETE 2026-05-23
 4. ✓ Admin-aware login routing (auth-callback.html) — COMPLETE 2026-05-22
 5. Healthy Habits Cafe dry run (next)
-6. T1-3 closure
+6. ✓ T1-3 closure — COMPLETE 2026-05-26 (resolved by T5-A5)
 7. T3-8 Stripe live mode conversion
 8. T6-5 Supabase Pro PITR upgrade (parallel — Ed completes
    independently)
@@ -1794,9 +1794,6 @@ narrative, every unbuilt-ticket spec) lives there. The list below is a one-line
 index of currently open tickets only — not started, partial, or in progress. When
 a ticket closes, mark it ✓ COMPLETE in BACKLOG.md and remove its line from this
 index.
-
-### Tier 1 — Must work before first real drop
-- T1-3 — Home page: fix vendor resolution error (`.catch` on `maybeSingle`) — open
 
 ### Tier 2 — Must work before showing anyone
 - T2-1 — Global navigation: add all pages to every header — open

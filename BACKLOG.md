@@ -67,6 +67,10 @@ including item_name_snapshot. Ensure capacity display is accurate.
 T1-3: Home page — fix vendor resolution error
 maybeSingle().catch is not a function — Supabase JS v2 chaining issue.
 Replace .catch() with proper async try/catch. Page flashes then fails.
+✓ COMPLETE 2026-05-26. Resolved as a side-effect of T5-A5
+(session-aware resolveVendor() rewrite, 2026-04-27). home.html loads
+cleanly for Healthy Habits Cafe on production — no flash, no error.
+Verified 2026-05-26.
 
 T1-4: Order page — hero image white strip ✓ COMPLETE
 Confirmed complete. Visual verification by Edward — hero image fills
