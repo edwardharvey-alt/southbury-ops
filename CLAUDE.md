@@ -1356,6 +1356,38 @@ on top of the coding rules above.
     RLS-locked tables are never the right path. (Learned from
     T-intelligence-engine-import-recommendation, 2026-05-23.)
 
+59. **`overflow:hidden` on `.boardCol` silently clips
+    absolutely-positioned children.** When overlaying an element on a
+    container that has `overflow:hidden`, the child must use
+    `position:absolute` (with the parent `position:relative`) plus a
+    `z-index` to sit on top of sibling content — appending it as a
+    normal flow child instead expands the container's height. This is
+    how the Ready-column delivery bar overlays the bottom of the
+    column without changing its height. (Learned from T-sb-4,
+    2026-05-26.)
+
+60. **`align-items:start` on a grid container makes columns size to
+    their own content, not the tallest sibling.** For equal-height
+    Kanban columns, override with `align-items:stretch`. The Service
+    Board's `.boardGrid` inherited `align-items:start` from hearth.css,
+    which left the Ready column shorter than its siblings whenever its
+    cards didn't fill the body height; `align-items:stretch` is the
+    correct, permanent fix. (Learned from T-sb-4, 2026-05-26.)
+
+61. **`.boardColFooter` is a fixed 12px decorative strip — never use
+    it as a button container.** Appending an action button to the
+    footer makes it grow beyond its decorative 12px and pushes the
+    column taller than its siblings. Use a separate element positioned
+    with `position:absolute` (see learning #59) instead. (Learned from
+    T-sb-4, 2026-05-26.)
+
+62. **`state.dropOrders` (the base `orders` table) is the reliable
+    source for `fulfilment_mode` and `delivery_address` — the
+    `v_drop_orders_summary` view does not reliably expose these
+    fields.** Code that needs per-order fulfilment mode or delivery
+    address on the Service Board must read from `state.dropOrders`, not
+    the summary view. (Learned from T-sb-4, 2026-05-26.)
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -1695,7 +1727,7 @@ Snapshot of which read/write paths are working in production and which are known
 - Order confirmation email (order_confirmed transactional trigger) — WORKING via `send-order-confirmation` Edge Function as of 2026-05-16 (PR #266). Invoked by `stripe-webhook` after `checkout.session.completed`. Calls Resend HTTP API directly with `RESEND_API_KEY`; inter-function call authenticated via `INTERNAL_FUNCTION_SECRET` in the `X-Internal-Secret` header (`verify_jwt = false` at gateway). First application-level Resend integration in production — see operational learnings #46 and #47 for the pattern. Other T5-11 triggers (order_ready automated SMS, drop_announced, drop_reminder, drop_early_access, post_drop_thank_you, the `comms_log` table) remain backlog per pre-launch scope decision.
 - Order read on confirmation page — WORKING via `fetch-order` Edge Function. Anonymous, matched-pair authorization (order_id + session_id). Returns order, items (including bundle line selections), drop, vendor, host. Customer-visible fields only — no email, phone, customer_id, contact_opt_in, or platform_fee_pence in response.
 - Order cancel-on-return — WORKING via `cancel-order` Edge Function. Idempotent, only flips pending_payment → cancelled. Frees capacity immediately when the customer hits Cancel on Stripe Checkout rather than waiting for Stripe's 30-minute session expiry. Does NOT call Stripe — relies on Stripe's own session expiry to clean up the unused Checkout session.
-- Service Board order status transitions (`orders.status` UPDATE and `order_status_events` INSERT) — WORKING via `transition-order-status` Edge Function as of 2026-05-15. Anonymous gateway (`verify_jwt = false`), server-side state machine enforcing adjacent-only transitions in `placed → confirmed → baking → ready → delivered` (forward and backward by one step only), optimistic-concurrency guard via `.eq("status", currentStatus)` returning 409 on concurrent writes, audit event written server-side as `actor: 'service_board'`, `actor_type: 'operator'`. Previously broken silently — direct PATCH from anonymous service-board.html returned 204 with zero rows affected because the `orders` RLS policies require `auth.uid()` to match `vendors.auth_user_id`. The bug was undiscoverable by routine testing because the optimistic UI showed success and the post-commit `refreshData()` re-fetched stale data that masked the failure on page reload.
+- Service Board order status transitions (`orders.status` UPDATE and `order_status_events` INSERT) — WORKING via `transition-order-status` Edge Function as of 2026-05-15. Anonymous gateway (`verify_jwt = false`), server-side state machine enforcing adjacent-only transitions in `placed → confirmed → preparing → ready → delivered` (forward and backward by one step only), optimistic-concurrency guard via `.eq("status", currentStatus)` returning 409 on concurrent writes, audit event written server-side as `actor: 'service_board'`, `actor_type: 'operator'`. Previously broken silently — direct PATCH from anonymous service-board.html returned 204 with zero rows affected because the `orders` RLS policies require `auth.uid()` to match `vendors.auth_user_id`. The bug was undiscoverable by routine testing because the optimistic UI showed success and the post-commit `refreshData()` re-fetched stale data that masked the failure on page reload.
 - Host listing — WORKING via `list-hosts` Edge Function.
 - Single-host fetch — WORKING via `get-host` Edge Function.
 - Host creation from `hosts.html` — WORKING via `create-host` Edge Function. Sends `terms_accepted: true` and `terms_accepted_at`.
@@ -1782,7 +1814,7 @@ T3-13 (capacity driver multi-mode) closed 2026-05-13: Drop Studio capacity mode 
 
 T3-13b (event / catering workflow) closed 2026-05-14: schema migration (`drops.expected_guests`, `drops.discount_tiers` jsonb, `orders.discount_pence`, `orders.discount_breakdown` jsonb) applied earlier; Drop Studio event-type behaviour (event-mode toggle, expected guests, bulk discount tier editor, slug random suffix, helper text) and order page event UX (capacity chip hidden on event drops, volume discount preview at checkout) merged across PRs in the T3-13b series; `create-order` updated to skip capacity enforcement for events, apply the matched discount in the Step 7 total guard, persist `discount_pence` and `discount_breakdown` on the orders row, and apply a one-off Stripe coupon (`amount_off` + `duration: 'once'` + `max_redemptions: 1`) to the Checkout Session so the itemised breakdown remains intact on Stripe's side. Shipped via PR #254 (three-prompt split: 3.1 helpers + select extension, 3.2 capacity skip + total guard, 3.3 persist discount + Stripe coupon).
 
-T-ops-rls-fix closed 2026-05-15 (closes T-ops-rls-fix-polish in same workstream): built `transition-order-status` Edge Function (anonymous, `verify_jwt = false`, server-side state machine enforcing adjacent-only transitions in `placed → confirmed → baking → ready → delivered`, optimistic-concurrency guard via `.eq("status", currentStatus)`, audit event written server-side as `actor: 'service_board'`, `actor_type: 'operator'`); migrated `commitPending` in service-board.html to invoke it (PR #256). Polish PR #257 removed the redundant `refreshData()` call inside `commitPending` so the Supabase realtime subscription is the single source of truth for post-transition refresh — eliminates the visible flick-back on forward transitions. Verified end-to-end on order `8f56908e-3c3c-4407-b306-2a235c63d4db`. Parallel T-ops-rls-audit (2026-05-15) produced the inventory that bounded this fix and surfaced T-ops-rls-customer-import, T-ops-rls-cleanup-auth-callback, T-ops-rls-reads-audit (see Tier 3 backlog index). Full closure narrative and audit linkage in BACKLOG.md.
+T-ops-rls-fix closed 2026-05-15 (closes T-ops-rls-fix-polish in same workstream): built `transition-order-status` Edge Function (anonymous, `verify_jwt = false`, server-side state machine enforcing adjacent-only transitions in `placed → confirmed → preparing → ready → delivered`, optimistic-concurrency guard via `.eq("status", currentStatus)`, audit event written server-side as `actor: 'service_board'`, `actor_type: 'operator'`); migrated `commitPending` in service-board.html to invoke it (PR #256). Polish PR #257 removed the redundant `refreshData()` call inside `commitPending` so the Supabase realtime subscription is the single source of truth for post-transition refresh — eliminates the visible flick-back on forward transitions. Verified end-to-end on order `8f56908e-3c3c-4407-b306-2a235c63d4db`. Parallel T-ops-rls-audit (2026-05-15) produced the inventory that bounded this fix and surfaced T-ops-rls-customer-import, T-ops-rls-cleanup-auth-callback, T-ops-rls-reads-audit (see Tier 3 backlog index). Full closure narrative and audit linkage in BACKLOG.md.
 
 T-ops-rls-customer-import closed 2026-05-15: built `bulk-create-customers` Edge Function (anonymous, `verify_jwt = false`, batched email+phone lookup, in-memory classification matching the page's existing four-way logic, sequential per-row writes for createNew + linkExisting, demand breakdown aggregation folded into the response — PR #260) and rewired customer-import.html to invoke it (286 deletions / 39 additions, removing inline `supabase.createClient()` + two pre-write reads + classification + four write loops + the now-dead `fetchDemandBreakdown` + `normalisePhone` — PR #261). Verified end-to-end on Test 12 with a 5-row CSV: stage 5 reported 5 added / 0 skipped / 0 conflicts / 0 failed; SQL count confirmed 5 customer_relationships rows for the vendor with source='import'. First successful end-to-end customer import in the platform's history. Full closure narrative and design rationale in BACKLOG.md. Audit linkage: closes the second of three RLS surfaces from T-ops-rls-audit (2026-05-15); T-ops-rls-cleanup-auth-callback and T-ops-rls-reads-audit remain open per their original framing.
 

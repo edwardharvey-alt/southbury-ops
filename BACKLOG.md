@@ -23,6 +23,33 @@ Caveats:
 
 ## Development backlog
 
+### Service Board (T-sb) — ✓ COMPLETE
+
+Service Board hardening workstream, all four tickets shipped and merged
+2026-05-26 (PRs #275–#278).
+
+- **T-sb-1: Rename 'baking' → 'preparing' status — ✓ COMPLETE 2026-05-26 (PR #275).**
+  Renamed the `baking` order status to `preparing` across the Service Board
+  UI and the Edge Function source (schema migration shipped with the PR).
+  The status pipeline is now `placed → confirmed → preparing → ready →
+  delivered`.
+- **T-sb-2: Respect capacity_driver in Service Board item display — ✓ COMPLETE 2026-05-26 (PR #276).**
+  Service Board item display now honours the drop's `capacity_driver`
+  (`by_order` vs `by_category`) when rendering item/capacity counts, rather
+  than assuming a single capacity model.
+- **T-sb-3: All items prep sheet with branded PDF export — ✓ COMPLETE 2026-05-26 (PR #277).**
+  Added an all-items prep sheet with a branded PDF export (html2canvas →
+  off-screen `#prepSheetPrint` container, vendor logo/colour, A4 portrait).
+- **T-sb-4: Delivery manifest and ready-for-delivery overlay — ✓ COMPLETE 2026-05-26 (PR #278).**
+  Added the branded delivery manifest PDF export and the phone-first
+  ready-for-delivery overlay (sticky "View delivery run →" action, ready
+  manifest download). Column-height parity fixed via `align-items: stretch`
+  on `.boardGrid` and an absolutely-positioned delivery bar that adds no
+  height to the Ready column. See CLAUDE.md operational learnings for the
+  CSS gotchas surfaced during this build.
+
+---
+
 ### Tier 1 — Must work before first real drop
 
 T1-1: Double-submit protection on order.html ✓ COMPLETE
