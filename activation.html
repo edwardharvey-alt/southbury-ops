@@ -17,16 +17,23 @@
 
   <style>
     /* The .home-* classes used below live in home.html's inline <style>,
-       not in hearth.css — mirror the rules this shell uses so the
-       placeholder card renders consistently with the Home page. */
+       not in hearth.css — mirror the rules this page uses so Activation
+       renders consistently with the Home page. */
     :root{
       --home-bg: var(--h-chalk, #faf8f5);
       --home-card:#ffffff;
       --home-border: var(--h-cinder, #e8ddd5);
       --home-text: var(--h-coal, #0f0b08);
       --home-muted: var(--h-stone, #8c7b6e);
+      --home-accent: var(--h-fire, #c4511a);
       --home-radius:20px;
       --home-shadow:0 10px 30px rgba(15,23,42,.05);
+      --home-good:#166534;
+      --home-good-bg:#ecfdf3;
+      --home-warn:#92400e;
+      --home-warn-bg:#fffbeb;
+      --home-neutral-bg:#f3f4f6;
+      --home-neutral:#374151;
     }
 
     body{
@@ -72,6 +79,105 @@
       font-size:14px;
       line-height:1.55;
     }
+
+    .home-loading{
+      color:var(--home-muted);
+      font-size:14px;
+    }
+
+    /* Single-column cards grid — full width to give the action area room. */
+    .activation-grid{
+      display:grid;
+      gap:14px;
+    }
+
+    .home-work{
+      display:grid;
+      gap:10px;
+      padding:18px;
+      border:1px solid var(--home-border);
+      border-radius:18px;
+      background:linear-gradient(180deg,#fff,#fcfbf8);
+    }
+
+    .home-workTop{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:flex-start;
+    }
+
+    .home-work h3{
+      margin:0;
+      font-size:18px;
+      letter-spacing:-.02em;
+    }
+
+    .home-work p{
+      margin:0;
+      color:var(--home-muted);
+      line-height:1.55;
+      font-size:14px;
+    }
+
+    .home-workMeta{
+      color:var(--home-text);
+      font-size:13px;
+      line-height:1.5;
+    }
+
+    .home-workActions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:2px;
+    }
+
+    .home-pill{
+      display:inline-flex;
+      align-items:center;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+    .good{ background:var(--home-good-bg); color:var(--home-good); }
+    .warn{ background:var(--home-warn-bg); color:var(--home-warn); }
+    .neutral{ background:var(--home-neutral-bg); color:var(--home-neutral); }
+
+    .home-button,
+    .home-button-secondary{
+      appearance:none;
+      border:none;
+      text-decoration:none;
+      min-height:42px;
+      padding:0 14px;
+      border-radius:12px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font:inherit;
+      cursor:pointer;
+      transition:all .18s ease;
+    }
+    .home-button-secondary{
+      background:#fff;
+      border:1px solid var(--home-border);
+      color:var(--home-text);
+    }
+    .home-button{
+      background:var(--home-accent);
+      color:#fff;
+      font-weight:700;
+    }
+    .home-button-secondary:hover{
+      border-color:#d8ccb8;
+      background:#fcfbf8;
+    }
+    .home-button:hover{
+      filter:brightness(.98);
+    }
   </style>
 </head>
 <body>
@@ -84,8 +190,8 @@
       <section class="home-card home-pad-lg">
         <h2 class="home-sectionTitle">Activation</h2>
         <p class="home-sectionSub">Fill your drops. The work of making each moment land.</p>
-        <div class="home-empty" style="margin-top:18px;">
-          Your active and upcoming drops will appear here.
+        <div id="activationContent" style="margin-top:18px;">
+          <div class="home-loading">Loading your drops…</div>
         </div>
       </section>
 
@@ -98,12 +204,9 @@
       window.HEARTH_CONFIG.SUPABASE_ANON_KEY
     );
 
-    const state = { vendor: null };
+    const state = { vendor: null, summaryById: {}, rawById: {} };
 
-    function getUrlParam(name){
-      const url = new URL(window.location.href);
-      return url.searchParams.get(name);
-    }
+    const DAY_MS = 24 * 60 * 60 * 1000;
 
     function escapeHtml(str){
       return String(str ?? '')
@@ -114,30 +217,182 @@
         .replace(/'/g,'&#39;');
     }
 
+    function titleCase(str){
+      return String(str || '')
+        .replace(/[_-]+/g,' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function fmtTime(d){
+      let h = d.getHours();
+      const m = d.getMinutes();
+      const ampm = h >= 12 ? 'pm' : 'am';
+      h = h % 12;
+      if (h === 0) h = 12;
+      return `${h}:${String(m).padStart(2,'0')}${ampm}`;
+    }
+
+    // "Friday 30 May · 6:00pm–8:00pm"
+    function fmtDateTime(start, end){
+      const ds = start ? new Date(start) : null;
+      if (!ds || Number.isNaN(ds.getTime())) return 'Date to be confirmed';
+      const datePart = ds.toLocaleDateString('en-GB', {
+        weekday:'long', day:'numeric', month:'long'
+      });
+      let timePart = fmtTime(ds);
+      const de = end ? new Date(end) : null;
+      if (de && !Number.isNaN(de.getTime())) {
+        timePart += `–${fmtTime(de)}`;
+      }
+      return `${datePart} · ${timePart}`;
+    }
+
+    function statusOf(s){
+      return String(s.status || '').toLowerCase();
+    }
+
+    // Activation scope: live, or upcoming (published/scheduled/open within
+    // the next 14 days), or recently closed (within the last 48 hours).
+    function inScope(s){
+      const status = statusOf(s);
+      if (status === 'live') return true;
+
+      if (status === 'published' || status === 'scheduled' || status === 'open') {
+        const ds = Date.parse(s.delivery_start);
+        if (Number.isNaN(ds)) return false;
+        const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+        const horizon = Date.now() + 14 * DAY_MS;
+        return ds >= todayStart.getTime() && ds <= horizon;
+      }
+
+      if (status === 'closed') {
+        const raw = state.rawById[s.drop_id];
+        const closedRaw = s.closed_at ?? (raw && raw.closes_at) ?? s.closes_at;
+        const cm = Date.parse(closedRaw);
+        if (Number.isNaN(cm)) return false;
+        const now = Date.now();
+        return cm >= now - 48 * 60 * 60 * 1000 && cm <= now + 60 * 1000;
+      }
+
+      return false;
+    }
+
+    function scopeRank(s){
+      const status = statusOf(s);
+      if (status === 'live') return 0;
+      if (status === 'closed') return 2;
+      return 1; // upcoming
+    }
+
+    // live first, then upcoming by delivery_start asc, then recently closed
+    // by delivery_start desc.
+    function sortScoped(rows){
+      return rows.slice().sort((a, b) => {
+        const ra = scopeRank(a), rb = scopeRank(b);
+        if (ra !== rb) return ra - rb;
+        const da = Date.parse(a.delivery_start) || 0;
+        const db = Date.parse(b.delivery_start) || 0;
+        return ra === 2 ? db - da : da - db;
+      });
+    }
+
+    function statusPill(status){
+      const st = String(status || '').toLowerCase();
+      if (st === 'live') return '<span class="home-pill good">Live now</span>';
+      if (st === 'closed') return '<span class="home-pill neutral">Closed</span>';
+      return '<span class="home-pill neutral">Scheduled</span>';
+    }
+
+    function contextLine(s){
+      if (s.host_name) return 'at ' + escapeHtml(s.host_name);
+      const fm = String(s.fulfilment_mode || '').toLowerCase();
+      if (fm === 'delivery') return 'Neighbourhood delivery';
+      if (fm === 'collection') return 'Collection';
+      if (fm) return escapeHtml(titleCase(fm));
+      return '';
+    }
+
+    function capacityLine(s){
+      const placed = Number(s.order_count || 0);
+      const total = s.capacity_units_total;
+      if (total == null || Number(total) === 0) {
+        return `${placed} orders placed`;
+      }
+      return `${placed} of ${Number(total)} orders`;
+    }
+
+    function cardHtml(s){
+      const ctx = contextLine(s);
+      const isLive = statusOf(s) === 'live';
+      const sbLink = isLive
+        ? `<a class="home-button-secondary" href="${HearthNav.withVendor('./service-board.html')}">Open Service Board</a>`
+        : '';
+      return `
+        <article class="home-work">
+          <div class="home-workTop">
+            <div>
+              <h3>${escapeHtml(s.drop_name || 'Untitled drop')}</h3>
+              ${ctx ? `<p>${ctx}</p>` : ''}
+            </div>
+            ${statusPill(s.status)}
+          </div>
+          <div class="home-workMeta">
+            ${escapeHtml(fmtDateTime(s.delivery_start, s.delivery_end))}<br>
+            ${escapeHtml(capacityLine(s))}
+          </div>
+          <div class="home-workActions">
+            <a class="home-button" href="#" data-drop-id="${escapeHtml(s.drop_id)}">View activation</a>
+            ${sbLink}
+          </div>
+        </article>
+      `;
+    }
+
+    function renderContent(rows){
+      const content = document.getElementById('activationContent');
+      if (!rows.length) {
+        content.innerHTML = `<div class="home-empty">No active or upcoming drops. Create your next drop in Drop Studio.</div>`;
+        return;
+      }
+      content.innerHTML = `<div class="activation-grid">${rows.map(cardHtml).join('')}</div>`;
+    }
+
+    async function loadDrops(){
+      state.vendor = await window.HearthVendor.resolveVendor(sb);
+      if (!state.vendor) throw new Error('Vendor resolution failed');
+
+      const { data, error } = await sb.functions.invoke('list-drops', { body: {} });
+      if (error) throw error;
+      if (data && data.error) throw new Error(data.error);
+
+      const summaries = Array.isArray(data?.drop_summaries) ? data.drop_summaries : [];
+      const drops = Array.isArray(data?.drops) ? data.drops : [];
+
+      state.rawById = {};
+      drops.forEach(d => { state.rawById[d.id] = d; });
+      state.summaryById = {};
+      summaries.forEach(s => { state.summaryById[s.drop_id] = s; });
+
+      return sortScoped(summaries.filter(inScope));
+    }
+
     async function init(){
       try {
-        state.vendor = await window.HearthVendor.resolveVendor(sb);
-        if (!state.vendor) {
-          const requestedSlug = getUrlParam('vendor') || getUrlParam('vendor_slug');
-          throw new Error(
-            requestedSlug
-              ? `Vendor "${requestedSlug}" not found. Check the ?vendor= URL parameter.`
-              : 'No vendor found. Add at least one vendor to the database.'
-          );
-        }
+        const rows = await loadDrops();
+        renderContent(rows);
       } catch (err) {
         console.error(err);
-        document.querySelector('.home-shell').innerHTML = `
-          <section class="home-card home-pad-lg">
-            <div class="home-empty">
-              Activation could not load. Check vendor resolution and Supabase access.
-              <br><br>
-              <strong>${escapeHtml(err.message || 'Unknown error')}</strong>
-            </div>
-          </section>
-        `;
+        document.getElementById('activationContent').innerHTML =
+          `<div class="home-empty">Drops could not be loaded. Check your connection and refresh.</div>`;
       }
     }
+
+    // "View activation" is a placeholder until Prompt 3 wires the per-drop
+    // view — keep the click inert so the page does not jump to the top.
+    document.getElementById('activationContent').addEventListener('click', function (e) {
+      const link = e.target.closest('a[data-drop-id]');
+      if (link) e.preventDefault();
+    });
 
     init();
   </script>
