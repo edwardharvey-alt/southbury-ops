@@ -718,6 +718,32 @@
       border-radius:0 8px 8px 0;
     }
 
+    /* ── Reaching your customers panel (T5-C4) ── */
+    #reachingCustomersSection .reachingCustomersBody {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 6px;
+    }
+    #reachingCustomersSection .reachingLine {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--h-slate);
+      margin: 0;
+    }
+    #reachingCustomersSection .reachingLine.muted {
+      color: var(--h-stone);
+    }
+    #reachingCustomersSection .reachingLine a {
+      color: var(--h-fire, #c4511a);
+      text-decoration: none;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    #reachingCustomersSection .reachingLine a:hover {
+      text-decoration: underline;
+    }
+
     /* ── Stripe gate notice (T3-8) ── */
     #stripeGate{
       margin:14px 0 4px;
@@ -830,6 +856,25 @@
       gap:10px;
       flex-wrap:wrap;
       margin-top:4px;
+    }
+    #firstDropGuidance .firstDropHowSection {
+      margin-top: 8px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(139, 107, 63, 0.15);
+    }
+    #firstDropGuidance .firstDropHowHeading {
+      margin: 0 0 6px;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--h-slate);
+    }
+    #firstDropGuidance .firstDropHowBody {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--h-stone);
+      max-width: 62ch;
     }
     @media (max-width:768px){
       #firstDropGuidance{
@@ -1853,6 +1898,11 @@
                   </div>
                 </div>
 
+                <div class="stageSection" id="reachingCustomersSection">
+                  <h4 class="stageSectionTitle">Reaching your customers</h4>
+                  <div class="reachingCustomersBody" id="reachingCustomersBody"></div>
+                </div>
+
                 <div class="reviewActionsRow">
                 <div class="stageSection">
                   <h4 class="stageSectionTitle">Publish</h4>
@@ -1891,11 +1941,11 @@
                     </div>
 
                     <div class="field">
-                      <label for="dropRevealProduct">Reveal dish</label>
+                      <label for="dropRevealProduct">Reveal item</label>
                       <select id="dropRevealProduct">
                         <option value="">No dish selected</option>
                       </select>
-                      <div class="helperText">The dish that headlines your Monday reveal post — we'll use its Menu Library photo.</div>
+                      <div class="helperText">The item that headlines your reveal post — we'll use its Menu Library photo.</div>
                     </div>
 
                     </div>
@@ -4213,6 +4263,74 @@
       populateMenuCard();
     }
 
+    /* ── Reaching your customers panel (T5-C4) ──────────────────────────────
+       Promotion guidance off the loaded drop state. Read-only — no writes. */
+    function renderReachingCustomers() {
+      const section = byId("reachingCustomersSection");
+      const body = byId("reachingCustomersBody");
+      if (!section || !body) return;
+
+      const drop = state.drop;
+      if (!drop || !drop.drop_type) {
+        section.style.display = "none";
+        body.innerHTML = "";
+        return;
+      }
+
+      section.style.display = "";
+
+      const dropType = drop.drop_type;
+      const count = typeof state.vendorCustomerCount === "number" ? state.vendorCustomerCount : 0;
+
+      const previousCustomersLine = () => count > 0
+        ? `<p class="reachingLine">${count} previous customers will get early access 24 hours before ordering opens. This happens automatically.</p>`
+        : `<p class="reachingLine muted">No previous customers yet. Your first drop builds this list — future drops will reach them first.</p>`;
+
+      const menuRevealLine = () => drop.reveal_product_id
+        ? `<p class="reachingLine">Your menu card is ready to share four days before ordering opens. <a href="#" id="reachingViewReveal">View it →</a></p>`
+        : `<p class="reachingLine">Set a reveal item to generate a menu card you can share four days before ordering opens. <a href="#" id="reachingSetReveal">Set reveal →</a></p>`;
+
+      let html = "";
+
+      if (dropType === "event") {
+        html = `<p class="reachingLine muted">Event drops are arranged directly with the organiser. The promotion sequence doesn't apply — your conversation with them is the activation.</p>`;
+      } else if (dropType === "community") {
+        const hostLine = drop.host_id
+          ? `<p class="reachingLine">The host can share this drop with their group. <a href="#" id="reachingPrepareMessage">Prepare the message →</a></p>`
+          : `<p class="reachingLine">No host assigned. The host's group is the highest-trust audience for a community drop. <a href="#" id="reachingAssignHost">Assign a host →</a></p>`;
+        html = hostLine + previousCustomersLine() + menuRevealLine();
+      } else {
+        const audienceLine = `<p class="reachingLine">Your existing customers and local reach are the primary audience for this drop.</p>`;
+        html = audienceLine + previousCustomersLine() + menuRevealLine();
+      }
+
+      body.innerHTML = html;
+
+      const assignHost = byId("reachingAssignHost");
+      if (assignHost) {
+        assignHost.addEventListener("click", (e) => {
+          e.preventDefault();
+          openStage("basics");
+          setTimeout(() => byId("hostSelect")?.focus(), 100);
+        });
+      }
+
+      const prepareMsg = byId("reachingPrepareMessage");
+      if (prepareMsg) {
+        prepareMsg.addEventListener("click", (e) => { e.preventDefault(); });
+      }
+
+      ["reachingViewReveal", "reachingSetReveal"].forEach((id) => {
+        const link = byId(id);
+        if (link) {
+          link.addEventListener("click", (e) => {
+            e.preventDefault();
+            byId("mondayRevealSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+        }
+      });
+    }
+
     /* T5-25 Part 0 — Menu card image for the reveal post */
 
     function formatMenuCardDate(value) {
@@ -5284,6 +5402,7 @@
       renderContextBar();
       updateWorkspaceHeader();
       renderReview();
+      renderReachingCustomers();
     }
 
     /* ── Stripe gate (T3-8) ────────────────────────────────────────────────
@@ -5404,10 +5523,24 @@
         ? `<button class="firstDropGuidanceDismiss" id="firstDropGuidanceDismiss" type="button" aria-label="Dismiss">×</button>`
         : "";
 
+      const HOW_TO_FILL_BODIES = {
+        "host": "Your drop fills through a sequence of moments, not a single announcement. Share your menu four days ahead, let your host tell their group, and message your previous customers when ordering goes live. The platform prepares each step — you decide when to send.",
+        "head-start": "Your drop fills through a sequence of moments, not a single announcement. Share your menu four days ahead, message your previous customers when ordering goes live, and post a short capacity update on the morning of the drop. The platform prepares each step — you decide when to send.",
+        "fallback": "Your drop fills through a sequence of moments, not a single announcement. Share your menu four days ahead on social media, share the ordering link with anyone in your network when it opens, and post a short capacity update on the morning of the drop. The platform prepares each step — you decide when to send."
+      };
+      const howBody = HOW_TO_FILL_BODIES[variant] || "";
+      const howHtml = howBody
+        ? `<div class="firstDropHowSection">
+             <h5 class="firstDropHowHeading">How to fill this drop</h5>
+             <p class="firstDropHowBody">${escapeHtml(howBody)}</p>
+           </div>`
+        : "";
+
       el.innerHTML = `
         ${dismissHtml}
         <h4 class="firstDropGuidanceHeading">${escapeHtml(heading)}</h4>
         <p class="firstDropGuidanceBody">${escapeHtml(body)}</p>
+        ${howHtml}
         <div class="firstDropGuidanceActions">
           ${ctaHtml}
         </div>
