@@ -14,6 +14,7 @@
   <script src="./assets/hearth-vendor.js?v=1"></script>
   <script src="./assets/vendor-nav.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <style>
     /* The .home-* classes used below live in home.html's inline <style>,
@@ -178,6 +179,265 @@
     .home-button:hover{
       filter:brightness(.98);
     }
+
+    /* Menu card artwork — ported verbatim from drop-manager.html. The
+       artwork is always 540×540px and scaled down via transform to fit
+       its frame; transform-origin top-left keeps the html2canvas export
+       pixel-identical to the preview. */
+    .menuCardArtwork {
+      width: 540px;
+      height: 540px;
+      position: relative;
+      overflow: hidden;
+      box-sizing: border-box;
+      font-family: 'Figtree', system-ui, sans-serif;
+      transform-origin: top left;
+      border-radius: 8px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+      --vendor-brand-primary: #8B6B3F;
+      background-color: var(--vendor-brand-primary);
+    }
+
+    .menuCardArtwork__image {
+      position: absolute;
+      display: block;
+    }
+
+    .menuCardArtwork__scrim {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 58%;
+      background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,0) 0%,
+        rgba(0,0,0,0) 25%,
+        rgba(0,0,0,0.38) 52%,
+        rgba(0,0,0,0.74) 76%,
+        rgba(0,0,0,0.92) 100%
+      );
+      pointer-events: none;
+    }
+
+    .menuCardArtwork__lockup {
+      position: absolute;
+      left: 36px;
+      right: 36px;
+      bottom: 32px;
+      color: #FAF8F4;
+      text-align: left;
+    }
+
+    .menuCardArtwork__dropName {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 500;
+      font-size: 30px;
+      line-height: 1.1;
+      letter-spacing: 0.005em;
+      margin: 0;
+      color: #FAF8F4;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.45), 0 0 14px rgba(0,0,0,0.35);
+    }
+
+    .menuCardArtwork__dropDate {
+      margin-top: 6px;
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 13px;
+      line-height: 1.2;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #FAF8F4;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.45), 0 0 14px rgba(0,0,0,0.35);
+    }
+
+    .menuCardArtwork__skeleton {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #F3EEE6 0%, #EBE4D6 100%);
+      color: var(--h-slate);
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    /* Per-drop activation timeline */
+    .act-timeline {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      padding-left: 24px;
+      border-left: 2px solid var(--home-border);
+      margin-top: 18px;
+    }
+
+    .act-touchpoint {
+      background: #fff;
+      border: 1px solid var(--home-border);
+      border-radius: 16px;
+      padding: 16px 18px;
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    .act-touchpoint::before {
+      content: '';
+      position: absolute;
+      left: -32px;
+      top: 20px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--home-border);
+      border: 2px solid var(--home-bg);
+    }
+
+    .act-touchpoint.is-vendor::before { background: var(--home-accent); }
+    .act-touchpoint.is-host::before { background: #CBB89D; }
+    .act-touchpoint.is-auto::before { background: #166534; }
+    .act-touchpoint.is-prompted::before { background: var(--home-muted); }
+
+    .act-touchpoint.is-host {
+      background: rgba(139,107,63,0.03);
+    }
+
+    .act-touchpoint.is-auto {
+      border-left: 3px solid #ecfdf3;
+    }
+
+    .act-touchpoint.is-locked {
+      opacity: 0.55;
+    }
+
+    .act-touchpoint.is-done {
+      opacity: 0.7;
+    }
+
+    .act-day-label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--home-muted);
+      margin-bottom: 6px;
+    }
+
+    .act-touchpoint h4 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+      margin: 0 0 6px;
+    }
+
+    .act-touchpoint p {
+      margin: 0 0 12px;
+      color: var(--home-muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .act-locked-note {
+      font-size: 12px;
+      color: var(--home-muted);
+      font-style: italic;
+    }
+
+    .act-done-state {
+      font-size: 13px;
+      color: #166534;
+      font-weight: 600;
+    }
+
+    .act-copy-btn {
+      appearance: none;
+      border: 1px solid var(--home-border);
+      background: #fff;
+      color: var(--home-text);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+
+    .act-copy-btn:hover {
+      border-color: #d8ccb8;
+      background: #fcfbf8;
+    }
+
+    .act-copy-btn.primary {
+      background: var(--home-accent);
+      border-color: var(--home-accent);
+      color: #fff;
+    }
+
+    .act-copy-btn.primary:hover {
+      filter: brightness(0.96);
+    }
+
+    .act-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: flex-start;
+      margin-top: 4px;
+    }
+
+    .act-note {
+      font-size: 12px;
+      color: var(--home-muted);
+      margin-top: 4px;
+    }
+
+    .act-back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--home-muted);
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: inherit;
+      margin-bottom: 16px;
+    }
+
+    .act-back-link:hover {
+      color: var(--home-text);
+    }
+
+    .act-drop-header {
+      margin-bottom: 4px;
+    }
+
+    .act-drop-title {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: 28px;
+      letter-spacing: -0.03em;
+      margin: 0 0 4px;
+    }
+
+    .act-drop-context {
+      font-size: 14px;
+      color: var(--home-muted);
+      margin: 0 0 4px;
+    }
   </style>
 </head>
 <body>
@@ -204,9 +464,21 @@
       window.HEARTH_CONFIG.SUPABASE_ANON_KEY
     );
 
-    const state = { vendor: null, summaryById: {}, rawById: {} };
+    const state = {
+      vendor: null,
+      summaryById: {},
+      rawById: {},
+      products: [],
+      selectedDropId: null,
+      activationLog: [],
+      view: 'cross',
+      resizeObserver: null,
+      currentTemplates: {}
+    };
 
     const DAY_MS = 24 * 60 * 60 * 1000;
+
+    function byId(id){ return document.getElementById(id); }
 
     function escapeHtml(str){
       return String(str ?? '')
@@ -251,6 +523,8 @@
       return String(s.status || '').toLowerCase();
     }
 
+    // ---- Cross-drop view (Prompt 2) ----------------------------------
+
     // Activation scope: live, or upcoming (published/scheduled/open within
     // the next 14 days), or recently closed (within the last 48 hours).
     function inScope(s){
@@ -267,7 +541,7 @@
 
       if (status === 'closed') {
         const raw = state.rawById[s.drop_id];
-        const closedRaw = s.closed_at ?? (raw && raw.closes_at) ?? s.closes_at;
+        const closedRaw = s.closed_at ?? (raw && (raw.closed_at ?? raw.closes_at)) ?? s.closes_at;
         const cm = Date.parse(closedRaw);
         if (Number.isNaN(cm)) return false;
         const now = Date.now();
@@ -349,7 +623,7 @@
     }
 
     function renderContent(rows){
-      const content = document.getElementById('activationContent');
+      const content = byId('activationContent');
       if (!rows.length) {
         content.innerHTML = `<div class="home-empty">No active or upcoming drops. Create your next drop in Drop Studio.</div>`;
         return;
@@ -376,22 +650,595 @@
       return sortScoped(summaries.filter(inScope));
     }
 
+    // ---- Per-drop view: helpers --------------------------------------
+
+    function getOrderingLink(rawDrop) {
+      const slug = rawDrop?.slug || '';
+      if (!slug) return '';
+      return `https://lovehearth.co.uk/order.html?drop=${encodeURIComponent(slug)}`;
+    }
+
+    function getTouchpointDayLabels(deliveryStart) {
+      const ds = deliveryStart ? new Date(deliveryStart) : null;
+      if (!ds || isNaN(ds.getTime())) {
+        return [
+          '4 DAYS BEFORE',
+          '3 DAYS BEFORE — HOST',
+          '1 DAY BEFORE — MORNING',
+          '1 DAY BEFORE — 5PM',
+          '1 DAY BEFORE — EVENING',
+          'DROP DAY — MORNING',
+          'DROP DAY — SERVICE',
+          'DROP DAY — EVENING',
+          'DAY AFTER — MORNING'
+        ];
+      }
+      const day = (offset) => {
+        const d = new Date(ds);
+        d.setDate(d.getDate() + offset);
+        return d.toLocaleDateString('en-GB', { weekday: 'long' }).toUpperCase();
+      };
+      return [
+        `${day(-4)} — 4 DAYS BEFORE`,
+        `${day(-3)} — HOST AWARENESS`,
+        `${day(-1)} MORNING — EARLY ACCESS`,
+        `${day(-1)} 5PM — ORDERING OPENS`,
+        `${day(-1)} EVENING — HOST LINK`,
+        `${day(0)} MORNING — CAPACITY SIGNAL`,
+        `${day(0)} — SERVICE`,
+        `${day(0)} EVENING — POST DROP`,
+        `${day(1)} MORNING — THANK YOU`
+      ];
+    }
+
+    // "this Friday" / "this Friday evening"
+    function actRelDay(value, withPartOfDay){
+      if (!value) return 'soon';
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return 'soon';
+      const wd = d.toLocaleDateString('en-GB', { weekday: 'long' });
+      if (!withPartOfDay) return `this ${wd}`;
+      const h = d.getHours();
+      const part = h >= 17 ? 'evening' : (h >= 12 ? 'afternoon' : 'morning');
+      return `this ${wd} ${part}`;
+    }
+
+    function actWeekday(value, offset){
+      if (!value) return '';
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return '';
+      d.setDate(d.getDate() + (offset || 0));
+      return d.toLocaleDateString('en-GB', { weekday: 'long' });
+    }
+
+    // "5:00pm on Friday 30 May", or "soon" when not set.
+    function actOpensPhrase(opensAt){
+      if (!opensAt) return 'soon';
+      const d = new Date(opensAt);
+      if (isNaN(d.getTime())) return 'soon';
+      return `${fmtTime(d)} on ${actFormatMenuCardDate(d)}`;
+    }
+
+    function getLogEntry(touchpoint){
+      return state.activationLog.find(e => e.touchpoint === touchpoint) || null;
+    }
+
+    function formatLogTime(isoString){
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return '';
+      return fmtTime(d);
+    }
+
+    function actLog(touchpoint, action){
+      state.activationLog.push({ touchpoint, action, timestamp: new Date().toISOString() });
+      renderDropView(state.selectedDropId);
+    }
+
+    async function actCopyToClipboard(text, btn, originalLabel) {
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = 'Copied ✓';
+        btn.disabled = true;
+        setTimeout(() => {
+          btn.textContent = originalLabel;
+          btn.disabled = false;
+        }, 2000);
+      } catch (err) {
+        console.error('Copy failed', err);
+      }
+    }
+
+    // ---- Menu card (ported from drop-manager.html, act- prefix) ------
+
+    function actFormatMenuCardDate(value) {
+      if (!value) return "";
+      const d = value instanceof Date ? value : new Date(value);
+      if (Number.isNaN(d.getTime())) return "";
+      return d.toLocaleDateString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long"
+      });
+    }
+
+    function actComputeRevealDate(deliveryStart) {
+      if (!deliveryStart) return null;
+      const d = new Date(deliveryStart);
+      if (Number.isNaN(d.getTime())) return null;
+      const reveal = new Date(d.getTime() - 4 * 24 * 60 * 60 * 1000);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (reveal.getTime() < today.getTime()) return null;
+      return reveal;
+    }
+
+    function actPopulateMenuCard(summary, rawDrop, vendor, products) {
+      const artworkEl = byId("act-menuCardArtwork");
+      const downloadBtn = byId("act-downloadMenuCardBtn");
+      const skeletonEl = byId("act-menuCardSkeleton");
+      if (!artworkEl) return;
+
+      // Brand-colour solid is the last-resort fallback.
+      artworkEl.style.setProperty("--vendor-brand-primary", (vendor && vendor.brand_primary_color) || "#8B6B3F");
+
+      // Image fallback chain: reveal product photo → vendor hero → solid.
+      let imageUrl = "";
+      if (rawDrop && rawDrop.reveal_product_id) {
+        const product = (products || []).find(
+          (p) => String(p.id) === String(rawDrop.reveal_product_id)
+        );
+        if (product && product.image_url) imageUrl = String(product.image_url);
+      }
+      if (!imageUrl && vendor && vendor.hero_image_url) imageUrl = String(vendor.hero_image_url);
+
+      // Explicit pixel geometry against the 540×540 source box so the
+      // html2canvas scale:2 export matches the preview exactly.
+      const img = byId("act-menuCardImage");
+      const S = 540;
+      if (img) {
+        if (imageUrl) {
+          img.onload = () => {
+            const iw = img.naturalWidth, ih = img.naturalHeight;
+            const sc = Math.max(S / iw, S / ih);
+            const w = iw * sc, h = ih * sc;
+            img.style.width  = w + "px";
+            img.style.height = h + "px";
+            img.style.left   = ((S - w) / 2) + "px";
+            img.style.top    = ((S - h) / 2) + "px";
+            img.style.display = "block";
+            if (skeletonEl) skeletonEl.style.display = "none";
+            if (downloadBtn) downloadBtn.disabled = false;
+          };
+          img.onerror = () => {
+            img.style.display = "none";
+            if (skeletonEl) skeletonEl.style.display = "none";
+            if (downloadBtn) downloadBtn.disabled = false;
+          };
+          img.crossOrigin = "anonymous";
+          img.src = imageUrl;
+        } else {
+          img.style.display = "none";
+          img.removeAttribute("src");
+          if (skeletonEl) skeletonEl.style.display = "none";
+          if (downloadBtn) downloadBtn.disabled = false;
+        }
+      }
+
+      const dropNameEl = byId("act-menuCardDropName");
+      if (dropNameEl) dropNameEl.textContent = (rawDrop && rawDrop.name) || summary.drop_name || "";
+      const dropDateEl = byId("act-menuCardDropDate");
+      if (dropDateEl) dropDateEl.textContent = actFormatMenuCardDate((rawDrop && rawDrop.delivery_start) || summary.delivery_start);
+
+      actUpdateMenuCardScale();
+    }
+
+    function actUpdateMenuCardScale() {
+      const frame = byId("act-menuCardFrame");
+      const artwork = byId("act-menuCardArtwork");
+      if (!frame || !artwork) return;
+      const targetWidth = frame.clientWidth;
+      if (!targetWidth) return;
+      const scale = Math.min(1, targetWidth / 540);
+      artwork.style.transform = `scale(${scale})`;
+      frame.style.height = `${540 * scale}px`;
+    }
+
+    async function actDownloadMenuCard() {
+      const artworkEl = byId("act-menuCardArtwork");
+      const downloadBtn = byId("act-downloadMenuCardBtn");
+      const skeletonEl = byId("act-menuCardSkeleton");
+      if (!artworkEl || !downloadBtn) return;
+
+      const vendor = state.vendor || {};
+      const rawDrop = state.rawById[state.selectedDropId] || {};
+
+      const originalText = downloadBtn.textContent;
+      const originalTransform = artworkEl.style.transform;
+      const skeletonWasVisible = skeletonEl ? skeletonEl.style.display !== "none" : false;
+
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = "Generating…";
+
+      try {
+        if (typeof window.html2canvas !== "function") {
+          throw new Error("html2canvas not loaded");
+        }
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+
+        if (skeletonEl) skeletonEl.style.display = "none";
+        artworkEl.style.transform = "scale(1)";
+
+        let canvas;
+        try {
+          canvas = await window.html2canvas(artworkEl, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: null,
+            logging: false
+          });
+        } finally {
+          artworkEl.style.transform = originalTransform;
+          if (skeletonEl && skeletonWasVisible) skeletonEl.style.display = "flex";
+        }
+
+        const blob = await new Promise((resolve, reject) => {
+          canvas.toBlob((b) => {
+            if (b) resolve(b);
+            else reject(new Error("toBlob returned null"));
+          }, "image/png", 1.0);
+        });
+
+        const vendorSlug = vendor.slug || "vendor";
+        const dropSlug = rawDrop.slug || "drop";
+        const filename = `${vendorSlug}-${dropSlug}-reveal.png`;
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (err) {
+        console.error("[menuCard] download failed", err);
+      } finally {
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = originalText;
+      }
+    }
+
+    function actSetupMenuCard(summary, rawDrop){
+      const frame = byId("act-menuCardFrame");
+      if (state.resizeObserver) { state.resizeObserver.disconnect(); state.resizeObserver = null; }
+      if (!frame) return; // Card 1 is in its done state — no menu card rendered.
+      actPopulateMenuCard(summary, rawDrop, state.vendor, state.products);
+      actUpdateMenuCardScale();
+      if (typeof ResizeObserver === "function") {
+        state.resizeObserver = new ResizeObserver(() => actUpdateMenuCardScale());
+        state.resizeObserver.observe(frame);
+      }
+    }
+
+    // ---- Per-drop view: card builders --------------------------------
+
+    function copyBtn(label, touchpoint, action, primary){
+      return `<button class="act-copy-btn${primary ? ' primary' : ''}" type="button" data-act="copy" data-touchpoint="${touchpoint}" data-action="${action}">${label}</button>`;
+    }
+
+    function confirmBtn(touchpoint){
+      return `<button class="act-copy-btn primary" type="button" data-act="confirm" data-touchpoint="${touchpoint}" data-action="confirmed">Confirm send</button>`;
+    }
+
+    // Resolves a card's action area, honouring done-state and locked-state.
+    function actActionArea(touchpointKey, locked, lockedNote, actionHtml){
+      if (touchpointKey) {
+        const entry = getLogEntry(touchpointKey);
+        if (entry) {
+          return { done: true, locked: false, html: `<div class="act-done-state">✓ Done · ${formatLogTime(entry.timestamp)}</div>` };
+        }
+      }
+      if (locked) {
+        return { done: false, locked: true, html: `<div class="act-locked-note">${escapeHtml(lockedNote)}</div>` };
+      }
+      return { done: false, locked: false, html: actionHtml };
+    }
+
+    function tpCard(opts){
+      const res = actActionArea(opts.touchpointKey || null, !!opts.locked, opts.lockedNote || '', opts.actionHtml || '');
+      const classes = ['act-touchpoint', opts.typeClass];
+      if (res.locked) classes.push('is-locked');
+      if (res.done) classes.push('is-done');
+      return `
+        <div class="${classes.join(' ')}">
+          <div class="act-day-label">${escapeHtml(opts.label || '')}</div>
+          <h4>${opts.title}</h4>
+          <p>${opts.desc}</p>
+          <div class="act-actions">${res.html}</div>
+        </div>
+      `;
+    }
+
+    function renderDropView(dropId){
+      const content = byId('activationContent');
+      const summary = state.summaryById[dropId];
+      const rawDrop = state.rawById[dropId];
+
+      if (!summary || !rawDrop) {
+        if (state.resizeObserver) { state.resizeObserver.disconnect(); state.resizeObserver = null; }
+        content.innerHTML = `
+          <button class="act-back-link" type="button" data-act="back">← All drops</button>
+          <div class="home-empty">This drop could not be loaded. Return to all drops and try again.</div>
+        `;
+        return;
+      }
+
+      const vendor = state.vendor || {};
+      const labels = getTouchpointDayLabels(summary.delivery_start);
+      const orderingLink = getOrderingLink(rawDrop);
+      const hasHost = !!summary.host_name;
+      const status = statusOf(summary);
+
+      const dropName = summary.drop_name || rawDrop.name || 'Your drop';
+      const hostName = summary.host_name || '';
+      const vendorName = vendor.display_name || vendor.name || 'your kitchen';
+
+      const capTotal = summary.capacity_units_total;
+      const capTotalNum = capTotal != null ? Number(capTotal) : null;
+      const used = Number(summary.capacity_units_used || 0);
+      const remaining = summary.capacity_units_remaining != null
+        ? Number(summary.capacity_units_remaining)
+        : (capTotalNum != null ? Math.max(0, capTotalNum - used) : null);
+      const orderCount = Number(summary.order_count || 0);
+
+      const capPhrase = (capTotalNum != null && capTotalNum > 0) ? String(capTotalNum) : 'a limited number of';
+      const opensAt = rawDrop.opens_at;
+      const closesAt = rawDrop.closes_at;
+      const closesTime = closesAt && !isNaN(new Date(closesAt).getTime()) ? fmtTime(new Date(closesAt)) : '';
+      const revealLine = (rawDrop.reveal_line || '').trim();
+
+      // --- copy templates ---
+      const templates = {};
+
+      // Card 1 — reveal caption
+      const c1 = [];
+      c1.push(`${dropName} is coming ${actRelDay(summary.delivery_start, false)}.`);
+      if (revealLine) c1.push(revealLine);
+      c1.push(`Orders open ${actOpensPhrase(opensAt)}. Capacity is limited to ${capPhrase} orders.`);
+      if (orderingLink) c1.push(orderingLink);
+      templates['monday_reveal'] = c1.join('\n\n');
+
+      // Card 2 — host awareness
+      const opensClause = opensAt && !isNaN(new Date(opensAt).getTime())
+        ? `orders open ${fmtTime(new Date(opensAt))} on ${actFormatMenuCardDate(opensAt)}`
+        : `orders open soon`;
+      templates['tuesday_host'] =
+        `Hey everyone — just to let you know, we've got ${vendorName} coming to ${hostName} on ${actRelDay(summary.delivery_start, true)}. They're doing a pre-order drop — ${opensClause} and capacity is limited to ${capPhrase} so worth ordering early. I'll share the link when it's live.`;
+
+      // Card 4 — vendor WhatsApp
+      const c4 = `${dropName} orders are now open. ${capPhrase} slots available — order here: ${orderingLink}` +
+        (closesTime ? `\n\nKitchen closes ${closesTime}.` : '');
+      templates['thursday_vendor_whatsapp'] = c4;
+
+      // Card 5 — host link
+      templates['thursday_host_link'] =
+        `Orders are live — ${capPhrase} slots available. Order here: ${orderingLink}`;
+
+      // Card 6 — capacity signal
+      const soldOut = (remaining === 0) || (capTotalNum != null && capTotalNum > 0 && used >= capTotalNum);
+      templates['friday_capacity'] = soldOut
+        ? `Tonight's drop is full. Next one coming soon.`
+        : `Only ${remaining == null ? capPhrase : remaining} slots left for ${dropName} today. Order here: ${orderingLink}`;
+
+      // Card 8 — post-drop caption
+      templates['friday_post_drop'] =
+        `${dropName} is done for tonight. ${orderCount} orders fulfilled.\n\n` +
+        `Thanks to everyone who ordered${hostName ? `, and to ${hostName} for having us` : ''} — see you next time.`;
+
+      state.currentTemplates = templates;
+
+      // --- cards ---
+      const eName = escapeHtml(dropName);
+      const eHost = escapeHtml(hostName);
+      const cards = [];
+
+      // Card 1 — reveal post (is-vendor)
+      const card1Action = `
+        <div class="menuCardArtworkFrame" id="act-menuCardFrame" style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
+          <div class="menuCardArtwork" id="act-menuCardArtwork">
+            <img class="menuCardArtwork__image" id="act-menuCardImage" alt="" crossorigin="anonymous" />
+            <div class="menuCardArtwork__scrim" aria-hidden="true"></div>
+            <div class="menuCardArtwork__lockup">
+              <div class="menuCardArtwork__dropName" id="act-menuCardDropName"></div>
+              <div class="menuCardArtwork__dropDate" id="act-menuCardDropDate"></div>
+            </div>
+            <div class="menuCardArtwork__skeleton" id="act-menuCardSkeleton">Loading…</div>
+          </div>
+        </div>
+        <button class="act-copy-btn primary" id="act-downloadMenuCardBtn" type="button" data-act="download" disabled>Download menu card</button>
+        ${copyBtn('Copy caption', 'monday_reveal', 'caption_copied', false)}
+      `;
+      cards.push(tpCard({
+        typeClass: 'is-vendor',
+        label: labels[0],
+        title: 'Share your reveal post',
+        desc: 'Post your menu card to Instagram before ordering opens. Start the anticipation early — this is the moment that seeds the algorithm for your drop day.',
+        actionHtml: card1Action,
+        touchpointKey: 'monday_reveal'
+      }));
+
+      // Card 2 — host awareness (is-host) — only if host present
+      if (hasHost) {
+        cards.push(tpCard({
+          typeClass: 'is-host',
+          label: labels[1],
+          title: 'Share with your host',
+          desc: `Ask ${eHost} to let their community know what's coming. This message goes into their WhatsApp group in their own voice — Hearth prepares it, they send it.`,
+          actionHtml: copyBtn('Copy host message', 'tuesday_host', 'message_copied', false),
+          touchpointKey: 'tuesday_host'
+        }));
+      }
+
+      // Card 3 — early access email (is-auto)
+      const card3Note = orderCount > 0
+        ? `Ready to send to ${orderCount} previous customers`
+        : 'No previous customers yet — this sends to anyone who has ordered before';
+      cards.push(tpCard({
+        typeClass: 'is-auto',
+        label: labels[2],
+        title: 'Early access for previous customers',
+        desc: "Previous customers get access before the public link goes live. The platform sends this automatically — confirm when you're ready.",
+        actionHtml: `${confirmBtn('thursday_early_access')}<div class="act-note">${escapeHtml(card3Note)}</div>`,
+        touchpointKey: 'thursday_early_access'
+      }));
+
+      // Card 4 — ordering open (is-vendor)
+      cards.push(tpCard({
+        typeClass: 'is-vendor',
+        label: labels[3],
+        title: 'Tell your customers ordering is live',
+        desc: 'Send this to your WhatsApp broadcast list when ordering opens. This is the conversion moment — WhatsApp gets 45–60% click-through versus 2–5% for email.',
+        actionHtml: copyBtn('Copy WhatsApp message', 'thursday_vendor_whatsapp', 'message_copied', false),
+        touchpointKey: 'thursday_vendor_whatsapp'
+      }));
+
+      // Card 5 — host link drop (is-host) — only if host present
+      if (hasHost) {
+        const primedDay = actWeekday(summary.delivery_start, -3) || 'earlier in the week';
+        cards.push(tpCard({
+          typeClass: 'is-host',
+          label: labels[4],
+          title: 'Ask your host to drop the link',
+          desc: `A second short message for ${eHost} — just the link and slot count. The community has been primed since ${escapeHtml(primedDay)}. This is the curtain going up.`,
+          actionHtml: copyBtn('Copy host link message', 'thursday_host_link', 'message_copied', false),
+          touchpointKey: 'thursday_host_link'
+        }));
+      }
+
+      // Card 6 — capacity signal (is-prompted)
+      const card6Locked = !(status === 'live' || (capTotalNum != null && capTotalNum > 0 && orderCount >= 0.5 * capTotalNum));
+      cards.push(tpCard({
+        typeClass: 'is-prompted',
+        label: labels[5],
+        title: 'Share your capacity signal',
+        desc: "If you're approaching capacity, post an Instagram Story. Real scarcity is honest — it validates the drop for people who ordered and trains future customers to act earlier next time.",
+        actionHtml: copyBtn('Copy capacity post', 'friday_capacity', 'post_copied', false),
+        locked: card6Locked,
+        lockedNote: 'This prompt appears when your drop is live or approaching capacity.',
+        touchpointKey: 'friday_capacity'
+      }));
+
+      // Card 7 — order ready (is-auto) — never enters done state
+      cards.push(tpCard({
+        typeClass: 'is-auto',
+        label: labels[6],
+        title: 'Notify customers when orders are ready',
+        desc: 'When you mark an order Ready in Service Board, the platform sends an SMS to that customer automatically. Nothing to do here — keep Service Board open during service.',
+        actionHtml: `<a class="act-copy-btn" href="${HearthNav.withVendor('./service-board.html')}">Open Service Board</a>`
+      }));
+
+      // Card 8 — post-drop content (is-prompted, locked until closed)
+      cards.push(tpCard({
+        typeClass: 'is-prompted',
+        label: labels[7],
+        title: 'Close the loop on social',
+        desc: "Post a real moment from the drop — food leaving the kitchen, the venue, a community moment. Unpolished is fine. Then post the sold-out confirmation if you haven't already.",
+        actionHtml: copyBtn('Copy post-drop caption', 'friday_post_drop', 'caption_copied', false),
+        locked: status !== 'closed',
+        lockedNote: 'This prompt appears once your drop closes.',
+        touchpointKey: 'friday_post_drop'
+      }));
+
+      // Card 9 — thank-you email (is-auto, locked until closed)
+      const card9Note = `Sends to ${orderCount} customer${orderCount === 1 ? '' : 's'} who ordered from this drop.`;
+      cards.push(tpCard({
+        typeClass: 'is-auto',
+        label: labels[8],
+        title: 'Thank-you email to every customer',
+        desc: 'A warm, brief thank-you goes to everyone who ordered, with the next drop date. The platform sends this automatically the morning after the drop closes.',
+        actionHtml: `${confirmBtn('saturday_thankyou')}<div class="act-note">${escapeHtml(card9Note)}</div>`,
+        locked: status !== 'closed',
+        lockedNote: 'This confirms once your drop closes.',
+        touchpointKey: 'saturday_thankyou'
+      }));
+
+      content.innerHTML = `
+        <button class="act-back-link" type="button" data-act="back">← All drops</button>
+        <div class="act-drop-header">
+          <h3 class="act-drop-title">${eName}</h3>
+          <p class="act-drop-context">${contextLine(summary)}</p>
+        </div>
+        <div class="act-timeline">${cards.join('')}</div>
+      `;
+
+      actSetupMenuCard(summary, rawDrop);
+    }
+
+    // ---- View switching ----------------------------------------------
+
+    function showCrossDropView(){
+      state.view = 'cross';
+      if (state.resizeObserver) { state.resizeObserver.disconnect(); state.resizeObserver = null; }
+      renderContent(sortScoped(Object.values(state.summaryById).filter(inScope)));
+    }
+
+    async function showDropView(dropId){
+      state.view = 'drop';
+      state.selectedDropId = dropId;
+      if (state.products.length === 0) {
+        byId('activationContent').innerHTML = `<div class="home-loading">Loading drop activation…</div>`;
+        try {
+          const { data, error } = await sb.from('products').select('*').eq('vendor_id', state.vendor.id);
+          if (!error && Array.isArray(data)) state.products = data;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      renderDropView(dropId);
+    }
+
+    // ---- Init + delegated events -------------------------------------
+
     async function init(){
       try {
         const rows = await loadDrops();
         renderContent(rows);
       } catch (err) {
         console.error(err);
-        document.getElementById('activationContent').innerHTML =
+        byId('activationContent').innerHTML =
           `<div class="home-empty">Drops could not be loaded. Check your connection and refresh.</div>`;
       }
     }
 
-    // "View activation" is a placeholder until Prompt 3 wires the per-drop
-    // view — keep the click inert so the page does not jump to the top.
-    document.getElementById('activationContent').addEventListener('click', function (e) {
-      const link = e.target.closest('a[data-drop-id]');
-      if (link) e.preventDefault();
+    byId('activationContent').addEventListener('click', async function (e) {
+      const dropLink = e.target.closest('a[data-drop-id]');
+      if (dropLink) { e.preventDefault(); showDropView(dropLink.dataset.dropId); return; }
+
+      const back = e.target.closest('[data-act="back"]');
+      if (back) { e.preventDefault(); showCrossDropView(); return; }
+
+      const dl = e.target.closest('[data-act="download"]');
+      if (dl) { e.preventDefault(); actDownloadMenuCard(); return; }
+
+      const copy = e.target.closest('[data-act="copy"]');
+      if (copy) {
+        e.preventDefault();
+        const tp = copy.dataset.touchpoint;
+        const action = copy.dataset.action || 'copied';
+        const text = (state.currentTemplates || {})[tp] || '';
+        await actCopyToClipboard(text, copy, copy.textContent);
+        actLog(tp, action);
+        return;
+      }
+
+      const confirm = e.target.closest('[data-act="confirm"]');
+      if (confirm) {
+        e.preventDefault();
+        actLog(confirm.dataset.touchpoint, confirm.dataset.action || 'confirmed');
+        return;
+      }
     });
 
     init();
