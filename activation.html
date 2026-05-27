@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hearth — Activation</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=31" />
+  <script src="./assets/config.js"></script>
+  <script src="./assets/hearth-vendor.js?v=1"></script>
+  <script src="./assets/vendor-nav.js?v=2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* The .home-* classes used below live in home.html's inline <style>,
+       not in hearth.css — mirror the rules this shell uses so the
+       placeholder card renders consistently with the Home page. */
+    :root{
+      --home-bg: var(--h-chalk, #faf8f5);
+      --home-card:#ffffff;
+      --home-border: var(--h-cinder, #e8ddd5);
+      --home-text: var(--h-coal, #0f0b08);
+      --home-muted: var(--h-stone, #8c7b6e);
+      --home-radius:20px;
+      --home-shadow:0 10px 30px rgba(15,23,42,.05);
+    }
+
+    body{
+      background:var(--home-bg);
+      color:var(--home-text);
+      font-family: 'Figtree', system-ui, sans-serif;
+    }
+
+    .home-shell{
+      display:grid;
+      gap:18px;
+      padding-bottom:40px;
+    }
+
+    .home-card{
+      background:var(--home-card);
+      border:1px solid var(--home-border);
+      border-radius:var(--home-radius);
+      box-shadow:var(--home-shadow);
+    }
+
+    .home-pad-lg{ padding:22px; }
+
+    .home-sectionTitle{
+      margin:0;
+      font-size:20px;
+      letter-spacing:-.02em;
+    }
+
+    .home-sectionSub{
+      margin:4px 0 0;
+      color:var(--home-muted);
+      font-size:13px;
+    }
+
+    .home-empty{
+      border:1px dashed #d6cdbc;
+      border-radius:16px;
+      padding:22px;
+      background:#fcfbf8;
+      color:var(--home-muted);
+      text-align:center;
+      font-size:14px;
+      line-height:1.55;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="home-shell">
+
+      <nav class="nav" id="operatorNav" aria-label="Primary"></nav>
+      <script>HearthNav.renderNav('operatorNav', 'activation.html', { dotSlash: true });</script>
+
+      <section class="home-card home-pad-lg">
+        <h2 class="home-sectionTitle">Activation</h2>
+        <p class="home-sectionSub">Fill your drops. The work of making each moment land.</p>
+        <div class="home-empty" style="margin-top:18px;">
+          Your active and upcoming drops will appear here.
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <script>
+    const sb = window.supabase.createClient(
+      window.HEARTH_CONFIG.SUPABASE_URL,
+      window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+    );
+
+    const state = { vendor: null };
+
+    function getUrlParam(name){
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name);
+    }
+
+    function escapeHtml(str){
+      return String(str ?? '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+    }
+
+    async function init(){
+      try {
+        state.vendor = await window.HearthVendor.resolveVendor(sb);
+        if (!state.vendor) {
+          const requestedSlug = getUrlParam('vendor') || getUrlParam('vendor_slug');
+          throw new Error(
+            requestedSlug
+              ? `Vendor "${requestedSlug}" not found. Check the ?vendor= URL parameter.`
+              : 'No vendor found. Add at least one vendor to the database.'
+          );
+        }
+      } catch (err) {
+        console.error(err);
+        document.querySelector('.home-shell').innerHTML = `
+          <section class="home-card home-pad-lg">
+            <div class="home-empty">
+              Activation could not load. Check vendor resolution and Supabase access.
+              <br><br>
+              <strong>${escapeHtml(err.message || 'Unknown error')}</strong>
+            </div>
+          </section>
+        `;
+      }
+    }
+
+    init();
+  </script>
+  <script>HearthNav.decorateLinks();</script>
+</body>
+</html>
