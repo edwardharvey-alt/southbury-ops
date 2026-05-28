@@ -626,6 +626,51 @@
         align-items: center;
       }
     }
+
+    /* Reveal fields above the menu card on Card 1 */
+    .act-reveal-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 16px;
+      width: 100%;
+    }
+
+    .act-field-label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--home-muted);
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .act-field-helper {
+      font-size: 12px;
+      color: var(--home-muted);
+      margin-top: 4px;
+    }
+
+    .act-reveal-fields textarea,
+    .act-reveal-fields select {
+      font: inherit;
+      font-size: 13px;
+      line-height: 1.55;
+      border: 1px solid var(--home-border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #fff;
+      color: var(--home-text);
+      width: 100%;
+      box-sizing: border-box;
+      resize: vertical;
+    }
+
+    .act-reveal-fields select {
+      resize: none;
+      min-height: 38px;
+    }
   </style>
 </head>
 <body>
@@ -1120,6 +1165,79 @@
       }
     }
 
+    // ---- Reveal fields (Card 1: reveal_line + reveal_product_id) -----
+
+    let actRevealSaveTimer = null;
+
+    // Persist the current reveal fields to update-drop. Silent on error —
+    // the vendor isn't blocked; failures land in the console for debug.
+    async function actSaveRevealFields(dropId) {
+      const lineEl = byId('act-revealLine');
+      const productEl = byId('act-revealProduct');
+      if (!lineEl || !productEl) return;
+      const reveal_line = lineEl.value.trim() || null;
+      const reveal_product_id = productEl.value || null;
+      try {
+        const { data, error } = await sb.functions.invoke('update-drop', {
+          body: {
+            vendor_id: state.vendor.id,
+            drop_id: dropId,
+            fields: { reveal_line, reveal_product_id }
+          }
+        });
+        if (error) throw error;
+        if (data && data.error) throw new Error(data.error);
+        if (state.rawById[dropId]) {
+          state.rawById[dropId].reveal_line = reveal_line;
+          state.rawById[dropId].reveal_product_id = reveal_product_id;
+        }
+      } catch (err) {
+        console.error('Reveal fields save failed', err);
+      }
+    }
+
+    // Wire the reveal textarea + product select inside Card 1's action
+    // area. Mirrors templates['monday_reveal'] inline so the Copy caption
+    // button always copies the latest text without waiting for the save.
+    function actInitRevealFields(dropId, summary, rawDrop) {
+      const lineEl = byId('act-revealLine');
+      const productEl = byId('act-revealProduct');
+      if (!lineEl || !productEl) return;
+
+      function rebuildMondayRevealCaption() {
+        const dropName = summary.drop_name || rawDrop.name || 'Your drop';
+        const opensAt = rawDrop.opens_at;
+        const capTotal = summary.capacity_units_total;
+        const capTotalNum = capTotal != null ? Number(capTotal) : null;
+        const capPhrase = (capTotalNum != null && capTotalNum > 0) ? String(capTotalNum) : 'a limited number of';
+        const orderingLink = getOrderingLink(rawDrop);
+        const revealLine = lineEl.value.trim();
+        const c1 = [];
+        c1.push(`${dropName} is coming ${actRelDay(summary.delivery_start, false)}.`);
+        if (revealLine) c1.push(revealLine);
+        c1.push(`Orders open ${actOpensPhrase(opensAt)}. Capacity is limited to ${capPhrase} orders.`);
+        if (orderingLink) c1.push(orderingLink);
+        if (!state.currentTemplates) state.currentTemplates = {};
+        state.currentTemplates['monday_reveal'] = c1.join('\n\n');
+      }
+
+      lineEl.addEventListener('input', () => {
+        rebuildMondayRevealCaption();
+        if (actRevealSaveTimer) clearTimeout(actRevealSaveTimer);
+        actRevealSaveTimer = setTimeout(() => actSaveRevealFields(dropId), 800);
+      });
+
+      productEl.addEventListener('change', () => {
+        const newProductId = productEl.value || null;
+        if (state.rawById[dropId]) {
+          state.rawById[dropId].reveal_product_id = newProductId;
+        }
+        // Update artwork live (don't wait for save).
+        actPopulateMenuCard(summary, state.rawById[dropId] || rawDrop, state.vendor, state.products);
+        actSaveRevealFields(dropId);
+      });
+    }
+
     // ---- Per-drop view: card builders --------------------------------
 
     function copyBtn(label, touchpoint, action, primary){
@@ -1382,12 +1500,37 @@
         ? `<div class="act-done-state">✓ Caption copied · ${formatLogTime(getLogEntry('monday_reveal').timestamp)}</div>`
         : copyBtn('Copy caption', 'monday_reveal', 'caption_copied', false);
 
+      // Reveal-dish options: only products with images (no image means
+       // nothing usable for the menu card).
+      const revealProductOptions = (state.products || [])
+        .filter(p => p && p.image_url)
+        .map(p => {
+          const selected = String(p.id) === String(rawDrop.reveal_product_id || '') ? ' selected' : '';
+          return `<option value="${escapeHtml(p.id)}"${selected}>${escapeHtml(p.name || 'Untitled product')}</option>`;
+        })
+        .join('');
+
       const card1Html = `
         <div class="act-touchpoint is-vendor${getLogEntry('monday_reveal') ? ' is-done' : ''}">
           <div class="act-day-label">${escapeHtml(labels[0])}</div>
           <h4>Share your reveal post</h4>
           <p>Post your menu card to Instagram before ordering opens. Start the anticipation early — this is the moment that seeds the algorithm for your drop day.</p>
           <div class="act-actions">
+            <div class="act-reveal-fields">
+              <div>
+                <label class="act-field-label" for="act-revealLine">Your line for this drop</label>
+                <textarea id="act-revealLine" maxlength="100" rows="3" placeholder="e.g. Hand-stretched sourdough, fired three minutes flat.">${escapeHtml(rawDrop.reveal_line || '')}</textarea>
+                <div class="act-field-helper">One line for your reveal post — the part that's yours to write. Around 80 characters.</div>
+              </div>
+              <div>
+                <label class="act-field-label" for="act-revealProduct">Reveal dish</label>
+                <select id="act-revealProduct">
+                  <option value="">No dish selected</option>
+                  ${revealProductOptions}
+                </select>
+                <div class="act-field-helper">The dish that headlines your reveal post — we'll use its photo.</div>
+              </div>
+            </div>
             <div class="menuCardArtworkFrame" id="act-menuCardFrame" style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
               <div class="menuCardArtwork" id="act-menuCardArtwork">
                 <img class="menuCardArtwork__image" id="act-menuCardImage" alt="" crossorigin="anonymous" />
@@ -1517,6 +1660,7 @@
       `;
 
       actSetupMenuCard(summary, rawDrop);
+      actInitRevealFields(dropId, summary, rawDrop);
     }
 
     // ---- View switching ----------------------------------------------
