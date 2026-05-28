@@ -1876,6 +1876,13 @@
                     <div class="qrWrap" id="qrWrap"></div>
                 </div>
 
+                <div class="reviewCardDivider"></div>
+                <div style="display:flex; justify-content:center; margin:4px 0 8px;">
+                  <a class="btnAccent" id="goToActivationBtn" href="#" style="min-width:280px; max-width:100%; text-align:center; display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+                    Go to Activation →
+                  </a>
+                </div>
+
                   <div class="stageSection mondayRevealSection" id="mondayRevealSection">
                     <div class="mondayRevealHeader">
                       <h4 class="stageSectionTitle">Your reveal post</h4>
@@ -6189,6 +6196,13 @@
           console.error(err);
           showError(err.message || "Unable to copy link.");
         }
+      });
+
+      byId("goToActivationBtn").addEventListener("click", function (e) {
+        e.preventDefault();
+        if (!state.selectedDropId) return;
+        const href = HearthNav.withVendor('./activation.html') + '&drop=' + encodeURIComponent(state.selectedDropId);
+        window.location.href = href;
       });
 
       byId("downloadQrBtn").addEventListener("click", () => {
