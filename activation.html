@@ -2005,6 +2005,14 @@
     }
 
     function renderDropView(dropId){
+      // Flush any open message-textarea values into messageDrafts before
+      // re-rendering so edits aren't lost when another card's action
+      // triggers a re-render mid-edit.
+      document.querySelectorAll('[data-act="message-textarea"]').forEach(ta => {
+        const tp = ta.dataset.touchpoint;
+        if (tp) state.messageDrafts[tp] = ta.value;
+      });
+
       const content = byId('activationContent');
       const summary = state.summaryById[dropId];
       const rawDrop = state.rawById[dropId];
