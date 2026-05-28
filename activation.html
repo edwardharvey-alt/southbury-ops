@@ -766,6 +766,144 @@
       font-weight: 500;
       letter-spacing: 0.02em;
     }
+
+    /* Editable message pattern for Cards 2 / 4 / 5 — preview ↔ textarea
+       with channel-specific copy buttons. */
+    .act-message-edit {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .act-message-edit textarea {
+      font: inherit;
+      font-size: 13px;
+      line-height: 1.6;
+      border: 1px solid var(--home-border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #fff;
+      color: var(--home-text);
+      width: 100%;
+      box-sizing: border-box;
+      resize: vertical;
+      min-height: 100px;
+      white-space: pre-wrap;
+    }
+
+    .act-message-edit-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* Capacity-signal visual asset for Card 6. Same 540×540 + transform-
+       scale pattern as the menu card / orders-open card; tint deepens to
+       0.62 opacity when sold out, with a Cormorant "Sold out" headline
+       replacing the slots-left number. */
+    .act-capacity-artwork {
+      width: 540px;
+      height: 540px;
+      position: relative;
+      overflow: hidden;
+      box-sizing: border-box;
+      font-family: 'Figtree', system-ui, sans-serif;
+      transform-origin: top left;
+      border-radius: 8px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+      --vendor-brand-primary: #8B6B3F;
+      background-color: var(--vendor-brand-primary);
+    }
+
+    .act-capacity-artwork__image {
+      position: absolute;
+      display: block;
+    }
+
+    .act-capacity-artwork__tint {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-color: var(--vendor-brand-primary);
+      opacity: 0.28;
+    }
+
+    .act-capacity-artwork__tint.is-soldout {
+      opacity: 0.62;
+    }
+
+    .act-capacity-artwork__centre {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .act-capacity-artwork__number {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 500;
+      font-size: 96px;
+      line-height: 1.0;
+      letter-spacing: -0.02em;
+      color: #FAF8F4;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.45), 0 0 20px rgba(0,0,0,0.35);
+      margin: 0;
+    }
+
+    .act-capacity-artwork__slots {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #FAF8F4;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      margin-top: 8px;
+      opacity: 0.9;
+    }
+
+    .act-capacity-artwork__soldout {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 500;
+      font-size: 72px;
+      line-height: 1.0;
+      letter-spacing: -0.01em;
+      color: #FAF8F4;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 24px rgba(0,0,0,0.4);
+      margin: 0;
+    }
+
+    .act-capacity-artwork__dropname {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 15px;
+      line-height: 1.3;
+      letter-spacing: 0.02em;
+      color: #FAF8F4;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      margin-top: 16px;
+      opacity: 0.88;
+    }
+
+    .act-capacity-artwork__skeleton {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #F3EEE6 0%, #EBE4D6 100%);
+      color: var(--h-slate, #374151);
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
   </style>
 </head>
 <body>
@@ -810,9 +948,12 @@
       view: 'cross',
       resizeObserver: null,
       _ordersOpenObserver: null,
+      _capacityObserver: null,
       currentTemplates: {},
       expandedEmailCards: {},
-      emailDrafts: {}
+      emailDrafts: {},
+      messageDrafts: {},
+      expandedMessageCards: {}
     };
 
     const DAY_MS = 24 * 60 * 60 * 1000;
@@ -1405,6 +1546,184 @@
       }
     }
 
+    // ---- Capacity-signal card (Card 6) — same html2canvas pattern;
+    // brand tint deepens (0.28 → 0.62) when sold out, with a Cormorant
+    // "Sold out" headline replacing the slots-left number.
+
+    function actUpdateCapacityScale() {
+      const frame = byId('act-capacityFrame');
+      const artwork = byId('act-capacityArtwork');
+      if (!frame || !artwork) return;
+      const targetWidth = frame.clientWidth;
+      if (!targetWidth) return;
+      const scale = Math.min(1, targetWidth / 540);
+      artwork.style.transform = `scale(${scale})`;
+      frame.style.height = `${540 * scale}px`;
+    }
+
+    function actPopulateCapacityCard(summary, rawDrop, vendor) {
+      const artworkEl = byId('act-capacityArtwork');
+      const downloadBtn = byId('act-downloadCapacityBtn');
+      const skeletonEl = byId('act-capacitySkeleton');
+      if (!artworkEl) return;
+
+      artworkEl.style.setProperty('--vendor-brand-primary',
+        (vendor && vendor.brand_primary_color) || '#8B6B3F');
+
+      const used = Number(summary.capacity_units_used || 0);
+      const total = summary.capacity_units_total != null
+        ? Number(summary.capacity_units_total)
+        : null;
+      const remaining = summary.capacity_units_remaining != null
+        ? Number(summary.capacity_units_remaining)
+        : (total != null ? Math.max(0, total - used) : null);
+      const soldOut = remaining === 0 ||
+        (total != null && total > 0 && used >= total);
+
+      // Update tint opacity for sold-out state
+      const tintEl = byId('act-capacityTint');
+      if (tintEl) tintEl.classList.toggle('is-soldout', soldOut);
+
+      // Show correct centre content
+      const numberEl = byId('act-capacityNumber');
+      const slotsEl = byId('act-capacitySlots');
+      const soldoutEl = byId('act-capacitySoldout');
+      const dropNameEl = byId('act-capacityDropName');
+
+      if (soldOut) {
+        if (numberEl) numberEl.style.display = 'none';
+        if (slotsEl) slotsEl.style.display = 'none';
+        if (soldoutEl) soldoutEl.style.display = '';
+      } else {
+        if (soldoutEl) soldoutEl.style.display = 'none';
+        if (numberEl) {
+          numberEl.style.display = '';
+          numberEl.textContent = remaining != null ? String(remaining) : '—';
+        }
+        if (slotsEl) {
+          slotsEl.style.display = '';
+          slotsEl.textContent = remaining === 1 ? 'slot left' : 'slots left';
+        }
+      }
+
+      if (dropNameEl) {
+        dropNameEl.textContent = summary.drop_name || rawDrop.name || '';
+      }
+
+      // Image fallback chain: reveal product → vendor hero → solid colour.
+      let imageUrl = '';
+      if (rawDrop && rawDrop.reveal_product_id) {
+        const product = (state.products || []).find(
+          p => String(p.id) === String(rawDrop.reveal_product_id)
+        );
+        if (product && product.image_url) imageUrl = String(product.image_url);
+      }
+      if (!imageUrl && vendor && vendor.hero_image_url) {
+        imageUrl = String(vendor.hero_image_url);
+      }
+
+      const img = byId('act-capacityImage');
+      const S = 540;
+      if (img) {
+        if (imageUrl) {
+          img.onload = () => {
+            const iw = img.naturalWidth, ih = img.naturalHeight;
+            const sc = Math.max(S / iw, S / ih);
+            const w = iw * sc, h = ih * sc;
+            img.style.width  = w + 'px';
+            img.style.height = h + 'px';
+            img.style.left   = ((S - w) / 2) + 'px';
+            img.style.top    = ((S - h) / 2) + 'px';
+            img.style.display = 'block';
+            if (skeletonEl) skeletonEl.style.display = 'none';
+            if (downloadBtn) downloadBtn.disabled = false;
+          };
+          img.onerror = () => {
+            img.style.display = 'none';
+            if (skeletonEl) skeletonEl.style.display = 'none';
+            if (downloadBtn) downloadBtn.disabled = false;
+          };
+          img.crossOrigin = 'anonymous';
+          img.src = imageUrl;
+        } else {
+          img.style.display = 'none';
+          img.removeAttribute('src');
+          if (skeletonEl) skeletonEl.style.display = 'none';
+          if (downloadBtn) downloadBtn.disabled = false;
+        }
+      }
+
+      actUpdateCapacityScale();
+    }
+
+    async function actDownloadCapacityCard() {
+      const artworkEl = byId('act-capacityArtwork');
+      const downloadBtn = byId('act-downloadCapacityBtn');
+      const skeletonEl = byId('act-capacitySkeleton');
+      if (!artworkEl || !downloadBtn) return;
+
+      const vendor = state.vendor || {};
+      const rawDrop = state.rawById[state.selectedDropId] || {};
+
+      const originalText = downloadBtn.textContent;
+      const originalTransform = artworkEl.style.transform;
+      const skeletonWasVisible = skeletonEl
+        ? skeletonEl.style.display !== 'none'
+        : false;
+
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = 'Generating…';
+
+      try {
+        if (typeof window.html2canvas !== 'function') {
+          throw new Error('html2canvas not loaded');
+        }
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+        if (skeletonEl) skeletonEl.style.display = 'none';
+        artworkEl.style.transform = 'scale(1)';
+
+        let canvas;
+        try {
+          canvas = await window.html2canvas(artworkEl, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: null,
+            logging: false
+          });
+        } finally {
+          artworkEl.style.transform = originalTransform;
+          if (skeletonEl && skeletonWasVisible) skeletonEl.style.display = 'flex';
+        }
+
+        const blob = await new Promise((resolve, reject) => {
+          canvas.toBlob(b => {
+            if (b) resolve(b);
+            else reject(new Error('toBlob returned null'));
+          }, 'image/png', 1.0);
+        });
+
+        const vendorSlug = vendor.slug || 'vendor';
+        const dropSlug = rawDrop.slug || 'drop';
+        const filename = `${vendorSlug}-${dropSlug}-capacity.png`;
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (err) {
+        console.error('[capacityCard] download failed', err);
+      } finally {
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = originalText;
+      }
+    }
+
     function actSetupMenuCard(summary, rawDrop){
       const frame = byId("act-menuCardFrame");
       if (state.resizeObserver) { state.resizeObserver.disconnect(); state.resizeObserver = null; }
@@ -1534,21 +1853,61 @@
     // visible, channel buttons replaced) so tpCard's touchpointKey is null.
     function messageCard(opts) {
       const entry = getLogEntry(opts.touchpointKey);
-      const messageHtml = `<div class="act-message-preview">${escapeHtml(opts.messageText || '')}</div>`;
+      const tp = opts.touchpointKey;
+
+      // Initialise message draft from generated template if not yet set
+      if (!state.messageDrafts[tp]) {
+        state.messageDrafts[tp] = opts.messageText || '';
+      }
+      const currentText = state.messageDrafts[tp];
+      const isExpanded = !!state.expandedMessageCards[tp];
 
       let actionHtml;
+
       if (entry) {
+        // Done state — message still visible read-only, buttons replaced
         actionHtml = `
-          ${messageHtml}
+          <div class="act-message-preview">${escapeHtml(currentText)}</div>
           <div class="act-done-state">✓ Sent · ${formatLogTime(entry.timestamp)}</div>
         `;
-      } else {
+      } else if (isExpanded) {
+        // Edit state — editable textarea, done editing + copy buttons
         const channelBtns = (opts.channels || []).map(ch =>
-          `<button class="act-copy-btn" type="button" data-act="copy" data-touchpoint="${opts.touchpointKey}" data-action="message_copied">Copy for ${escapeHtml(ch)}</button>`
+          `<button class="act-copy-btn" type="button"
+            data-act="copy-message"
+            data-touchpoint="${escapeHtml(tp)}"
+            data-action="message_copied">Copy for ${escapeHtml(ch)}</button>`
         ).join('');
         actionHtml = `
-          ${messageHtml}
-          <div class="act-channel-row">${channelBtns}</div>
+          <div class="act-message-edit">
+            <textarea
+              data-act="message-textarea"
+              data-touchpoint="${escapeHtml(tp)}"
+              rows="5">${escapeHtml(currentText)}</textarea>
+            <div class="act-message-edit-row">
+              <button class="act-copy-btn" type="button"
+                data-act="collapse-message"
+                data-touchpoint="${escapeHtml(tp)}">Done editing</button>
+              ${channelBtns}
+            </div>
+          </div>
+        `;
+      } else {
+        // Collapsed preview — show message, edit button, copy buttons
+        const channelBtns = (opts.channels || []).map(ch =>
+          `<button class="act-copy-btn" type="button"
+            data-act="copy-message"
+            data-touchpoint="${escapeHtml(tp)}"
+            data-action="message_copied">Copy for ${escapeHtml(ch)}</button>`
+        ).join('');
+        actionHtml = `
+          <div class="act-message-preview">${escapeHtml(currentText)}</div>
+          <div class="act-channel-row">
+            <button class="act-copy-btn" type="button"
+              data-act="expand-message"
+              data-touchpoint="${escapeHtml(tp)}">Edit</button>
+            ${channelBtns}
+          </div>
         `;
       }
 
@@ -1558,7 +1917,7 @@
         title: opts.title,
         desc: opts.desc,
         actionHtml,
-        touchpointKey: null // done state handled inline above
+        touchpointKey: null  // done state handled inline above
       });
     }
 
@@ -1834,13 +2193,58 @@
       // always show; only the message + channel buttons flip to a done
       // state once one of the channels has been copied.
       const card4Entry = getLogEntry('thursday_vendor_whatsapp');
-      const card4MessageArea = card4Entry
-        ? `<div class="act-done-state">✓ Sent · ${formatLogTime(card4Entry.timestamp)}</div>`
-        : `<div class="act-message-preview">${escapeHtml(templates['thursday_vendor_whatsapp'])}</div>
-           <div class="act-channel-row">
-             ${copyBtn('Copy for WhatsApp', 'thursday_vendor_whatsapp', 'message_copied', false)}
-             ${copyBtn('Copy for social', 'thursday_vendor_whatsapp', 'message_copied', false)}
-           </div>`;
+
+      // Initialise Card 4 message draft
+      if (!state.messageDrafts['thursday_vendor_whatsapp']) {
+        state.messageDrafts['thursday_vendor_whatsapp'] = templates['thursday_vendor_whatsapp'] || '';
+      }
+      const card4Text = state.messageDrafts['thursday_vendor_whatsapp'];
+      const card4Expanded = !!state.expandedMessageCards['thursday_vendor_whatsapp'];
+
+      let card4MessageArea;
+      if (card4Entry) {
+        card4MessageArea = `
+          <div class="act-message-preview">${escapeHtml(card4Text)}</div>
+          <div class="act-done-state">✓ Sent · ${formatLogTime(card4Entry.timestamp)}</div>
+        `;
+      } else if (card4Expanded) {
+        card4MessageArea = `
+          <div class="act-message-edit">
+            <textarea data-act="message-textarea" data-touchpoint="thursday_vendor_whatsapp"
+              rows="5">${escapeHtml(card4Text)}</textarea>
+            <div class="act-message-edit-row">
+              <button class="act-copy-btn" type="button"
+                data-act="collapse-message"
+                data-touchpoint="thursday_vendor_whatsapp">Done editing</button>
+              <button class="act-copy-btn" type="button"
+                data-act="copy-message"
+                data-touchpoint="thursday_vendor_whatsapp"
+                data-action="message_copied">Copy for WhatsApp</button>
+              <button class="act-copy-btn" type="button"
+                data-act="copy-message"
+                data-touchpoint="thursday_vendor_whatsapp"
+                data-action="message_copied">Copy for social</button>
+            </div>
+          </div>
+        `;
+      } else {
+        card4MessageArea = `
+          <div class="act-message-preview">${escapeHtml(card4Text)}</div>
+          <div class="act-channel-row">
+            <button class="act-copy-btn" type="button"
+              data-act="expand-message"
+              data-touchpoint="thursday_vendor_whatsapp">Edit</button>
+            <button class="act-copy-btn" type="button"
+              data-act="copy-message"
+              data-touchpoint="thursday_vendor_whatsapp"
+              data-action="message_copied">Copy for WhatsApp</button>
+            <button class="act-copy-btn" type="button"
+              data-act="copy-message"
+              data-touchpoint="thursday_vendor_whatsapp"
+              data-action="message_copied">Copy for social</button>
+          </div>
+        `;
+      }
 
       const card4Html = `
         <div class="act-touchpoint is-vendor${card4Entry ? ' is-done' : ''}">
@@ -1881,18 +2285,58 @@
         }));
       }
 
-      // Card 6 — capacity signal (is-prompted)
-      const card6Locked = !(status === 'live' || (capTotalNum != null && capTotalNum > 0 && orderCount >= 0.5 * capTotalNum));
-      cards.push(tpCard({
-        typeClass: 'is-prompted',
-        label: labels[5],
-        title: 'Share your capacity signal',
-        desc: "If you're approaching capacity, post an Instagram Story. Real scarcity is honest — it validates the drop for people who ordered and trains future customers to act earlier next time.",
-        actionHtml: copyBtn('Copy capacity post', 'friday_capacity', 'post_copied', false),
-        locked: card6Locked,
-        lockedNote: 'This prompt appears when your drop is live or approaching capacity.',
-        touchpointKey: 'friday_capacity'
-      }));
+      // Card 6 — capacity signal (is-prompted) with visual asset. Rendered
+      // directly (not via tpCard) so the artwork + download button render
+      // alongside the copy-caption button when unlocked; locked state still
+      // shows the trigger note.
+      const card6Locked = !(status === 'live' ||
+        (capTotalNum != null && capTotalNum > 0 && orderCount >= 0.5 * capTotalNum));
+
+      const card6Entry = getLogEntry('friday_capacity');
+      const card6CopyArea = card6Entry
+        ? `<div class="act-done-state">✓ Sent · ${formatLogTime(card6Entry.timestamp)}</div>`
+        : copyBtn('Copy capacity post', 'friday_capacity', 'post_copied', false);
+
+      const card6ArtworkHtml = card6Locked ? '' : `
+        <div class="menuCardArtworkFrame" id="act-capacityFrame"
+          style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
+          <div class="act-capacity-artwork" id="act-capacityArtwork">
+            <img class="act-capacity-artwork__image" id="act-capacityImage"
+              alt="" crossorigin="anonymous" />
+            <div class="act-capacity-artwork__tint" id="act-capacityTint"
+              aria-hidden="true"></div>
+            <div class="act-capacity-artwork__centre">
+              <div class="act-capacity-artwork__number" id="act-capacityNumber"></div>
+              <div class="act-capacity-artwork__slots" id="act-capacitySlots"></div>
+              <div class="act-capacity-artwork__soldout" id="act-capacitySoldout"
+                style="display:none;">Sold out</div>
+              <div class="act-capacity-artwork__dropname"
+                id="act-capacityDropName"></div>
+            </div>
+            <div class="act-capacity-artwork__skeleton"
+              id="act-capacitySkeleton">Loading…</div>
+          </div>
+        </div>
+        <button class="act-copy-btn primary" id="act-downloadCapacityBtn"
+          type="button" data-act="download-capacity" disabled>Download image</button>
+      `;
+
+      const card6Html = `
+        <div class="act-touchpoint is-prompted${card6Locked ? ' is-locked' : ''}${card6Entry ? ' is-done' : ''}">
+          <div class="act-day-label">${escapeHtml(labels[5])}</div>
+          <h4>Share your capacity signal</h4>
+          <p>If you're approaching capacity, post an Instagram Story. Real scarcity
+          is honest — it validates the drop for people who ordered and trains future
+          customers to act earlier next time.</p>
+          <div class="act-actions">
+            ${card6Locked
+              ? `<div class="act-locked-note">This prompt appears when your drop is live or approaching capacity.</div>`
+              : `${card6ArtworkHtml}${card6CopyArea}`
+            }
+          </div>
+        </div>
+      `;
+      cards.push(card6Html);
 
       // Card 7 — order ready (is-auto) — never enters done state
       cards.push(tpCard({
@@ -1959,6 +2403,22 @@
           state._ordersOpenObserver = ooObserver;
         }
       }
+
+      // Populate capacity artwork (Card 6) — only when unlocked
+      if (state._capacityObserver) {
+        state._capacityObserver.disconnect();
+        state._capacityObserver = null;
+      }
+      const capacityFrame = byId('act-capacityFrame');
+      if (capacityFrame) {
+        actPopulateCapacityCard(summary, rawDrop, state.vendor);
+        actUpdateCapacityScale();
+        if (typeof ResizeObserver === 'function') {
+          const capObserver = new ResizeObserver(() => actUpdateCapacityScale());
+          capObserver.observe(capacityFrame);
+          state._capacityObserver = capObserver;
+        }
+      }
     }
 
     // ---- View switching ----------------------------------------------
@@ -1969,6 +2429,10 @@
       if (state._ordersOpenObserver) {
         state._ordersOpenObserver.disconnect();
         state._ordersOpenObserver = null;
+      }
+      if (state._capacityObserver) {
+        state._capacityObserver.disconnect();
+        state._capacityObserver = null;
       }
       renderContent(sortScoped(Object.values(state.summaryById).filter(inScope)));
     }
@@ -1985,6 +2449,9 @@
           console.error(e);
         }
       }
+      // Reset per-drop edit state so drafts from a previous drop don't bleed through.
+      state.messageDrafts = {};
+      state.expandedMessageCards = {};
       renderDropView(dropId);
     }
 
@@ -2028,6 +2495,56 @@
         return;
       }
 
+      const dlCapacity = e.target.closest('[data-act="download-capacity"]');
+      if (dlCapacity) {
+        e.preventDefault();
+        actDownloadCapacityCard();
+        return;
+      }
+
+      // Expand message card into edit mode
+      const expandMsg = e.target.closest('[data-act="expand-message"]');
+      if (expandMsg) {
+        e.preventDefault();
+        state.expandedMessageCards[expandMsg.dataset.touchpoint] = true;
+        renderDropView(state.selectedDropId);
+        return;
+      }
+
+      // Collapse message card — save textarea value first
+      const collapseMsg = e.target.closest('[data-act="collapse-message"]');
+      if (collapseMsg) {
+        e.preventDefault();
+        const tp = collapseMsg.dataset.touchpoint;
+        const ta = document.querySelector(
+          `[data-act="message-textarea"][data-touchpoint="${tp}"]`
+        );
+        if (ta) state.messageDrafts[tp] = ta.value;
+        state.expandedMessageCards[tp] = false;
+        renderDropView(state.selectedDropId);
+        return;
+      }
+
+      // Copy message (from preview or edit state)
+      const copyMsg = e.target.closest('[data-act="copy-message"]');
+      if (copyMsg) {
+        e.preventDefault();
+        const tp = copyMsg.dataset.touchpoint;
+        // If currently in edit state, save the textarea first
+        const ta = document.querySelector(
+          `[data-act="message-textarea"][data-touchpoint="${tp}"]`
+        );
+        if (ta) state.messageDrafts[tp] = ta.value;
+        const text = state.messageDrafts[tp] || '';
+        const originalLabel = copyMsg.textContent;
+        await actCopyToClipboard(text, copyMsg, originalLabel);
+        actLog(tp, copyMsg.dataset.action || 'message_copied');
+        return;
+      }
+
+      // Original copy handler (for non-message copy buttons e.g. caption,
+      // capacity post, post-drop caption — cards 1, 6, 8 still emit
+      // data-act="copy" via the copyBtn() helper).
       const copy = e.target.closest('[data-act="copy"]');
       if (copy) {
         e.preventDefault();
