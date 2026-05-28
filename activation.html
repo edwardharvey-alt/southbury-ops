@@ -671,6 +671,101 @@
       resize: none;
       min-height: 38px;
     }
+
+    /* Orders-open visual asset for Card 4. Same 540×540 + transform-
+       scale pattern as the menu card; distinct visual treatment with a
+       brand-colour tint, centred "Orders open" headline, drop name
+       below, closing time at the bottom. */
+    .act-orders-open-artwork {
+      width: 540px;
+      height: 540px;
+      position: relative;
+      overflow: hidden;
+      box-sizing: border-box;
+      font-family: 'Figtree', system-ui, sans-serif;
+      transform-origin: top left;
+      border-radius: 8px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+      --vendor-brand-primary: #8B6B3F;
+      background-color: var(--vendor-brand-primary);
+    }
+
+    .act-orders-open-artwork__image {
+      position: absolute;
+      display: block;
+    }
+
+    .act-orders-open-artwork__tint {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-color: var(--vendor-brand-primary);
+      opacity: 0.28;
+    }
+
+    .act-orders-open-artwork__centre {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .act-orders-open-artwork__headline {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 500;
+      font-size: 64px;
+      line-height: 1.0;
+      letter-spacing: -0.01em;
+      color: #FAF8F4;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.45), 0 0 20px rgba(0,0,0,0.35);
+      margin: 0;
+    }
+
+    .act-orders-open-artwork__dropname {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 18px;
+      line-height: 1.3;
+      letter-spacing: 0.02em;
+      color: #FAF8F4;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      margin-top: 14px;
+      opacity: 0.92;
+    }
+
+    .act-orders-open-artwork__closing {
+      position: absolute;
+      bottom: 28px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #FAF8F4;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      opacity: 0.85;
+    }
+
+    .act-orders-open-artwork__skeleton {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #F3EEE6 0%, #EBE4D6 100%);
+      color: var(--h-slate, #374151);
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
   </style>
 </head>
 <body>
@@ -714,6 +809,7 @@
       activationLog: [],
       view: 'cross',
       resizeObserver: null,
+      _ordersOpenObserver: null,
       currentTemplates: {},
       expandedEmailCards: {},
       emailDrafts: {}
@@ -1153,6 +1249,162 @@
       }
     }
 
+    // ---- Orders-open card (Card 4) — same html2canvas pattern as the
+    // menu card, distinct treatment: brand-tinted hero photo, centred
+    // "Orders open" headline, drop name below, closing time at the foot.
+
+    function actUpdateOrdersOpenScale() {
+      const frame = byId('act-ordersOpenFrame');
+      const artwork = byId('act-ordersOpenArtwork');
+      if (!frame || !artwork) return;
+      const targetWidth = frame.clientWidth;
+      if (!targetWidth) return;
+      const scale = Math.min(1, targetWidth / 540);
+      artwork.style.transform = `scale(${scale})`;
+      frame.style.height = `${540 * scale}px`;
+    }
+
+    function actPopulateOrdersOpenCard(summary, rawDrop, vendor) {
+      const artworkEl = byId('act-ordersOpenArtwork');
+      const downloadBtn = byId('act-downloadOrdersOpenBtn');
+      const skeletonEl = byId('act-ordersOpenSkeleton');
+      if (!artworkEl) return;
+
+      artworkEl.style.setProperty('--vendor-brand-primary',
+        (vendor && vendor.brand_primary_color) || '#8B6B3F');
+
+      // Image fallback chain: reveal product → vendor hero → solid colour.
+      let imageUrl = '';
+      if (rawDrop && rawDrop.reveal_product_id) {
+        const product = (state.products || []).find(
+          p => String(p.id) === String(rawDrop.reveal_product_id)
+        );
+        if (product && product.image_url) imageUrl = String(product.image_url);
+      }
+      if (!imageUrl && vendor && vendor.hero_image_url) {
+        imageUrl = String(vendor.hero_image_url);
+      }
+
+      const img = byId('act-ordersOpenImage');
+      const S = 540;
+      if (img) {
+        if (imageUrl) {
+          img.onload = () => {
+            const iw = img.naturalWidth, ih = img.naturalHeight;
+            const sc = Math.max(S / iw, S / ih);
+            const w = iw * sc, h = ih * sc;
+            img.style.width  = w + 'px';
+            img.style.height = h + 'px';
+            img.style.left   = ((S - w) / 2) + 'px';
+            img.style.top    = ((S - h) / 2) + 'px';
+            img.style.display = 'block';
+            if (skeletonEl) skeletonEl.style.display = 'none';
+            if (downloadBtn) downloadBtn.disabled = false;
+          };
+          img.onerror = () => {
+            img.style.display = 'none';
+            if (skeletonEl) skeletonEl.style.display = 'none';
+            if (downloadBtn) downloadBtn.disabled = false;
+          };
+          img.crossOrigin = 'anonymous';
+          img.src = imageUrl;
+        } else {
+          img.style.display = 'none';
+          img.removeAttribute('src');
+          if (skeletonEl) skeletonEl.style.display = 'none';
+          if (downloadBtn) downloadBtn.disabled = false;
+        }
+      }
+
+      const dropNameEl = byId('act-ordersOpenDropName');
+      if (dropNameEl) {
+        dropNameEl.textContent = summary.drop_name || rawDrop.name || '';
+      }
+
+      const closingEl = byId('act-ordersOpenClosing');
+      if (closingEl) {
+        const closesAt = rawDrop.closes_at;
+        const closesTime = closesAt && !isNaN(new Date(closesAt).getTime())
+          ? fmtTime(new Date(closesAt))
+          : '';
+        closingEl.textContent = closesTime ? `Orders close at ${closesTime}` : '';
+        closingEl.style.display = closesTime ? '' : 'none';
+      }
+
+      actUpdateOrdersOpenScale();
+    }
+
+    async function actDownloadOrdersOpenCard() {
+      const artworkEl = byId('act-ordersOpenArtwork');
+      const downloadBtn = byId('act-downloadOrdersOpenBtn');
+      const skeletonEl = byId('act-ordersOpenSkeleton');
+      if (!artworkEl || !downloadBtn) return;
+
+      const vendor = state.vendor || {};
+      const rawDrop = state.rawById[state.selectedDropId] || {};
+
+      const originalText = downloadBtn.textContent;
+      const originalTransform = artworkEl.style.transform;
+      const skeletonWasVisible = skeletonEl
+        ? skeletonEl.style.display !== 'none'
+        : false;
+
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = 'Generating…';
+
+      try {
+        if (typeof window.html2canvas !== 'function') {
+          throw new Error('html2canvas not loaded');
+        }
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+
+        if (skeletonEl) skeletonEl.style.display = 'none';
+        artworkEl.style.transform = 'scale(1)';
+
+        let canvas;
+        try {
+          canvas = await window.html2canvas(artworkEl, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: null,
+            logging: false
+          });
+        } finally {
+          artworkEl.style.transform = originalTransform;
+          if (skeletonEl && skeletonWasVisible) {
+            skeletonEl.style.display = 'flex';
+          }
+        }
+
+        const blob = await new Promise((resolve, reject) => {
+          canvas.toBlob(b => {
+            if (b) resolve(b);
+            else reject(new Error('toBlob returned null'));
+          }, 'image/png', 1.0);
+        });
+
+        const vendorSlug = vendor.slug || 'vendor';
+        const dropSlug = rawDrop.slug || 'drop';
+        const filename = `${vendorSlug}-${dropSlug}-orders-open.png`;
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (err) {
+        console.error('[ordersOpenCard] download failed', err);
+      } finally {
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = originalText;
+      }
+    }
+
     function actSetupMenuCard(summary, rawDrop){
       const frame = byId("act-menuCardFrame");
       if (state.resizeObserver) { state.resizeObserver.disconnect(); state.resizeObserver = null; }
@@ -1577,16 +1829,43 @@
         touchpointKey: 'thursday_early_access'
       }));
 
-      // Card 4 — ordering open (is-vendor)
-      cards.push(messageCard({
-        typeClass: 'is-vendor',
-        label: labels[3],
-        title: 'Tell your customers ordering is live',
-        desc: 'Send this when ordering opens. WhatsApp gets 45–60% click-through versus 2–5% for email — but use whatever channel your customers are on.',
-        messageText: templates['thursday_vendor_whatsapp'],
-        channels: ['WhatsApp', 'social'],
-        touchpointKey: 'thursday_vendor_whatsapp'
-      }));
+      // Card 4 — ordering open (is-vendor) with visual asset. Rendered
+      // directly (not via messageCard) so the artwork + download button
+      // always show; only the message + channel buttons flip to a done
+      // state once one of the channels has been copied.
+      const card4Entry = getLogEntry('thursday_vendor_whatsapp');
+      const card4MessageArea = card4Entry
+        ? `<div class="act-done-state">✓ Sent · ${formatLogTime(card4Entry.timestamp)}</div>`
+        : `<div class="act-message-preview">${escapeHtml(templates['thursday_vendor_whatsapp'])}</div>
+           <div class="act-channel-row">
+             ${copyBtn('Copy for WhatsApp', 'thursday_vendor_whatsapp', 'message_copied', false)}
+             ${copyBtn('Copy for social', 'thursday_vendor_whatsapp', 'message_copied', false)}
+           </div>`;
+
+      const card4Html = `
+        <div class="act-touchpoint is-vendor${card4Entry ? ' is-done' : ''}">
+          <div class="act-day-label">${escapeHtml(labels[3])}</div>
+          <h4>Tell your customers ordering is live</h4>
+          <p>Send this when ordering opens. WhatsApp gets 45–60% click-through versus 2–5% for email — but use whatever channel your customers are on. Download the image for Instagram.</p>
+          <div class="act-actions">
+            <div class="menuCardArtworkFrame" id="act-ordersOpenFrame" style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
+              <div class="act-orders-open-artwork" id="act-ordersOpenArtwork">
+                <img class="act-orders-open-artwork__image" id="act-ordersOpenImage" alt="" crossorigin="anonymous" />
+                <div class="act-orders-open-artwork__tint" aria-hidden="true"></div>
+                <div class="act-orders-open-artwork__centre">
+                  <div class="act-orders-open-artwork__headline">Orders open</div>
+                  <div class="act-orders-open-artwork__dropname" id="act-ordersOpenDropName"></div>
+                </div>
+                <div class="act-orders-open-artwork__closing" id="act-ordersOpenClosing"></div>
+                <div class="act-orders-open-artwork__skeleton" id="act-ordersOpenSkeleton">Loading…</div>
+              </div>
+            </div>
+            <button class="act-copy-btn primary" id="act-downloadOrdersOpenBtn" type="button" data-act="download-orders-open" disabled>Download image</button>
+            ${card4MessageArea}
+          </div>
+        </div>
+      `;
+      cards.push(card4Html);
 
       // Card 5 — host link drop (is-host) — only if host present
       if (hasHost) {
@@ -1661,6 +1940,25 @@
 
       actSetupMenuCard(summary, rawDrop);
       actInitRevealFields(dropId, summary, rawDrop);
+
+      // Populate orders-open artwork (Card 4)
+      const ordersOpenFrame = byId('act-ordersOpenFrame');
+      if (state._ordersOpenObserver) {
+        // renderDropView re-runs on every copy/confirm — disconnect the
+        // stale observer first so we don't leak one per re-render.
+        state._ordersOpenObserver.disconnect();
+        state._ordersOpenObserver = null;
+      }
+      if (ordersOpenFrame) {
+        actPopulateOrdersOpenCard(summary, rawDrop, state.vendor);
+        actUpdateOrdersOpenScale();
+        if (typeof ResizeObserver === 'function') {
+          const ooObserver = new ResizeObserver(() => actUpdateOrdersOpenScale());
+          ooObserver.observe(ordersOpenFrame);
+          // Store alongside the menu card observer so showCrossDropView can clean up.
+          state._ordersOpenObserver = ooObserver;
+        }
+      }
     }
 
     // ---- View switching ----------------------------------------------
@@ -1668,6 +1966,10 @@
     function showCrossDropView(){
       state.view = 'cross';
       if (state.resizeObserver) { state.resizeObserver.disconnect(); state.resizeObserver = null; }
+      if (state._ordersOpenObserver) {
+        state._ordersOpenObserver.disconnect();
+        state._ordersOpenObserver = null;
+      }
       renderContent(sortScoped(Object.values(state.summaryById).filter(inScope)));
     }
 
@@ -1718,6 +2020,13 @@
 
       const dl = e.target.closest('[data-act="download"]');
       if (dl) { e.preventDefault(); actDownloadMenuCard(); return; }
+
+      const dlOrdersOpen = e.target.closest('[data-act="download-orders-open"]');
+      if (dlOrdersOpen) {
+        e.preventDefault();
+        actDownloadOrdersOpenCard();
+        return;
+      }
 
       const copy = e.target.closest('[data-act="copy"]');
       if (copy) {
