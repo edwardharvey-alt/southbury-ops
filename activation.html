@@ -529,23 +529,86 @@
       gap: 8px;
       align-items: center;
     }
+
+    /* Containment for the cards layered inside the page shell — prevents
+       child content (long links, message previews) from forcing the cards
+       wider than their parent and reintroducing horizontal scroll. */
+    .home-card,
+    .act-touchpoint,
+    .act-message-preview {
+      box-sizing: border-box;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    @media (max-width: 768px) {
+      .home-shell {
+        padding: 0;
+      }
+
+      .home-card {
+        border-radius: 16px;
+      }
+
+      .act-timeline {
+        padding-left: 16px;
+        border-left-width: 2px;
+      }
+
+      .act-touchpoint {
+        box-sizing: border-box;
+        max-width: 100%;
+        min-width: 0;
+      }
+
+      .act-touchpoint::before {
+        left: -24px;
+      }
+
+      .act-message-preview {
+        box-sizing: border-box;
+        max-width: 100%;
+        word-break: break-word;
+        overflow-wrap: break-word;
+      }
+
+      .act-actions {
+        max-width: 100%;
+      }
+
+      .act-copy-btn {
+        max-width: 100%;
+        white-space: normal;
+        height: auto;
+        min-height: 44px;
+        padding: 8px 14px;
+        text-align: center;
+      }
+
+      .act-drop-title {
+        font-size: 22px;
+      }
+
+      .menuCardArtworkFrame {
+        max-width: 100% !important;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="home-shell">
-
-      <div class="card headerBar">
-        <div class="brand">
-          <a class="brandMark" href="./home.html" aria-label="Hearth home">H</a>
-          <div>
-            <div class="brandTitle">Hearth</div>
-            <div class="brandSubtitle" id="actHeaderVendorSub">Activation</div>
-          </div>
+    <div class="card headerBar">
+      <div class="brand">
+        <a class="brandMark" href="./home.html" aria-label="Hearth home">H</a>
+        <div>
+          <div class="brandTitle">Hearth</div>
+          <div class="brandSubtitle" id="actHeaderVendorSub">Activation</div>
         </div>
-        <nav class="nav" id="operatorNav" aria-label="Primary"></nav>
-        <script>HearthNav.renderNav('operatorNav', 'activation.html', { dotSlash: true });</script>
       </div>
+      <nav class="nav" id="operatorNav" aria-label="Primary"></nav>
+      <script>HearthNav.renderNav('operatorNav', 'activation.html', { dotSlash: true });</script>
+    </div>
+    <div class="home-shell">
 
       <section class="home-card home-pad-lg">
         <h2 class="home-sectionTitle">Activation</h2>
