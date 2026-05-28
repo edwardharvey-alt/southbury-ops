@@ -2255,7 +2255,12 @@
       }
 
       // Card 3 — early access email (is-auto), locked when no prior customers
-      const card3Locked = orderCount === 0;
+      // Card 3 locks only when the vendor has no previous customers at all —
+      // not based on this drop's order count. Sum order_count across all
+      // loaded summaries as a proxy for total customer history.
+      const totalOrdersAcrossDrops = Object.values(state.summaryById)
+        .reduce((sum, s) => sum + Number(s.order_count || 0), 0);
+      const card3Locked = totalOrdersAcrossDrops === 0;
       cards.push(emailCard({
         typeClass: 'is-auto',
         label: labels[2],
@@ -2263,7 +2268,7 @@
         desc: 'Previous customers get access before the public link goes live. Review and confirm the email below.',
         subject: state.emailDrafts['thursday_early_access'].subject,
         body: state.emailDrafts['thursday_early_access'].body,
-        note: card3Locked ? null : `Sends to ${orderCount} previous customer${orderCount === 1 ? '' : 's'}`,
+        note: card3Locked ? null : `Sends to customers who have previously ordered from you.`,
         locked: card3Locked,
         lockedNote: 'No previous customers yet — this unlocks once someone has ordered from you.',
         touchpointKey: 'thursday_early_access'
