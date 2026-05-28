@@ -593,6 +593,39 @@
         max-width: 100% !important;
       }
     }
+
+    /* Ported from service-board.html (lines 135–162) — keeps the operator
+       nav as a single horizontal scroll strip on small screens instead of
+       wrapping to multiple rows under hearth.css's defaults. */
+    @media (max-width: 768px) {
+
+      /* --- 1. Header bar: stack brand and nav vertically --- */
+      .headerBar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 14px;
+      }
+
+      /* --- 2. Navigation: horizontally scrollable, no wrapping --- */
+      .nav {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+        flex-wrap: nowrap;
+        gap: 2px;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+        justify-content: flex-start;
+      }
+      .nav::-webkit-scrollbar { display: none; }
+      .nav a {
+        flex-shrink: 0;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+      }
+    }
   </style>
 </head>
 <body>
