@@ -6201,7 +6201,9 @@
       byId("goToActivationBtn").addEventListener("click", function (e) {
         e.preventDefault();
         if (!state.selectedDropId) return;
-        const href = HearthNav.withVendor('./activation.html') + '&drop=' + encodeURIComponent(state.selectedDropId);
+        const base = HearthNav.withVendor('./activation.html');
+        const sep = base.includes('?') ? '&' : '?';
+        const href = base + sep + 'drop=' + encodeURIComponent(state.selectedDropId);
         window.location.href = href;
       });
 
