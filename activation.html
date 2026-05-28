@@ -459,31 +459,6 @@
       align-items: center;
     }
 
-    .act-email-preview {
-      background: rgba(139,107,63,0.04);
-      border: 1px solid var(--home-border);
-      border-radius: 10px;
-      padding: 12px 14px;
-      margin-bottom: 10px;
-    }
-
-    .act-email-subject {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--home-text);
-      margin-bottom: 4px;
-    }
-
-    .act-email-body-preview {
-      font-size: 13px;
-      color: var(--home-muted);
-      line-height: 1.55;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
     .act-email-expanded {
       display: flex;
       flex-direction: column;
@@ -903,6 +878,86 @@
       font-size: 14px;
       font-weight: 500;
       letter-spacing: 0.02em;
+    }
+
+    /* Styled email preview for Cards 3 and 9 — shows how the email
+       will actually appear to customers (branded header, subject, body,
+       sign-off). Always visible; the edit-state fields layer below. */
+    .act-email-mock {
+      border: 1px solid var(--home-border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 10px;
+      background: #fff;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .act-email-mock__header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--home-border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(139,107,63,0.04);
+    }
+
+    .act-email-mock__brand-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: #fff;
+      flex-shrink: 0;
+      background: var(--home-accent);
+    }
+
+    .act-email-mock__from {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--home-text);
+    }
+
+    .act-email-mock__from-address {
+      font-size: 11px;
+      color: var(--home-muted);
+      margin-top: 1px;
+    }
+
+    .act-email-mock__body {
+      padding: 14px 16px;
+    }
+
+    .act-email-mock__subject {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--home-text);
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    .act-email-mock__content {
+      font-size: 13px;
+      color: var(--home-text);
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .act-email-mock__divider {
+      border: none;
+      border-top: 1px solid var(--home-border);
+      margin: 12px 0;
+    }
+
+    .act-email-mock__footer {
+      font-size: 11px;
+      color: var(--home-muted);
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -1927,80 +1982,98 @@
     // touchpointKey is null.
     function emailCard(opts) {
       const entry = getLogEntry(opts.touchpointKey);
+      const tp = opts.touchpointKey;
+
+      // Preserve any edits the vendor has made
+      if (!state.emailDrafts[tp]) {
+        state.emailDrafts[tp] = { subject: opts.subject, body: opts.body };
+      }
+      const draft = state.emailDrafts[tp];
+      const isExpanded = !!state.expandedEmailCards[tp];
+
+      // Brand initial — first letter of vendor display name
+      const vendorName = (state.vendor && (state.vendor.display_name || state.vendor.name)) || 'Hearth';
+      const brandInitial = vendorName.charAt(0).toUpperCase();
+      const brandColour = (state.vendor && state.vendor.brand_primary_color) || '#8B6B3F';
+
+      // Styled email mock — always visible, shows current draft content
+      const emailMockHtml = `
+        <div class="act-email-mock">
+          <div class="act-email-mock__header">
+            <div class="act-email-mock__brand-dot"
+              style="background:${escapeHtml(brandColour)};">${escapeHtml(brandInitial)}</div>
+            <div>
+              <div class="act-email-mock__from">${escapeHtml(vendorName)}</div>
+              <div class="act-email-mock__from-address">via Hearth · to your customers</div>
+            </div>
+          </div>
+          <div class="act-email-mock__body">
+            <div class="act-email-mock__subject">${escapeHtml(draft.subject)}</div>
+            <div class="act-email-mock__content">${escapeHtml(draft.body)}</div>
+            <hr class="act-email-mock__divider">
+            <div class="act-email-mock__footer">${escapeHtml(vendorName)}</div>
+          </div>
+        </div>
+      `;
+
+      let actionHtml;
 
       if (entry) {
-        return tpCard({
-          typeClass: opts.typeClass,
-          label: opts.label,
-          title: opts.title,
-          desc: opts.desc,
-          actionHtml: `
-            <div class="act-email-preview">
-              <div class="act-email-subject">${escapeHtml(opts.subject)}</div>
-            </div>
-            <div class="act-done-state">✓ Confirmed · ${formatLogTime(entry.timestamp)}</div>
-          `,
-          touchpointKey: null
-        });
-      }
-
-      if (opts.locked) {
-        return tpCard({
-          typeClass: opts.typeClass,
-          label: opts.label,
-          title: opts.title,
-          desc: opts.desc,
-          locked: true,
-          lockedNote: opts.lockedNote,
-          touchpointKey: null
-        });
-      }
-
-      const isExpanded = !!state.expandedEmailCards[opts.touchpointKey];
-
-      if (isExpanded) {
-        const actionHtml = `
+        // Done state — email mock visible read-only, confirm button replaced
+        actionHtml = `
+          ${emailMockHtml}
+          <div class="act-done-state">✓ Confirmed · ${formatLogTime(entry.timestamp)}</div>
+        `;
+      } else if (opts.locked) {
+        // Locked state — no email mock, just the trigger note
+        actionHtml = `<div class="act-locked-note">${escapeHtml(opts.lockedNote || '')}</div>`;
+      } else if (isExpanded) {
+        // Edit state — email mock still visible above the fields
+        // so the vendor can see the live preview as they type
+        actionHtml = `
+          ${emailMockHtml}
           <div class="act-email-expanded">
             <div class="act-email-field">
-              <label>Subject</label>
-              <input type="text" class="act-email-subject-input" data-email-key="${opts.touchpointKey}" value="${escapeHtml(opts.subject)}" />
+              <label class="act-field-label">Subject</label>
+              <input type="text" class="act-email-subject-input"
+                data-email-key="${escapeHtml(tp)}"
+                value="${escapeHtml(draft.subject)}" />
             </div>
             <div class="act-email-field">
-              <label>Message</label>
-              <textarea class="act-email-body-input" data-email-key="${opts.touchpointKey}" rows="6">${escapeHtml(opts.body)}</textarea>
+              <label class="act-field-label">Message</label>
+              <textarea class="act-email-body-input"
+                data-email-key="${escapeHtml(tp)}"
+                rows="7">${escapeHtml(draft.body)}</textarea>
             </div>
           </div>
           <div class="act-confirm-row">
-            <button class="act-copy-btn primary" type="button" data-act="confirm-email" data-touchpoint="${opts.touchpointKey}">Confirm send</button>
-            <button class="act-copy-btn" type="button" data-act="collapse-email" data-touchpoint="${opts.touchpointKey}">Cancel</button>
+            <button class="act-copy-btn primary" type="button"
+              data-act="confirm-email"
+              data-touchpoint="${escapeHtml(tp)}">Confirm send</button>
+            <button class="act-copy-btn" type="button"
+              data-act="collapse-email"
+              data-touchpoint="${escapeHtml(tp)}">Done editing</button>
           </div>
           ${opts.note ? `<div class="act-note">${escapeHtml(opts.note)}</div>` : ''}
         `;
-        return tpCard({
-          typeClass: opts.typeClass,
-          label: opts.label,
-          title: opts.title,
-          desc: opts.desc,
-          actionHtml,
-          touchpointKey: null
-        });
+      } else {
+        // Collapsed state — email mock + Edit & confirm button
+        actionHtml = `
+          ${emailMockHtml}
+          <button class="act-copy-btn primary" type="button"
+            data-act="expand-email"
+            data-touchpoint="${escapeHtml(tp)}">Edit & confirm</button>
+          ${opts.note ? `<div class="act-note">${escapeHtml(opts.note)}</div>` : ''}
+        `;
       }
 
-      const actionHtml = `
-        <div class="act-email-preview">
-          <div class="act-email-subject">${escapeHtml(opts.subject)}</div>
-          <div class="act-email-body-preview">${escapeHtml(opts.body)}</div>
-        </div>
-        <button class="act-copy-btn primary" type="button" data-act="expand-email" data-touchpoint="${opts.touchpointKey}">Edit & confirm</button>
-        ${opts.note ? `<div class="act-note">${escapeHtml(opts.note)}</div>` : ''}
-      `;
       return tpCard({
         typeClass: opts.typeClass,
         label: opts.label,
         title: opts.title,
         desc: opts.desc,
         actionHtml,
-        touchpointKey: null
+        touchpointKey: null  // done state handled inline above
       });
     }
 
@@ -2608,6 +2681,35 @@
         }
         state.expandedEmailCards[tp] = false;
         actLog(tp, 'confirmed');
+        return;
+      }
+    });
+
+    // Live preview wiring for the email mock — patches the mock DOM
+    // directly as the vendor types so the preview stays in sync without
+    // any re-render flicker.
+    byId('activationContent').addEventListener('input', function (e) {
+      const subjectInput = e.target.closest('.act-email-subject-input');
+      if (subjectInput) {
+        const tp = subjectInput.dataset.emailKey;
+        if (tp && state.emailDrafts[tp]) {
+          state.emailDrafts[tp].subject = subjectInput.value;
+          const mockSubject = subjectInput.closest('.act-touchpoint')
+            ?.querySelector('.act-email-mock__subject');
+          if (mockSubject) mockSubject.textContent = subjectInput.value;
+        }
+        return;
+      }
+
+      const bodyInput = e.target.closest('.act-email-body-input');
+      if (bodyInput) {
+        const tp = bodyInput.dataset.emailKey;
+        if (tp && state.emailDrafts[tp]) {
+          state.emailDrafts[tp].body = bodyInput.value;
+          const mockContent = bodyInput.closest('.act-touchpoint')
+            ?.querySelector('.act-email-mock__content');
+          if (mockContent) mockContent.textContent = bodyInput.value;
+        }
         return;
       }
     });
