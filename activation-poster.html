@@ -93,55 +93,30 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 20mm 18mm;
+      padding: 14mm 16mm 12mm;
       min-height: 297mm;
     }
 
-    .poster-topbar {
-      display: flex;
-      align-items: flex-start;
-      margin-bottom: 16mm;
-    }
-
-    .poster-hearth-mark {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      flex-shrink: 0;
-    }
-
-    .poster-hearth-mark__text {
-      font-family: 'Figtree', system-ui, sans-serif;
-      font-size: 13px;
-      font-weight: 600;
-      color: #3D3530;
-      letter-spacing: -0.01em;
-    }
-
-    .poster-hearth-mark__dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #C1440E;
+    .poster-top {
       flex-shrink: 0;
     }
 
     .poster-vendor-name {
       font-family: 'Cormorant Garamond', Georgia, serif;
-      font-weight: 500;
-      font-size: 38pt;
-      line-height: 1.05;
+      font-weight: 600;
+      font-size: 52pt;
+      line-height: 1.0;
       color: #1F2937;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
+      margin-bottom: 3mm;
     }
 
     .poster-drop-name {
       font-family: 'Figtree', system-ui, sans-serif;
       font-weight: 500;
-      font-size: 13pt;
-      color: #6B5D4F;
-      margin-top: 3mm;
-      letter-spacing: 0.01em;
+      font-size: 11pt;
+      color: #8B7355;
+      letter-spacing: 0.02em;
     }
 
     .poster-reveal-line {
@@ -150,80 +125,104 @@
       font-weight: 400;
       font-size: 11pt;
       color: #8B6B3F;
-      margin-top: 3mm;
+      margin-top: 2mm;
       letter-spacing: 0.01em;
     }
 
     .poster-rule {
       border: none;
-      border-top: 1.5px solid #C4B49A;
-      margin: 10mm 0;
+      border-top: 1px solid #C4B49A;
+      margin: 8mm 0;
+      flex-shrink: 0;
     }
 
     .poster-cta {
       font-family: 'Cormorant Garamond', Georgia, serif;
       font-weight: 500;
-      font-size: 28pt;
+      font-size: 36pt;
       color: #1F2937;
-      line-height: 1.15;
-      letter-spacing: -0.005em;
-      margin-bottom: 10mm;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      flex-shrink: 0;
+      margin-bottom: 8mm;
     }
 
-    .poster-qr-section {
+    /* QR action zone — warm tinted box, the visual centre of the poster */
+    .poster-qr-zone {
+      background: #F3EDE3;
+      border-radius: 8px;
+      padding: 10mm 8mm;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 5mm;
+      gap: 4mm;
       flex: 1;
       justify-content: center;
-      padding: 8mm 0;
-    }
-
-    #posterQr {
-      /* QR library renders a canvas or img inside this div */
+      margin-bottom: 8mm;
     }
 
     #posterQr canvas,
     #posterQr img {
-      width: 54mm !important;
-      height: 54mm !important;
+      width: 62mm !important;
+      height: 62mm !important;
       display: block;
     }
 
     .poster-scan-label {
       font-family: 'Figtree', system-ui, sans-serif;
-      font-weight: 700;
-      font-size: 11pt;
-      letter-spacing: 0.06em;
+      font-weight: 800;
+      font-size: 10pt;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       color: #1F2937;
     }
 
     .poster-url {
       font-family: 'Figtree', system-ui, sans-serif;
-      font-size: 9pt;
-      color: #6B5D4F;
+      font-size: 8pt;
+      color: #8B7355;
       word-break: break-all;
       text-align: center;
-      max-width: 80mm;
-      line-height: 1.4;
+      max-width: 70mm;
+      line-height: 1.5;
     }
 
     .poster-footer {
-      margin-top: auto;
-      padding-top: 10mm;
+      flex-shrink: 0;
       display: flex;
       justify-content: space-between;
-      align-items: flex-end;
+      align-items: center;
     }
 
     .poster-closes {
       font-family: 'Figtree', system-ui, sans-serif;
-      font-size: 9pt;
+      font-size: 8pt;
       font-weight: 500;
       color: #9B8B7A;
       letter-spacing: 0.02em;
+    }
+
+    .poster-hearth-mark {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .poster-hearth-mark__text {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      color: #C4B49A;
+      letter-spacing: 0.04em;
+    }
+
+    .poster-hearth-mark__dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #C4B49A;
+      flex-shrink: 0;
     }
 
     /* ---- Print styles — everything except the poster-wrap disappears ---- */
@@ -373,21 +372,20 @@
 
       wrap.innerHTML = `
         <div class="poster-inner">
-          <div class="poster-topbar">
-            <div>
-              <div class="poster-vendor-name">${escapeHtml(vendor.display_name || 'Hearth')}</div>
-              <div class="poster-drop-name">${escapeHtml(drop.name || '')}</div>
-              ${drop.reveal_line
-                ? `<div class="poster-reveal-line">${escapeHtml(drop.reveal_line)}</div>`
-                : ''}
-            </div>
+
+          <div class="poster-top">
+            <div class="poster-vendor-name">${escapeHtml(vendor.display_name || 'Hearth')}</div>
+            <div class="poster-drop-name">${escapeHtml(drop.name || '')}</div>
+            ${drop.reveal_line
+              ? `<div class="poster-reveal-line">${escapeHtml(drop.reveal_line)}</div>`
+              : ''}
           </div>
 
           <hr class="poster-rule">
 
-          <div class="poster-cta">Orders are now open.</div>
+          <div class="poster-cta">Orders are<br>now open.</div>
 
-          <div class="poster-qr-section">
+          <div class="poster-qr-zone">
             <div id="posterQr"></div>
             <div class="poster-scan-label">Scan to order</div>
             <div class="poster-url">${escapeHtml(orderingUrl)}</div>
@@ -397,11 +395,12 @@
             <div class="poster-closes">
               ${closesTime ? `Orders close at ${escapeHtml(closesTime)}` : ''}
             </div>
-            <div class="poster-hearth-mark poster-hearth-mark--footer">
-              <span class="poster-hearth-mark__text" style="font-size:10px; color:#C4B49A;">Hearth</span>
-              <span class="poster-hearth-mark__dot" style="width:6px; height:6px; background:#C4B49A;"></span>
+            <div class="poster-hearth-mark">
+              <span class="poster-hearth-mark__text">Hearth</span>
+              <span class="poster-hearth-mark__dot"></span>
             </div>
           </div>
+
         </div>
       `;
 
