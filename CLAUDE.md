@@ -1388,6 +1388,26 @@ on top of the coding rules above.
     address on the Service Board must read from `state.dropOrders`, not
     the summary view. (Learned from T-sb-4, 2026-05-26.)
 
+63. **CSS `zoom` (not `transform: scale`) is the correct approach for
+    scaling a fixed-dimension HTML element to fit a smaller viewport
+    while preserving layout footprint.** `transform: scale` shrinks the
+    rendered element but leaves its original footprint in the layout
+    (leaving overflow/scroll gaps), whereas `zoom` rescales the box
+    itself so the layout footprint shrinks with it. Used in
+    activation-poster.html. (Learned from the Activation build,
+    2026-05-29.)
+
+64. **Activation Card 2's touchpoint key is `'tuesday_host'`, not
+    `'tuesday_host_whatsapp'`.** Confirmed from source. Code that logs
+    or reads Card 2 progress must use the bare `'tuesday_host'` key.
+    (Learned from the Activation build, 2026-05-29.)
+
+65. **Activation Card 7 (order ready) is a passive auto-card with no
+    touchpoint key.** It never logs and must be excluded from the
+    progress-countable set — `getDropProfile()` keeps it in the card
+    list but `getDropProgress()` does not count it. (Learned from the
+    Activation build, 2026-05-29.)
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -2027,6 +2047,60 @@ for quick chronological recall across the whole platform.
   customers. Admin-aware routing also landed in auth-callback.html —
   admins and vendors share login.html as the platform's single entry
   point. Pre-launch sequence: four items complete, dry-run next.
+
+- 2026-05-29: Activation surface shipped. New top-level operator
+  surface for vendor-facing drop activation and communication.
+
+  - Activation surface (activation.html) complete — top-level nav item
+    between Service Board and Insights. Two views: cross-drop landing
+    (drop cards with progress bar, next action, profile-filtered step
+    count) and per-drop timeline (9 touchpoints, profile-filtered by
+    drop type and host presence).
+
+  - activation-poster.html — standalone print page accessed via Card 4
+    "Print poster" button. Accepts ?drop=<slug>. Uses CSS zoom (not
+    transform) for mobile scaling. Auto-triggers window.print() on load
+    is not implemented — vendor prints manually via the "Print poster"
+    button.
+
+  - Activation visual asset pattern — three downloadable 540×540 PNG
+    assets via html2canvas at scale:2: menu card (Card 1), orders-open
+    (Card 4), capacity signal (Card 6). All use same image fallback
+    chain: reveal product photo → vendor hero → solid brand colour.
+    ResizeObserver pattern with disconnect-first guard on all three
+    frames.
+
+  - Activation message pattern — Cards 2, 4, 5 use state.messageDrafts
+    and state.expandedMessageCards (three-state: collapsed preview /
+    edit textarea / done). Both reset on drop switch in showDropView().
+    Textarea values flushed into messageDrafts at top of
+    renderDropView() to prevent loss on implicit re-renders.
+
+  - Activation email pattern — Cards 3 and 9 use emailCard() with
+    styled .act-email-mock showing vendor brand dot, subject, body, and
+    sign-off. Live preview updates via delegated input listener on
+    #activationContent — patches mock DOM directly without re-render.
+    state.emailDrafts persists edits.
+
+  - Drop profile filtering — getDropProfile(summary) returns {cards,
+    optional} based on host_name (has host / no host) and drop_type
+    (event = private, everything else = public). Four profiles:
+    hosted+public (all 9), no-host+public (1,3,4,6,7,8,9),
+    hosted+private (1 optional,2,5,7,8,9), no-host+private (1
+    optional,7,8,9). Card 7 excluded from progress count (passive
+    auto-card, never logs). actLog() stamps dropId:
+    state.selectedDropId.
+
+  - Activation progress — getDropProgress(summary) returns {completed,
+    total, nextTitle} from state.activationLog filtered by dropId.
+    Progress bar and next action line shown on cross-drop landing page
+    cards. Progress is in-memory only — resets on page reload
+    (consistent with existing log behaviour).
+
+  - Reveal fields (reveal_line, reveal_product_id) owned by Activation
+    Card 1. Drop Studio no longer reads or writes these fields.
+    getDropPayload() in drop-manager.html does not include reveal_line
+    or reveal_product_id.
 
 ## Future architecture
 

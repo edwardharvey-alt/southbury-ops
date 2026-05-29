@@ -5400,3 +5400,48 @@ Third: T9-1, T9-4, T9-7, T9-8 — need real data to be credible,
 build once Southbury Farm has meaningful drop history and Healthy
 Habits is live.
 
+### Activation surface (T-ACT)
+
+Follow-on tickets surfaced by the Activation surface build (shipped
+2026-05-29 — see CLAUDE.md "Recent updates" and operational learnings
+#63–#65). All open.
+
+#### T-ACT-1 — AI-personalised activation message copy
+
+Replace generated template text in Cards 2, 4, 5 with vendor/drop-aware
+copy via Claude API (Haiku 4.5). Input: vendor name, drop name, drop
+context (host, date, capacity, closes_at). Output: WhatsApp message,
+social caption. No AI feature commits anything without explicit vendor
+approval — edit state allows vendor to review and modify before
+copying. Gated on real drop history from Healthy Habits Cafe.
+
+#### T-ACT-2 — Cross-drop today's actions summary strip
+
+Aggregate due touchpoints across all live/upcoming drops on the
+Activation landing page. Show what needs attention today without
+clicking into individual drops. Deferred from original Activation build
+session.
+
+#### T-ACT-3 — Card 3 actual customer count
+
+Fetch count of customer_relationships where owner_id = vendor_id and
+consent_status = 'granted' and customer has email. Display as "Sends to
+X previous customers" on Card 3. Currently shows generic text. Requires
+a lightweight Edge Function call or addition to get-home-dashboard
+payload.
+
+#### T-ACT-4 — Activation progress persistence
+
+state.activationLog is in-memory only — resets on page reload. Persist
+log to Supabase (new table or JSONB column on drops) so progress
+survives sessions. Design carefully: log should be vendor-scoped and
+drop-scoped. Consider whether confirmed email sends (Cards 3, 9) should
+write back to a communications log rather than a UI-state log.
+
+#### T-ACT-5 — Drop Studio Review pane polish
+
+Review pane layout needs tightening now the reveal post section is
+removed. Currently single-column with generous whitespace. Reduce
+padding, tighten section gaps, make "Go to Activation →" button more
+prominent as the primary post-publish action.
+
