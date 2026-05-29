@@ -100,7 +100,6 @@
 
     .poster-topbar {
       display: flex;
-      justify-content: space-between;
       align-items: flex-start;
       margin-bottom: 16mm;
     }
@@ -271,22 +270,23 @@
       const scaleWrap = wrap && wrap.parentElement;
       if (!wrap || !scaleWrap) return;
 
-      // A4 at 96dpi: 210mm × 297mm = 794px × 1123px
       const A4_W = 794;
       const A4_H = 1123;
 
-      const availWidth = Math.min(window.innerWidth - 32, 794);
-      const scale = availWidth / A4_W;
+      const availWidth = window.innerWidth - 32;
+      const scale = Math.min(1, availWidth / A4_W);
 
       wrap.style.transform = `scale(${scale})`;
-      wrap.style.transformOrigin = 'top left';
+      wrap.style.transformOrigin = 'top center';
       wrap.style.width = A4_W + 'px';
       wrap.style.height = A4_H + 'px';
       wrap.style.minHeight = 'unset';
 
-      // Size the container to match the scaled poster
-      scaleWrap.style.width = (A4_W * scale) + 'px';
+      scaleWrap.style.width = '100%';
       scaleWrap.style.height = (A4_H * scale) + 'px';
+      scaleWrap.style.display = 'flex';
+      scaleWrap.style.justifyContent = 'center';
+      scaleWrap.style.overflow = 'hidden';
     }
 
     window.addEventListener('resize', scalePoster);
@@ -369,10 +369,6 @@
             <div>
               <div class="poster-vendor-name">${escapeHtml(vendor.display_name || 'Hearth')}</div>
               <div class="poster-drop-name">${escapeHtml(drop.name || '')}</div>
-            </div>
-            <div class="poster-hearth-mark">
-              <span class="poster-hearth-mark__text">Hearth</span>
-              <span class="poster-hearth-mark__dot"></span>
             </div>
           </div>
 
