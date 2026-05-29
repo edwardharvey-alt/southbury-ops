@@ -57,6 +57,13 @@
       border: 1px solid rgba(0,0,0,0.12);
     }
 
+    .poster-scale-wrap {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      overflow-x: hidden;
+    }
+
     .poster-wrap {
       width: 210mm;
       min-height: 297mm;
@@ -67,6 +74,14 @@
       flex-direction: column;
       position: relative;
       overflow: hidden;
+      transform-origin: top center;
+    }
+
+    @media (max-width: 900px) {
+      .poster-wrap {
+        transform: scale(var(--poster-scale, 1));
+        margin-bottom: calc((297mm * var(--poster-scale, 1)) - 297mm);
+      }
     }
 
     /* Loading + error states */
@@ -98,13 +113,26 @@
     }
 
     .poster-hearth-mark {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .poster-hearth-mark__text {
       font-family: 'Figtree', system-ui, sans-serif;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: #8B6B3F;
-      opacity: 0.7;
+      font-size: 13px;
+      font-weight: 600;
+      color: #3D3530;
+      letter-spacing: -0.01em;
+    }
+
+    .poster-hearth-mark__dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #C1440E;
+      flex-shrink: 0;
     }
 
     .poster-vendor-name {
@@ -197,15 +225,6 @@
       letter-spacing: 0.02em;
     }
 
-    .poster-footer-hearth {
-      font-family: 'Figtree', system-ui, sans-serif;
-      font-size: 8pt;
-      font-weight: 800;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: #C4B49A;
-    }
-
     /* ---- Print styles — everything except the poster-wrap disappears ---- */
     @media print {
       body {
@@ -218,7 +237,13 @@
         display: none !important;
       }
 
+      .poster-scale-wrap {
+        display: block;
+        width: 100%;
+      }
+
       .poster-wrap {
+        transform: none !important;
         width: 100%;
         min-height: 100vh;
         box-shadow: none;
@@ -239,12 +264,30 @@
     <a class="btn btn-ghost" id="backBtn" href="activation.html">← Back to Activation</a>
   </div>
 
-  <div class="poster-wrap" id="posterWrap">
-    <div class="poster-state" id="posterState">Loading…</div>
+  <div class="poster-scale-wrap">
+    <div class="poster-wrap" id="posterWrap">
+      <div class="poster-state" id="posterState">Loading…</div>
+    </div>
   </div>
 
   <script>
     function byId(id) { return document.getElementById(id); }
+
+    function scalePoster() {
+      const wrap = byId('posterWrap');
+      if (!wrap) return;
+      const availWidth = window.innerWidth - 32; // 16px padding each side
+      const posterMm = 210;
+      const posterPx = posterMm * 3.7795; // mm to px at 96dpi
+      const scale = Math.min(1, availWidth / posterPx);
+      wrap.style.setProperty('--poster-scale', scale);
+      // Collapse the visual height so the page doesn't scroll past the scaled poster
+      const scaledHeight = 297 * 3.7795 * scale;
+      wrap.parentElement.style.height = scaledHeight + 'px';
+    }
+
+    window.addEventListener('resize', scalePoster);
+    // Call after render too — hooked in renderPoster()
 
     function fmtTime(date) {
       return date.toLocaleTimeString('en-GB', {
@@ -324,7 +367,10 @@
               <div class="poster-vendor-name">${escapeHtml(vendor.display_name || 'Hearth')}</div>
               <div class="poster-drop-name">${escapeHtml(drop.name || '')}</div>
             </div>
-            <div class="poster-hearth-mark">Hearth</div>
+            <div class="poster-hearth-mark">
+              <span class="poster-hearth-mark__text">Hearth</span>
+              <span class="poster-hearth-mark__dot"></span>
+            </div>
           </div>
 
           <hr class="poster-rule">
@@ -341,7 +387,10 @@
             <div class="poster-closes">
               ${closesTime ? `Orders close at ${escapeHtml(closesTime)}` : ''}
             </div>
-            <div class="poster-footer-hearth">Hearth</div>
+            <div class="poster-hearth-mark poster-hearth-mark--footer">
+              <span class="poster-hearth-mark__text" style="font-size:10px; color:#C4B49A;">Hearth</span>
+              <span class="poster-hearth-mark__dot" style="width:6px; height:6px; background:#C4B49A;"></span>
+            </div>
           </div>
         </div>
       `;
@@ -355,6 +404,8 @@
         colorLight: '#FAF8F4',
         correctLevel: QRCode.CorrectLevel.M
       });
+
+      scalePoster();
     }
 
     function escapeHtml(str) {
