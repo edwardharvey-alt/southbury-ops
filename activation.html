@@ -2351,6 +2351,11 @@
               </div>
             </div>
             <button class="act-copy-btn primary" id="act-downloadOrdersOpenBtn" type="button" data-act="download-orders-open" disabled>Download image</button>
+            <a class="act-copy-btn"
+              id="act-posterBtn"
+              href="#"
+              data-act="open-poster"
+              target="_blank">Print poster</a>
             ${card4MessageArea}
           </div>
         </div>
@@ -2578,6 +2583,19 @@
       if (dlOrdersOpen) {
         e.preventDefault();
         actDownloadOrdersOpenCard();
+        return;
+      }
+
+      const openPoster = e.target.closest('[data-act="open-poster"]');
+      if (openPoster) {
+        e.preventDefault();
+        const rawDrop = state.rawById[state.selectedDropId];
+        if (rawDrop && rawDrop.slug) {
+          window.open(
+            `./activation-poster.html?drop=${encodeURIComponent(rawDrop.slug)}`,
+            '_blank'
+          );
+        }
         return;
       }
 
