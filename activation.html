@@ -959,6 +959,47 @@
       color: var(--home-muted);
       margin-top: 10px;
     }
+
+    .act-progress-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .act-progress-bar {
+      flex: 1;
+      height: 4px;
+      background: var(--home-border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .act-progress-fill {
+      height: 100%;
+      background: #8B6B3F;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    .act-progress-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--home-muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .act-next-action {
+      font-size: 12px;
+      color: var(--home-muted);
+      margin-top: 5px;
+    }
+
+    .act-next-action.act-next-complete {
+      color: #4B7A52;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -1136,6 +1177,25 @@
       const sbLink = isLive
         ? `<a class="home-button-secondary" href="${HearthNav.withVendor('./service-board.html')}">Open Service Board</a>`
         : '';
+
+      const progress = getDropProgress(s);
+      const progressPct = progress.total > 0
+        ? Math.round((progress.completed / progress.total) * 100)
+        : 0;
+      const progressLine = progress.total > 0
+        ? `<div class="act-progress-row">
+             <div class="act-progress-bar">
+               <div class="act-progress-fill" style="width:${progressPct}%"></div>
+             </div>
+             <span class="act-progress-label">${progress.completed} of ${progress.total}</span>
+           </div>`
+        : '';
+      const nextLine = progress.nextTitle && progress.completed < progress.total
+        ? `<div class="act-next-action">Next: ${escapeHtml(progress.nextTitle)}</div>`
+        : progress.completed === progress.total && progress.total > 0
+          ? `<div class="act-next-action act-next-complete">All steps complete</div>`
+          : '';
+
       return `
         <article class="home-work">
           <div class="home-workTop">
@@ -1149,6 +1209,7 @@
             ${escapeHtml(fmtDateTime(s.delivery_start, s.delivery_end))}<br>
             ${escapeHtml(capacityLine(s))}
           </div>
+          ${progressLine}${nextLine}
           <div class="home-workActions">
             <a class="home-button" href="#" data-drop-id="${escapeHtml(s.drop_id)}">View activation</a>
             ${sbLink}
@@ -1226,6 +1287,83 @@
       ];
     }
 
+    // Returns the set of touchpoint card numbers relevant for this drop,
+    // based on two axes: host present / absent, public / private (event).
+    // optionalCards are shown but don't block progress completion and are
+    // marked "(optional)" in their title.
+    function getDropProfile(summary) {
+      const hasHost = !!summary.host_name;
+      const isPrivate = summary.drop_type === 'event';
+
+      if (!isPrivate && hasHost)  return { cards: [1,2,3,4,5,6,7,8,9], optional: [] };
+      if (!isPrivate && !hasHost) return { cards: [1,3,4,6,7,8,9],     optional: [] };
+      if (isPrivate  && hasHost)  return { cards: [1,2,5,7,8,9],       optional: [1] };
+      /* isPrivate && !hasHost */  return { cards: [1,7,8,9],           optional: [1] };
+    }
+
+    // Returns the activation log entries for a specific drop from
+    // state.activationLog. The log entries have a dropId field stamped
+    // when actLog() is called.
+    function getDropLog(dropId) {
+      return (state.activationLog || []).filter(e => e.dropId === dropId);
+    }
+
+    // Returns progress for a drop: { completed, total, nextTitle }
+    function getDropProgress(summary) {
+      const profile = getDropProfile(summary);
+      const dropId = summary.drop_id;
+      const log = getDropLog(dropId);
+
+      // Map touchpoint card numbers to the actual logged touchpoint keys
+      // (verified against the actLog() call sites in renderDropView — the
+      // keys here are the ones the code really stamps, not the day-named
+      // variants). Card 7 is a passive auto-card that never logs, so it has
+      // no key and is excluded from counting below.
+      const cardKeyMap = {
+        1: 'monday_reveal',
+        2: 'tuesday_host',
+        3: 'thursday_early_access',
+        4: 'thursday_vendor_whatsapp',
+        5: 'thursday_host_link',
+        6: 'friday_capacity',
+        7: null,
+        8: 'friday_post_drop',
+        9: 'saturday_thankyou'
+      };
+
+      const cardTitleMap = {
+        1: 'Share reveal post',
+        2: 'Send host WhatsApp',
+        3: 'Send early access email',
+        4: 'Tell customers ordering is live',
+        5: 'Send host ordering link',
+        6: 'Share capacity signal',
+        7: 'Order ready notifications',
+        8: 'Post drop content',
+        9: 'Send thank-you email'
+      };
+
+      const loggedKeys = new Set(log.map(e => e.touchpoint));
+
+      // Only count non-optional cards that actually have a loggable key
+      // toward progress. Card 7 (key null) is passive and never completes,
+      // so excluding it keeps 100% / "All steps complete" reachable.
+      const countableCards = profile.cards.filter(
+        n => !profile.optional.includes(n) && cardKeyMap[n]
+      );
+      const completed = countableCards.filter(n => loggedKeys.has(cardKeyMap[n])).length;
+      const total = countableCards.length;
+
+      // Next action: first unlogged countable card in profile order.
+      const nextCard = profile.cards.find(
+        n => cardKeyMap[n] && !loggedKeys.has(cardKeyMap[n])
+      );
+      const nextTitle = nextCard ? cardTitleMap[nextCard] : null;
+
+      return { completed, total, nextTitle };
+    }
+
+
     // "this Friday" / "this Friday evening"
     function actRelDay(value, withPartOfDay){
       if (!value) return 'soon';
@@ -1265,7 +1403,12 @@
     }
 
     function actLog(touchpoint, action){
-      state.activationLog.push({ touchpoint, action, timestamp: new Date().toISOString() });
+      state.activationLog.push({
+        touchpoint,
+        action,
+        dropId: state.selectedDropId || null,
+        timestamp: new Date().toISOString()
+      });
       renderDropView(state.selectedDropId);
     }
 
@@ -2105,6 +2248,20 @@
       const hasHost = !!summary.host_name;
       const status = statusOf(summary);
 
+      const profile = getDropProfile(summary);
+      const profileCards = profile.cards;
+      const optionalCards = new Set(profile.optional);
+
+      // Helper: should this card number be included for this drop?
+      function inProfile(cardNum) {
+        return profileCards.includes(cardNum);
+      }
+
+      // Helper: is this card optional for this drop?
+      function isOptional(cardNum) {
+        return optionalCards.has(cardNum);
+      }
+
       const dropName = summary.drop_name || rawDrop.name || 'Your drop';
       const hostName = summary.host_name || '';
       const vendorName = vendor.display_name || vendor.name || 'your kitchen';
@@ -2188,6 +2345,13 @@
       // Card 1 — reveal post (is-vendor). Rendered directly (not via
       // tpCard) so the menu card artwork + download button always show;
       // only the caption button flips to a done state once copied.
+      if (inProfile(1)) {
+      const card1Title = isOptional(1)
+        ? 'Share your reveal post (optional)'
+        : 'Share your reveal post';
+      const card1Desc = isOptional(1)
+        ? 'Create a menu card asset for your client or to share on social if relevant to this drop.'
+        : 'Post your menu card to Instagram before ordering opens. Start the anticipation early — this is the moment that seeds the algorithm for your drop day.';
       const card1CaptionArea = getLogEntry('monday_reveal')
         ? `<div class="act-done-state">✓ Caption copied · ${formatLogTime(getLogEntry('monday_reveal').timestamp)}</div>`
         : copyBtn('Copy caption', 'monday_reveal', 'caption_copied', false);
@@ -2205,8 +2369,8 @@
       const card1Html = `
         <div class="act-touchpoint is-vendor${getLogEntry('monday_reveal') ? ' is-done' : ''}">
           <div class="act-day-label">${escapeHtml(labels[0])}</div>
-          <h4>Share your reveal post</h4>
-          <p>Post your menu card to Instagram before ordering opens. Start the anticipation early — this is the moment that seeds the algorithm for your drop day.</p>
+          <h4>${escapeHtml(card1Title)}</h4>
+          <p>${escapeHtml(card1Desc)}</p>
           <div class="act-actions">
             <div class="act-reveal-fields">
               <div>
@@ -2240,9 +2404,10 @@
         </div>
       `;
       cards.push(card1Html);
+      }
 
-      // Card 2 — host awareness (is-host) — only if host present
-      if (hasHost) {
+      // Card 2 — host awareness (is-host) — only in profiles that include it
+      if (inProfile(2)) {
         cards.push(messageCard({
           typeClass: 'is-host',
           label: labels[1],
@@ -2258,26 +2423,29 @@
       // Card 3 locks only when the vendor has no previous customers at all —
       // not based on this drop's order count. Sum order_count across all
       // loaded summaries as a proxy for total customer history.
-      const totalOrdersAcrossDrops = Object.values(state.summaryById)
-        .reduce((sum, s) => sum + Number(s.order_count || 0), 0);
-      const card3Locked = totalOrdersAcrossDrops === 0;
-      cards.push(emailCard({
-        typeClass: 'is-auto',
-        label: labels[2],
-        title: 'Early access for previous customers',
-        desc: 'Previous customers get access before the public link goes live. Review and confirm the email below.',
-        subject: state.emailDrafts['thursday_early_access'].subject,
-        body: state.emailDrafts['thursday_early_access'].body,
-        note: card3Locked ? null : `Sends to customers who have previously ordered from you.`,
-        locked: card3Locked,
-        lockedNote: 'No previous customers yet — this unlocks once someone has ordered from you.',
-        touchpointKey: 'thursday_early_access'
-      }));
+      if (inProfile(3)) {
+        const totalOrdersAcrossDrops = Object.values(state.summaryById)
+          .reduce((sum, s) => sum + Number(s.order_count || 0), 0);
+        const card3Locked = totalOrdersAcrossDrops === 0;
+        cards.push(emailCard({
+          typeClass: 'is-auto',
+          label: labels[2],
+          title: 'Early access for previous customers',
+          desc: 'Previous customers get access before the public link goes live. Review and confirm the email below.',
+          subject: state.emailDrafts['thursday_early_access'].subject,
+          body: state.emailDrafts['thursday_early_access'].body,
+          note: card3Locked ? null : `Sends to customers who have previously ordered from you.`,
+          locked: card3Locked,
+          lockedNote: 'No previous customers yet — this unlocks once someone has ordered from you.',
+          touchpointKey: 'thursday_early_access'
+        }));
+      }
 
       // Card 4 — ordering open (is-vendor) with visual asset. Rendered
       // directly (not via messageCard) so the artwork + download button
       // always show; only the message + channel buttons flip to a done
       // state once one of the channels has been copied.
+      if (inProfile(4)) {
       const card4Entry = getLogEntry('thursday_vendor_whatsapp');
 
       // Initialise Card 4 message draft
@@ -2361,9 +2529,10 @@
         </div>
       `;
       cards.push(card4Html);
+      }
 
-      // Card 5 — host link drop (is-host) — only if host present
-      if (hasHost) {
+      // Card 5 — host link drop (is-host) — only in profiles that include it
+      if (inProfile(5)) {
         const primedDay = actWeekday(summary.delivery_start, -3) || 'earlier in the week';
         cards.push(messageCard({
           typeClass: 'is-host',
@@ -2380,6 +2549,7 @@
       // directly (not via tpCard) so the artwork + download button render
       // alongside the copy-caption button when unlocked; locked state still
       // shows the trigger note.
+      if (inProfile(6)) {
       const card6Locked = !(status === 'live' ||
         (capTotalNum != null && capTotalNum > 0 && orderCount >= 0.5 * capTotalNum));
 
@@ -2428,41 +2598,51 @@
         </div>
       `;
       cards.push(card6Html);
+      }
+
+      // Cards 7, 8, 9 — present in all profiles, but wrapped with
+      // inProfile() for consistency with the rest of the timeline.
 
       // Card 7 — order ready (is-auto) — never enters done state
-      cards.push(tpCard({
-        typeClass: 'is-auto',
-        label: labels[6],
-        title: 'Notify customers when orders are ready',
-        desc: 'When you mark an order Ready in Service Board, the platform sends an SMS to that customer automatically. Nothing to do here — keep Service Board open during service.',
-        actionHtml: `<a class="act-copy-btn" href="${HearthNav.withVendor('./service-board.html')}">Open Service Board</a>`
-      }));
+      if (inProfile(7)) {
+        cards.push(tpCard({
+          typeClass: 'is-auto',
+          label: labels[6],
+          title: 'Notify customers when orders are ready',
+          desc: 'When you mark an order Ready in Service Board, the platform sends an SMS to that customer automatically. Nothing to do here — keep Service Board open during service.',
+          actionHtml: `<a class="act-copy-btn" href="${HearthNav.withVendor('./service-board.html')}">Open Service Board</a>`
+        }));
+      }
 
       // Card 8 — post-drop content (is-prompted, locked until closed)
-      cards.push(tpCard({
-        typeClass: 'is-prompted',
-        label: labels[7],
-        title: 'Close the loop on social',
-        desc: "Post a real moment from the drop — food leaving the kitchen, the venue, a community moment. Unpolished is fine. Then post the sold-out confirmation if you haven't already.",
-        actionHtml: copyBtn('Copy post-drop caption', 'friday_post_drop', 'caption_copied', false),
-        locked: status !== 'closed',
-        lockedNote: 'This prompt appears once your drop closes.',
-        touchpointKey: 'friday_post_drop'
-      }));
+      if (inProfile(8)) {
+        cards.push(tpCard({
+          typeClass: 'is-prompted',
+          label: labels[7],
+          title: 'Close the loop on social',
+          desc: "Post a real moment from the drop — food leaving the kitchen, the venue, a community moment. Unpolished is fine. Then post the sold-out confirmation if you haven't already.",
+          actionHtml: copyBtn('Copy post-drop caption', 'friday_post_drop', 'caption_copied', false),
+          locked: status !== 'closed',
+          lockedNote: 'This prompt appears once your drop closes.',
+          touchpointKey: 'friday_post_drop'
+        }));
+      }
 
       // Card 9 — thank-you email (is-auto, locked until closed)
-      cards.push(emailCard({
-        typeClass: 'is-auto',
-        label: labels[8],
-        title: 'Thank-you email to every customer',
-        desc: 'A warm, brief thank-you goes to everyone who ordered. Review and confirm before it sends.',
-        subject: state.emailDrafts['saturday_thankyou'].subject,
-        body: state.emailDrafts['saturday_thankyou'].body,
-        note: `Sends to ${orderCount} customer${orderCount === 1 ? '' : 's'} who ordered from this drop.`,
-        locked: status !== 'closed',
-        lockedNote: 'This confirms once your drop closes.',
-        touchpointKey: 'saturday_thankyou'
-      }));
+      if (inProfile(9)) {
+        cards.push(emailCard({
+          typeClass: 'is-auto',
+          label: labels[8],
+          title: 'Thank-you email to every customer',
+          desc: 'A warm, brief thank-you goes to everyone who ordered. Review and confirm before it sends.',
+          subject: state.emailDrafts['saturday_thankyou'].subject,
+          body: state.emailDrafts['saturday_thankyou'].body,
+          note: `Sends to ${orderCount} customer${orderCount === 1 ? '' : 's'} who ordered from this drop.`,
+          locked: status !== 'closed',
+          lockedNote: 'This confirms once your drop closes.',
+          touchpointKey: 'saturday_thankyou'
+        }));
+      }
 
       content.innerHTML = `
         <button class="act-back-link" type="button" data-act="back">← All drops</button>
