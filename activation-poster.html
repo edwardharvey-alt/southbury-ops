@@ -74,7 +74,6 @@
       flex-direction: column;
       position: relative;
       overflow: hidden;
-      transform-origin: top left;
     }
 
     /* Loading + error states */
@@ -230,11 +229,12 @@
       }
 
       .poster-scale-wrap {
-        width: 100% !important;
-        height: auto !important;
+        display: block;
+        width: 100%;
       }
 
       .poster-wrap {
+        zoom: 1 !important;
         transform: none !important;
         width: 100% !important;
         height: auto !important;
@@ -270,23 +270,21 @@
       const scaleWrap = wrap && wrap.parentElement;
       if (!wrap || !scaleWrap) return;
 
+      // A4 at 96dpi
       const A4_W = 794;
-      const A4_H = 1123;
 
       const availWidth = window.innerWidth - 32;
       const scale = Math.min(1, availWidth / A4_W);
 
-      wrap.style.transform = `scale(${scale})`;
-      wrap.style.transformOrigin = 'top center';
-      wrap.style.width = A4_W + 'px';
-      wrap.style.height = A4_H + 'px';
-      wrap.style.minHeight = 'unset';
+      // CSS zoom scales layout AND visual — no transform trickery needed
+      wrap.style.zoom = scale;
+      wrap.style.transform = 'none';
 
-      scaleWrap.style.width = '100%';
-      scaleWrap.style.height = (A4_H * scale) + 'px';
+      // Container just needs to centre the element; zoom handles the rest
       scaleWrap.style.display = 'flex';
       scaleWrap.style.justifyContent = 'center';
-      scaleWrap.style.overflow = 'hidden';
+      scaleWrap.style.width = '100%';
+      scaleWrap.style.height = 'auto';
     }
 
     window.addEventListener('resize', scalePoster);
