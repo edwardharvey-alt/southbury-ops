@@ -144,6 +144,16 @@
       letter-spacing: 0.01em;
     }
 
+    .poster-reveal-line {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-style: italic;
+      font-weight: 400;
+      font-size: 11pt;
+      color: #8B6B3F;
+      margin-top: 3mm;
+      letter-spacing: 0.01em;
+    }
+
     .poster-rule {
       border: none;
       border-top: 1.5px solid #C4B49A;
@@ -333,7 +343,7 @@
       // Fetch drop by slug scoped to vendor
       const { data: drop } = await sb
         .from('drops')
-        .select('id, name, slug, closes_at, opens_at, delivery_start')
+        .select('id, name, slug, closes_at, opens_at, delivery_start, reveal_line')
         .eq('slug', dropSlug)
         .eq('vendor_id', vendor.id)
         .maybeSingle();
@@ -367,6 +377,9 @@
             <div>
               <div class="poster-vendor-name">${escapeHtml(vendor.display_name || 'Hearth')}</div>
               <div class="poster-drop-name">${escapeHtml(drop.name || '')}</div>
+              ${drop.reveal_line
+                ? `<div class="poster-reveal-line">${escapeHtml(drop.reveal_line)}</div>`
+                : ''}
             </div>
           </div>
 
