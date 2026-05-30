@@ -98,29 +98,26 @@ function buildPrompt(input: CopyInput): string {
       return `Write a short social media post from ${vendor_name} after completing their '${drop_name}' food drop. Warm and grateful. Hint that the next one is coming. 2 sentences.`;
 
     case "early_access_email":
-      return `Write the complete body of an early access email from ${vendor_name} to a previous customer.
-The drop is '${drop_name}' at ${host} on ${delivery_day}. Orders close at ${closes_time || "tonight"} and capacity is ${cap}.
-The ordering link is: ${ordering_url}
+      return `Output this email body exactly, replacing only [BODY] with 1–2 warm sentences. Do not change anything else. Do not add extra lines.
 
-Write in this exact structure, with blank lines between sections:
-"Hi,"
-[1-2 warm sentences explaining they get early access before the public link goes live — do not invent any details not listed above]
-"Order here: ${ordering_url}"
-"Capacity is limited to ${cap} and closes at ${closes_time || "tonight"}."
-"${vendor_name}"
+Hi,
 
-Plain language. Warm but not gushing. Do not add a subject line.`;
+[BODY: warm sentences telling this customer they get early access to order '${drop_name}' at ${host} on ${delivery_day} before the public link goes live. Use only the facts given here — do not invent details.]
+
+Order here: ${ordering_url}
+
+Capacity is limited to ${cap} and closes at ${closes_time || "tonight"}.
+
+${vendor_name}`;
 
     case "post_drop_thankyou":
-      return `Write the complete body of a thank-you email from ${vendor_name} to a customer after their '${drop_name}' drop on ${delivery_day}.
+      return `Output this email body exactly, replacing only [BODY] with 1–2 warm sentences. Do not change anything else. Do not add extra lines.
 
-Write in this exact structure, with blank lines between sections:
-"Hi,"
-[1-2 genuinely warm sentences thanking them for ordering — do not invent any specific details]
-[1 sentence hinting the next drop is coming, without being specific about dates]
-"${vendor_name}"
+Hi,
 
-Plain language. Genuine warmth. Do not add a subject line. Do not invent details not given above.`;
+[BODY: warm thank-you sentences to a customer who ordered from '${drop_name}' on ${delivery_day}. Mention that more drops are coming. Do not invent specific dates or details.]
+
+${vendor_name}`;
 
     default:
       return `Write a short, warm social media post for ${vendor_name} about their '${drop_name}' food drop at ${host} this ${delivery_day}. 2 sentences.`;
