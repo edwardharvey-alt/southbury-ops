@@ -98,10 +98,11 @@ function buildPrompt(input: CopyInput): string {
       return `Write a short social media post from ${vendor_name} after completing their '${drop_name}' food drop. Warm and grateful. Hint that the next one is coming. 2 sentences.`;
 
     case "early_access_email":
-      return `Write the body of a short email from ${vendor_name} to a previous customer giving them early access to order '${drop_name}' at ${host} this ${delivery_day}.
-Do not include a subject line, greeting ("Hi"), or sign-off — write only 2–3 body sentences.
-Orders close at ${closes_time || "tonight"} and capacity is ${cap}. Ordering link: ${ordering_url}.
-Warm, personal, vendor-voiced. Never pushy. Plain language.`;
+      return `Write 2 short sentences for the body of an early access email from ${vendor_name} to a previous customer.
+The drop is '${drop_name}' at ${host} on ${delivery_day}. Orders close at ${closes_time || "tonight"} and capacity is ${cap}.
+Do not invent any details not listed above — no collection times, no specific items, no prices.
+Do not include a subject line, greeting, sign-off, or ordering link — those are added separately.
+Warm and personal. Plain language.`;
 
     case "post_drop_thankyou":
       return `Write the body of a short thank-you email from ${vendor_name} to a customer after their '${drop_name}' drop on ${delivery_day}.
