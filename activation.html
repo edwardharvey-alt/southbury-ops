@@ -1060,7 +1060,8 @@
       messageDrafts: {},
       expandedMessageCards: {},
       sendingEmail: {},  // touchpoint → true while in-flight
-      generateLoading: {}  // touchpoint → true while AI copy generates
+      generateLoading: {},  // touchpoint → true while AI copy generates
+      emailBodyGenerated: {}  // touchpoint → true once body auto-generated
     };
 
     const DAY_MS = 24 * 60 * 60 * 1000;
@@ -2947,8 +2948,17 @@
       const expandEmail = e.target.closest('[data-act="expand-email"]');
       if (expandEmail) {
         e.preventDefault();
-        state.expandedEmailCards[expandEmail.dataset.touchpoint] = true;
+        const tp = expandEmail.dataset.touchpoint;
+        state.expandedEmailCards[tp] = true;
         renderDropView(state.selectedDropId);
+        // Auto-generate body on first open — vendor edits from AI output,
+        // not from a blank template. Button stays for regeneration.
+        if (!state.emailBodyGenerated?.[tp]) {
+          const genBtn = document.querySelector(
+            `[data-act="generate-email-body"][data-touchpoint="${tp}"]`
+          );
+          if (genBtn) genBtn.click();
+        }
         return;
       }
 
@@ -3033,6 +3043,8 @@
             bodyInput.value = fullBody;
             bodyInput.dispatchEvent(new Event('input'));
             if (state.emailDrafts?.[tp]) state.emailDrafts[tp].body = fullBody;
+            state.emailBodyGenerated = state.emailBodyGenerated || {};
+            state.emailBodyGenerated[tp] = true;
           }
 
         } catch (err) {
