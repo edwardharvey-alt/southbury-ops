@@ -1050,7 +1050,8 @@
       emailDrafts: {},
       messageDrafts: {},
       expandedMessageCards: {},
-      sendingEmail: {}  // touchpoint → true while in-flight
+      sendingEmail: {},  // touchpoint → true while in-flight
+      generateLoading: {}  // touchpoint → true while AI copy generates
     };
 
     const DAY_MS = 24 * 60 * 60 * 1000;
@@ -2085,11 +2086,19 @@
               data-touchpoint="${escapeHtml(tp)}"
               rows="5">${escapeHtml(currentText)}</textarea>
             <div class="act-message-edit-row">
+              <button
+                data-act="generate-copy"
+                data-touchpoint="${escapeHtml(tp)}"
+                style="background:none; border:1px solid var(--h-border); border-radius:6px; padding:5px 12px; font-size:13px; color:var(--h-slate); cursor:pointer;">
+                Generate →
+              </button>
               <button class="act-copy-btn" type="button"
                 data-act="collapse-message"
                 data-touchpoint="${escapeHtml(tp)}">Done editing</button>
               ${channelBtns}
             </div>
+            <div class="act-copy-error" data-error-key="${escapeHtml(tp)}"
+              style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
           </div>
         `;
       } else {
@@ -2474,6 +2483,12 @@
             <textarea data-act="message-textarea" data-touchpoint="thursday_vendor_whatsapp"
               rows="5">${escapeHtml(card4Text)}</textarea>
             <div class="act-message-edit-row">
+              <button
+                data-act="generate-copy"
+                data-touchpoint="thursday_vendor_whatsapp"
+                style="background:none; border:1px solid var(--h-border); border-radius:6px; padding:5px 12px; font-size:13px; color:var(--h-slate); cursor:pointer;">
+                Generate →
+              </button>
               <button class="act-copy-btn" type="button"
                 data-act="collapse-message"
                 data-touchpoint="thursday_vendor_whatsapp">Done editing</button>
@@ -2486,6 +2501,8 @@
                 data-touchpoint="thursday_vendor_whatsapp"
                 data-action="message_copied">Copy for social</button>
             </div>
+            <div class="act-copy-error" data-error-key="thursday_vendor_whatsapp"
+              style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
           </div>
         `;
       } else {
@@ -2875,6 +2892,91 @@
         }
         state.expandedEmailCards[tp] = false;
         renderDropView(state.selectedDropId);
+        return;
+      }
+
+      const generateCopy = e.target.closest('[data-act="generate-copy"]');
+      if (generateCopy) {
+        e.preventDefault();
+        const tp = generateCopy.dataset.touchpoint;
+        const dropId = state.selectedDropId;
+        const rawDrop = state.rawById?.[dropId];
+        if (!rawDrop) return;
+
+        // Map activation touchpoint keys → Edge Function touchpoint names.
+        // Only the editable message cards (2, 4, 5) carry a Generate button;
+        // cards 1 and 8 are copy-caption cards with no textarea, so they are
+        // intentionally absent here. Keys confirmed against the card-key map.
+        const tpMap = {
+          tuesday_host:             'tuesday_host',
+          thursday_vendor_whatsapp: 'thursday_vendor',
+          thursday_host_link:       'thursday_host_link',
+        };
+        if (!tpMap[tp]) return;
+
+        state.generateLoading = state.generateLoading || {};
+        state.generateLoading[tp] = true;
+        generateCopy.disabled = true;
+        generateCopy.textContent = 'Generating…';
+
+        // Clear any previous error
+        const errorNote = document.querySelector(`.act-copy-error[data-error-key="${tp}"]`);
+        if (errorNote) errorNote.textContent = '';
+
+        try {
+          // Build day/time strings for the prompt context.
+          const deliveryDay = rawDrop.delivery_start
+            ? new Date(rawDrop.delivery_start).toLocaleDateString('en-GB', {
+                weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London'
+              })
+            : '';
+          const opensDay = rawDrop.opens_at
+            ? new Date(rawDrop.opens_at).toLocaleDateString('en-GB', {
+                weekday: 'long', timeZone: 'Europe/London'
+              })
+            : null;
+          const fmtT = (iso) => iso
+            ? new Date(iso).toLocaleTimeString('en-GB', {
+                hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Europe/London'
+              }).toLowerCase().replace(':00', '').replace(' ', '')
+            : null;
+
+          const body = {
+            touchpoint:   tpMap[tp],
+            vendor_name:  state.vendor?.display_name || '',
+            drop_name:    rawDrop.name || '',
+            host_name:    rawDrop.host_name || null,
+            delivery_day: deliveryDay,
+            opens_day:    opensDay,
+            opens_time:   fmtT(rawDrop.opens_at),
+            closes_time:  fmtT(rawDrop.closes_at),
+            capacity:     rawDrop.capacity_units_total || null,
+            ordering_url: `https://lovehearth.co.uk/order.html?drop=${rawDrop.slug}`,
+            tagline:      state.vendor?.tagline || null,
+            website_url:  state.vendor?.website_url || null,
+          };
+
+          const { data, error } = await sb.functions.invoke('generate-activation-copy', { body });
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+
+          if (data?.copy) {
+            state.messageDrafts[tp] = data.copy;
+            // Patch the textarea directly — no full re-render needed
+            const ta = document.querySelector(
+              `[data-act="message-textarea"][data-touchpoint="${tp}"]`
+            );
+            if (ta) ta.value = data.copy;
+          }
+
+        } catch (err) {
+          console.error('[activation] generate-copy failed:', tp, err);
+          if (errorNote) errorNote.textContent = 'Generation failed — try again or edit manually.';
+        } finally {
+          state.generateLoading[tp] = false;
+          generateCopy.disabled = false;
+          generateCopy.textContent = 'Generate →';
+        }
         return;
       }
 

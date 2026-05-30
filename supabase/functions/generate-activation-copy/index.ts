@@ -9,11 +9,49 @@ const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const MODEL = "claude-haiku-4-5-20251001";
 
-const SYSTEM_PROMPT = `You write short, warm copy for independent food businesses.
+function buildSystemPrompt(tagline: string | null, websiteContent: string | null): string {
+  let prompt = `You write short, warm copy for independent food businesses.
 Output only the copy text — no preamble, explanation, or quotation marks around it.
 Tone: calm, warm, local, proud. Never pushy or generic.
 Avoid: "delicious", "amazing", "don't miss out", "selling fast", "limited time offer", "exciting".
 Use the specific details provided. Plain, honest language.`;
+
+  if (tagline) {
+    prompt += `\n\nThe vendor's tagline is: "${tagline}" — let this inform the tone and style.`;
+  }
+
+  if (websiteContent) {
+    prompt += `\n\nHere is how this vendor describes themselves on their own website. Write copy consistent with this voice:\n---\n${websiteContent}\n---`;
+  }
+
+  return prompt;
+}
+
+async function fetchWebsiteContent(url: string): Promise<string | null> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Hearth/1.0 (brand voice)" },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.includes("text/html")) return null;
+    const html = await res.text();
+    const text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 800);
+    return text.length > 50 ? text : null;
+  } catch {
+    return null; // always non-fatal
+  }
+}
 
 interface CopyInput {
   touchpoint: string;
@@ -26,6 +64,8 @@ interface CopyInput {
   closes_time: string | null;
   capacity: number | null;
   ordering_url: string;
+  tagline: string | null;       // new
+  website_url: string | null;   // new
 }
 
 function buildPrompt(input: CopyInput): string {
@@ -100,6 +140,17 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "touchpoint, vendor_name, and drop_name are required" }, 400);
     }
 
+    // ---- Voice context ------------------------------------------
+    const tagline = input.tagline || null;
+    let websiteContent: string | null = null;
+    if (input.website_url) {
+      websiteContent = await fetchWebsiteContent(input.website_url);
+      if (websiteContent) {
+        console.log(`[generate-activation-copy] website content fetched (${websiteContent.length} chars)`);
+      }
+    }
+    const systemPrompt = buildSystemPrompt(tagline, websiteContent);
+
     // ---- Generate ---------------------------------------------------
     const userPrompt = buildPrompt(input);
 
@@ -113,7 +164,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 300,
-        system: SYSTEM_PROMPT,
+        system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
       }),
     });
