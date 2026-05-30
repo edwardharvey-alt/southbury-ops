@@ -2204,12 +2204,6 @@
         // so the vendor can see the live preview as they type
         actionHtml = `
           ${emailMockHtml}
-          <button
-            data-act="generate-email-body"
-            data-touchpoint="${escapeHtml(tp)}"
-            class="act-copy-btn" style="margin-bottom:10px;">
-            ✦ Generate body →
-          </button>
           <div class="act-email-expanded">
             <div class="act-email-field">
               <label class="act-field-label">Subject</label>
@@ -2224,6 +2218,12 @@
                 data-email-key="${escapeHtml(tp)}"
                 rows="8">${escapeHtml(draft.body)}</textarea>
             </div>
+            <button
+              data-act="generate-email-body"
+              data-touchpoint="${escapeHtml(tp)}"
+              class="act-copy-btn" style="margin-bottom:10px;">
+              ✦ Generate body →
+            </button>
           </div>
           <div class="act-confirm-row">
             <button class="act-copy-btn primary" type="button"
