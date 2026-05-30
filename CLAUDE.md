@@ -1408,6 +1408,12 @@ on top of the coding rules above.
     list but `getDropProgress()` does not count it. (Learned from the
     Activation build, 2026-05-29.)
 
+66. **Neighbourhood drops do not have hosts by design.** Surfacing a
+    "no host" warning on a neighbourhood drop incorrectly suggests adding
+    one, which violates the model (neighbourhood + host = community drop).
+    Always gate host-related signals on `drop_type !== 'neighbourhood'`.
+    (Learned from the Review pane promotion plan build, 2026-05-30.)
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -2101,6 +2107,37 @@ for quick chronological recall across the whole platform.
     Card 1. Drop Studio no longer reads or writes these fields.
     getDropPayload() in drop-manager.html does not include reveal_line
     or reveal_product_id.
+
+- 2026-05-30: Pre-launch comms and review pane
+
+  - send-early-access-email Edge Function — deployed. Sends to all
+    consented customers (granted/imported) with a valid email for this
+    vendor. Input: { vendor_id, drop_id }. Follows T5-11-minimum pattern
+    (Resend HTTP, non-fatal per-recipient errors, structured JSON response).
+    Deduplicates by lowercase email. Wired to Activation Card 3 "Confirm
+    send" — vendor reviews the styled email mock, confirms, function sends.
+
+  - send-post-drop-thankyou Edge Function — deployed. Sends to every
+    customer who placed an order in the specific drop (reads from orders
+    table by drop_id + customer_email IS NOT NULL). Includes next
+    scheduled drop date and ordering link if one exists. Wired to
+    Activation Card 9 "Confirm send".
+
+  - Activation Cards 3 and 9 wired — confirm-email handler now maps
+    thursday_early_access → send-early-access-email and saturday_thankyou
+    → send-post-drop-thankyou. Shows "Sending…" state, logs
+    email_confirmed with { sent, total } on success, shows inline retry
+    note on failure. actLog() extended to accept optional meta object.
+    emailCard done state appends "· N emails sent" when count is present.
+
+  - Review pane promotion plan — informational section added to Drop
+    Studio Review pane above "Go to Activation →". Shows two signals:
+    (1) host assigned — only shown for hosted/community/event drops, never
+    neighbourhood (adding a host to a neighbourhood drop is a model
+    violation); (2) previous customers — shown for all drop types. Reuses
+    existing readinessItem/pass/fail CSS (fail is amber #b45309, not red).
+    Not a publish gate. getDropProfile() drop-type logic is the reference
+    for the host/neighbourhood distinction.
 
 ## Future architecture
 

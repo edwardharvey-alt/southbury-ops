@@ -2065,9 +2065,15 @@ Hearth_Drop_Communications_Architecture.md section 7 (Phase 2 detail).
 
 T5-C4: Drop activation guide — vendor-facing communication playbook
 
-**Status:** Open. Tier 5. Should land before Healthy Habits Cafe goes
-live — vendors need to understand the activation model before their
-first drop, not after.
+**Status:** PARTIAL (2026-05-30). Tier 5. Should land before Healthy
+Habits Cafe goes live — vendors need to understand the activation model
+before their first drop, not after.
+
+T5-C4 PARTIAL 2026-05-30 — Review pane promotion plan checklist
+shipped (signals for host and previous customers, "Go to Activation →"
+handoff). Standalone guide page (drop-activation-guide.html) remains
+open — build after the first real drop so the guide reflects actual
+experience.
 
 **The problem**
 
@@ -5414,6 +5420,12 @@ context (host, date, capacity, closes_at). Output: WhatsApp message,
 social caption. No AI feature commits anything without explicit vendor
 approval — edit state allows vendor to review and modify before
 copying. Gated on real drop history from Healthy Habits Cafe.
+
+Note (2026-05-30): Early access and thank-you sends now ship via
+send-early-access-email and send-post-drop-thankyou Edge Functions,
+wired to Cards 3 and 9 in Activation. T-ACT-1 covers the AI
+personalisation layer on top of these working sends — the plumbing
+is in place, the copy is still template-generated.
 
 #### T-ACT-2 — Cross-drop today's actions summary strip
 
