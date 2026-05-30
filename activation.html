@@ -1061,7 +1061,8 @@
       expandedMessageCards: {},
       sendingEmail: {},  // touchpoint → true while in-flight
       generateLoading: {},  // touchpoint → true while AI copy generates
-      emailBodyGenerated: {}  // touchpoint → true once body auto-generated
+      emailBodyGenerated: {},  // touchpoint → true once body auto-generated
+      messageGenerated: {}  // touchpoint → true once message copy generated
     };
 
     const DAY_MS = 24 * 60 * 60 * 1000;
@@ -2100,7 +2101,7 @@
                 data-act="generate-copy"
                 data-touchpoint="${escapeHtml(tp)}"
                 class="act-copy-btn">
-                ✦ Generate →
+                ${state.messageGenerated?.[tp] ? '↺ Regenerate →' : '✦ Generate →'}
               </button>
               <button class="act-copy-btn" type="button"
                 data-act="collapse-message"
@@ -2126,7 +2127,7 @@
               data-act="generate-copy"
               data-touchpoint="${escapeHtml(tp)}"
               class="act-copy-btn">
-              ✦ Generate →
+              ${state.messageGenerated?.[tp] ? '↺ Regenerate →' : '✦ Generate →'}
             </button>
             <button class="act-copy-btn" type="button"
               data-act="expand-message"
@@ -2223,7 +2224,7 @@
           <div class="act-confirm-row">
             <button class="act-copy-btn" type="button"
               data-act="generate-email-body"
-              data-touchpoint="${escapeHtml(tp)}">✦ Generate body →</button>
+              data-touchpoint="${escapeHtml(tp)}">${state.emailBodyGenerated?.[tp] ? '↺ Regenerate body →' : '✦ Generate body →'}</button>
             <button class="act-copy-btn primary" type="button"
               data-act="confirm-email"
               data-touchpoint="${escapeHtml(tp)}">Confirm send</button>
@@ -2815,6 +2816,13 @@
       state.messageDrafts = {};
       state.expandedMessageCards = {};
       renderDropView(dropId);
+      // Auto-generate Card 1 (monday_reveal) on first drop selection
+      if (!state.messageGenerated?.['monday_reveal']) {
+        const genBtn = document.querySelector(
+          '[data-act="generate-copy"][data-touchpoint="monday_reveal"]'
+        );
+        if (genBtn) genBtn.click();
+      }
     }
 
     // ---- Init + delegated events -------------------------------------
@@ -3051,7 +3059,7 @@
           console.error('[activation] generate-email-body failed:', tp, err);
         } finally {
           generateEmailBody.disabled = false;
-          generateEmailBody.textContent = '✦ Generate body →';
+          generateEmailBody.textContent = state.emailBodyGenerated?.[tp] ? '↺ Regenerate body →' : '✦ Generate body →';
         }
         return;
       }
@@ -3128,6 +3136,8 @@
             // generated text is shown. The re-render rebuilds the button, so
             // no manual button reset is needed here.
             state.messageDrafts[tp] = data.copy;
+            state.messageGenerated = state.messageGenerated || {};
+            state.messageGenerated[tp] = true;
             state.expandedMessageCards[tp] = true;
             state.generateLoading[tp] = false;
             // Sync the live textarea (if one is mounted) before the re-render:
@@ -3146,7 +3156,7 @@
           console.error('[activation] generate-copy failed:', tp, err);
           state.generateLoading[tp] = false;
           generateCopy.disabled = false;
-          generateCopy.textContent = '✦ Generate →';
+          generateCopy.textContent = state.messageGenerated?.[tp] ? '↺ Regenerate →' : '✦ Generate →';
           const errNote = document.querySelector(`.act-copy-error[data-error-key="${tp}"]`);
           if (errNote) errNote.textContent = 'Generation failed — try again or edit manually.';
         } finally {

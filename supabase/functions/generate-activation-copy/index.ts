@@ -83,7 +83,7 @@ function buildPrompt(input: CopyInput): string {
 
   switch (touchpoint) {
     case "monday_reveal":
-      return `Write a social media post for ${vendor_name} announcing their upcoming '${drop_name}' food drop at ${host} this ${delivery_day}. Ordering opens ${opensWhen} — do not include a link yet. Build warm anticipation. 2–3 sentences.`;
+      return `Write a social media post for ${vendor_name} announcing their upcoming '${drop_name}' food drop at ${host} this ${delivery_day}. Ordering opens ${opensWhen} — do not include a link yet. Build warm anticipation. 2–3 sentences. Do not invent specific food items or menu details — keep it to what you know from the context given.`;
 
     case "tuesday_host":
       return `Write a WhatsApp message from ${host} to their members about ${vendor_name}'s '${drop_name}' food drop this ${delivery_day}. Written as the venue or club organiser — a trusted community heads-up, not a vendor promotion. Mention ordering opens ${opensWhen} and capacity is ${cap}. 3–4 short sentences, casual and warm.`;
