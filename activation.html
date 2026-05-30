@@ -2112,6 +2112,12 @@
         actionHtml = `
           <div class="act-message-preview">${escapeHtml(currentText)}</div>
           <div class="act-channel-row">
+            <button
+              data-act="generate-copy"
+              data-touchpoint="${escapeHtml(tp)}"
+              style="background:none; border:1px solid var(--h-border); border-radius:6px; padding:5px 12px; font-size:13px; color:var(--h-slate); cursor:pointer;">
+              ✦ Generate →
+            </button>
             <button class="act-copy-btn" type="button"
               data-act="expand-message"
               data-touchpoint="${escapeHtml(tp)}">Edit</button>
@@ -2189,18 +2195,25 @@
         // so the vendor can see the live preview as they type
         actionHtml = `
           ${emailMockHtml}
+          <button
+            data-act="generate-email-body"
+            data-touchpoint="${escapeHtml(tp)}"
+            style="background:none; border:1px solid var(--h-border); border-radius:6px; padding:5px 12px; font-size:13px; color:var(--h-slate); cursor:pointer; margin-bottom:10px;">
+            ✦ Generate body →
+          </button>
           <div class="act-email-expanded">
             <div class="act-email-field">
               <label class="act-field-label">Subject</label>
               <input type="text" class="act-email-subject-input"
                 data-email-key="${escapeHtml(tp)}"
+                style="width:100%"
                 value="${escapeHtml(draft.subject)}" />
             </div>
             <div class="act-email-field">
               <label class="act-field-label">Message</label>
               <textarea class="act-email-body-input"
                 data-email-key="${escapeHtml(tp)}"
-                rows="7">${escapeHtml(draft.body)}</textarea>
+                rows="8">${escapeHtml(draft.body)}</textarea>
             </div>
           </div>
           <div class="act-confirm-row">
@@ -2368,9 +2381,35 @@
       const card1Desc = isOptional(1)
         ? 'Create a menu card asset for your client or to share on social if relevant to this drop.'
         : 'Post your menu card to Instagram before ordering opens. Start the anticipation early — this is the moment that seeds the algorithm for your drop day.';
-      const card1CaptionArea = getLogEntry('monday_reveal')
-        ? `<div class="act-done-state">✓ Caption copied · ${formatLogTime(getLogEntry('monday_reveal').timestamp)}</div>`
-        : copyBtn('Copy caption', 'monday_reveal', 'caption_copied', false);
+      let card1CaptionArea;
+      if (getLogEntry('monday_reveal')) {
+        card1CaptionArea = `<div class="act-done-state">✓ Caption copied · ${formatLogTime(getLogEntry('monday_reveal').timestamp)}</div>`;
+      } else {
+        // Editable caption draft, seeded from the assembled template.
+        if (!state.messageDrafts['monday_reveal']) {
+          state.messageDrafts['monday_reveal'] = templates['monday_reveal'];
+        }
+        const card1Caption = state.messageDrafts['monday_reveal'];
+        card1CaptionArea = `
+          <div class="act-message-edit">
+            <textarea
+              data-act="message-textarea"
+              data-touchpoint="monday_reveal"
+              rows="5">${escapeHtml(card1Caption)}</textarea>
+            <div class="act-message-edit-row">
+              <button
+                data-act="generate-copy"
+                data-touchpoint="monday_reveal"
+                style="background:none; border:1px solid var(--h-border); border-radius:6px; padding:5px 12px; font-size:13px; color:var(--h-slate); cursor:pointer;">
+                ✦ Generate →
+              </button>
+              ${copyBtn('Copy caption', 'monday_reveal', 'caption_copied', false)}
+            </div>
+            <div class="act-copy-error" data-error-key="monday_reveal"
+              style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
+          </div>
+        `;
+      }
 
       // Reveal-dish options: only products with images (no image means
        // nothing usable for the menu card).
@@ -2640,12 +2679,36 @@
 
       // Card 8 — post-drop content (is-prompted, locked until closed)
       if (inProfile(8)) {
+        // Editable caption draft, seeded from the assembled template.
+        if (!state.messageDrafts['friday_post_drop']) {
+          state.messageDrafts['friday_post_drop'] = templates['friday_post_drop'];
+        }
+        const card8Caption = state.messageDrafts['friday_post_drop'];
+        const card8ActionHtml = `
+          <div class="act-message-edit">
+            <textarea
+              data-act="message-textarea"
+              data-touchpoint="friday_post_drop"
+              rows="5">${escapeHtml(card8Caption)}</textarea>
+            <div class="act-message-edit-row">
+              <button
+                data-act="generate-copy"
+                data-touchpoint="friday_post_drop"
+                style="background:none; border:1px solid var(--h-border); border-radius:6px; padding:5px 12px; font-size:13px; color:var(--h-slate); cursor:pointer;">
+                ✦ Generate →
+              </button>
+              ${copyBtn('Copy post-drop caption', 'friday_post_drop', 'caption_copied', false)}
+            </div>
+            <div class="act-copy-error" data-error-key="friday_post_drop"
+              style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
+          </div>
+        `;
         cards.push(tpCard({
           typeClass: 'is-prompted',
           label: labels[7],
           title: 'Close the loop on social',
           desc: "Post a real moment from the drop — food leaving the kitchen, the venue, a community moment. Unpolished is fine. Then post the sold-out confirmation if you haven't already.",
-          actionHtml: copyBtn('Copy post-drop caption', 'friday_post_drop', 'caption_copied', false),
+          actionHtml: card8ActionHtml,
           locked: status !== 'closed',
           lockedNote: 'This prompt appears once your drop closes.',
           touchpointKey: 'friday_post_drop'
@@ -2858,7 +2921,14 @@
         e.preventDefault();
         const tp = copy.dataset.touchpoint;
         const action = copy.dataset.action || 'copied';
-        const text = (state.currentTemplates || {})[tp] || '';
+        // Caption cards (1, 8) now carry an editable textarea + Generate, so
+        // copy the live textarea value when present — otherwise the saved
+        // draft, otherwise the freshly-assembled template.
+        const captionTa = document.querySelector(`[data-act="message-textarea"][data-touchpoint="${tp}"]`);
+        const text = (captionTa && captionTa.value)
+          || (state.messageDrafts || {})[tp]
+          || (state.currentTemplates || {})[tp]
+          || '';
         await actCopyToClipboard(text, copy, copy.textContent);
         actLog(tp, action);
         return;
@@ -2895,6 +2965,68 @@
         return;
       }
 
+      const generateEmailBody = e.target.closest('[data-act="generate-email-body"]');
+      if (generateEmailBody) {
+        e.preventDefault();
+        const tp = generateEmailBody.dataset.touchpoint;
+        const dropId = state.selectedDropId;
+        const rawDrop = state.rawById?.[dropId];
+        if (!rawDrop) return;
+
+        const emailTpMap = {
+          thursday_early_access: 'early_access_email',
+          saturday_thankyou:     'post_drop_thankyou',
+        };
+        if (!emailTpMap[tp]) return;
+
+        generateEmailBody.disabled = true;
+        generateEmailBody.textContent = 'Generating…';
+        const bodyInput = document.querySelector(`.act-email-body-input[data-email-key="${tp}"]`);
+
+        try {
+          const fmtT = (iso) => iso
+            ? new Date(iso).toLocaleTimeString('en-GB', {
+                hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Europe/London'
+              }).toLowerCase().replace(':00', '').replace(' ', '')
+            : null;
+
+          const body = {
+            touchpoint:   emailTpMap[tp],
+            vendor_name:  state.vendor?.display_name || '',
+            drop_name:    rawDrop.name || '',
+            host_name:    rawDrop.host_name || null,
+            delivery_day: rawDrop.delivery_start
+              ? new Date(rawDrop.delivery_start).toLocaleDateString('en-GB', {
+                  weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London'
+                })
+              : '',
+            closes_time:  fmtT(rawDrop.closes_at),
+            capacity:     rawDrop.capacity_units_total || null,
+            ordering_url: `https://lovehearth.co.uk/order.html?drop=${rawDrop.slug}`,
+            tagline:      state.vendor?.tagline || null,
+            website_url:  state.vendor?.website_url || null,
+            opens_day: null, opens_time: null,
+          };
+
+          const { data, error } = await sb.functions.invoke('generate-activation-copy', { body });
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+
+          if (data?.copy && bodyInput) {
+            bodyInput.value = data.copy;
+            // Also update emailDrafts if the platform tracks them
+            if (state.emailDrafts?.[tp]) state.emailDrafts[tp].body = data.copy;
+          }
+
+        } catch (err) {
+          console.error('[activation] generate-email-body failed:', tp, err);
+        } finally {
+          generateEmailBody.disabled = false;
+          generateEmailBody.textContent = '✦ Generate body →';
+        }
+        return;
+      }
+
       const generateCopy = e.target.closest('[data-act="generate-copy"]');
       if (generateCopy) {
         e.preventDefault();
@@ -2904,13 +3036,15 @@
         if (!rawDrop) return;
 
         // Map activation touchpoint keys → Edge Function touchpoint names.
-        // Only the editable message cards (2, 4, 5) carry a Generate button;
-        // cards 1 and 8 are copy-caption cards with no textarea, so they are
-        // intentionally absent here. Keys confirmed against the card-key map.
+        // Message cards (2, 4, 5) plus the caption cards (1, 8) now all
+        // carry an editable textarea + Generate button. Keys confirmed
+        // against the card-key map and the Edge Function's buildPrompt.
         const tpMap = {
+          monday_reveal:            'monday_reveal',
           tuesday_host:             'tuesday_host',
           thursday_vendor_whatsapp: 'thursday_vendor',
           thursday_host_link:       'thursday_host_link',
+          friday_post_drop:         'friday_post_drop',
         };
         if (!tpMap[tp]) return;
 
@@ -2961,21 +3095,33 @@
           if (data?.error) throw new Error(data.error);
 
           if (data?.copy) {
+            // On success always re-render the card in expanded state so the
+            // generated text is shown. The re-render rebuilds the button, so
+            // no manual button reset is needed here.
             state.messageDrafts[tp] = data.copy;
-            // Patch the textarea directly — no full re-render needed
+            state.expandedMessageCards[tp] = true;
+            state.generateLoading[tp] = false;
+            // Sync the live textarea (if one is mounted) before the re-render:
+            // renderDropView() flushes every message-textarea's current DOM
+            // value back into messageDrafts first, which would otherwise
+            // clobber data.copy with the stale pre-generation text.
             const ta = document.querySelector(
               `[data-act="message-textarea"][data-touchpoint="${tp}"]`
             );
             if (ta) ta.value = data.copy;
+            renderDropView(dropId);
+            return;
           }
 
         } catch (err) {
           console.error('[activation] generate-copy failed:', tp, err);
-          if (errorNote) errorNote.textContent = 'Generation failed — try again or edit manually.';
-        } finally {
           state.generateLoading[tp] = false;
           generateCopy.disabled = false;
           generateCopy.textContent = '✦ Generate →';
+          const errNote = document.querySelector(`.act-copy-error[data-error-key="${tp}"]`);
+          if (errNote) errNote.textContent = 'Generation failed — try again or edit manually.';
+        } finally {
+          state.generateLoading[tp] = false;
         }
         return;
       }
