@@ -1035,8 +1035,21 @@
     #pane-review .reviewGrid { align-items: start; }
     #pane-review #publishBtn { width: 280px; max-width: 100%; }
     #pane-review .qrWrap { border: 0; background: none; min-height: 0; padding: 0; margin-top: 12px; }
-    #pane-review .qrWrap img { width: 120px; height: 120px; }
+    #pane-review .qrWrap img { width: 120px; height: 120px; max-width: 100%; }
     #pane-review #shareLinkPreview { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .reviewBottomGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .reviewBottomGrid {
+        grid-template-columns: 1fr;
+      }
+    }
 
     /* "Drop link" section, demoted to visually secondary below the card */
     .stageSection.is-secondary .stageSectionTitle {
@@ -1697,7 +1710,10 @@
                     <button class="btnGhost" id="cancelDropBtn" type="button">Cancel Drop</button>
                     <button class="btnGhost" id="archiveDropBtn" type="button">Archive Drop</button>
                   </div>
-                  <div class="reviewCardDivider"></div>
+                </div>
+
+                <div class="reviewBottomGrid">
+                  <div class="stageSection">
                     <h4 class="stageSectionTitle">Drop link</h4>
                     <p class="stageSectionSub">Share this link with customers.</p>
                     <div class="shareLink" id="shareLinkPreview">No drop link yet.</div>
@@ -1706,9 +1722,10 @@
                       <button class="btnGhost" id="downloadQrBtn" type="button">Download QR</button>
                     </div>
                     <div class="qrWrap" id="qrWrap"></div>
-                </div>
+                  </div>
 
-                <div class="stageSection" id="reviewPromotionPlan"></div>
+                  <div class="stageSection" id="reviewPromotionPlan"></div>
+                </div>
 
                 <div class="reviewCardDivider"></div>
                 <div style="display:flex; justify-content:center; margin:4px 0 8px;">
