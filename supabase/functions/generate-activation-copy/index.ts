@@ -98,26 +98,13 @@ function buildPrompt(input: CopyInput): string {
       return `Write a short social media post from ${vendor_name} after completing their '${drop_name}' food drop. Warm and grateful. Hint that the next one is coming. 2 sentences.`;
 
     case "early_access_email":
-      return `Output this email body exactly, replacing only [BODY] with 1–2 warm sentences. Do not change anything else. Do not add extra lines.
-
-Hi,
-
-[BODY: warm sentences telling this customer they get early access to order '${drop_name}' at ${host} on ${delivery_day} before the public link goes live. Use only the facts given here — do not invent details.]
-
-Order here: ${ordering_url}
-
-Capacity is limited to ${cap} and closes at ${closes_time || "tonight"}.
-
-${vendor_name}`;
+      return `Write 1–2 warm sentences for an early access email from ${vendor_name} to a previous customer.
+They get to order '${drop_name}' at ${host} on ${delivery_day} before the public link goes live.
+Only use facts given here — do not invent details. Plain, warm language. Output only the sentences, nothing else.`;
 
     case "post_drop_thankyou":
-      return `Output this email body exactly, replacing only [BODY] with 1–2 warm sentences. Do not change anything else. Do not add extra lines.
-
-Hi,
-
-[BODY: warm thank-you sentences to a customer who ordered from '${drop_name}' on ${delivery_day}. Mention that more drops are coming. Do not invent specific dates or details.]
-
-${vendor_name}`;
+      return `Write 1–2 warm sentences thanking a customer for ordering from ${vendor_name}'s '${drop_name}' drop on ${delivery_day}.
+Mention that more drops are coming. Do not invent specific details. Plain, warm language. Output only the sentences, nothing else.`;
 
     default:
       return `Write a short, warm social media post for ${vendor_name} about their '${drop_name}' food drop at ${host} this ${delivery_day}. 2 sentences.`;

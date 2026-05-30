@@ -22,6 +22,10 @@ function fmtDay(iso: string): string {
   });
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   const jsonResponse = (body: unknown, status: number) =>
@@ -49,14 +53,19 @@ Deno.serve(async (req) => {
     if (authError || !user) return jsonResponse({ error: "Unauthorized" }, 401);
 
     // ---- Body -------------------------------------------------------
-    let body: { vendor_id?: string; drop_id?: string };
+    let body: {
+      vendor_id?: string;
+      drop_id?: string;
+      custom_subject?: string | null;
+      custom_body?: string | null;
+    };
     try {
       body = await req.json();
     } catch {
       return jsonResponse({ error: "Invalid JSON body" }, 400);
     }
 
-    const { vendor_id, drop_id } = body;
+    const { vendor_id, drop_id, custom_subject, custom_body } = body;
     if (!vendor_id) return jsonResponse({ error: "vendor_id is required" }, 400);
     if (!drop_id)   return jsonResponse({ error: "drop_id is required" }, 400);
 
@@ -132,51 +141,55 @@ Deno.serve(async (req) => {
     const vendorName   = vendor.display_name || "Hearth";
     const brandColour  = vendor.brand_primary_color || "#8B6B3F";
 
-    const subject = `${drop.name} — orders open early for you`;
+    const subject = custom_subject || `${drop.name} — orders open early for you`;
 
-    const buildEmail = (name: string) => {
+    // Wrap a plain-text body (greeting → sign-off, paragraphs separated by
+    // blank lines) in the branded HTML shell. Same header, footer, and
+    // brand colour whether the body is custom or default — only the body
+    // content changes.
+    const buildHtml = (bodyText: string) => {
+      const paragraphs = bodyText
+        .split(/\n{2,}/)
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0)
+        .map((p) => {
+          const safe = escapeHtml(p)
+            .replace(/(https?:\/\/[^\s]+)/g, `<a href="$1" style="color:${brandColour};">$1</a>`)
+            .replace(/\n/g, "<br>");
+          return `  <p style="margin:0 0 16px;font-size:15px;line-height:1.65;">${safe}</p>`;
+        })
+        .join("\n");
+
+      return `
+<div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#1F2937;background:#ffffff;">
+  <div style="margin-bottom:24px;">
+    <span style="font-size:15px;font-weight:700;color:#3D3530;">${vendorName}</span>
+    <span style="font-size:12px;color:#9CA3AF;margin-left:8px;">via Hearth</span>
+  </div>
+${paragraphs}
+</div>`.trim();
+    };
+
+    // Default plain-text body, used when the caller supplies no custom_body.
+    // Includes greeting and sign-off so buildHtml wraps the whole thing.
+    const buildDefaultBody = (name: string) => {
       const greeting      = name ? `Hi ${name.split(" ")[0]},` : "Hi,";
       const capacityLine  = capacity
         ? `Capacity is limited to ${capacity} orders — worth ordering early.`
         : "Capacity is limited — worth ordering early.";
       const closesLine    = closesTime ? `Orders close at ${closesTime}.` : "";
 
-      const html = `
-<div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#1F2937;background:#ffffff;">
-  <div style="margin-bottom:24px;">
-    <span style="font-size:15px;font-weight:700;color:#3D3530;">${vendorName}</span>
-    <span style="font-size:12px;color:#9CA3AF;margin-left:8px;">via Hearth</span>
-  </div>
-  <p style="margin:0 0 16px;font-size:15px;line-height:1.65;">${greeting}</p>
-  <p style="margin:0 0 16px;font-size:15px;line-height:1.65;">
-    <strong>${drop.name}</strong> is coming ${dropDay}. As a previous customer, you get access to order before the link goes public.
-  </p>
-  <p style="margin:24px 0;">
-    <a href="${orderingUrl}"
-       style="display:inline-block;background:${brandColour};color:#ffffff;padding:13px 26px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
-      Order now →
-    </a>
-  </p>
-  <p style="margin:0 0 6px;font-size:14px;color:#6B7280;line-height:1.6;">${capacityLine}</p>
-  ${closesLine ? `<p style="margin:0 0 16px;font-size:14px;color:#6B7280;">${closesLine}</p>` : ""}
-  <hr style="border:none;border-top:1px solid #E5E7EB;margin:28px 0 20px;" />
-  <p style="margin:0;font-size:13px;color:#9CA3AF;">${vendorName}</p>
-</div>`.trim();
-
-      const text = [
+      return [
         greeting,
         "",
         `${drop.name} is coming ${dropDay}. As a previous customer, you get access to order before the link goes public.`,
         "",
         `Order here: ${orderingUrl}`,
         "",
-        capacityLine,
-        closesLine,
+        [capacityLine, closesLine].filter(Boolean).join(" "),
         "",
         vendorName,
-      ].filter(line => line !== undefined).join("\n");
-
-      return { html, text };
+      ].join("\n");
     };
 
     // ---- Send -------------------------------------------------------
@@ -184,7 +197,8 @@ Deno.serve(async (req) => {
     const errors: string[] = [];
 
     for (const recipient of recipients) {
-      const { html, text } = buildEmail(recipient.name);
+      const text = custom_body || buildDefaultBody(recipient.name);
+      const html = buildHtml(text);
 
       try {
         const res = await fetch(RESEND_URL, {

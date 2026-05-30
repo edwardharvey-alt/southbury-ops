@@ -2226,9 +2226,6 @@
             <button class="act-copy-btn primary" type="button"
               data-act="confirm-email"
               data-touchpoint="${escapeHtml(tp)}">Confirm send</button>
-            <button class="act-copy-btn" type="button"
-              data-act="collapse-email"
-              data-touchpoint="${escapeHtml(tp)}">Done editing</button>
           </div>
           <div class="act-email-send-error" data-error-key="${escapeHtml(tp)}"
             style="font-size:12px;color:#b91c1c;margin-top:6px;"></div>
@@ -3019,10 +3016,23 @@
           if (data?.error) throw new Error(data.error);
 
           if (data?.copy && bodyInput) {
-            bodyInput.value = data.copy;
+            const orderingUrl = `https://lovehearth.co.uk/order.html?drop=${rawDrop.slug}`;
+            const vendorName = state.vendor?.display_name || '';
+            const capStr = rawDrop.capacity_units_total
+              ? `${rawDrop.capacity_units_total} orders`
+              : 'a limited number of orders';
+            const closesStr = fmtT(rawDrop.closes_at) || 'tonight';
+
+            let fullBody;
+            if (emailTpMap[tp] === 'early_access_email') {
+              fullBody = `Hi,\n\n${data.copy}\n\nOrder here: ${orderingUrl}\n\nCapacity is limited to ${capStr} and closes at ${closesStr}. Don't hang about.\n\n${vendorName}`;
+            } else {
+              fullBody = `Hi,\n\n${data.copy}\n\n${vendorName}`;
+            }
+
+            bodyInput.value = fullBody;
             bodyInput.dispatchEvent(new Event('input'));
-            // Also update emailDrafts if the platform tracks them
-            if (state.emailDrafts?.[tp]) state.emailDrafts[tp].body = data.copy;
+            if (state.emailDrafts?.[tp]) state.emailDrafts[tp].body = fullBody;
           }
 
         } catch (err) {
@@ -3171,6 +3181,8 @@
             body: {
               vendor_id: state.vendor.id,
               drop_id:   dropId,
+              custom_subject: state.emailDrafts?.[tp]?.subject || null,
+              custom_body:    state.emailDrafts?.[tp]?.body    || null,
             },
           });
 
