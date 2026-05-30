@@ -1708,7 +1708,6 @@
                     <div class="qrWrap" id="qrWrap"></div>
                 </div>
 
-                <div class="reviewCardDivider"></div>
                 <div class="stageSection" id="reviewPromotionPlan"></div>
 
                 <div class="reviewCardDivider"></div>
@@ -3973,20 +3972,31 @@
         .filter((d) => d.drop_id !== state.selectedDropId)
         .reduce((sum, d) => sum + Number(d.order_count || 0), 0) > 0;
 
-      const promoSignals = [
-        {
-          ok: Boolean(liveDrop.host_id || liveDrop.host_name),
-          label: (liveDrop.host_id || liveDrop.host_name)
-            ? "Host assigned — WhatsApp activation available"
-            : "No host yet — adding one unlocks WhatsApp activation"
-        },
-        {
-          ok: hasPreviousOrders,
-          label: hasPreviousOrders
-            ? "Previous customers — early access email will send"
-            : "No previous customers yet — they'll build from this drop"
-        }
-      ];
+      const dropType = state.drop.drop_type || 'neighbourhood';
+      const isNeighbourhood = dropType === 'neighbourhood';
+
+      const promoSignals = [];
+
+      // Host signal — only relevant for hosted, community and event drops.
+      // Neighbourhood drops don't have hosts by design; showing this signal
+      // would suggest adding one, which is a model violation.
+      if (!isNeighbourhood) {
+        const hasHost = Boolean(liveDrop.host_id || liveDrop.host_name);
+        promoSignals.push({
+          ok: hasHost,
+          label: hasHost
+            ? 'Host assigned — WhatsApp activation available'
+            : 'No host yet — adding one unlocks WhatsApp activation',
+        });
+      }
+
+      // Previous customers signal — relevant for all drop types.
+      promoSignals.push({
+        ok: hasPreviousOrders,
+        label: hasPreviousOrders
+          ? 'Previous customers — early access email will send'
+          : 'No previous customers yet — they\'ll build from this drop',
+      });
 
       byId("reviewPromotionPlan").innerHTML = `
         <h4 class="stageSectionTitle">Promotion plan</h4>
