@@ -98,16 +98,29 @@ function buildPrompt(input: CopyInput): string {
       return `Write a short social media post from ${vendor_name} after completing their '${drop_name}' food drop. Warm and grateful. Hint that the next one is coming. 2 sentences.`;
 
     case "early_access_email":
-      return `Write 2 short sentences for the body of an early access email from ${vendor_name} to a previous customer.
+      return `Write the complete body of an early access email from ${vendor_name} to a previous customer.
 The drop is '${drop_name}' at ${host} on ${delivery_day}. Orders close at ${closes_time || "tonight"} and capacity is ${cap}.
-Do not invent any details not listed above — no collection times, no specific items, no prices.
-Do not include a subject line, greeting, sign-off, or ordering link — those are added separately.
-Warm and personal. Plain language.`;
+The ordering link is: ${ordering_url}
+
+Write in this exact structure, with blank lines between sections:
+"Hi,"
+[1-2 warm sentences explaining they get early access before the public link goes live — do not invent any details not listed above]
+"Order here: ${ordering_url}"
+"Capacity is limited to ${cap} and closes at ${closes_time || "tonight"}."
+"${vendor_name}"
+
+Plain language. Warm but not gushing. Do not add a subject line.`;
 
     case "post_drop_thankyou":
-      return `Write the body of a short thank-you email from ${vendor_name} to a customer after their '${drop_name}' drop on ${delivery_day}.
-Do not include a subject line, greeting, or sign-off — write only 2–3 body sentences.
-Genuine and warm. If it feels natural, hint that more drops are coming — but do not force it.`;
+      return `Write the complete body of a thank-you email from ${vendor_name} to a customer after their '${drop_name}' drop on ${delivery_day}.
+
+Write in this exact structure, with blank lines between sections:
+"Hi,"
+[1-2 genuinely warm sentences thanking them for ordering — do not invent any specific details]
+[1 sentence hinting the next drop is coming, without being specific about dates]
+"${vendor_name}"
+
+Plain language. Genuine warmth. Do not add a subject line. Do not invent details not given above.`;
 
     default:
       return `Write a short, warm social media post for ${vendor_name} about their '${drop_name}' food drop at ${host} this ${delivery_day}. 2 sentences.`;
