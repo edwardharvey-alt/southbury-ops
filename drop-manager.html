@@ -1709,6 +1709,9 @@
                 </div>
 
                 <div class="reviewCardDivider"></div>
+                <div class="stageSection" id="reviewPromotionPlan"></div>
+
+                <div class="reviewCardDivider"></div>
                 <div style="display:flex; justify-content:center; margin:4px 0 8px;">
                   <a class="btnAccent" id="goToActivationBtn" href="#" style="min-width:280px; max-width:100%; text-align:center; display:inline-flex; align-items:center; justify-content:center; gap:8px;">
                     Go to Activation →
@@ -3913,6 +3916,7 @@
       if (!state.drop) {
         summary.innerHTML = `<div class="emptyState">No drop selected.</div>`;
         readinessEl.innerHTML = `<div class="emptyState">No drop selected.</div>`;
+        byId("reviewPromotionPlan").innerHTML = "";
         share.textContent = "No drop link yet.";
         renderQrCode("");
         /* createEventWindowBtn removed — event windows now in timing pane */
@@ -3960,6 +3964,42 @@
           <span>${escapeHtml(item.label)}</span>
         </div>
       `).join("");
+
+      // Promotion plan — informational signals showing what's ready to help
+      // fill this drop. Not a publish gate. Reuses the readinessItem pattern;
+      // "fail" is styled amber (informational), not red, so it reads as a
+      // nudge rather than a blocker.
+      const hasPreviousOrders = (state.drops || [])
+        .filter((d) => d.drop_id !== state.selectedDropId)
+        .reduce((sum, d) => sum + Number(d.order_count || 0), 0) > 0;
+
+      const promoSignals = [
+        {
+          ok: Boolean(liveDrop.host_id || liveDrop.host_name),
+          label: (liveDrop.host_id || liveDrop.host_name)
+            ? "Host assigned — WhatsApp activation available"
+            : "No host yet — adding one unlocks WhatsApp activation"
+        },
+        {
+          ok: hasPreviousOrders,
+          label: hasPreviousOrders
+            ? "Previous customers — early access email will send"
+            : "No previous customers yet — they'll build from this drop"
+        }
+      ];
+
+      byId("reviewPromotionPlan").innerHTML = `
+        <h4 class="stageSectionTitle">Promotion plan</h4>
+        <p class="stageSectionSub">Everything Hearth prepares to help you fill this drop.</p>
+        <div class="readinessList">
+          ${promoSignals.map((s) => `
+            <div class="readinessItem ${s.ok ? "pass" : "fail"}">
+              <span class="readinessMark">${s.ok ? "✓" : "→"}</span>
+              <span>${escapeHtml(s.label)}</span>
+            </div>
+          `).join("")}
+        </div>
+      `;
 
       const shareUrl = getShareUrl();
       share.textContent = shareUrl || "No drop link yet.";
