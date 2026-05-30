@@ -2447,6 +2447,7 @@
                 <div class="act-field-helper">The dish that headlines your reveal post — we'll use its photo.</div>
               </div>
             </div>
+            ${card1CaptionArea}
             <div class="menuCardArtworkFrame" id="act-menuCardFrame" style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
               <div class="menuCardArtwork" id="act-menuCardArtwork">
                 <img class="menuCardArtwork__image" id="act-menuCardImage" alt="" crossorigin="anonymous" />
@@ -2459,7 +2460,6 @@
               </div>
             </div>
             <button class="act-copy-btn primary" id="act-downloadMenuCardBtn" type="button" data-act="download" disabled>Download menu card</button>
-            ${card1CaptionArea}
           </div>
         </div>
       `;
@@ -2816,13 +2816,26 @@
       state.messageDrafts = {};
       state.expandedMessageCards = {};
       renderDropView(dropId);
-      // Auto-generate Card 1 (monday_reveal) on first drop selection
-      if (!state.messageGenerated?.['monday_reveal']) {
-        const genBtn = document.querySelector(
-          '[data-act="generate-copy"][data-touchpoint="monday_reveal"]'
-        );
-        if (genBtn) genBtn.click();
-      }
+      // Auto-generate all message cards on first drop selection.
+      // AI is the starting point — vendor edits from the generated draft.
+      // Staggered to avoid simultaneous API calls.
+      const messageCardTouchpoints = [
+        'monday_reveal',
+        'tuesday_host',
+        'thursday_vendor_whatsapp',
+        'thursday_host_link',
+        'friday_post_drop',
+      ];
+      messageCardTouchpoints.forEach((tp, i) => {
+        if (!state.messageGenerated?.[tp]) {
+          setTimeout(() => {
+            const genBtn = document.querySelector(
+              `[data-act="generate-copy"][data-touchpoint="${tp}"]`
+            );
+            if (genBtn) genBtn.click();
+          }, i * 400);
+        }
+      });
     }
 
     // ---- Init + delegated events -------------------------------------
@@ -3002,7 +3015,6 @@
 
         generateEmailBody.disabled = true;
         generateEmailBody.textContent = 'Generating…';
-        const bodyInput = document.querySelector(`.act-email-body-input[data-email-key="${tp}"]`);
 
         try {
           const fmtT = (iso) => iso
@@ -3033,7 +3045,7 @@
           if (error) throw error;
           if (data?.error) throw new Error(data.error);
 
-          if (data?.copy && bodyInput) {
+          if (data?.copy) {
             const orderingUrl = `https://lovehearth.co.uk/order.html?drop=${rawDrop.slug}`;
             const vendorName = state.vendor?.display_name || '';
             const capStr = rawDrop.capacity_units_total
@@ -3048,11 +3060,14 @@
               fullBody = `Hi,\n\n${data.copy}\n\n${vendorName}`;
             }
 
-            bodyInput.value = fullBody;
-            bodyInput.dispatchEvent(new Event('input'));
+            // Update state — renderDropView will re-render both mock and
+            // textarea from state, keeping them in sync.
             if (state.emailDrafts?.[tp]) state.emailDrafts[tp].body = fullBody;
             state.emailBodyGenerated = state.emailBodyGenerated || {};
             state.emailBodyGenerated[tp] = true;
+            state.expandedEmailCards = state.expandedEmailCards || {};
+            state.expandedEmailCards[tp] = true;
+            renderDropView(dropId);
           }
 
         } catch (err) {
