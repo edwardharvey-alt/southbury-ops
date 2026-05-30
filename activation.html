@@ -3020,6 +3020,7 @@
 
           if (data?.copy && bodyInput) {
             bodyInput.value = data.copy;
+            bodyInput.dispatchEvent(new Event('input'));
             // Also update emailDrafts if the platform tracks them
             if (state.emailDrafts?.[tp]) state.emailDrafts[tp].body = data.copy;
           }
