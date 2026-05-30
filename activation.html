@@ -1049,7 +1049,8 @@
       expandedEmailCards: {},
       emailDrafts: {},
       messageDrafts: {},
-      expandedMessageCards: {}
+      expandedMessageCards: {},
+      sendingEmail: {}  // touchpoint → true while in-flight
     };
 
     const DAY_MS = 24 * 60 * 60 * 1000;
@@ -1402,12 +1403,13 @@
       return fmtTime(d);
     }
 
-    function actLog(touchpoint, action){
+    function actLog(touchpoint, action, meta = {}){
       state.activationLog.push({
         touchpoint,
         action,
         dropId: state.selectedDropId || null,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        ...meta
       });
       renderDropView(state.selectedDropId);
     }
@@ -2163,9 +2165,12 @@
 
       if (entry) {
         // Done state — email mock visible read-only, confirm button replaced
+        const sentCount = entry.sent != null
+          ? ` · ${entry.sent} email${entry.sent === 1 ? '' : 's'} sent`
+          : '';
         actionHtml = `
           ${emailMockHtml}
-          <div class="act-done-state">✓ Confirmed · ${formatLogTime(entry.timestamp)}</div>
+          <div class="act-done-state">✓ Confirmed · ${formatLogTime(entry.timestamp)}${escapeHtml(sentCount)}</div>
         `;
       } else if (opts.locked) {
         // Locked state — no email mock, just the trigger note
@@ -2197,6 +2202,8 @@
               data-act="collapse-email"
               data-touchpoint="${escapeHtml(tp)}">Done editing</button>
           </div>
+          <div class="act-email-send-error" data-error-key="${escapeHtml(tp)}"
+            style="font-size:12px;color:#b91c1c;margin-top:6px;"></div>
           ${opts.note ? `<div class="act-note">${escapeHtml(opts.note)}</div>` : ''}
         `;
       } else {
@@ -2875,15 +2882,63 @@
       if (confirmEmail) {
         e.preventDefault();
         const tp = confirmEmail.dataset.touchpoint;
-        // Save final edits before confirming
+        const dropId = state.selectedDropId;
+
+        // Save final edits before sending
         const subjectInput = document.querySelector(`.act-email-subject-input[data-email-key="${tp}"]`);
         const bodyInput = document.querySelector(`.act-email-body-input[data-email-key="${tp}"]`);
         if (subjectInput && bodyInput && state.emailDrafts && state.emailDrafts[tp]) {
           state.emailDrafts[tp].subject = subjectInput.value;
           state.emailDrafts[tp].body = bodyInput.value;
         }
-        state.expandedEmailCards[tp] = false;
-        actLog(tp, 'confirmed');
+
+        // Map touchpoint key → Edge Function name
+        const fnMap = {
+          thursday_early_access: 'send-early-access-email',
+          saturday_thankyou:     'send-post-drop-thankyou',
+        };
+        const fnName = fnMap[tp];
+
+        if (!fnName) {
+          // No Edge Function for this touchpoint — collapse, log, re-render
+          state.expandedEmailCards[tp] = false;
+          actLog(tp, 'email_confirmed');
+          return;
+        }
+
+        // Show sending state — disable the button while in-flight
+        state.sendingEmail[tp] = true;
+        confirmEmail.disabled = true;
+        confirmEmail.textContent = 'Sending…';
+
+        try {
+          const { data, error } = await sb.functions.invoke(fnName, {
+            body: {
+              vendor_id: state.vendor.id,
+              drop_id:   dropId,
+            },
+          });
+
+          if (error) throw error;
+          if (data && data.error) throw new Error(data.error);
+
+          // Success — collapse, log into done state with sent count
+          const sent  = data?.sent  ?? 0;
+          const total = data?.total ?? 0;
+          state.sendingEmail[tp] = false;
+          state.expandedEmailCards[tp] = false;
+          actLog(tp, 'email_confirmed', { sent, total });
+        } catch (err) {
+          console.error('[activation] Email send failed:', tp, err);
+          state.sendingEmail[tp] = false;
+          // Restore the button so the vendor can retry
+          confirmEmail.disabled = false;
+          confirmEmail.textContent = 'Confirm send';
+          // Show a brief inline error note below the button — leave the card
+          // in its expanded state (no re-render) so the note survives.
+          const note = document.querySelector(`.act-email-send-error[data-error-key="${tp}"]`);
+          if (note) note.textContent = 'Send failed — check your connection and try again.';
+        }
         return;
       }
     });
