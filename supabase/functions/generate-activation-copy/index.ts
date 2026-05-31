@@ -82,6 +82,12 @@ function buildPrompt(input: CopyInput): string {
     : opens_day || "soon";
 
   switch (touchpoint) {
+    case "monday_reveal_hook":
+      return `Write a single punchy hook line for a food drop reveal post. Around 80 characters maximum.
+Vendor: ${vendor_name}. Drop: '${drop_name}' at ${host} on ${delivery_day}.
+One line only. No emojis. Warm and intriguing. Do not invent specific menu items — keep it to the type of food and occasion.
+Output only the line, nothing else.`;
+
     case "monday_reveal":
       return `Write a social media post for ${vendor_name} announcing their upcoming '${drop_name}' food drop at ${host} this ${delivery_day}. Ordering opens ${opensWhen} — do not include a link yet. Build warm anticipation. 2–3 sentences. Do not invent specific food items or menu details — keep it to what you know from the context given.`;
 

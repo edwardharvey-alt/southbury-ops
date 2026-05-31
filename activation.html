@@ -1062,7 +1062,8 @@
       sendingEmail: {},  // touchpoint → true while in-flight
       generateLoading: {},  // touchpoint → true while AI copy generates
       emailBodyGenerated: {},  // touchpoint → true once body auto-generated
-      messageGenerated: {}  // touchpoint → true once message copy generated
+      messageGenerated: {},  // touchpoint → true once message copy generated
+      hookLineGenerated: false  // true once the Card 1 reveal hook line is auto-generated
     };
 
     const DAY_MS = 24 * 60 * 60 * 1000;
@@ -2406,7 +2407,7 @@
                 data-act="generate-copy"
                 data-touchpoint="monday_reveal"
                 class="act-copy-btn">
-                ✦ Generate →
+                ${state.messageGenerated?.['monday_reveal'] ? '↺ Regenerate →' : '✦ Generate →'}
               </button>
               ${copyBtn('Copy caption', 'monday_reveal', 'caption_copied', false)}
             </div>
@@ -2436,6 +2437,12 @@
               <div>
                 <label class="act-field-label" for="act-revealLine">Your line for this drop</label>
                 <textarea id="act-revealLine" maxlength="100" rows="3" placeholder="e.g. Hand-stretched sourdough, fired three minutes flat.">${escapeHtml(rawDrop.reveal_line || '')}</textarea>
+                <button
+                  data-act="generate-hook-line"
+                  class="act-copy-btn"
+                  style="margin-top:6px;">
+                  ${state.hookLineGenerated ? '↺ Regenerate →' : '✦ Generate →'}
+                </button>
                 <div class="act-field-helper">One line for your reveal post — the part that's yours to write. Around 80 characters.</div>
               </div>
               <div>
@@ -2816,6 +2823,11 @@
       state.messageDrafts = {};
       state.expandedMessageCards = {};
       renderDropView(dropId);
+      // Auto-generate hook line (Card 1)
+      if (!state.hookLineGenerated) {
+        const hookBtn = document.querySelector('[data-act="generate-hook-line"]');
+        if (hookBtn) hookBtn.click();
+      }
       // Auto-generate all message cards on first drop selection.
       // AI is the starting point — vendor edits from the generated draft.
       // Staggered to avoid simultaneous API calls.
@@ -3075,6 +3087,59 @@
         } finally {
           generateEmailBody.disabled = false;
           generateEmailBody.textContent = state.emailBodyGenerated?.[tp] ? '↺ Regenerate body →' : '✦ Generate body →';
+        }
+        return;
+      }
+
+      const generateHookLine = e.target.closest('[data-act="generate-hook-line"]');
+      if (generateHookLine) {
+        e.preventDefault();
+        const dropId = state.selectedDropId;
+        const rawDrop = state.rawById?.[dropId];
+        if (!rawDrop) return;
+
+        generateHookLine.disabled = true;
+        generateHookLine.textContent = 'Generating…';
+
+        const revealLineInput = document.querySelector('#act-revealLine');
+
+        try {
+          const { data, error } = await sb.functions.invoke('generate-activation-copy', {
+            body: {
+              touchpoint:   'monday_reveal_hook',
+              vendor_name:  state.vendor?.display_name || '',
+              drop_name:    rawDrop.name || '',
+              host_name:    rawDrop.host_name || null,
+              delivery_day: rawDrop.delivery_start
+                ? new Date(rawDrop.delivery_start).toLocaleDateString('en-GB', {
+                    weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London'
+                  })
+                : '',
+              opens_day: null, opens_time: null, closes_time: null,
+              capacity: null,
+              ordering_url: `https://lovehearth.co.uk/order.html?drop=${rawDrop.slug}`,
+              tagline:     state.vendor?.tagline || null,
+              website_url: state.vendor?.website_url || null,
+            },
+          });
+
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+
+          if (data?.copy && revealLineInput) {
+            revealLineInput.value = data.copy;
+            // Fire input/change event so the live save mechanism picks it up
+            revealLineInput.dispatchEvent(new Event('input', { bubbles: true }));
+            revealLineInput.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+
+          state.hookLineGenerated = true;
+
+        } catch (err) {
+          console.error('[activation] generate-hook-line failed:', err);
+        } finally {
+          generateHookLine.disabled = false;
+          generateHookLine.textContent = state.hookLineGenerated ? '↺ Regenerate →' : '✦ Generate →';
         }
         return;
       }
