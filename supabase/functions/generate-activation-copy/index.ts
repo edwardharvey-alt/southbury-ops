@@ -66,6 +66,7 @@ interface CopyInput {
   ordering_url: string;
   tagline: string | null;       // new
   website_url: string | null;   // new
+  guidance?: string | null;     // optional vendor steer for regeneration
 }
 
 function buildPrompt(input: CopyInput): string {
@@ -168,6 +169,9 @@ Deno.serve(async (req) => {
 
     // ---- Generate ---------------------------------------------------
     const userPrompt = buildPrompt(input);
+    const finalPrompt = input.guidance?.trim()
+      ? `${userPrompt}\n\nAdditional instruction from the vendor: "${input.guidance.trim()}"`
+      : userPrompt;
 
     const anthropicRes = await fetch(ANTHROPIC_URL, {
       method: "POST",
@@ -180,7 +184,7 @@ Deno.serve(async (req) => {
         model: MODEL,
         max_tokens: 300,
         system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
+        messages: [{ role: "user", content: finalPrompt }],
       }),
     });
 

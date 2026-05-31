@@ -1017,6 +1017,46 @@
       opacity: 0.75;
       user-select: none;
     }
+
+    .act-email-brand-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      color: var(--h-slate, #6B7280);
+    }
+    .act-email-brand-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .act-guidance-row {
+      margin-top: 8px;
+      margin-bottom: 4px;
+    }
+    .act-guidance-input {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid var(--h-border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 13px;
+      color: var(--h-text);
+      background: var(--h-surface);
+      font-family: inherit;
+    }
+    .act-guidance-input::placeholder {
+      color: var(--h-slate);
+      opacity: 0.7;
+    }
   </style>
 </head>
 <body>
@@ -1066,6 +1106,7 @@
       expandedEmailCards: {},
       emailDrafts: {},
       messageDrafts: {},
+      guidanceDrafts: {},
       expandedMessageCards: {},
       sendingEmail: {},  // touchpoint → true while in-flight
       generateLoading: {},  // touchpoint → true while AI copy generates
@@ -2080,6 +2121,12 @@
               data-touchpoint="${escapeHtml(tp)}"
               rows="5">${escapeHtml(currentText)}</textarea>
             ${state.messageGenerated?.[tp] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
+            ${state.messageGenerated?.[tp] ? `
+              <div class="act-guidance-row">
+                <input type="text" class="act-guidance-input"
+                  data-touchpoint="${escapeHtml(tp)}"
+                  placeholder="e.g. shorter, more casual, mention the match is on that evening...">
+              </div>` : ''}
             <div class="act-message-edit-row">
               <button
                 data-act="generate-copy"
@@ -2131,100 +2178,75 @@
       });
     }
 
-    // Email card: inline subject/body preview with an edit-and-confirm
-    // flow. Edits persist in state.emailDrafts; expansion in
-    // state.expandedEmailCards. Done/locked handled here, so tpCard's
-    // touchpointKey is null.
+    // Email card: always-editable subject/body with a Generate/Regenerate +
+    // Confirm send flow. No mock, no expand/collapse — the fields are shown
+    // directly. Edits persist in state.emailDrafts (via the live input
+    // listener). Done/locked handled here, so tpCard's touchpointKey is null.
     function emailCard(opts) {
-      const entry = getLogEntry(opts.touchpointKey);
       const tp = opts.touchpointKey;
+      const entry = getLogEntry(tp);
 
       // Preserve any edits the vendor has made
       if (!state.emailDrafts[tp]) {
         state.emailDrafts[tp] = { subject: opts.subject, body: opts.body };
       }
       const draft = state.emailDrafts[tp];
-      const isExpanded = !!state.expandedEmailCards[tp];
 
-      // Brand initial — first letter of vendor display name
+      // Brand indicator — first letter of vendor display name
       const vendorName = (state.vendor && (state.vendor.display_name || state.vendor.name)) || 'Hearth';
       const brandInitial = vendorName.charAt(0).toUpperCase();
       const brandColour = (state.vendor && state.vendor.brand_primary_color) || '#8B6B3F';
-
-      // Styled email mock — always visible, shows current draft content
-      const emailMockHtml = `
-        <div class="act-email-mock">
-          <div class="act-email-mock__header">
-            <div class="act-email-mock__brand-dot"
-              style="background:${escapeHtml(brandColour)};">${escapeHtml(brandInitial)}</div>
-            <div>
-              <div class="act-email-mock__from">${escapeHtml(vendorName)}</div>
-              <div class="act-email-mock__from-address">via Hearth · to your customers</div>
-            </div>
-          </div>
-          <div class="act-email-mock__body">
-            <div class="act-email-mock__subject">${escapeHtml(draft.subject)}</div>
-            <div class="act-email-mock__content">${escapeHtml(draft.body)}</div>
-            <hr class="act-email-mock__divider">
-            <div class="act-email-mock__footer">${escapeHtml(vendorName)}</div>
-          </div>
-        </div>
-      `;
+      const generated = !!state.emailBodyGenerated?.[tp];
 
       let actionHtml;
 
       if (entry) {
-        // Done state — email mock visible read-only, confirm button replaced
+        // Done state — confirm button replaced with confirmation + sent count
         const sentCount = entry.sent != null
           ? ` · ${entry.sent} email${entry.sent === 1 ? '' : 's'} sent`
           : '';
-        actionHtml = `
-          ${emailMockHtml}
-          <div class="act-done-state">✓ Confirmed · ${formatLogTime(entry.timestamp)}${escapeHtml(sentCount)}</div>
-        `;
+        actionHtml = `<div class="act-done-state">✓ Confirmed · ${formatLogTime(entry.timestamp)}${escapeHtml(sentCount)}</div>`;
       } else if (opts.locked) {
-        // Locked state — no email mock, just the trigger note
+        // Locked state — just the trigger note
         actionHtml = `<div class="act-locked-note">${escapeHtml(opts.lockedNote || '')}</div>`;
-      } else if (isExpanded) {
-        // Edit state — email mock still visible above the fields
-        // so the vendor can see the live preview as they type
+      } else {
+        // Always-editable state — brand header, fields, generate + confirm
         actionHtml = `
-          ${emailMockHtml}
-          <div class="act-email-expanded">
-            <div class="act-email-field">
-              <label class="act-field-label">Subject</label>
-              <input type="text" class="act-email-subject-input"
-                data-email-key="${escapeHtml(tp)}"
-                style="width:100%"
-                value="${escapeHtml(draft.subject)}" />
-            </div>
-            <div class="act-email-field">
-              <label class="act-field-label">Message</label>
-              <textarea class="act-email-body-input"
-                data-email-key="${escapeHtml(tp)}"
-                rows="8">${escapeHtml(draft.body)}</textarea>
-              ${state.emailBodyGenerated?.[tp] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
-            </div>
+          <div class="act-email-brand-header">
+            <span class="act-email-brand-dot" style="background:${escapeHtml(brandColour)};">${escapeHtml(brandInitial)}</span>
+            <span>${escapeHtml(vendorName)}</span>
+            <span>· via Hearth · to your customers</span>
           </div>
+          <div class="act-email-field">
+            <label class="act-field-label">Subject</label>
+            <input type="text" class="act-email-subject-input"
+              data-email-key="${escapeHtml(tp)}"
+              style="width:100%"
+              value="${escapeHtml(draft.subject)}" />
+          </div>
+          <div class="act-email-field">
+            <label class="act-field-label">Message</label>
+            <textarea class="act-email-body-input"
+              data-email-key="${escapeHtml(tp)}"
+              rows="8">${escapeHtml(draft.body)}</textarea>
+          </div>
+          ${generated ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
+          ${generated ? `
+            <div class="act-guidance-row">
+              <input type="text" class="act-guidance-input"
+                data-touchpoint="${escapeHtml(tp)}"
+                placeholder="e.g. shorter, more personal, mention it's their first time at this venue...">
+            </div>` : ''}
           <div class="act-confirm-row">
             <button class="act-copy-btn" type="button"
               data-act="generate-email-body"
-              data-touchpoint="${escapeHtml(tp)}">${state.emailBodyGenerated?.[tp] ? '↺ Regenerate body →' : '✦ Generate body →'}</button>
+              data-touchpoint="${escapeHtml(tp)}">${generated ? '↺ Regenerate body →' : '✦ Generate body →'}</button>
             <button class="act-copy-btn primary" type="button"
               data-act="confirm-email"
               data-touchpoint="${escapeHtml(tp)}">Confirm send</button>
           </div>
           <div class="act-email-send-error" data-error-key="${escapeHtml(tp)}"
             style="font-size:12px;color:#b91c1c;margin-top:6px;"></div>
-          ${opts.note ? `<div class="act-note">${escapeHtml(opts.note)}</div>` : ''}
-        `;
-      } else {
-        // Collapsed state — email mock + Edit & confirm button
-        actionHtml = `
-          ${emailMockHtml}
-          <button class="act-copy-btn primary" type="button"
-            data-act="expand-email"
-            data-touchpoint="${escapeHtml(tp)}">Edit & confirm</button>
           ${opts.note ? `<div class="act-note">${escapeHtml(opts.note)}</div>` : ''}
         `;
       }
@@ -2818,6 +2840,17 @@
           }, i * 400);
         }
       });
+      // Auto-generate email cards on drop selection
+      ['thursday_early_access', 'saturday_thankyou'].forEach((tp, i) => {
+        if (!state.emailBodyGenerated?.[tp]) {
+          setTimeout(() => {
+            const genBtn = document.querySelector(
+              `[data-act="generate-email-body"][data-touchpoint="${tp}"]`
+            );
+            if (genBtn) genBtn.click();
+          }, (messageCardTouchpoints.length + i + 1) * 400);
+        }
+      });
     }
 
     // ---- Init + delegated events -------------------------------------
@@ -2948,23 +2981,6 @@
         return;
       }
 
-      const expandEmail = e.target.closest('[data-act="expand-email"]');
-      if (expandEmail) {
-        e.preventDefault();
-        const tp = expandEmail.dataset.touchpoint;
-        state.expandedEmailCards[tp] = true;
-        renderDropView(state.selectedDropId);
-        // Auto-generate body on first open — vendor edits from AI output,
-        // not from a blank template. Button stays for regeneration.
-        if (!state.emailBodyGenerated?.[tp]) {
-          const genBtn = document.querySelector(
-            `[data-act="generate-email-body"][data-touchpoint="${tp}"]`
-          );
-          if (genBtn) genBtn.click();
-        }
-        return;
-      }
-
       const collapseEmail = e.target.closest('[data-act="collapse-email"]');
       if (collapseEmail) {
         e.preventDefault();
@@ -2995,6 +3011,10 @@
         };
         if (!emailTpMap[tp]) return;
 
+        // Optional vendor steer for this regeneration (cleared after success).
+        const guidanceEl = document.querySelector(`.act-guidance-input[data-touchpoint="${tp}"]`);
+        const guidance = guidanceEl?.value?.trim() || null;
+
         generateEmailBody.disabled = true;
         generateEmailBody.textContent = 'Generating…';
 
@@ -3021,6 +3041,7 @@
             tagline:      state.vendor?.tagline || null,
             website_url:  state.vendor?.website_url || null,
             opens_day: null, opens_time: null,
+            guidance,
           };
 
           const { data, error } = await sb.functions.invoke('generate-activation-copy', { body });
@@ -3028,6 +3049,7 @@
           if (data?.error) throw new Error(data.error);
 
           if (data?.copy) {
+            if (guidanceEl) guidanceEl.value = '';
             const orderingUrl = `https://lovehearth.co.uk/order.html?drop=${rawDrop.slug}`;
             const vendorName = state.vendor?.display_name || '';
             const capStr = rawDrop.capacity_units_total
@@ -3082,6 +3104,10 @@
         };
         if (!tpMap[tp]) return;
 
+        // Optional vendor steer for this regeneration (cleared after success).
+        const guidanceEl = document.querySelector(`.act-guidance-input[data-touchpoint="${tp}"]`);
+        const guidance = guidanceEl?.value?.trim() || null;
+
         state.generateLoading = state.generateLoading || {};
         state.generateLoading[tp] = true;
         generateCopy.disabled = true;
@@ -3122,6 +3148,7 @@
             ordering_url: `https://lovehearth.co.uk/order.html?drop=${rawDrop.slug}`,
             tagline:      state.vendor?.tagline || null,
             website_url:  state.vendor?.website_url || null,
+            guidance,
           };
 
           const { data, error } = await sb.functions.invoke('generate-activation-copy', { body });
@@ -3129,6 +3156,7 @@
           if (data?.error) throw new Error(data.error);
 
           if (data?.copy) {
+            if (guidanceEl) guidanceEl.value = '';
             // On success always re-render the card in expanded state so the
             // generated text is shown. The re-render rebuilds the button, so
             // no manual button reset is needed here.
