@@ -1009,6 +1009,14 @@
       color: #4B7A52;
       font-weight: 600;
     }
+
+    .act-ai-draft {
+      font-size: 11px;
+      color: var(--h-slate, #6B7280);
+      margin-top: 4px;
+      opacity: 0.75;
+      user-select: none;
+    }
   </style>
 </head>
 <body>
@@ -1062,8 +1070,7 @@
       sendingEmail: {},  // touchpoint → true while in-flight
       generateLoading: {},  // touchpoint → true while AI copy generates
       emailBodyGenerated: {},  // touchpoint → true once body auto-generated
-      messageGenerated: {},  // touchpoint → true once message copy generated
-      hookLineGenerated: false  // true once the Card 1 reveal hook line is auto-generated
+      messageGenerated: {}  // touchpoint → true once message copy generated
     };
 
     const DAY_MS = 24 * 60 * 60 * 1000;
@@ -1956,10 +1963,9 @@
     // Persist the current reveal fields to update-drop. Silent on error —
     // the vendor isn't blocked; failures land in the console for debug.
     async function actSaveRevealFields(dropId) {
-      const lineEl = byId('act-revealLine');
       const productEl = byId('act-revealProduct');
-      if (!lineEl || !productEl) return;
-      const reveal_line = lineEl.value.trim() || null;
+      if (!productEl) return;
+      const reveal_line = (state.rawById[dropId]?.reveal_line || '').trim() || null;
       const reveal_product_id = productEl.value || null;
       try {
         const { data, error } = await sb.functions.invoke('update-drop', {
@@ -1984,32 +1990,8 @@
     // area. Mirrors templates['monday_reveal'] inline so the Copy caption
     // button always copies the latest text without waiting for the save.
     function actInitRevealFields(dropId, summary, rawDrop) {
-      const lineEl = byId('act-revealLine');
       const productEl = byId('act-revealProduct');
-      if (!lineEl || !productEl) return;
-
-      function rebuildMondayRevealCaption() {
-        const dropName = summary.drop_name || rawDrop.name || 'Your drop';
-        const opensAt = rawDrop.opens_at;
-        const capTotal = summary.capacity_units_total;
-        const capTotalNum = capTotal != null ? Number(capTotal) : null;
-        const capPhrase = (capTotalNum != null && capTotalNum > 0) ? String(capTotalNum) : 'a limited number of';
-        const orderingLink = getOrderingLink(rawDrop);
-        const revealLine = lineEl.value.trim();
-        const c1 = [];
-        c1.push(`${dropName} is coming ${actRelDay(summary.delivery_start, false)}.`);
-        if (revealLine) c1.push(revealLine);
-        c1.push(`Orders open ${actOpensPhrase(opensAt)}. Capacity is limited to ${capPhrase} orders.`);
-        if (orderingLink) c1.push(orderingLink);
-        if (!state.currentTemplates) state.currentTemplates = {};
-        state.currentTemplates['monday_reveal'] = c1.join('\n\n');
-      }
-
-      lineEl.addEventListener('input', () => {
-        rebuildMondayRevealCaption();
-        if (actRevealSaveTimer) clearTimeout(actRevealSaveTimer);
-        actRevealSaveTimer = setTimeout(() => actSaveRevealFields(dropId), 800);
-      });
+      if (!productEl) return;
 
       productEl.addEventListener('change', () => {
         const newProductId = productEl.value || null;
@@ -2097,6 +2079,7 @@
               data-act="message-textarea"
               data-touchpoint="${escapeHtml(tp)}"
               rows="5">${escapeHtml(currentText)}</textarea>
+            ${state.messageGenerated?.[tp] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
             <div class="act-message-edit-row">
               <button
                 data-act="generate-copy"
@@ -2220,6 +2203,7 @@
               <textarea class="act-email-body-input"
                 data-email-key="${escapeHtml(tp)}"
                 rows="8">${escapeHtml(draft.body)}</textarea>
+              ${state.emailBodyGenerated?.[tp] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
             </div>
           </div>
           <div class="act-confirm-row">
@@ -2402,6 +2386,7 @@
               data-act="message-textarea"
               data-touchpoint="monday_reveal"
               rows="5">${escapeHtml(card1Caption)}</textarea>
+            ${state.messageGenerated?.['monday_reveal'] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
             <div class="act-message-edit-row">
               <button
                 data-act="generate-copy"
@@ -2434,17 +2419,6 @@
           <p>${escapeHtml(card1Desc)}</p>
           <div class="act-actions">
             <div class="act-reveal-fields">
-              <div>
-                <label class="act-field-label" for="act-revealLine">Your line for this drop</label>
-                <textarea id="act-revealLine" maxlength="100" rows="3" placeholder="e.g. Hand-stretched sourdough, fired three minutes flat.">${escapeHtml(rawDrop.reveal_line || '')}</textarea>
-                <button
-                  data-act="generate-hook-line"
-                  class="act-copy-btn"
-                  style="margin-top:6px;">
-                  ${state.hookLineGenerated ? '↺ Regenerate →' : '✦ Generate →'}
-                </button>
-                <div class="act-field-helper">One line for your reveal post — the part that's yours to write. Around 80 characters.</div>
-              </div>
               <div>
                 <label class="act-field-label" for="act-revealProduct">Reveal dish</label>
                 <select id="act-revealProduct">
@@ -2702,6 +2676,7 @@
               data-act="message-textarea"
               data-touchpoint="friday_post_drop"
               rows="5">${escapeHtml(card8Caption)}</textarea>
+            ${state.messageGenerated?.['friday_post_drop'] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
             <div class="act-message-edit-row">
               <button
                 data-act="generate-copy"
@@ -2823,11 +2798,6 @@
       state.messageDrafts = {};
       state.expandedMessageCards = {};
       renderDropView(dropId);
-      // Auto-generate hook line (Card 1)
-      if (!state.hookLineGenerated) {
-        const hookBtn = document.querySelector('[data-act="generate-hook-line"]');
-        if (hookBtn) hookBtn.click();
-      }
       // Auto-generate all message cards on first drop selection.
       // AI is the starting point — vendor edits from the generated draft.
       // Staggered to avoid simultaneous API calls.
@@ -3087,59 +3057,6 @@
         } finally {
           generateEmailBody.disabled = false;
           generateEmailBody.textContent = state.emailBodyGenerated?.[tp] ? '↺ Regenerate body →' : '✦ Generate body →';
-        }
-        return;
-      }
-
-      const generateHookLine = e.target.closest('[data-act="generate-hook-line"]');
-      if (generateHookLine) {
-        e.preventDefault();
-        const dropId = state.selectedDropId;
-        const rawDrop = state.rawById?.[dropId];
-        if (!rawDrop) return;
-
-        generateHookLine.disabled = true;
-        generateHookLine.textContent = 'Generating…';
-
-        const revealLineInput = document.querySelector('#act-revealLine');
-
-        try {
-          const { data, error } = await sb.functions.invoke('generate-activation-copy', {
-            body: {
-              touchpoint:   'monday_reveal_hook',
-              vendor_name:  state.vendor?.display_name || '',
-              drop_name:    rawDrop.name || '',
-              host_name:    rawDrop.host_name || null,
-              delivery_day: rawDrop.delivery_start
-                ? new Date(rawDrop.delivery_start).toLocaleDateString('en-GB', {
-                    weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London'
-                  })
-                : '',
-              opens_day: null, opens_time: null, closes_time: null,
-              capacity: null,
-              ordering_url: `https://lovehearth.co.uk/order.html?drop=${rawDrop.slug}`,
-              tagline:     state.vendor?.tagline || null,
-              website_url: state.vendor?.website_url || null,
-            },
-          });
-
-          if (error) throw error;
-          if (data?.error) throw new Error(data.error);
-
-          if (data?.copy && revealLineInput) {
-            revealLineInput.value = data.copy;
-            // Fire input/change event so the live save mechanism picks it up
-            revealLineInput.dispatchEvent(new Event('input', { bubbles: true }));
-            revealLineInput.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-
-          state.hookLineGenerated = true;
-
-        } catch (err) {
-          console.error('[activation] generate-hook-line failed:', err);
-        } finally {
-          generateHookLine.disabled = false;
-          generateHookLine.textContent = state.hookLineGenerated ? '↺ Regenerate →' : '✦ Generate →';
         }
         return;
       }
