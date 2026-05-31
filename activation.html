@@ -1041,8 +1041,11 @@
     .act-guidance-row {
       margin-top: 8px;
       margin-bottom: 4px;
+      display: block;
+      width: 100%;
     }
     .act-guidance-input {
+      display: block;
       width: 100%;
       box-sizing: border-box;
       border: 1px solid var(--h-border);
@@ -2234,7 +2237,6 @@
           ${generated ? `
             <div class="act-guidance-row">
               <input type="text" class="act-guidance-input"
-                style="display:block;width:100%;"
                 data-touchpoint="${escapeHtml(tp)}"
                 placeholder="e.g. shorter, more personal, mention it's their first time at this venue...">
             </div>` : ''}
@@ -2536,12 +2538,20 @@
           <div class="act-message-edit">
             <textarea data-act="message-textarea" data-touchpoint="thursday_vendor_whatsapp"
               rows="5">${escapeHtml(card4Text)}</textarea>
+            ${state.messageGenerated?.['thursday_vendor_whatsapp']
+              ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
+            ${state.messageGenerated?.['thursday_vendor_whatsapp'] ? `
+              <div class="act-guidance-row">
+                <input type="text" class="act-guidance-input"
+                  data-touchpoint="thursday_vendor_whatsapp"
+                  placeholder="e.g. more urgent, mention it's first come first served...">
+              </div>` : ''}
             <div class="act-message-edit-row">
               <button
                 data-act="generate-copy"
                 data-touchpoint="thursday_vendor_whatsapp"
                 class="act-copy-btn">
-                ✦ Generate →
+                ${state.messageGenerated?.['thursday_vendor_whatsapp'] ? '↺ Regenerate →' : '✦ Generate →'}
               </button>
               <button class="act-copy-btn" type="button"
                 data-act="collapse-message"
@@ -2562,7 +2572,20 @@
       } else {
         card4MessageArea = `
           <div class="act-message-preview">${escapeHtml(card4Text)}</div>
+          ${state.messageGenerated?.['thursday_vendor_whatsapp']
+            ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
+          ${state.messageGenerated?.['thursday_vendor_whatsapp'] ? `
+            <div class="act-guidance-row">
+              <input type="text" class="act-guidance-input"
+                data-touchpoint="thursday_vendor_whatsapp"
+                placeholder="e.g. more urgent, mention it's first come first served...">
+            </div>` : ''}
           <div class="act-channel-row">
+            <button class="act-copy-btn" type="button"
+              data-act="generate-copy"
+              data-touchpoint="thursday_vendor_whatsapp">
+              ${state.messageGenerated?.['thursday_vendor_whatsapp'] ? '↺ Regenerate →' : '✦ Generate →'}
+            </button>
             <button class="act-copy-btn" type="button"
               data-act="expand-message"
               data-touchpoint="thursday_vendor_whatsapp">Edit</button>
@@ -3170,10 +3193,22 @@
 
           if (data?.copy) {
             if (guidanceEl) guidanceEl.value = '';
+            // Card 4 (ordering-opens) gets the AI opener plus a
+            // platform-assembled ordering link + close time, so the link is
+            // always accurate while the AI writes only the warm opener.
+            // Other touchpoints use the generated copy verbatim.
+            let draft;
+            if (tp === 'thursday_vendor_whatsapp') {
+              const orderingUrl = `https://lovehearth.co.uk/order.html?drop=${rawDrop.slug}`;
+              const closeTime = fmtT(rawDrop.closes_at) || 'tonight';
+              draft = `${data.copy}\n\nOrder here: ${orderingUrl}\n\nOrders close at ${closeTime}.`;
+            } else {
+              draft = data.copy;
+            }
             // On success always re-render the card in expanded state so the
             // generated text is shown. The re-render rebuilds the button, so
             // no manual button reset is needed here.
-            state.messageDrafts[tp] = data.copy;
+            state.messageDrafts[tp] = draft;
             state.messageGenerated = state.messageGenerated || {};
             state.messageGenerated[tp] = true;
             state.expandedMessageCards[tp] = true;
@@ -3181,11 +3216,11 @@
             // Sync the live textarea (if one is mounted) before the re-render:
             // renderDropView() flushes every message-textarea's current DOM
             // value back into messageDrafts first, which would otherwise
-            // clobber data.copy with the stale pre-generation text.
+            // clobber the assembled draft with the stale pre-generation text.
             const ta = document.querySelector(
               `[data-act="message-textarea"][data-touchpoint="${tp}"]`
             );
-            if (ta) ta.value = data.copy;
+            if (ta) ta.value = draft;
             renderDropView(dropId);
             return;
           }

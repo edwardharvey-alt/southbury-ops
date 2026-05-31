@@ -96,7 +96,7 @@ Output only the line, nothing else.`;
       return `Write a WhatsApp message from ${host} to their members about ${vendor_name}'s '${drop_name}' food drop this ${delivery_day}. Written as the venue or club organiser — a trusted community heads-up, not a vendor promotion. Mention ordering opens ${opensWhen} and capacity is ${cap}. 3–4 short sentences, casual and warm.`;
 
     case "thursday_vendor":
-      return `Write a short WhatsApp message from ${vendor_name} to their customers. Ordering is now open for '${drop_name}'. Include this ordering link: ${ordering_url}. Mention ${cap} available and orders close at ${closes_time || "tonight"}. Under 40 words. Direct but warm.`;
+      return `Write a short WhatsApp message from ${vendor_name} to their customers announcing that ordering is NOW open for '${drop_name}' at ${host} on ${delivery_day}. ${capacity ? `${capacity} slots available.` : ""} Direct and warm — 1–2 sentences only. Do not include the ordering link or closing time — these will be added automatically.`;
 
     case "thursday_host_link":
       return `Write a very short WhatsApp message from ${host} dropping the live ordering link in their group. Under 15 words. Mention ${cap} remaining and include this link: ${ordering_url}. Nothing else.`;
