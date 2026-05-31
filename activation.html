@@ -2234,6 +2234,7 @@
           ${generated ? `
             <div class="act-guidance-row">
               <input type="text" class="act-guidance-input"
+                style="display:block;width:100%;"
                 data-touchpoint="${escapeHtml(tp)}"
                 placeholder="e.g. shorter, more personal, mention it's their first time at this venue...">
             </div>` : ''}
@@ -2409,6 +2410,12 @@
               data-touchpoint="monday_reveal"
               rows="5">${escapeHtml(card1Caption)}</textarea>
             ${state.messageGenerated?.['monday_reveal'] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
+            ${state.messageGenerated?.['monday_reveal'] ? `
+              <div class="act-guidance-row">
+                <input type="text" class="act-guidance-input"
+                  data-touchpoint="monday_reveal"
+                  placeholder="e.g. shorter, more intriguing, mention it's their first drop at this venue...">
+              </div>` : ''}
             <div class="act-message-edit-row">
               <button
                 data-act="generate-copy"
@@ -2699,6 +2706,12 @@
               data-touchpoint="friday_post_drop"
               rows="5">${escapeHtml(card8Caption)}</textarea>
             ${state.messageGenerated?.['friday_post_drop'] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
+            ${state.messageGenerated?.['friday_post_drop'] ? `
+              <div class="act-guidance-row">
+                <input type="text" class="act-guidance-input"
+                  data-touchpoint="friday_post_drop"
+                  placeholder="e.g. warmer, mention the sold-out moment, include the next drop date...">
+              </div>` : ''}
             <div class="act-message-edit-row">
               <button
                 data-act="generate-copy"
