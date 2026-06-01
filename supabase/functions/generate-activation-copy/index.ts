@@ -7,7 +7,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-const MODEL = "claude-haiku-4-5-20251001";
+const MODEL = "claude-sonnet-4-6";
 
 // Shared guardrail appended to EVERY touchpoint prompt (before any vendor
 // guidance) so all cases inherit it from one place. Purely restrictive: it
