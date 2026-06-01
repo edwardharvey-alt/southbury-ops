@@ -113,6 +113,9 @@ Only use facts given here — do not invent details. Plain, warm language. Outpu
       return `Write 1–2 warm sentences thanking a customer for ordering from ${vendor_name}'s '${drop_name}' drop on ${delivery_day}.
 Mention that more drops are coming. Do not invent specific details. Plain, warm language. Output only the sentences, nothing else.`;
 
+    case "poster_hook":
+      return `Write a single short line for a printed poster that sits beside the till in ${vendor_name}'s shop. The reader is a walk-in customer who may never have seen anything about this online. The line has one job: make them want to scan a QR code and pre-order ahead for ${vendor_name}'s service on ${delivery_day}${host_name ? `, at ${host_name}` : ""}. Write ONE line of 12 words or fewer. Convey that this is a special, limited, order-ahead occasion worth planning for — warm, confident, calm. Do NOT use the word 'drop' or explain what one is. Do NOT include any number or count (the poster is printed and cannot update). Do NOT invent menu items, dishes, or details you were not given. No hype, no exclamation marks, no fake urgency, no marketing clichés. Return only the line itself — no quotation marks, no markdown, nothing else.`;
+
     default:
       return `Write a short, warm social media post for ${vendor_name} about their '${drop_name}' food drop at ${host} this ${delivery_day}. 2 sentences.`;
   }
