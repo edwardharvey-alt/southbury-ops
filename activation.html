@@ -2049,6 +2049,74 @@
       });
     }
 
+    // ---- Shared AI-copy request context ------------------------------
+
+    // Clock formatter shared by actBuildDropContext and the post-response
+    // link/close-time assembly in the generate handlers. One definition so
+    // the time formatting can never drift between the three handlers.
+    function fmtT(iso){
+      return iso
+        ? new Date(iso).toLocaleTimeString('en-GB', {
+            hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Europe/London'
+          }).toLowerCase().replace(':00', '').replace(' ', '')
+        : null;
+    }
+
+    // Assembles the common request context every generate handler sends to
+    // the generate-activation-copy Edge Function — every field EXCEPT
+    // touchpoint and guidance, which the handler supplies. Three new signals
+    // (fulfilment_mode, reveal_dish, cadence) are included for the EF to
+    // start reading next; they are inert until then (each EF case reads only
+    // the fields it needs), so adding them does not change current output.
+    function actBuildDropContext(dropId){
+      const summary = state.summaryById[dropId];
+      const rawDrop = state.rawById[dropId] || {};
+
+      const deliveryDay = rawDrop.delivery_start
+        ? new Date(rawDrop.delivery_start).toLocaleDateString('en-GB', {
+            weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London'
+          })
+        : '';
+      const opensDay = rawDrop.opens_at
+        ? new Date(rawDrop.opens_at).toLocaleDateString('en-GB', {
+            weekday: 'long', timeZone: 'Europe/London'
+          })
+        : null;
+
+      // New signal: the reveal dish name, resolved from reveal_product_id.
+      let revealDish = null;
+      if (rawDrop.reveal_product_id) {
+        const product = (state.products || []).find(
+          p => String(p.id) === String(rawDrop.reveal_product_id)
+        );
+        revealDish = (product && product.name) || null;
+      }
+
+      // New signal: cadence — event drops, recurring-series drops, or one-offs.
+      const dropType = summary?.drop_type;
+      const cadence = dropType === 'event'
+        ? 'event'
+        : (rawDrop.series_id ? 'series' : 'standalone');
+
+      return {
+        vendor_name:     state.vendor?.display_name || '',
+        drop_name:       rawDrop.name || '',
+        host_name:       rawDrop.host_name || null,
+        delivery_day:    deliveryDay,
+        opens_day:       opensDay,
+        opens_time:      fmtT(rawDrop.opens_at),
+        closes_time:     fmtT(rawDrop.closes_at),
+        capacity:        rawDrop.capacity_units_total || null,
+        ordering_url:    `https://lovehearth.co.uk/order.html?drop=${rawDrop.slug}`,
+        tagline:         state.vendor?.tagline || null,
+        website_url:     state.vendor?.website_url || null,
+        // New signals — inert until the EF reads them.
+        fulfilment_mode: summary?.fulfilment_mode || rawDrop.fulfilment_mode || null,
+        reveal_dish:     revealDish,
+        cadence,
+      };
+    }
+
     // ---- Per-drop view: card builders --------------------------------
 
     function copyBtn(label, touchpoint, action, primary){
@@ -3088,27 +3156,11 @@
         generateEmailBody.textContent = 'Generating…';
 
         try {
-          const fmtT = (iso) => iso
-            ? new Date(iso).toLocaleTimeString('en-GB', {
-                hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Europe/London'
-              }).toLowerCase().replace(':00', '').replace(' ', '')
-            : null;
-
           const body = {
-            touchpoint:   emailTpMap[tp],
-            vendor_name:  state.vendor?.display_name || '',
-            drop_name:    rawDrop.name || '',
-            host_name:    rawDrop.host_name || null,
-            delivery_day: rawDrop.delivery_start
-              ? new Date(rawDrop.delivery_start).toLocaleDateString('en-GB', {
-                  weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London'
-                })
-              : '',
-            closes_time:  fmtT(rawDrop.closes_at),
-            capacity:     rawDrop.capacity_units_total || null,
-            ordering_url: `https://lovehearth.co.uk/order.html?drop=${rawDrop.slug}`,
-            tagline:      state.vendor?.tagline || null,
-            website_url:  state.vendor?.website_url || null,
+            touchpoint: emailTpMap[tp],
+            ...actBuildDropContext(dropId),
+            // Email cases deliberately receive no opens day/time — preserve
+            // today's behaviour by overriding after spreading the context.
             opens_day: null, opens_time: null,
             guidance,
           };
@@ -3187,36 +3239,9 @@
         if (errorNote) errorNote.textContent = '';
 
         try {
-          // Build day/time strings for the prompt context.
-          const deliveryDay = rawDrop.delivery_start
-            ? new Date(rawDrop.delivery_start).toLocaleDateString('en-GB', {
-                weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London'
-              })
-            : '';
-          const opensDay = rawDrop.opens_at
-            ? new Date(rawDrop.opens_at).toLocaleDateString('en-GB', {
-                weekday: 'long', timeZone: 'Europe/London'
-              })
-            : null;
-          const fmtT = (iso) => iso
-            ? new Date(iso).toLocaleTimeString('en-GB', {
-                hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Europe/London'
-              }).toLowerCase().replace(':00', '').replace(' ', '')
-            : null;
-
           const body = {
-            touchpoint:   tpMap[tp],
-            vendor_name:  state.vendor?.display_name || '',
-            drop_name:    rawDrop.name || '',
-            host_name:    rawDrop.host_name || null,
-            delivery_day: deliveryDay,
-            opens_day:    opensDay,
-            opens_time:   fmtT(rawDrop.opens_at),
-            closes_time:  fmtT(rawDrop.closes_at),
-            capacity:     rawDrop.capacity_units_total || null,
-            ordering_url: `https://lovehearth.co.uk/order.html?drop=${rawDrop.slug}`,
-            tagline:      state.vendor?.tagline || null,
-            website_url:  state.vendor?.website_url || null,
+            touchpoint: tpMap[tp],
+            ...actBuildDropContext(dropId),
             guidance,
           };
 
@@ -3291,36 +3316,9 @@
         if (errorNote) errorNote.textContent = '';
 
         try {
-          // Build day/time strings for the prompt context (mirrors generate-copy).
-          const deliveryDay = rawDrop.delivery_start
-            ? new Date(rawDrop.delivery_start).toLocaleDateString('en-GB', {
-                weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London'
-              })
-            : '';
-          const opensDay = rawDrop.opens_at
-            ? new Date(rawDrop.opens_at).toLocaleDateString('en-GB', {
-                weekday: 'long', timeZone: 'Europe/London'
-              })
-            : null;
-          const fmtT = (iso) => iso
-            ? new Date(iso).toLocaleTimeString('en-GB', {
-                hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Europe/London'
-              }).toLowerCase().replace(':00', '').replace(' ', '')
-            : null;
-
           const body = {
-            touchpoint:   'poster_hook',
-            vendor_name:  state.vendor?.display_name || '',
-            drop_name:    rawDrop.name || '',
-            host_name:    rawDrop.host_name || null,
-            delivery_day: deliveryDay,
-            opens_day:    opensDay,
-            opens_time:   fmtT(rawDrop.opens_at),
-            closes_time:  fmtT(rawDrop.closes_at),
-            capacity:     rawDrop.capacity_units_total || null,
-            ordering_url: `https://lovehearth.co.uk/order.html?drop=${rawDrop.slug}`,
-            tagline:      state.vendor?.tagline || null,
-            website_url:  state.vendor?.website_url || null,
+            touchpoint: 'poster_hook',
+            ...actBuildDropContext(dropId),
             guidance,
           };
 
