@@ -1114,7 +1114,9 @@
       sendingEmail: {},  // touchpoint → true while in-flight
       generateLoading: {},  // touchpoint → true while AI copy generates
       emailBodyGenerated: {},  // touchpoint → true once body auto-generated
-      messageGenerated: {}  // touchpoint → true once message copy generated
+      messageGenerated: {},  // touchpoint → true once message copy generated
+      posterHookGenerated: {},  // dropId → true once the till poster line is generated
+      _posterHookDebounce: null  // debounce timer for manual poster-line edits
     };
 
     const DAY_MS = 24 * 60 * 60 * 1000;
@@ -2620,6 +2622,27 @@
               </div>
             </div>
             <button class="act-copy-btn primary" id="act-downloadOrdersOpenBtn" type="button" data-act="download-orders-open" disabled>Download image</button>
+            <div class="act-poster-hook" style="width:100%;">
+              <label class="act-field-label" for="act-posterHookInput">Till poster line — the line a walk-in customer reads by the till</label>
+              <input type="text" class="act-guidance-input" id="act-posterHookInput"
+                maxlength="90"
+                placeholder="e.g. Order ahead for Friday — collect hot at 6pm"
+                value="${escapeHtml(state.rawById[dropId]?.reveal_line || '')}" />
+              ${state.posterHookGenerated?.[dropId] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
+              ${state.posterHookGenerated?.[dropId] ? `
+                <div class="act-guidance-row">
+                  <input type="text" class="act-guidance-input"
+                    data-touchpoint="poster_hook"
+                    placeholder="e.g. shorter, mention collection time, more playful...">
+                </div>` : ''}
+              <button
+                data-act="generate-poster-hook"
+                class="act-copy-btn">
+                ${state.posterHookGenerated?.[dropId] ? '↺ Regenerate →' : '✦ Generate →'}
+              </button>
+              <div class="act-copy-error" data-error-key="poster_hook"
+                style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
+            </div>
             <a class="act-copy-btn"
               id="act-posterBtn"
               href="#"
@@ -2887,6 +2910,17 @@
           }, (messageCardTouchpoints.length + i + 1) * 400);
         }
       });
+      // Auto-generate the till poster line once — but only if no saved line
+      // exists, so a vendor's saved edit is never clobbered. When reveal_line
+      // already has content the field is seeded from it (in card4Html) and we
+      // leave it alone.
+      const savedPosterLine = (state.rawById[dropId]?.reveal_line || '').trim();
+      if (!savedPosterLine && !state.posterHookGenerated?.[dropId]) {
+        setTimeout(() => {
+          const phBtn = document.querySelector('[data-act="generate-poster-hook"]');
+          if (phBtn) phBtn.click();
+        }, (messageCardTouchpoints.length + 3) * 400);
+      }
     }
 
     // ---- Init + delegated events -------------------------------------
@@ -3238,6 +3272,87 @@
         return;
       }
 
+      const generatePosterHook = e.target.closest('[data-act="generate-poster-hook"]');
+      if (generatePosterHook) {
+        e.preventDefault();
+        const dropId = state.selectedDropId;
+        const rawDrop = state.rawById?.[dropId];
+        if (!rawDrop) return;
+        const input = byId('act-posterHookInput');
+
+        // Optional vendor steer for this regeneration (cleared after success).
+        const guidanceEl = document.querySelector('.act-guidance-input[data-touchpoint="poster_hook"]');
+        const guidance = guidanceEl?.value?.trim() || null;
+
+        generatePosterHook.disabled = true;
+        generatePosterHook.textContent = 'Generating…';
+
+        // Clear any previous error
+        const errorNote = document.querySelector('.act-copy-error[data-error-key="poster_hook"]');
+        if (errorNote) errorNote.textContent = '';
+
+        try {
+          // Build day/time strings for the prompt context (mirrors generate-copy).
+          const deliveryDay = rawDrop.delivery_start
+            ? new Date(rawDrop.delivery_start).toLocaleDateString('en-GB', {
+                weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London'
+              })
+            : '';
+          const opensDay = rawDrop.opens_at
+            ? new Date(rawDrop.opens_at).toLocaleDateString('en-GB', {
+                weekday: 'long', timeZone: 'Europe/London'
+              })
+            : null;
+          const fmtT = (iso) => iso
+            ? new Date(iso).toLocaleTimeString('en-GB', {
+                hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Europe/London'
+              }).toLowerCase().replace(':00', '').replace(' ', '')
+            : null;
+
+          const body = {
+            touchpoint:   'poster_hook',
+            vendor_name:  state.vendor?.display_name || '',
+            drop_name:    rawDrop.name || '',
+            host_name:    rawDrop.host_name || null,
+            delivery_day: deliveryDay,
+            opens_day:    opensDay,
+            opens_time:   fmtT(rawDrop.opens_at),
+            closes_time:  fmtT(rawDrop.closes_at),
+            capacity:     rawDrop.capacity_units_total || null,
+            ordering_url: `https://lovehearth.co.uk/order.html?drop=${rawDrop.slug}`,
+            tagline:      state.vendor?.tagline || null,
+            website_url:  state.vendor?.website_url || null,
+            guidance,
+          };
+
+          const { data, error } = await sb.functions.invoke('generate-activation-copy', { body });
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+
+          if (data?.copy) {
+            if (guidanceEl) guidanceEl.value = '';
+            const line = data.copy.trim();
+            // Persist to the drop's reveal_line so the poster page picks it up.
+            if (state.rawById[dropId]) state.rawById[dropId].reveal_line = line;
+            state.posterHookGenerated = state.posterHookGenerated || {};
+            state.posterHookGenerated[dropId] = true;
+            // Sync the live input before the re-render seeds it from reveal_line.
+            if (input) input.value = line;
+            await actSaveRevealFields(dropId);
+            renderDropView(dropId);
+            return;
+          }
+
+        } catch (err) {
+          console.error('[activation] generate-poster-hook failed:', err);
+          generatePosterHook.disabled = false;
+          generatePosterHook.textContent = state.posterHookGenerated?.[dropId] ? '↺ Regenerate →' : '✦ Generate →';
+          const errNote = document.querySelector('.act-copy-error[data-error-key="poster_hook"]');
+          if (errNote) errNote.textContent = 'Generation failed — try again or edit manually.';
+        }
+        return;
+      }
+
       const confirmEmail = e.target.closest('[data-act="confirm-email"]');
       if (confirmEmail) {
         e.preventDefault();
@@ -3329,6 +3444,21 @@
           const mockContent = bodyInput.closest('.act-touchpoint')
             ?.querySelector('.act-email-mock__content');
           if (mockContent) mockContent.textContent = bodyInput.value;
+        }
+        return;
+      }
+
+      // Manual edits to the till poster line persist to the drop's
+      // reveal_line, debounced so we don't save on every keystroke.
+      const posterHookInput = e.target.closest('#act-posterHookInput');
+      if (posterHookInput) {
+        const dropId = state.selectedDropId;
+        if (dropId && state.rawById[dropId]) {
+          state.rawById[dropId].reveal_line = posterHookInput.value;
+          clearTimeout(state._posterHookDebounce);
+          state._posterHookDebounce = setTimeout(() => {
+            actSaveRevealFields(dropId);
+          }, 600);
         }
         return;
       }
