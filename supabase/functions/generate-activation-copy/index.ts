@@ -16,7 +16,7 @@ const MODEL = "claude-sonnet-4-6";
 // a later prompt feeds them.
 const COPY_FLOOR = `Rules for the line(s) you write: use only the facts given above. Never invent or guess — (a) how often this happens: do not say 'once', 'weekly', 'first time', 'regular', or imply any frequency, unless a cadence is provided; (b) the meal or service type: do not say 'breakfast', 'lunch', 'dinner' or 'dinner service' — describe only what the drop name and details tell you; (c) the fulfilment method: only mention collection or delivery if you are told which; (d) any number, count or price you were not given; (e) any menu item beyond a dish explicitly provided. Voice: warm, calm, confident, local — never hype, fake urgency, exclamation marks, or marketplace clichés like 'boost', 'trending', 'limited-time' or 'don't miss out'.`;
 
-function buildSystemPrompt(tagline: string | null, websiteContent: string | null): string {
+function buildSystemPrompt(tagline: string | null, voiceSample: string | null): string {
   let prompt = `You write short, warm copy for independent food businesses.
 Output only the copy text — no preamble, explanation, or quotation marks around it.
 Tone: calm, warm, local, proud. Never pushy or generic.
@@ -24,11 +24,13 @@ Avoid: "delicious", "amazing", "don't miss out", "selling fast", "limited time o
 Use the specific details provided. Plain, honest language.`;
 
   if (tagline) {
-    prompt += `\n\nThe vendor's tagline is: "${tagline}" — let this inform the tone and style.`;
+    prompt += `\n\nThe vendor's tagline is: "${tagline}".`;
   }
-
-  if (websiteContent) {
-    prompt += `\n\nHere is how this vendor describes themselves on their own website. Write copy consistent with this voice:\n---\n${websiteContent}\n---`;
+  if (voiceSample) {
+    prompt += `\n\nHere is how this vendor describes themselves, in their own words:\n---\n${voiceSample}\n---`;
+  }
+  if (tagline || voiceSample) {
+    prompt += `\n\nUse the tagline and the description above only as a guide to the vendor's voice and tone — how they sound. They are NOT a source of facts about this particular service: do not carry over meal types, dishes, times, or anything they list into the copy. The facts for this service come only from the details in the task below.`;
   }
 
   return prompt;
@@ -73,6 +75,7 @@ interface CopyInput {
   ordering_url: string;
   tagline: string | null;       // new
   website_url: string | null;   // new
+  brand_voice?: string | null;
   guidance?: string | null;     // optional vendor steer for regeneration
   // Signals assembled by actBuildDropContext on the frontend; read per case.
   fulfilment_mode?: string | null;
@@ -179,15 +182,16 @@ Deno.serve(async (req) => {
     }
 
     // ---- Voice context ------------------------------------------
-    const tagline = input.tagline || null;
-    let websiteContent: string | null = null;
-    if (input.website_url) {
-      websiteContent = await fetchWebsiteContent(input.website_url);
-      if (websiteContent) {
-        console.log(`[generate-activation-copy] website content fetched (${websiteContent.length} chars)`);
+    const tagline = input.tagline?.trim() || null;
+    const brandVoice = input.brand_voice?.trim() || null;
+    let voiceSample: string | null = brandVoice;
+    if (!voiceSample && input.website_url) {
+      voiceSample = await fetchWebsiteContent(input.website_url);
+      if (voiceSample) {
+        console.log(`[generate-activation-copy] website content fetched (${voiceSample.length} chars)`);
       }
     }
-    const systemPrompt = buildSystemPrompt(tagline, websiteContent);
+    const systemPrompt = buildSystemPrompt(tagline, voiceSample);
 
     // ---- Generate ---------------------------------------------------
     // Append the shared guardrail floor to EVERY case here (before any vendor
