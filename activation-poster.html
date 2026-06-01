@@ -113,11 +113,11 @@
     .poster-vendor-name {
       font-family: 'Cormorant Garamond', Georgia, serif;
       font-weight: 600;
-      font-size: 52pt;
+      font-size: 30pt;
       line-height: 1.0;
       color: #1F2937;
       letter-spacing: -0.02em;
-      margin-bottom: 3mm;
+      margin-bottom: 2mm;
     }
 
     .poster-drop-name {
@@ -128,16 +128,6 @@
       letter-spacing: 0.02em;
     }
 
-    .poster-reveal-line {
-      font-family: 'Figtree', system-ui, sans-serif;
-      font-style: italic;
-      font-weight: 400;
-      font-size: 11pt;
-      color: #8B6B3F;
-      margin-top: 2mm;
-      letter-spacing: 0.01em;
-    }
-
     .poster-rule {
       border: none;
       border-top: 1px solid #C4B49A;
@@ -145,15 +135,26 @@
       flex-shrink: 0;
     }
 
-    .poster-cta {
+    /* HERO — the AI hook (reveal_line). Largest text on the poster; the
+       visual centre of gravity. Upright Cormorant, not italic. */
+    .poster-hero {
       font-family: 'Cormorant Garamond', Georgia, serif;
-      font-weight: 500;
-      font-size: 36pt;
+      font-weight: 600;
+      font-size: 44pt;
+      line-height: 1.05;
       color: #1F2937;
-      line-height: 1.1;
       letter-spacing: -0.01em;
       flex-shrink: 0;
-      margin-bottom: 0;
+    }
+
+    .poster-date {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 17pt;
+      color: #8B6B3F;
+      letter-spacing: 0.01em;
+      margin-top: 5mm;
+      flex-shrink: 0;
     }
 
     /* QR action zone — warm tinted box, the visual centre of the poster */
@@ -210,9 +211,9 @@
 
     .poster-closes {
       font-family: 'Figtree', system-ui, sans-serif;
-      font-size: 8pt;
-      font-weight: 500;
-      color: #9B8B7A;
+      font-size: 10pt;
+      font-weight: 600;
+      color: #8B7355;
       letter-spacing: 0.02em;
     }
 
@@ -378,6 +379,29 @@
         ? fmtTime(new Date(closesAt))
         : null;
 
+      // Delivery date — surfaced as a readable line below the hero.
+      const deliveryDate = drop.delivery_start && !isNaN(new Date(drop.delivery_start).getTime())
+        ? new Date(drop.delivery_start)
+        : null;
+      const deliveryDateLine = deliveryDate
+        ? deliveryDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+        : null;
+      const deliveryWeekday = deliveryDate
+        ? deliveryDate.toLocaleDateString('en-GB', { weekday: 'long' })
+        : null;
+
+      // Hero — the AI hook. Falls back to an assembled line so it's never blank.
+      const revealLine = drop.reveal_line && drop.reveal_line.trim()
+        ? drop.reveal_line.trim()
+        : null;
+      const heroLine = revealLine
+        || (deliveryWeekday ? `Order ahead for ${deliveryWeekday}` : 'Order ahead');
+
+      // Demoted CTA — small supporting line at the foot, with the close time.
+      const supportingLine = closesTime
+        ? `Orders open now · close at ${closesTime}`
+        : 'Orders open now';
+
       // Build the deep-link back button to include the drop
       const backBtn = byId('backBtn');
       if (backBtn) {
@@ -391,14 +415,14 @@
             <div class="poster-top">
               <div class="poster-vendor-name">${escapeHtml(vendor.display_name || 'Hearth')}</div>
               <div class="poster-drop-name">${escapeHtml(drop.name || '')}</div>
-              ${drop.reveal_line
-                ? `<div class="poster-reveal-line">${escapeHtml(drop.reveal_line)}</div>`
-                : ''}
             </div>
 
             <hr class="poster-rule">
 
-            <div class="poster-cta">Orders are now open.</div>
+            <div class="poster-hero">${escapeHtml(heroLine)}</div>
+            ${deliveryDateLine
+              ? `<div class="poster-date">${escapeHtml(deliveryDateLine)}</div>`
+              : ''}
           </div>
 
           <div class="poster-qr-zone">
@@ -408,9 +432,7 @@
           </div>
 
           <div class="poster-footer">
-            <div class="poster-closes">
-              ${closesTime ? `Orders close at ${escapeHtml(closesTime)}` : ''}
-            </div>
+            <div class="poster-closes">${escapeHtml(supportingLine)}</div>
             <div class="poster-hearth-mark">
               <span class="poster-hearth-mark__text">Hearth</span>
               <span class="poster-hearth-mark__dot"></span>
