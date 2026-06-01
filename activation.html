@@ -2009,10 +2009,9 @@
     // Persist the current reveal fields to update-drop. Silent on error —
     // the vendor isn't blocked; failures land in the console for debug.
     async function actSaveRevealFields(dropId) {
-      const productEl = byId('act-revealProduct');
-      if (!productEl) return;
+      if (!state.rawById[dropId]) return;
       const reveal_line = (state.rawById[dropId]?.reveal_line || '').trim() || null;
-      const reveal_product_id = productEl.value || null;
+      const reveal_product_id = state.rawById[dropId]?.reveal_product_id || null;
       try {
         const { data, error } = await sb.functions.invoke('update-drop', {
           body: {
