@@ -9,6 +9,13 @@ const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const MODEL = "claude-haiku-4-5-20251001";
 
+// Shared guardrail appended to EVERY touchpoint prompt (before any vendor
+// guidance) so all cases inherit it from one place. Purely restrictive: it
+// stops the invention we've seen (meal-type, frequency) without constraining
+// good output. A case that lacks its signals simply stays conservative until
+// a later prompt feeds them.
+const COPY_FLOOR = `Rules for the line(s) you write: use only the facts given above. Never invent or guess — (a) how often this happens: do not say 'once', 'weekly', 'first time', 'regular', or imply any frequency, unless a cadence is provided; (b) the meal or service type: do not say 'breakfast', 'lunch', 'dinner' or 'dinner service' — describe only what the drop name and details tell you; (c) the fulfilment method: only mention collection or delivery if you are told which; (d) any number, count or price you were not given; (e) any menu item beyond a dish explicitly provided. Voice: warm, calm, confident, local — never hype, fake urgency, exclamation marks, or marketplace clichés like 'boost', 'trending', 'limited-time' or 'don't miss out'.`;
+
 function buildSystemPrompt(tagline: string | null, websiteContent: string | null): string {
   let prompt = `You write short, warm copy for independent food businesses.
 Output only the copy text — no preamble, explanation, or quotation marks around it.
@@ -67,13 +74,17 @@ interface CopyInput {
   tagline: string | null;       // new
   website_url: string | null;   // new
   guidance?: string | null;     // optional vendor steer for regeneration
+  // Signals assembled by actBuildDropContext on the frontend; read per case.
+  fulfilment_mode?: string | null;
+  reveal_dish?: string | null;
+  cadence?: string | null;
 }
 
 function buildPrompt(input: CopyInput): string {
   const {
     touchpoint, vendor_name, drop_name, host_name,
     delivery_day, opens_day, opens_time, closes_time,
-    capacity, ordering_url
+    capacity, ordering_url, fulfilment_mode, reveal_dish, cadence
   } = input;
 
   const host = host_name || "their neighbourhood";
@@ -114,7 +125,15 @@ Only use facts given here — do not invent details. Plain, warm language. Outpu
 Mention that more drops are coming. Do not invent specific details. Plain, warm language. Output only the sentences, nothing else.`;
 
     case "poster_hook":
-      return `Write a single short line for a printed poster beside the till in ${vendor_name}'s shop. The reader is a walk-in customer; ordering is open right now and there is a QR code directly beneath this line. The line's job is to make them want to order ahead today for ${drop_name} on ${delivery_day}${host_name ? `, at ${host_name}` : ""}. Write ONE line of 12 words or fewer, present tense, that reads as an invitation to act now and sits naturally above 'Scan to order'. Convey a special, limited occasion worth ordering ahead for — warm, confident, calm. Do NOT say 'coming soon' or anything implying they cannot order yet — they can, now. Do NOT name or guess a meal or service type (no 'breakfast', 'lunch', 'dinner', 'dinner service'); describe what's on offer using only ${drop_name} and the day. Do NOT use the word 'drop'. Do NOT include any number or count. Do NOT invent menu items or details you were not given. No hype, no exclamation marks, no fake urgency, no clichés. Return only the line itself — no quotation marks, no markdown, nothing else.`;
+      return `Task: Write a single short line for a printed poster beside the till in ${vendor_name}'s shop. Ordering is open now and a QR code sits directly beneath this line. Make a walk-in customer want to order ahead today.
+
+Facts:
+- What's offered: ${reveal_dish || drop_name}${host_name ? `, at ${host_name}` : ""}
+- When: ${delivery_day}
+- Fulfilment: ${fulfilment_mode || "not specified"}
+- This drop is: ${cadence || "standalone"}  (event = a one-off; series = part of a regular rhythm; standalone = a single planned occasion)
+
+Rules: Write ONE line of 12 words or fewer, present tense, that reads as an invitation to act now and sits naturally above 'Scan to order'. Use only the one or two facts that make the strongest short line — you don't need them all. If a reveal dish is given you may lead with it. Reflect fulfilment honestly: collection at a venue means they collect there; delivery means it's delivered; if not specified, say nothing about it. On frequency: if a series, you may hint at the regular rhythm; if an event, a one-off framing is fine; if standalone, say nothing about how often it happens. Do NOT use the word 'drop' or explain what one is. Do NOT include any number or count — the poster is printed and cannot update. Return only the line — no quotation marks, no markdown, nothing else.`;
 
     default:
       return `Write a short, warm social media post for ${vendor_name} about their '${drop_name}' food drop at ${host} this ${delivery_day}. 2 sentences.`;
@@ -171,7 +190,9 @@ Deno.serve(async (req) => {
     const systemPrompt = buildSystemPrompt(tagline, websiteContent);
 
     // ---- Generate ---------------------------------------------------
-    const userPrompt = buildPrompt(input);
+    // Append the shared guardrail floor to EVERY case here (before any vendor
+    // guidance) so all touchpoints inherit it from one place.
+    const userPrompt = `${buildPrompt(input)}\n\n${COPY_FLOOR}`;
     const finalPrompt = input.guidance?.trim()
       ? `${userPrompt}\n\nAdditional instruction from the vendor: "${input.guidance.trim()}"`
       : userPrompt;
