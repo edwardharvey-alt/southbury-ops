@@ -18,6 +18,7 @@ const ALLOWED_FIELDS = new Set([
   "name",
   "display_name",
   "tagline",
+  "brand_voice",
   "order_label",
   "contact_phone",
   "website_url",

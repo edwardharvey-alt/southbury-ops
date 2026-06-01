@@ -902,6 +902,12 @@
             </div>
 
             <div class="field">
+              <label for="vendorBrandVoice">In your own words</label>
+              <div class="helperText">Hearth drafts your posts, messages and posters — this is where it learns to sound like you, not like everyone else. Write a few sentences the way you'd describe your place to a regular who asked: plain and honest, how you really talk — not marketing.</div>
+              <textarea id="vendorBrandVoice" rows="4" placeholder="e.g. A small family-run cafe doing proper, fresh food — generous, unfussy, the kind of thing people come back for."></textarea>
+            </div>
+
+            <div class="field">
               <label for="vendorContactPhone">Phone number</label>
               <input id="vendorContactPhone" type="tel" placeholder="01234 567890" />
               <div class="helperText">Shown to customers if they need to reach you.</div>
@@ -1257,6 +1263,7 @@
         name: byId("vendorDisplayName").value.trim(),
         display_name: byId("vendorDisplayName").value.trim(),
         tagline: byId("vendorTagline").value.trim(),
+        brand_voice: byId("vendorBrandVoice").value.trim(),
         order_label: byId("vendorOrderLabel").value.trim(),
         contact_phone: byId("vendorContactPhone").value.trim(),
         website_url: byId("vendorWebsiteUrl").value.trim(),
@@ -1285,6 +1292,7 @@
       byId("vendorName").value = vendor.name || "";
       byId("vendorDisplayName").value = vendor.display_name || vendor.name || "";
       byId("vendorTagline").value = vendor.tagline || "";
+      byId("vendorBrandVoice").value = vendor.brand_voice || "";
       byId("vendorOrderLabel").value = vendor.order_label || "Order direct";
       byId("vendorContactPhone").value = vendor.contact_phone || "";
       byId("vendorWebsiteUrl").value = vendor.website_url || "";
@@ -1666,6 +1674,7 @@
         name: form.name || state.vendor.name || "Vendor",
         display_name: form.display_name || null,
         tagline: form.tagline || null,
+        brand_voice: form.brand_voice || null,
         order_label: form.order_label || null,
         contact_phone: form.contact_phone || null,
         website_url: form.website_url || null,
@@ -1776,6 +1785,7 @@
         "vendorName",
         "vendorDisplayName",
         "vendorTagline",
+        "vendorBrandVoice",
         "vendorOrderLabel",
         "vendorContactPhone",
         "vendorWebsiteUrl",
