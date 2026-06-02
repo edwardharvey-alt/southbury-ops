@@ -709,22 +709,24 @@
 
     // Channel starter templates. Tokens [host], [date], [link] are filled by
     // fillTemplate() below. Email starters lead with a "Subject:" line.
+    // Outbound copy never names "Hearth" — it foregrounds the food and the
+    // host. (See CLAUDE.md brand/tone rules.)
     const STEP1_TEMPLATES = {
       whatsapp:
-        "Just so you know — we've got a Hearth food drop at [host] on [date]. It's pre-order only and places are limited, so worth keeping an eye out. I'll share the order link here as soon as ordering opens.",
+        "Just so you know — we've got a food drop at [host] on [date]. It's pre-order only and places are limited, so worth keeping an eye out. I'll share the order link here as soon as ordering opens.",
       social:
-        "We're hosting a Hearth food drop at [host] on [date]. Pre-order only, places limited — ordering opens soon. We'll share the link when it's live.",
+        "We're hosting a food drop at [host] on [date]. Pre-order only, places limited — ordering opens soon. We'll share the link when it's live.",
       email:
-        "Subject: A Hearth food drop at [host] — [date]\n\nHello,\n\nWe're hosting a Hearth food drop at [host] on [date]. It's pre-order only and places are limited.\n\nOrdering opens soon — we'll send the link as soon as it's live.\n\nSee you there.",
+        "Subject: A food drop at [host] — [date]\n\nHello,\n\nWe're hosting a food drop at [host] on [date]. It's pre-order only and places are limited.\n\nOrdering opens soon — we'll send the link as soon as it's live.\n\nSee you there.",
     };
 
     const STEP2_TEMPLATES = {
       whatsapp:
         "Ordering's now open for the food drop at [host] — [link]. Places are limited and it's pre-order only, so get yours in when you can.",
       social:
-        "Ordering is now open for our Hearth food drop at [host]. Pre-order only and places are limited — order here: [link]",
+        "Ordering is now open for our food drop at [host]. Pre-order only and places are limited — order here: [link]",
       email:
-        "Subject: Ordering's open — Hearth food drop at [host]\n\nHello,\n\nOrdering is now open for the Hearth food drop at [host] on [date]. Places are limited and it's pre-order only.\n\nOrder here: [link]\n\nSee you there.",
+        "Subject: Ordering's open — food drop at [host]\n\nHello,\n\nOrdering is now open for the food drop at [host] on [date]. Places are limited and it's pre-order only.\n\nOrder here: [link]\n\nSee you there.",
     };
 
     const CHANNELS = [
