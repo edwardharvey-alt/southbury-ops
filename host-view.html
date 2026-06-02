@@ -39,7 +39,7 @@
     }
 
     .hvPage{
-      max-width:620px;
+      max-width:780px;
       margin:0 auto;
       padding:48px 20px 64px;
       display:grid;
@@ -300,6 +300,21 @@
       margin:0;
     }
 
+    /* Step 2 — two columns on desktop (message | order link + QR) */
+    .hvStep2Cols{
+      display:grid;
+      grid-template-columns:1fr minmax(220px, 280px);
+      gap:18px;
+      align-items:start;
+    }
+
+    .hvStep2Left,
+    .hvStep2Right{
+      display:grid;
+      gap:10px;
+      min-width:0;
+    }
+
     .hvTextarea{
       width:100%;
       box-sizing:border-box;
@@ -467,6 +482,9 @@
       }
       .hvStatValue{
         font-size:26px;
+      }
+      .hvStep2Cols{
+        grid-template-columns:1fr;
       }
     }
   </style>
@@ -674,7 +692,7 @@
 
           <div class="hvStep">
             <p class="hvStepTitle">1 · Give your community a heads-up</p>
-            <p class="hvStepGuide">A few days before, let your members know it's coming. Post this in your group's WhatsApp, newsletter, or wherever you usually reach them.</p>
+            <p class="hvStepGuide">A few days before, give people a heads-up — post it wherever you'd normally reach them.</p>
             <textarea class="hvTextarea" id="hvHeadsUpMessage">${escapeHtml(headsUpMessage)}</textarea>
             <div class="hvBtnRow">
               <button type="button" class="hvActionBtn" data-copy-target="hvHeadsUpMessage">Copy message</button>
@@ -685,11 +703,17 @@
 
           <div class="hvStep">
             <p class="hvStepTitle">2 · Share the order link</p>
-            <p class="hvStepGuide">When ordering opens, share the link so your members can order.</p>
-            ${linkRow}
-            <textarea class="hvTextarea" id="hvShareLinkMessage">${escapeHtml(shareLinkMessage)}</textarea>
-            <div class="hvBtnRow">
-              <button type="button" class="hvActionBtn" data-copy-target="hvShareLinkMessage">Copy message</button>
+            <p class="hvStepGuide">When ordering opens, share the link so people can order.</p>
+            <div class="hvStep2Cols">
+              <div class="hvStep2Left">
+                <textarea class="hvTextarea" id="hvShareLinkMessage">${escapeHtml(shareLinkMessage)}</textarea>
+                <div class="hvBtnRow">
+                  <button type="button" class="hvActionBtn" data-copy-target="hvShareLinkMessage">Copy message</button>
+                </div>
+              </div>
+              <div class="hvStep2Right">
+                ${linkRow}
+              </div>
             </div>
           </div>
         </div>
