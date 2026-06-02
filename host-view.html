@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
   <script src="./assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <style>
     :root{
@@ -242,6 +243,151 @@
       opacity:.78;
       margin:2px 0 0;
       line-height:1.4;
+    }
+
+    /* Share with your community */
+    .hvCommunity{
+      background:#fff;
+      border:1px solid #e9e3d8;
+      border-radius:22px;
+      box-shadow:0 2px 12px rgba(15,23,42,0.04);
+      padding:24px 22px;
+      display:grid;
+      gap:18px;
+    }
+
+    .hvCommunityHead{
+      display:grid;
+      gap:8px;
+    }
+
+    .hvCommunityTitle{
+      font-family:'Cormorant Garamond', Georgia, serif;
+      font-weight:500;
+      font-size:26px;
+      letter-spacing:-0.01em;
+      line-height:1.12;
+      color:#1f2937;
+      margin:0;
+    }
+
+    .hvCommunityIntro{
+      font-size:14px;
+      font-weight:600;
+      color:#4b5563;
+      line-height:1.55;
+      margin:0;
+    }
+
+    .hvStep{
+      display:grid;
+      gap:10px;
+    }
+
+    .hvStepTitle{
+      font-size:15px;
+      font-weight:900;
+      letter-spacing:-0.01em;
+      color:#1f2937;
+      margin:0;
+    }
+
+    .hvStepGuide{
+      font-size:13px;
+      font-weight:600;
+      color:#6b7280;
+      line-height:1.5;
+      margin:0;
+    }
+
+    .hvTextarea{
+      width:100%;
+      box-sizing:border-box;
+      font-family:'Figtree', system-ui, sans-serif;
+      font-size:14px;
+      font-weight:500;
+      line-height:1.55;
+      color:#1f2937;
+      background:#fcfbf9;
+      border:1px solid #e9e3d8;
+      border-radius:14px;
+      padding:12px 14px;
+      min-height:120px;
+      resize:vertical;
+    }
+
+    .hvTextarea:focus{
+      outline:none;
+      border-color:var(--hv-brand-secondary);
+      box-shadow:0 0 0 3px var(--hv-brand-soft);
+    }
+
+    .hvLinkRow{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .hvLinkBox{
+      flex:1 1 auto;
+      min-width:0;
+      font-size:13px;
+      font-weight:700;
+      color:#6b4c1f;
+      background:rgba(139,107,63,0.08);
+      border:1px solid rgba(139,107,63,0.18);
+      border-radius:12px;
+      padding:10px 14px;
+      word-break:break-all;
+    }
+
+    .hvActionBtn{
+      font-family:'Figtree', system-ui, sans-serif;
+      font-size:13px;
+      font-weight:800;
+      letter-spacing:-0.01em;
+      color:#fff;
+      background:var(--hv-brand-primary);
+      border:none;
+      border-radius:999px;
+      padding:10px 18px;
+      cursor:pointer;
+      transition:opacity .2s ease;
+    }
+
+    .hvActionBtn:hover{
+      opacity:0.9;
+    }
+
+    .hvActionBtn:disabled{
+      opacity:0.6;
+      cursor:default;
+    }
+
+    .hvActionBtn.ghost{
+      color:#6b4c1f;
+      background:none;
+      border:1px solid rgba(139,107,63,0.32);
+      flex:0 0 auto;
+    }
+
+    .hvBtnRow{
+      display:flex;
+    }
+
+    .hvQrWrap{
+      display:flex;
+      justify-content:center;
+      padding:6px 0 2px;
+    }
+
+    .hvQr{
+      padding:14px;
+      background:#fff;
+      border:1px solid #e9e3d8;
+      border-radius:16px;
+      line-height:0;
     }
 
     /* Footer */
@@ -482,8 +628,145 @@
       return "live";
     }
 
+    function buildOrderLink(){
+      const slug = state.dropSlug || "";
+      if (!slug) return "";
+      // Mirrors drop-manager.html getShareUrl(): origin + /order.html?drop=<slug>
+      return `${window.location.origin}/order.html?drop=${encodeURIComponent(slug)}`;
+    }
+
+    function buildCommunitySection(drop, orderLink){
+      const hostName = drop.host_name || null;
+      // Use the delivery date as the human "[date]"; fall back to generic phrasing.
+      const dateText = formatDateLong(drop.delivery_start) || formatDateLong(drop.delivery_end);
+
+      const hostFragment = hostName ? ` at ${hostName}` : "";
+      const dateFragment = dateText ? ` on ${dateText}` : "";
+
+      const headsUpMessage =
+        `Just so you know — we've got a Hearth food drop${hostFragment}${dateFragment}. ` +
+        `It's pre-order only and places are limited, so worth keeping an eye out. ` +
+        `I'll post the order link here as soon as ordering opens.`;
+
+      const linkText = orderLink || "[order link]";
+      const shareLinkMessage =
+        `Ordering's now open for the food drop${hostFragment} — ${linkText}. ` +
+        `Places are limited and it's pre-order only, so get yours in when you can.`;
+
+      const linkRow = orderLink
+        ? `
+          <div class="hvLinkRow">
+            <span class="hvLinkBox" id="hvOrderLinkText">${escapeHtml(orderLink)}</span>
+            <button type="button" class="hvActionBtn ghost" id="hvCopyLinkBtn">Copy link</button>
+          </div>
+          <div class="hvQrWrap"><div class="hvQr" id="hvQr"></div></div>
+        `
+        : `<p class="hvStepGuide">The order link will appear here once this drop has a link name set.</p>`;
+
+      return `
+        <div class="hvCommunity">
+          <div class="hvCommunityHead">
+            <h2 class="hvCommunityTitle">Share with your community</h2>
+            <p class="hvCommunityIntro">A drop fills best when the people who'll love it hear about it from you. Here are two simple things that help — share them in your own words, through your own channels. Both are optional.</p>
+          </div>
+
+          <div class="hvDivider"></div>
+
+          <div class="hvStep">
+            <p class="hvStepTitle">1 · Give your community a heads-up</p>
+            <p class="hvStepGuide">A few days before, let your members know it's coming. Post this in your group's WhatsApp, newsletter, or wherever you usually reach them.</p>
+            <textarea class="hvTextarea" id="hvHeadsUpMessage">${escapeHtml(headsUpMessage)}</textarea>
+            <div class="hvBtnRow">
+              <button type="button" class="hvActionBtn" data-copy-target="hvHeadsUpMessage">Copy message</button>
+            </div>
+          </div>
+
+          <div class="hvDivider"></div>
+
+          <div class="hvStep">
+            <p class="hvStepTitle">2 · Share the order link</p>
+            <p class="hvStepGuide">When ordering opens, share the link so your members can order.</p>
+            ${linkRow}
+            <textarea class="hvTextarea" id="hvShareLinkMessage">${escapeHtml(shareLinkMessage)}</textarea>
+            <div class="hvBtnRow">
+              <button type="button" class="hvActionBtn" data-copy-target="hvShareLinkMessage">Copy message</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function copyTextToClipboard(text){
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "absolute";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+
+    function flashCopied(btn){
+      if (!btn) return;
+      const original = btn.textContent;
+      btn.textContent = "Copied ✓";
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.disabled = false;
+      }, 2000);
+    }
+
+    function wireCommunitySection(orderLink){
+      // Copy-message buttons (read live textarea contents).
+      document.querySelectorAll("[data-copy-target]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const target = document.getElementById(btn.dataset.copyTarget);
+          if (!target) return;
+          try {
+            await copyTextToClipboard(target.value);
+            flashCopied(btn);
+          } catch (err){
+            console.error("copy failed", err);
+          }
+        });
+      });
+
+      // Copy the order link.
+      const copyLinkBtn = document.getElementById("hvCopyLinkBtn");
+      if (copyLinkBtn && orderLink){
+        copyLinkBtn.addEventListener("click", async () => {
+          try {
+            await copyTextToClipboard(orderLink);
+            flashCopied(copyLinkBtn);
+          } catch (err){
+            console.error("copy failed", err);
+          }
+        });
+      }
+
+      // QR code of the order link.
+      const qrEl = document.getElementById("hvQr");
+      if (qrEl && orderLink && window.QRCode){
+        qrEl.innerHTML = "";
+        new QRCode(qrEl, {
+          text: orderLink,
+          width: 160,
+          height: 160,
+          correctLevel: QRCode.CorrectLevel.M,
+        });
+      }
+    }
+
     function renderDrop(drop){
       const page = document.getElementById("hvPage");
+      const orderLink = buildOrderLink();
 
       const dropName = stripWindowSuffix(drop.drop_name || drop.name) || "This drop";
       const hostName = drop.host_name || null;
@@ -536,6 +819,8 @@
 
         ${noteHTML}
 
+        ${buildCommunitySection(drop, orderLink)}
+
         <div class="hvCard">
           <div class="hvStatRow">
             <p class="hvStatLabel">Orders placed</p>
@@ -584,6 +869,8 @@
       if (refreshBtn){
         refreshBtn.addEventListener("click", refreshLiveValues);
       }
+
+      wireCommunitySection(orderLink);
     }
 
     function updateLiveValues(summary){
