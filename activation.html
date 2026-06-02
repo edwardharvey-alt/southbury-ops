@@ -491,6 +491,126 @@
       margin: 0 0 4px;
     }
 
+    /* Two-region per-drop layout: timeline (left) | live-stats aside (right,
+       sticky on desktop). Mirrors host-view's hvLayout / hvLayoutAside. */
+    .act-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .act-layout-main {
+      min-width: 0;
+    }
+
+    .act-layout-aside {
+      position: sticky;
+      top: 24px;
+      margin-top: 18px;
+      display: grid;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    /* Live-stats card — mirrors host-view's hvCard / hvStat* styling. */
+    .act-stat-card {
+      background: #fff;
+      border: 1px solid #e9e3d8;
+      border-radius: 18px;
+      box-shadow: 0 2px 12px rgba(15,23,42,0.04);
+      padding: 20px 20px 22px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .act-stat-eyebrow {
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #8b6b3f;
+      margin: 0;
+    }
+
+    .act-stat-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .act-stat-label {
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      margin: 0;
+    }
+
+    .act-stat-value {
+      font-size: 30px;
+      font-weight: 950;
+      letter-spacing: -0.03em;
+      color: #1f2937;
+      margin: 0;
+      line-height: 1;
+    }
+
+    .act-stat-value--sm {
+      font-size: 22px;
+    }
+
+    .act-stat-divider {
+      height: 1px;
+      background: rgba(15,23,42,0.06);
+    }
+
+    .act-capacity {
+      display: grid;
+      gap: 10px;
+    }
+
+    .act-capacity-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .act-capacity-pct {
+      font-size: 14px;
+      font-weight: 900;
+      color: #1f2937;
+      letter-spacing: -0.01em;
+    }
+
+    .act-capacity-track {
+      position: relative;
+      width: 100%;
+      height: 10px;
+      background: rgba(15,23,42,0.07);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .act-capacity-fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 0%;
+      background: var(--home-accent);
+      border-radius: 999px;
+      transition: width 0.45s ease;
+    }
+
+    .act-capacity-meta {
+      font-size: 12px;
+      font-weight: 700;
+      color: #6b7280;
+      margin: 0;
+    }
+
     .act-message-preview {
       background: rgba(139,107,63,0.04);
       border-left: 3px solid var(--home-border);
@@ -589,6 +709,18 @@
       .act-timeline {
         padding-left: 16px;
         border-left-width: 2px;
+      }
+
+      /* Single column on mobile: aside stacks below the timeline, not sticky. */
+      .act-layout {
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+
+      .act-layout-aside {
+        position: static;
+        top: auto;
+        margin-top: 0;
       }
 
       .act-touchpoint {
@@ -1521,6 +1653,11 @@
       const d = new Date(isoString);
       if (isNaN(d.getTime())) return '';
       return fmtTime(d);
+    }
+
+    function formatMoneyPence(pence){
+      const n = Number(pence || 0);
+      return '£' + (n / 100).toFixed(2);
     }
 
     function actLog(touchpoint, action, meta = {}){
@@ -2997,13 +3134,58 @@
         }));
       }
 
+      // Sticky live-stats aside — mirrors host-view's order-insight aside.
+      // All figures come from the summary object already in scope (the same
+      // v_drop_summary row driving statusOf and the capacity artwork); no
+      // extra fetch. No "your share" card — that is host-only.
+      const asideCapNum = (capTotalNum != null && capTotalNum > 0) ? capTotalNum : 0;
+      const asideCapPct = asideCapNum > 0
+        ? Math.min(100, Math.round((used / asideCapNum) * 100))
+        : 0;
+      const asideGmvPence = summary.drop_gmv_pence;
+      const asideShowGmv = asideGmvPence != null;
+      const asideHtml = `
+        <div class="act-stat-card">
+          <p class="act-stat-eyebrow">This drop, live</p>
+          <div class="act-stat-row">
+            <p class="act-stat-label">Orders placed</p>
+            <p class="act-stat-value">${orderCount}</p>
+          </div>
+          <div class="act-stat-divider"></div>
+          <div class="act-capacity">
+            <div class="act-capacity-head">
+              <p class="act-stat-label">Capacity filled</p>
+              <span class="act-capacity-pct">${asideCapPct}%</span>
+            </div>
+            <div class="act-capacity-track">
+              <div class="act-capacity-fill" style="width:${asideCapPct}%"></div>
+            </div>
+            <p class="act-capacity-meta">${asideCapNum > 0
+              ? `${used} of ${asideCapNum} orders taken`
+              : 'No capacity limit set'}</p>
+          </div>
+          ${asideShowGmv ? `
+          <div class="act-stat-divider"></div>
+          <div class="act-stat-row">
+            <p class="act-stat-label">Revenue</p>
+            <p class="act-stat-value act-stat-value--sm">${formatMoneyPence(asideGmvPence)}</p>
+          </div>
+          ` : ''}
+        </div>
+      `;
+
       content.innerHTML = `
         <button class="act-back-link" type="button" data-act="back">← All drops</button>
         <div class="act-drop-header">
           <h3 class="act-drop-title">${eName}</h3>
           <p class="act-drop-context">${contextLine(summary)}</p>
         </div>
-        <div class="act-timeline">${cards.join('')}</div>
+        <div class="act-layout">
+          <div class="act-layout-main">
+            <div class="act-timeline">${cards.join('')}</div>
+          </div>
+          <aside class="act-layout-aside">${asideHtml}</aside>
+        </div>
       `;
 
       actSetupMenuCard(summary, rawDrop);
