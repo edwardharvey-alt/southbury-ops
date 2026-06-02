@@ -475,6 +475,19 @@
       display:flex;
     }
 
+    /* "Print a poster" — always-available outbound asset below the steps */
+    .hvPoster{
+      display:grid;
+      gap:10px;
+    }
+
+    .hvPoster .hvActionBtn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      text-decoration:none;
+    }
+
     .hvQrWrap{
       display:flex;
       justify-content:center;
@@ -868,6 +881,13 @@
       const step1Open = dropState === "pre-open";
       const step2Open = dropState === "live";
 
+      // Printable poster — an always-available asset. Passes the same slug +
+      // token this page already holds; the poster's QR encodes the public
+      // order URL only (never the token). New tab, rel=noopener.
+      const posterUrl = (state.dropSlug && state.token)
+        ? `${window.location.origin}/host-poster.html?drop=${encodeURIComponent(state.dropSlug)}&t=${encodeURIComponent(state.token)}`
+        : null;
+
       return `
         <div class="hvCommunity">
           <div class="hvCommunityHead">
@@ -911,6 +931,17 @@
               ${linkRow}
             </div>
           </div>
+          ${posterUrl ? `
+          <div class="hvDivider"></div>
+
+          <div class="hvPoster">
+            <p class="hvStepTitle">Print a poster</p>
+            <p class="hvStepGuide">Put it up where people will see it — a noticeboard, counter, or window.</p>
+            <div class="hvBtnRow">
+              <a class="hvActionBtn ghost" href="${escapeHtml(posterUrl)}" target="_blank" rel="noopener">Open poster</a>
+            </div>
+          </div>
+          ` : ""}
         </div>
       `;
     }
