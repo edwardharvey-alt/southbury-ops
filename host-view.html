@@ -474,13 +474,15 @@
       display:flex;
     }
 
-    /* "Print a poster" — always-available outbound asset, shares from Step 2 */
-    .hvPoster{
-      display:grid;
-      gap:10px;
+    /* Direct-share actions — "Copy link" and "Open poster" as peers.
+       Side by side; wrap to stack on narrow screens. */
+    .hvShareBtns{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
     }
 
-    .hvPoster .hvActionBtn{
+    .hvShareBtns .hvActionBtn{
       display:inline-flex;
       align-items:center;
       justify-content:center;
@@ -846,11 +848,25 @@
         </div>
       `;
 
+      // Printable poster — an always-available asset. Passes the same slug +
+      // token this page already holds; the poster's QR encodes the public
+      // order URL only (never the token). New tab, rel=noopener.
+      const posterUrl = (state.dropSlug && state.token)
+        ? `${window.location.origin}/host-poster.html?drop=${encodeURIComponent(state.dropSlug)}&t=${encodeURIComponent(state.token)}`
+        : null;
+
+      // The two direct-share actions sit together under the link display:
+      // "Copy link" and (when available) "Open poster" as peer outline
+      // buttons. The poster opens host-poster.html in a new tab.
       const linkRow = orderLink
         ? `
           <div class="hvLinkRow">
             <span class="hvLinkBox" id="hvOrderLinkText">${escapeHtml(orderLink)}</span>
+          </div>
+          <p class="hvStepGuide">Copy the link, or open a printable poster to put up.</p>
+          <div class="hvShareBtns">
             <button type="button" class="hvActionBtn ghost" id="hvCopyLinkBtn">Copy link</button>
+            ${posterUrl ? `<a class="hvActionBtn ghost" href="${escapeHtml(posterUrl)}" target="_blank" rel="noopener">Open poster</a>` : ""}
           </div>
         `
         : `<p class="hvStepGuide">The order link will appear here once this drop has a link name set.</p>`;
@@ -864,13 +880,6 @@
       const dropState = computeDropState(drop);
       const step1Open = dropState === "pre-open";
       const step2Open = dropState === "live";
-
-      // Printable poster — an always-available asset. Passes the same slug +
-      // token this page already holds; the poster's QR encodes the public
-      // order URL only (never the token). New tab, rel=noopener.
-      const posterUrl = (state.dropSlug && state.token)
-        ? `${window.location.origin}/host-poster.html?drop=${encodeURIComponent(state.dropSlug)}&t=${encodeURIComponent(state.token)}`
-        : null;
 
       return `
         <div class="hvCommunity">
@@ -913,15 +922,6 @@
                 <button type="button" class="hvActionBtn" data-copy-target="hvMsgStep2">Copy message</button>
               </div>
               ${linkRow}
-              ${posterUrl ? `
-              <div class="hvPoster">
-                <p class="hvStepTitle">Print a poster</p>
-                <p class="hvStepGuide">Put it up where people will see it — a noticeboard, counter, or window.</p>
-                <div class="hvBtnRow">
-                  <a class="hvActionBtn ghost" href="${escapeHtml(posterUrl)}" target="_blank" rel="noopener">Open poster</a>
-                </div>
-              </div>
-              ` : ""}
             </div>
           </div>
         </div>
