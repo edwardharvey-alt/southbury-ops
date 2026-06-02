@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drop Poster</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    /* ---- Screen styles (mirror activation-poster.html) ---- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #E8E4DC;
+      font-family: 'Figtree', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 32px 16px;
+      gap: 20px;
+    }
+
+    .screen-toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .btn-primary {
+      background: #8B6B3F;
+      color: #fff;
+    }
+
+    .poster-scale-wrap {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      overflow-x: hidden;
+    }
+
+    .poster-wrap {
+      width: 210mm;
+      height: 297mm;
+      background: #FAF8F4;
+      border-radius: 4px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Loading + error states */
+    .poster-state {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      color: #6B7280;
+      font-family: 'Figtree', system-ui, sans-serif;
+      min-height: 297mm;
+      text-align: center;
+      padding: 0 24mm;
+      line-height: 1.5;
+    }
+
+    /* ---- Poster content ---- */
+    .poster-inner {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 0;
+      padding: 16mm 16mm 14mm;
+      min-height: 297mm;
+    }
+
+    .poster-top-group {
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      margin-bottom: auto;
+    }
+
+    .poster-vendor-name {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 600;
+      font-size: 32pt;
+      line-height: 1.0;
+      color: #1F2937;
+      letter-spacing: -0.02em;
+      margin-bottom: 2mm;
+    }
+
+    .poster-venue {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 12pt;
+      color: #8B7355;
+      letter-spacing: 0.02em;
+    }
+
+    .poster-rule {
+      border: none;
+      border-top: 1px solid #C4B49A;
+      margin: 9mm 0;
+      flex-shrink: 0;
+    }
+
+    /* HERO — the drop name. Largest text on the poster; the visual centre
+       of gravity. Upright Cormorant, not italic. */
+    .poster-hero {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 600;
+      font-size: 46pt;
+      line-height: 1.05;
+      color: #1F2937;
+      letter-spacing: -0.01em;
+      flex-shrink: 0;
+    }
+
+    .poster-date {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 17pt;
+      color: #8B6B3F;
+      letter-spacing: 0.01em;
+      margin-top: 5mm;
+      flex-shrink: 0;
+    }
+
+    /* QR action zone — warm tinted box, the visual centre of the poster */
+    .poster-qr-zone {
+      background: #F3EDE3;
+      border-radius: 10px;
+      padding: 9mm 9mm 8mm;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4mm;
+      flex-shrink: 0;
+      width: fit-content;
+      min-width: 80mm;
+      max-width: 100mm;
+      align-self: center;
+      margin: 0 auto;
+      margin-bottom: auto;
+      box-sizing: border-box;
+    }
+
+    #posterQr canvas,
+    #posterQr img {
+      width: 72mm !important;
+      height: 72mm !important;
+      display: block;
+    }
+
+    .poster-scan-label {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-weight: 800;
+      font-size: 11pt;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #1F2937;
+    }
+
+    .poster-url {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 8pt;
+      color: #8B7355;
+      word-break: break-all;
+      text-align: center;
+      max-width: 80mm;
+      line-height: 1.5;
+    }
+
+    .poster-footer {
+      flex-shrink: 0;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+    }
+
+    .poster-supporting {
+      font-family: 'Figtree', system-ui, sans-serif;
+      font-size: 10pt;
+      font-weight: 600;
+      color: #8B7355;
+      letter-spacing: 0.02em;
+    }
+
+    /* ---- Print styles — only the poster prints, no UI chrome ---- */
+    @media print {
+      body {
+        background: none;
+        padding: 0;
+        display: block;
+      }
+
+      .screen-toolbar {
+        display: none !important;
+      }
+
+      .poster-scale-wrap {
+        display: block;
+        width: 100%;
+      }
+
+      .poster-wrap {
+        zoom: 1 !important;
+        transform: none !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 100vh !important;
+        box-shadow: none;
+        border-radius: 0;
+      }
+
+      .poster-state {
+        min-height: 100vh;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="screen-toolbar" id="screenToolbar">
+    <button class="btn btn-primary" onclick="window.print()">Print poster</button>
+  </div>
+
+  <div class="poster-scale-wrap">
+    <div class="poster-wrap" id="posterWrap">
+      <div class="poster-state" id="posterState">Loading…</div>
+    </div>
+  </div>
+
+  <script>
+    function byId(id) { return document.getElementById(id); }
+
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // Mirror host-view.html's window-suffix stripper so multi-window drop
+    // names read cleanly on the poster.
+    function stripWindowSuffix(name) {
+      return String(name || '').replace(/\s*[—-]\s*Window\s*\d+\s*$/i, '').trim();
+    }
+
+    function fmtDateLong(value) {
+      if (!value) return null;
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return null;
+      return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    }
+
+    function fmtTime(value) {
+      if (!value) return null;
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return null;
+      return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+
+    // Build the date/time line from the delivery window. Mirrors
+    // host-view.html's formatDropWindow shape.
+    function fmtDropWindow(startISO, endISO) {
+      const startDate = fmtDateLong(startISO) || fmtDateLong(endISO);
+      const startTime = fmtTime(startISO);
+      const endTime = fmtTime(endISO);
+      if (!startDate) return null;
+      if (startTime && endTime) return `${startDate}, ${startTime}–${endTime}`;
+      if (startTime) return `${startDate}, from ${startTime}`;
+      if (endTime) return `${startDate}, until ${endTime}`;
+      return startDate;
+    }
+
+    // Public order URL — slug only, never the host token. Mirrors
+    // host-view.html's buildOrderLink (origin + /order.html?drop=<slug>).
+    function buildOrderLink(slug) {
+      if (!slug) return '';
+      return `${window.location.origin}/order.html?drop=${encodeURIComponent(slug)}`;
+    }
+
+    function showState(message) {
+      byId('posterState').textContent = message;
+    }
+
+    async function init() {
+      const params = new URLSearchParams(window.location.search);
+      const slug = params.get('drop');
+      const token = params.get('t');
+
+      if (!slug || !token) {
+        showState('This link is invalid or has expired. Please ask your vendor for a fresh host link.');
+        return;
+      }
+
+      // Anonymous client + token-authed Edge Function — exactly the flow
+      // host-view.html uses. No vendor session required.
+      let sb;
+      try {
+        sb = window.supabase.createClient(
+          window.HEARTH_CONFIG.SUPABASE_URL,
+          window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+        );
+      } catch (initErr) {
+        showState("Couldn't connect to the platform. Please try refreshing the page.");
+        return;
+      }
+
+      let summary = null;
+      try {
+        const { data, error } = await sb.functions.invoke(
+          'host-view-summary',
+          { body: { slug, token } }
+        );
+        if (!error && !(data && data.error) && data && data.drop_id) {
+          summary = data;
+        }
+      } catch (err) {
+        console.error('host-view-summary invoke failed', err);
+      }
+
+      if (!summary) {
+        showState('This link is invalid or has expired. Please ask your vendor for a fresh host link.');
+        return;
+      }
+
+      renderPoster(summary, slug);
+    }
+
+    function renderPoster(summary, slug) {
+      const wrap = byId('posterWrap');
+      const orderingUrl = buildOrderLink(slug);
+
+      // Foreground the maker. If vendor_name is missing we omit it rather
+      // than printing the platform name — outbound copy never names Hearth
+      // (see CLAUDE.md brand/tone rules).
+      const vendorName = summary.vendor_name && String(summary.vendor_name).trim()
+        ? String(summary.vendor_name).trim()
+        : null;
+
+      const hostName = summary.host_name && String(summary.host_name).trim()
+        ? String(summary.host_name).trim()
+        : null;
+
+      // The drop is the hero. Fall back to a calm invitation if absent.
+      const dropName = stripWindowSuffix(summary.drop_name) || null;
+      const heroLine = dropName || 'Order ahead';
+
+      const dateLine = fmtDropWindow(summary.delivery_start, summary.delivery_end);
+
+      wrap.innerHTML = `
+        <div class="poster-inner">
+
+          <div class="poster-top-group">
+            <div class="poster-top">
+              ${vendorName ? `<div class="poster-vendor-name">${escapeHtml(vendorName)}</div>` : ''}
+              ${hostName ? `<div class="poster-venue">At ${escapeHtml(hostName)}</div>` : ''}
+            </div>
+
+            <hr class="poster-rule">
+
+            <div class="poster-hero">${escapeHtml(heroLine)}</div>
+            ${dateLine ? `<div class="poster-date">${escapeHtml(dateLine)}</div>` : ''}
+          </div>
+
+          <div class="poster-qr-zone">
+            <div id="posterQr"></div>
+            <div class="poster-scan-label">Scan to order</div>
+            <div class="poster-url">${escapeHtml(orderingUrl)}</div>
+          </div>
+
+          <div class="poster-footer">
+            <div class="poster-supporting">Pre-order only · places are limited</div>
+          </div>
+
+        </div>
+      `;
+
+      // Large QR encoding the PUBLIC order URL only — never the token.
+      new QRCode(byId('posterQr'), {
+        text: orderingUrl,
+        width: 272,  // ~72mm at 96dpi
+        height: 272,
+        colorDark: '#1F2937',
+        colorLight: '#FAF8F4',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+
+      scalePoster();
+    }
+
+    function scalePoster() {
+      const wrap = byId('posterWrap');
+      const scaleWrap = wrap && wrap.parentElement;
+      if (!wrap || !scaleWrap) return;
+
+      // A4 width at 96dpi
+      const A4_W = 794;
+      const availWidth = window.innerWidth - 32;
+      const scale = Math.min(1, availWidth / A4_W);
+
+      // CSS zoom scales layout AND visual — no transform trickery needed.
+      wrap.style.zoom = scale;
+      wrap.style.transform = 'none';
+
+      scaleWrap.style.display = 'flex';
+      scaleWrap.style.justifyContent = 'center';
+      scaleWrap.style.width = '100%';
+      scaleWrap.style.height = 'auto';
+    }
+
+    window.addEventListener('resize', scalePoster);
+
+    init();
+  </script>
+</body>
+</html>

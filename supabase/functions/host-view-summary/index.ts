@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
     const { data: summary, error: summaryErr } = await serviceClient
       .from("v_drop_summary")
       .select(
-        "drop_id, drop_name, host_name, status, opens_at, closes_at, delivery_start, delivery_end, capacity_units_total, capacity_units_used, capacity_units_remaining, order_count, host_share_enabled, host_share_total_pence, host_share_model, host_share_percentage, host_share_per_order_pence, host_share_fixed_pence, fundraising_enabled, fundraising_total_pence, fundraising_display_text"
+        "drop_id, drop_name, vendor_name, host_name, status, opens_at, closes_at, delivery_start, delivery_end, capacity_units_total, capacity_units_used, capacity_units_remaining, order_count, host_share_enabled, host_share_total_pence, host_share_model, host_share_percentage, host_share_per_order_pence, host_share_fixed_pence, fundraising_enabled, fundraising_total_pence, fundraising_display_text"
       )
       .eq("slug", slug)
       .maybeSingle();
@@ -130,6 +130,7 @@ Deno.serve(async (req) => {
       {
         drop_id: summary.drop_id,
         drop_name: summary.drop_name,
+        vendor_name: summary.vendor_name,
         host_name: summary.host_name,
         status: summary.status,
         opens_at: summary.opens_at,

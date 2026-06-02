@@ -38,11 +38,27 @@
     }
 
     .hvPage{
-      max-width:620px;
+      max-width:1040px;
       margin:0 auto;
       padding:48px 20px 64px;
       display:grid;
       gap:20px;
+    }
+
+    /* Two-region layout: activation (left) | order insight (right, sticky) */
+    .hvLayout{
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) 340px;
+      gap:20px;
+      align-items:start;
+    }
+
+    .hvLayoutAside{
+      position:sticky;
+      top:24px;
+      display:grid;
+      gap:16px;
+      min-width:0;
     }
 
     /* Header / drop identity */
@@ -244,6 +260,235 @@
       line-height:1.4;
     }
 
+    /* Share with your community */
+    .hvCommunity{
+      background:#fff;
+      border:1px solid #e9e3d8;
+      border-radius:22px;
+      box-shadow:0 2px 12px rgba(15,23,42,0.04);
+      padding:24px 22px;
+      display:grid;
+      gap:18px;
+    }
+
+    .hvCommunityHead{
+      display:grid;
+      gap:8px;
+    }
+
+    .hvCommunityTitle{
+      font-family:'Cormorant Garamond', Georgia, serif;
+      font-weight:500;
+      font-size:26px;
+      letter-spacing:-0.01em;
+      line-height:1.12;
+      color:#1f2937;
+      margin:0;
+    }
+
+    .hvCommunityIntro{
+      font-size:14px;
+      font-weight:600;
+      color:#4b5563;
+      line-height:1.55;
+      margin:0;
+    }
+
+    .hvStep{
+      display:grid;
+      gap:10px;
+    }
+
+    .hvStepTitle{
+      font-size:15px;
+      font-weight:900;
+      letter-spacing:-0.01em;
+      color:#1f2937;
+      margin:0;
+    }
+
+    .hvStepGuide{
+      font-size:13px;
+      font-weight:600;
+      color:#6b7280;
+      line-height:1.5;
+      margin:0;
+    }
+
+    /* Subtle "when to send" line under each step heading */
+    .hvStepWhen{
+      font-size:12px;
+      font-weight:700;
+      color:#8b6b3f;
+      letter-spacing:.01em;
+      margin:-2px 0 2px;
+    }
+
+    /* Collapsible step disclosure — the title row is the toggle */
+    .hvStepToggle{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      width:100%;
+      background:none;
+      border:none;
+      padding:0;
+      margin:0;
+      cursor:pointer;
+      text-align:left;
+      font-family:inherit;
+      color:inherit;
+    }
+
+    .hvStepChevron{
+      flex-shrink:0;
+      font-size:20px;
+      line-height:1;
+      color:#8b6b3f;
+      transform:rotate(0deg);
+      transition:transform .18s ease;
+    }
+
+    .hvStepToggle[aria-expanded="true"] .hvStepChevron{
+      transform:rotate(90deg);
+    }
+
+    .hvStepBody{
+      display:grid;
+      gap:10px;
+    }
+
+    .hvStepBody.hvStepBody--collapsed{
+      display:none;
+    }
+
+    /* Channel selector — subtle segmented control */
+    .hvChannelBar{
+      justify-self:start;
+      display:inline-flex;
+      gap:4px;
+      padding:4px;
+      background:rgba(139,107,63,0.08);
+      border:1px solid rgba(139,107,63,0.16);
+      border-radius:999px;
+    }
+
+    .hvChannelPill{
+      font-family:'Figtree', system-ui, sans-serif;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:-0.01em;
+      color:#6b7280;
+      background:none;
+      border:none;
+      border-radius:999px;
+      padding:6px 14px;
+      cursor:pointer;
+      transition:background .2s ease, color .2s ease;
+    }
+
+    .hvChannelPill:hover{
+      color:#1f2937;
+    }
+
+    .hvChannelPill.active{
+      background:#fff;
+      color:#6b4c1f;
+      box-shadow:0 1px 3px rgba(15,23,42,0.08);
+    }
+
+    .hvTextarea{
+      width:100%;
+      box-sizing:border-box;
+      font-family:'Figtree', system-ui, sans-serif;
+      font-size:14px;
+      font-weight:500;
+      line-height:1.55;
+      color:#1f2937;
+      background:#fcfbf9;
+      border:1px solid #e9e3d8;
+      border-radius:14px;
+      padding:12px 14px;
+      min-height:120px;
+      resize:vertical;
+    }
+
+    .hvTextarea:focus{
+      outline:none;
+      border-color:var(--hv-brand-secondary);
+      box-shadow:0 0 0 3px var(--hv-brand-soft);
+    }
+
+    .hvLinkRow{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .hvLinkBox{
+      flex:1 1 auto;
+      min-width:0;
+      font-size:13px;
+      font-weight:700;
+      color:#6b4c1f;
+      background:rgba(139,107,63,0.08);
+      border:1px solid rgba(139,107,63,0.18);
+      border-radius:12px;
+      padding:10px 14px;
+      word-break:break-all;
+    }
+
+    .hvActionBtn{
+      font-family:'Figtree', system-ui, sans-serif;
+      font-size:13px;
+      font-weight:800;
+      letter-spacing:-0.01em;
+      color:#fff;
+      background:var(--hv-brand-primary);
+      border:none;
+      border-radius:999px;
+      padding:10px 18px;
+      cursor:pointer;
+      transition:opacity .2s ease;
+    }
+
+    .hvActionBtn:hover{
+      opacity:0.9;
+    }
+
+    .hvActionBtn:disabled{
+      opacity:0.6;
+      cursor:default;
+    }
+
+    .hvActionBtn.ghost{
+      color:#6b4c1f;
+      background:none;
+      border:1px solid rgba(139,107,63,0.32);
+      flex:0 0 auto;
+    }
+
+    .hvBtnRow{
+      display:flex;
+    }
+
+    /* Direct-share actions — "Copy link" and "Open poster" as peers.
+       Side by side; wrap to stack on narrow screens. */
+    .hvShareBtns{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .hvShareBtns .hvActionBtn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      text-decoration:none;
+    }
+
     /* Footer */
     .hvFooter{
       text-align:center;
@@ -322,6 +567,13 @@
       .hvStatValue{
         font-size:26px;
       }
+      .hvLayout{
+        grid-template-columns:1fr;
+      }
+      .hvLayoutAside{
+        position:static;
+        top:auto;
+      }
     }
   </style>
 </head>
@@ -344,6 +596,11 @@
     };
 
     let _sb;
+
+    // Per-step channel message drafts. Each step holds an active channel and
+    // its own draft per channel, so edits survive switching channels and back.
+    // Shape: { step1: { active, drafts: {whatsapp, social, email} }, step2: {...} }
+    let communityState = null;
 
     function getQueryParam(name){
       return new URLSearchParams(window.location.search).get(name);
@@ -482,8 +739,336 @@
       return "live";
     }
 
+    function buildOrderLink(){
+      const slug = state.dropSlug || "";
+      if (!slug) return "";
+      // Mirrors drop-manager.html getShareUrl(): origin + /order.html?drop=<slug>
+      return `${window.location.origin}/order.html?drop=${encodeURIComponent(slug)}`;
+    }
+
+    // Channel starter templates. Tokens [vendor], [host], [date], [link] are
+    // filled by fillTemplate() below. Email starters lead with a "Subject:"
+    // line. Outbound copy goes to the host's community, who don't know
+    // "Hearth" or "a drop" — so it names neither. When the vendor name is
+    // available it leads with the maker (*_VENDOR variants); otherwise it
+    // describes the moment in plain terms (the generic variants). (See
+    // CLAUDE.md brand/tone rules.)
+    const STEP1_TEMPLATES = {
+      whatsapp:
+        "Just so you know — we've got food coming to [host] on [date]. It's pre-order only and places are limited, so worth keeping an eye out. I'll share the order link here as soon as ordering opens.",
+      social:
+        "We've got food coming to [host] on [date]. Pre-order only, places limited — ordering opens soon. We'll share the link when it's live.",
+      email:
+        "Subject: Food coming to [host] — [date]\n\nHello,\n\nWe've got food coming to [host] on [date]. It's pre-order only and places are limited.\n\nOrdering opens soon — we'll send the link as soon as it's live.\n\nSee you there.",
+    };
+
+    const STEP1_TEMPLATES_VENDOR = {
+      whatsapp:
+        "Just so you know — [vendor] is coming to [host] on [date]. It's pre-order only and places are limited, so worth keeping an eye out. I'll share the order link here as soon as ordering opens.",
+      social:
+        "[vendor] is coming to [host] on [date]. Pre-order only, places limited — ordering opens soon. We'll share the link when it's live.",
+      email:
+        "Subject: [vendor] is coming to [host] — [date]\n\nHello,\n\n[vendor] is coming to [host] on [date]. It's pre-order only and places are limited.\n\nOrdering opens soon — we'll send the link as soon as it's live.\n\nSee you there.",
+    };
+
+    const STEP2_TEMPLATES = {
+      whatsapp:
+        "Ordering's now open — food at [host] on [date]. [link] Pre-order only and places are limited, so get yours in when you can.",
+      social:
+        "Ordering is now open — food at [host]. Pre-order only and places are limited — order here: [link]",
+      email:
+        "Subject: Ordering's open — food at [host]\n\nHello,\n\nOrdering is now open — food at [host] on [date]. Places are limited and it's pre-order only.\n\nOrder here: [link]\n\nSee you there.",
+    };
+
+    const STEP2_TEMPLATES_VENDOR = {
+      whatsapp:
+        "Ordering's now open — [vendor] at [host] on [date]. [link] Pre-order only and places are limited, so get yours in when you can.",
+      social:
+        "Ordering is now open — [vendor] at [host]. Pre-order only and places are limited — order here: [link]",
+      email:
+        "Subject: Ordering's open — [vendor] at [host]\n\nHello,\n\nOrdering is now open — [vendor] at [host] on [date]. Places are limited and it's pre-order only.\n\nOrder here: [link]\n\nSee you there.",
+    };
+
+    const CHANNELS = [
+      { key: "whatsapp", label: "WhatsApp" },
+      { key: "social", label: "Social" },
+      { key: "email", label: "Email" },
+    ];
+
+    function textareaIdFor(step){
+      return step === "step1" ? "hvMsgStep1" : "hvMsgStep2";
+    }
+
+    function buildCommunitySection(drop, orderLink){
+      const hostName = drop.host_name || null;
+      // Vendor (the maker). When present we lead the outbound copy with it.
+      const vendorName = (drop.vendor_name && String(drop.vendor_name).trim())
+        ? String(drop.vendor_name).trim()
+        : null;
+      // Use the delivery date as the human "[date]"; fall back to generic phrasing.
+      const dateText = formatDateLong(drop.delivery_start) || formatDateLong(drop.delivery_end);
+
+      // Fill rule, reusing the page's existing host/date/link values. Missing
+      // values degrade to calm generic phrasing rather than leaving brackets.
+      const host = hostName || "our community";
+      const linkText = orderLink || "[order link]";
+      const onDate = dateText ? `on ${dateText}` : "soon";
+      const dashDate = dateText ? dateText : "soon";
+      const fillTemplate = (s) =>
+        s
+          .split("[vendor]").join(vendorName || "")
+          .split("[host]").join(host)
+          .split("on [date]").join(onDate)
+          .split("— [date]").join(`— ${dashDate}`)
+          .split("[date]").join(dashDate)
+          .split("[link]").join(linkText);
+
+      const fillAll = (templates) => ({
+        whatsapp: fillTemplate(templates.whatsapp),
+        social: fillTemplate(templates.social),
+        email: fillTemplate(templates.email),
+      });
+
+      // Lead with the vendor when we have a name; otherwise the generic
+      // describe-the-moment templates.
+      const step1Templates = vendorName ? STEP1_TEMPLATES_VENDOR : STEP1_TEMPLATES;
+      const step2Templates = vendorName ? STEP2_TEMPLATES_VENDOR : STEP2_TEMPLATES;
+
+      // Seed the per-step channel drafts (default channel: WhatsApp).
+      communityState = {
+        step1: { active: "whatsapp", drafts: fillAll(step1Templates) },
+        step2: { active: "whatsapp", drafts: fillAll(step2Templates) },
+      };
+
+      const channelBar = (step) => `
+        <div class="hvChannelBar" data-step="${step}">
+          ${CHANNELS.map((c, i) => `
+            <button type="button" class="hvChannelPill${i === 0 ? " active" : ""}" data-step="${step}" data-channel="${c.key}">${c.label}</button>
+          `).join("")}
+        </div>
+      `;
+
+      // Printable poster — an always-available asset. Passes the same slug +
+      // token this page already holds; the poster's QR encodes the public
+      // order URL only (never the token). New tab, rel=noopener.
+      const posterUrl = (state.dropSlug && state.token)
+        ? `${window.location.origin}/host-poster.html?drop=${encodeURIComponent(state.dropSlug)}&t=${encodeURIComponent(state.token)}`
+        : null;
+
+      // The two direct-share actions sit together under the link display:
+      // "Copy link" and (when available) "Open poster" as peer outline
+      // buttons. The poster opens host-poster.html in a new tab.
+      const linkRow = orderLink
+        ? `
+          <div class="hvLinkRow">
+            <span class="hvLinkBox" id="hvOrderLinkText">${escapeHtml(orderLink)}</span>
+          </div>
+          <p class="hvStepGuide">Copy the link, or open a printable poster to put up.</p>
+          <div class="hvShareBtns">
+            <button type="button" class="hvActionBtn ghost" id="hvCopyLinkBtn">Copy link</button>
+            ${posterUrl ? `<a class="hvActionBtn ghost" href="${escapeHtml(posterUrl)}" target="_blank" rel="noopener">Open poster</a>` : ""}
+          </div>
+        `
+        : `<p class="hvStepGuide">The order link will appear here once this drop has a link name set.</p>`;
+
+      // "When to send" guidance, derived from the ordering-open date (opens_at).
+      const timings = computeStepTimings(drop);
+
+      // Auto-expand the step that matches the drop's current state; collapse
+      // the other (the host can still open it). Closed → both collapsed.
+      // Manual toggles override this initial state (see wireCommunitySection).
+      const dropState = computeDropState(drop);
+      const step1Open = dropState === "pre-open";
+      const step2Open = dropState === "live";
+
+      return `
+        <div class="hvCommunity">
+          <div class="hvCommunityHead">
+            <h2 class="hvCommunityTitle">Share with your community</h2>
+            <p class="hvCommunityIntro">A drop fills best when the people who'll love it hear about it from you. Here are two simple things that help — share them in your own words, through your own channels. Both are optional.</p>
+          </div>
+
+          <div class="hvDivider"></div>
+
+          <div class="hvStep">
+            <button type="button" class="hvStepToggle" data-step-toggle="step1" aria-expanded="${step1Open}" aria-controls="hvStepBody-step1">
+              <span class="hvStepTitle">1 · Give your community a heads-up</span>
+              <span class="hvStepChevron" aria-hidden="true">›</span>
+            </button>
+            <div class="hvStepBody${step1Open ? "" : " hvStepBody--collapsed"}" id="hvStepBody-step1">
+              <p class="hvStepWhen">${escapeHtml(timings.step1)}</p>
+              <p class="hvStepGuide">Give people a heads-up — post it wherever you'd normally reach them.</p>
+              ${channelBar("step1")}
+              <textarea class="hvTextarea" id="hvMsgStep1">${escapeHtml(communityState.step1.drafts.whatsapp)}</textarea>
+              <div class="hvBtnRow">
+                <button type="button" class="hvActionBtn" data-copy-target="hvMsgStep1">Copy message</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="hvDivider"></div>
+
+          <div class="hvStep">
+            <button type="button" class="hvStepToggle" data-step-toggle="step2" aria-expanded="${step2Open}" aria-controls="hvStepBody-step2">
+              <span class="hvStepTitle">2 · Share the order link</span>
+              <span class="hvStepChevron" aria-hidden="true">›</span>
+            </button>
+            <div class="hvStepBody${step2Open ? "" : " hvStepBody--collapsed"}" id="hvStepBody-step2">
+              <p class="hvStepWhen">${escapeHtml(timings.step2)}</p>
+              <p class="hvStepGuide">Share the link so people can order.</p>
+              ${channelBar("step2")}
+              <textarea class="hvTextarea" id="hvMsgStep2">${escapeHtml(communityState.step2.drafts.whatsapp)}</textarea>
+              <div class="hvBtnRow">
+                <button type="button" class="hvActionBtn" data-copy-target="hvMsgStep2">Copy message</button>
+              </div>
+              ${linkRow}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Derive gentle "when to send" lines.
+    // Step 1 anchors on the ordering-open date if scheduled, else the
+    // delivery date; the heads-up lands ~2 days ahead (or "as soon as you
+    // can" once that day is here/past). Step 2 reflects whether ordering
+    // has a scheduled opening, is already open (reusing computeDropState's
+    // "null opens_at = open from creation" logic), or neither.
+    function computeStepTimings(drop){
+      // Step 1 — heads-up, two days ahead of the anchor.
+      const anchorRaw = drop.opens_at != null ? drop.opens_at : drop.delivery_start;
+      const anchorMs = anchorRaw != null ? new Date(anchorRaw).getTime() : NaN;
+
+      let step1;
+      if (isNaN(anchorMs)){
+        step1 = "A few days ahead";
+      } else {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const minusTwo = new Date(anchorMs);
+        minusTwo.setDate(minusTwo.getDate() - 2);
+        minusTwo.setHours(0, 0, 0, 0);
+
+        if (minusTwo.getTime() <= todayStart.getTime()){
+          step1 = "Get the word out as soon as you can";
+        } else {
+          const minusTwoLong = formatDateLong(minusTwo.toISOString());
+          step1 = minusTwoLong ? `A few days ahead — around ${minusTwoLong}` : "A few days ahead";
+        }
+      }
+
+      // Step 2 — reflect the drop's ACTUAL state via computeDropState
+      // (the same logic behind the pre-open banner), not just whether
+      // opens_at is set.
+      let step2;
+      const dropState = computeDropState(drop);
+      if (dropState === "pre-open"){
+        const openDate = formatDateLong(drop.opens_at);
+        step2 = openDate ? `Send when ordering opens — ${openDate}` : "Send when ordering opens";
+      } else if (dropState === "closed"){
+        step2 = "Ordering has closed";
+      } else {
+        step2 = "Ordering is open now";
+      }
+
+      return { step1, step2 };
+    }
+
+    async function copyTextToClipboard(text){
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "absolute";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+
+    function flashCopied(btn){
+      if (!btn) return;
+      const original = btn.textContent;
+      btn.textContent = "Copied ✓";
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.disabled = false;
+      }, 2000);
+    }
+
+    function wireCommunitySection(orderLink){
+      // Collapsible step disclosures — the title row toggles its body.
+      // Native <button> gives keyboard operability for free; aria-expanded
+      // and the chevron reflect state. A manual toggle overrides the
+      // auto-expanded initial state set in buildCommunitySection.
+      document.querySelectorAll(".hvStepToggle").forEach((toggle) => {
+        toggle.addEventListener("click", () => {
+          const next = toggle.getAttribute("aria-expanded") !== "true";
+          toggle.setAttribute("aria-expanded", String(next));
+          const bodyId = toggle.getAttribute("aria-controls");
+          const body = bodyId ? document.getElementById(bodyId) : null;
+          if (body) body.classList.toggle("hvStepBody--collapsed", !next);
+        });
+      });
+
+      // Channel selectors — preserve the current channel's edit on switch.
+      document.querySelectorAll(".hvChannelBar").forEach((bar) => {
+        const step = bar.dataset.step;
+        bar.querySelectorAll(".hvChannelPill").forEach((pill) => {
+          pill.addEventListener("click", () => {
+            const channel = pill.dataset.channel;
+            const st = communityState && communityState[step];
+            if (!st || channel === st.active) return;
+            const ta = document.getElementById(textareaIdFor(step));
+            if (!ta) return;
+            // Save the current channel's live edit, then load the new one.
+            st.drafts[st.active] = ta.value;
+            st.active = channel;
+            ta.value = st.drafts[channel];
+            bar.querySelectorAll(".hvChannelPill").forEach((p) => {
+              p.classList.toggle("active", p.dataset.channel === channel);
+            });
+          });
+        });
+      });
+
+      // Copy-message buttons (read live textarea contents).
+      document.querySelectorAll("[data-copy-target]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const target = document.getElementById(btn.dataset.copyTarget);
+          if (!target) return;
+          try {
+            await copyTextToClipboard(target.value);
+            flashCopied(btn);
+          } catch (err){
+            console.error("copy failed", err);
+          }
+        });
+      });
+
+      // Copy the order link.
+      const copyLinkBtn = document.getElementById("hvCopyLinkBtn");
+      if (copyLinkBtn && orderLink){
+        copyLinkBtn.addEventListener("click", async () => {
+          try {
+            await copyTextToClipboard(orderLink);
+            flashCopied(copyLinkBtn);
+          } catch (err){
+            console.error("copy failed", err);
+          }
+        });
+      }
+    }
+
     function renderDrop(drop){
       const page = document.getElementById("hvPage");
+      const orderLink = buildOrderLink();
 
       const dropName = stripWindowSuffix(drop.drop_name || drop.name) || "This drop";
       const hostName = drop.host_name || null;
@@ -536,43 +1121,49 @@
 
         ${noteHTML}
 
-        <div class="hvCard">
-          <div class="hvStatRow">
-            <p class="hvStatLabel">Orders placed</p>
-            <p class="hvStatValue" id="hvOrderCount">${orderCount}</p>
-          </div>
+        <div class="hvLayout">
+          ${buildCommunitySection(drop, orderLink)}
 
-          <div class="hvDivider"></div>
+          <div class="hvLayoutAside">
+            <div class="hvCard">
+              <div class="hvStatRow">
+                <p class="hvStatLabel">Orders placed</p>
+                <p class="hvStatValue" id="hvOrderCount">${orderCount}</p>
+              </div>
 
-          <div class="hvCapacity">
-            <div class="hvCapacityHead">
-              <p class="hvCapacityLabel">Capacity filled</p>
-              <span class="hvCapacityPct" id="hvCapacityPct">${pct}%</span>
+              <div class="hvDivider"></div>
+
+              <div class="hvCapacity">
+                <div class="hvCapacityHead">
+                  <p class="hvCapacityLabel">Capacity filled</p>
+                  <span class="hvCapacityPct" id="hvCapacityPct">${pct}%</span>
+                </div>
+                <div class="hvCapacityTrack">
+                  <div class="hvCapacityFill" id="hvCapacityFill" style="width:${pct}%"></div>
+                </div>
+                <p class="hvCapacityMeta" id="hvCapacityMeta">
+                  ${capacityUsed} of ${capacityTotal} units taken
+                </p>
+              </div>
             </div>
-            <div class="hvCapacityTrack">
-              <div class="hvCapacityFill" id="hvCapacityFill" style="width:${pct}%"></div>
+
+            ${hostShareEnabled ? `
+            <div class="hvShareCard">
+              <p class="hvShareLabel">Your share</p>
+              <p class="hvShareValue" id="hvShareValue">${formatMoneyPence(hostSharePence)}</p>
+              ${hostShareDescriptor ? `<p class="hvShareHint">${escapeHtml(hostShareDescriptor)}</p>` : ""}
             </div>
-            <p class="hvCapacityMeta" id="hvCapacityMeta">
-              ${capacityUsed} of ${capacityTotal} units taken
-            </p>
+            ` : ""}
+
+            ${fundraisingEnabled ? `
+            <div class="hvShareCard">
+              <p class="hvShareLabel">Fundraising</p>
+              <p class="hvShareValue" id="hvFundraisingValue">${formatMoneyPence(fundraisingPence)}</p>
+              ${fundraisingText ? `<p class="hvShareHint">${escapeHtml(fundraisingText)}</p>` : ""}
+            </div>
+            ` : ""}
           </div>
         </div>
-
-        ${hostShareEnabled ? `
-        <div class="hvShareCard">
-          <p class="hvShareLabel">Your share</p>
-          <p class="hvShareValue" id="hvShareValue">${formatMoneyPence(hostSharePence)}</p>
-          ${hostShareDescriptor ? `<p class="hvShareHint">${escapeHtml(hostShareDescriptor)}</p>` : ""}
-        </div>
-        ` : ""}
-
-        ${fundraisingEnabled ? `
-        <div class="hvShareCard">
-          <p class="hvShareLabel">Fundraising</p>
-          <p class="hvShareValue" id="hvFundraisingValue">${formatMoneyPence(fundraisingPence)}</p>
-          ${fundraisingText ? `<p class="hvShareHint">${escapeHtml(fundraisingText)}</p>` : ""}
-        </div>
-        ` : ""}
 
         <div class="hvFooter">
           <button type="button" id="hvRefreshBtn" class="hvRefreshLink">Refresh</button>
@@ -584,6 +1175,8 @@
       if (refreshBtn){
         refreshBtn.addEventListener("click", refreshLiveValues);
       }
+
+      wireCommunitySection(orderLink);
     }
 
     function updateLiveValues(summary){

@@ -1601,6 +1601,17 @@ the control surface for the platform itself.
 - Vocabulary: Drop, Capacity, Host, Planned moment, Service Board,
   Drop Studio, Menu Library, Brand Hearth, Insights
 - Avoid: Campaign, Listing, Inventory, SKU, Funnel, Promotion, Deal
+- **Outbound, customer-facing copy never names "Hearth".** Any text a
+  host or vendor sends to people outside the platform (shareable
+  messages, social posts, emails, posters, SMS) must foreground the
+  vendor and the food, never the platform — Hearth is infrastructure,
+  not the brand the community engages with. Hearth stays invisible in
+  shared/outbound copy. The platform's own in-app UI chrome (nav,
+  eyebrow labels like "A Hearth drop", "Powered by Hearth"
+  attribution) may still say Hearth — the rule applies only to copy
+  that leaves the platform. Reference: the host-view "Share with your
+  community" channel templates (host-view.html) name the food and the
+  host, not Hearth.
 
 **Product decisions captured during build:**
 
