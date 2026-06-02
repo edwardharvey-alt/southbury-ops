@@ -11,7 +11,6 @@
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
   <script src="./assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <style>
     :root{
@@ -475,7 +474,7 @@
       display:flex;
     }
 
-    /* "Print a poster" — always-available outbound asset below the steps */
+    /* "Print a poster" — always-available outbound asset, shares from Step 2 */
     .hvPoster{
       display:grid;
       gap:10px;
@@ -486,20 +485,6 @@
       align-items:center;
       justify-content:center;
       text-decoration:none;
-    }
-
-    .hvQrWrap{
-      display:flex;
-      justify-content:center;
-      padding:6px 0 2px;
-    }
-
-    .hvQr{
-      padding:14px;
-      background:#fff;
-      border:1px solid #e9e3d8;
-      border-radius:16px;
-      line-height:0;
     }
 
     /* Footer */
@@ -867,7 +852,6 @@
             <span class="hvLinkBox" id="hvOrderLinkText">${escapeHtml(orderLink)}</span>
             <button type="button" class="hvActionBtn ghost" id="hvCopyLinkBtn">Copy link</button>
           </div>
-          <div class="hvQrWrap"><div class="hvQr" id="hvQr"></div></div>
         `
         : `<p class="hvStepGuide">The order link will appear here once this drop has a link name set.</p>`;
 
@@ -929,19 +913,17 @@
                 <button type="button" class="hvActionBtn" data-copy-target="hvMsgStep2">Copy message</button>
               </div>
               ${linkRow}
+              ${posterUrl ? `
+              <div class="hvPoster">
+                <p class="hvStepTitle">Print a poster</p>
+                <p class="hvStepGuide">Put it up where people will see it — a noticeboard, counter, or window.</p>
+                <div class="hvBtnRow">
+                  <a class="hvActionBtn ghost" href="${escapeHtml(posterUrl)}" target="_blank" rel="noopener">Open poster</a>
+                </div>
+              </div>
+              ` : ""}
             </div>
           </div>
-          ${posterUrl ? `
-          <div class="hvDivider"></div>
-
-          <div class="hvPoster">
-            <p class="hvStepTitle">Print a poster</p>
-            <p class="hvStepGuide">Put it up where people will see it — a noticeboard, counter, or window.</p>
-            <div class="hvBtnRow">
-              <a class="hvActionBtn ghost" href="${escapeHtml(posterUrl)}" target="_blank" rel="noopener">Open poster</a>
-            </div>
-          </div>
-          ` : ""}
         </div>
       `;
     }
@@ -1080,18 +1062,6 @@
           } catch (err){
             console.error("copy failed", err);
           }
-        });
-      }
-
-      // QR code of the order link.
-      const qrEl = document.getElementById("hvQr");
-      if (qrEl && orderLink && window.QRCode){
-        qrEl.innerHTML = "";
-        new QRCode(qrEl, {
-          text: orderLink,
-          width: 160,
-          height: 160,
-          correctLevel: QRCode.CorrectLevel.M,
         });
       }
     }
