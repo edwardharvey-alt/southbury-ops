@@ -325,6 +325,41 @@
       margin:-2px 0 2px;
     }
 
+    /* Channel selector — subtle segmented control */
+    .hvChannelBar{
+      justify-self:start;
+      display:inline-flex;
+      gap:4px;
+      padding:4px;
+      background:rgba(139,107,63,0.08);
+      border:1px solid rgba(139,107,63,0.16);
+      border-radius:999px;
+    }
+
+    .hvChannelPill{
+      font-family:'Figtree', system-ui, sans-serif;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:-0.01em;
+      color:#6b7280;
+      background:none;
+      border:none;
+      border-radius:999px;
+      padding:6px 14px;
+      cursor:pointer;
+      transition:background .2s ease, color .2s ease;
+    }
+
+    .hvChannelPill:hover{
+      color:#1f2937;
+    }
+
+    .hvChannelPill.active{
+      background:#fff;
+      color:#6b4c1f;
+      box-shadow:0 1px 3px rgba(15,23,42,0.08);
+    }
+
     .hvTextarea{
       width:100%;
       box-sizing:border-box;
@@ -523,6 +558,11 @@
 
     let _sb;
 
+    // Per-step channel message drafts. Each step holds an active channel and
+    // its own draft per channel, so edits survive switching channels and back.
+    // Shape: { step1: { active, drafts: {whatsapp, social, email} }, step2: {...} }
+    let communityState = null;
+
     function getQueryParam(name){
       return new URLSearchParams(window.location.search).get(name);
     }
@@ -667,23 +707,74 @@
       return `${window.location.origin}/order.html?drop=${encodeURIComponent(slug)}`;
     }
 
+    // Channel starter templates. Tokens [host], [date], [link] are filled by
+    // fillTemplate() below. Email starters lead with a "Subject:" line.
+    const STEP1_TEMPLATES = {
+      whatsapp:
+        "Just so you know — we've got a Hearth food drop at [host] on [date]. It's pre-order only and places are limited, so worth keeping an eye out. I'll share the order link here as soon as ordering opens.",
+      social:
+        "We're hosting a Hearth food drop at [host] on [date]. Pre-order only, places limited — ordering opens soon. We'll share the link when it's live.",
+      email:
+        "Subject: A Hearth food drop at [host] — [date]\n\nHello,\n\nWe're hosting a Hearth food drop at [host] on [date]. It's pre-order only and places are limited.\n\nOrdering opens soon — we'll send the link as soon as it's live.\n\nSee you there.",
+    };
+
+    const STEP2_TEMPLATES = {
+      whatsapp:
+        "Ordering's now open for the food drop at [host] — [link]. Places are limited and it's pre-order only, so get yours in when you can.",
+      social:
+        "Ordering is now open for our Hearth food drop at [host]. Pre-order only and places are limited — order here: [link]",
+      email:
+        "Subject: Ordering's open — Hearth food drop at [host]\n\nHello,\n\nOrdering is now open for the Hearth food drop at [host] on [date]. Places are limited and it's pre-order only.\n\nOrder here: [link]\n\nSee you there.",
+    };
+
+    const CHANNELS = [
+      { key: "whatsapp", label: "WhatsApp" },
+      { key: "social", label: "Social" },
+      { key: "email", label: "Email" },
+    ];
+
+    function textareaIdFor(step){
+      return step === "step1" ? "hvMsgStep1" : "hvMsgStep2";
+    }
+
     function buildCommunitySection(drop, orderLink){
       const hostName = drop.host_name || null;
       // Use the delivery date as the human "[date]"; fall back to generic phrasing.
       const dateText = formatDateLong(drop.delivery_start) || formatDateLong(drop.delivery_end);
 
-      const hostFragment = hostName ? ` at ${hostName}` : "";
-      const dateFragment = dateText ? ` on ${dateText}` : "";
-
-      const headsUpMessage =
-        `Just so you know — we've got a Hearth food drop${hostFragment}${dateFragment}. ` +
-        `It's pre-order only and places are limited, so worth keeping an eye out. ` +
-        `I'll post the order link here as soon as ordering opens.`;
-
+      // Fill rule, reusing the page's existing host/date/link values. Missing
+      // values degrade to calm generic phrasing rather than leaving brackets.
+      const host = hostName || "our community";
       const linkText = orderLink || "[order link]";
-      const shareLinkMessage =
-        `Ordering's now open for the food drop${hostFragment} — ${linkText}. ` +
-        `Places are limited and it's pre-order only, so get yours in when you can.`;
+      const onDate = dateText ? `on ${dateText}` : "soon";
+      const dashDate = dateText ? dateText : "soon";
+      const fillTemplate = (s) =>
+        s
+          .split("[host]").join(host)
+          .split("on [date]").join(onDate)
+          .split("— [date]").join(`— ${dashDate}`)
+          .split("[date]").join(dashDate)
+          .split("[link]").join(linkText);
+
+      const fillAll = (templates) => ({
+        whatsapp: fillTemplate(templates.whatsapp),
+        social: fillTemplate(templates.social),
+        email: fillTemplate(templates.email),
+      });
+
+      // Seed the per-step channel drafts (default channel: WhatsApp).
+      communityState = {
+        step1: { active: "whatsapp", drafts: fillAll(STEP1_TEMPLATES) },
+        step2: { active: "whatsapp", drafts: fillAll(STEP2_TEMPLATES) },
+      };
+
+      const channelBar = (step) => `
+        <div class="hvChannelBar" data-step="${step}">
+          ${CHANNELS.map((c, i) => `
+            <button type="button" class="hvChannelPill${i === 0 ? " active" : ""}" data-step="${step}" data-channel="${c.key}">${c.label}</button>
+          `).join("")}
+        </div>
+      `;
 
       const linkRow = orderLink
         ? `
@@ -711,9 +802,10 @@
             <p class="hvStepTitle">1 · Give your community a heads-up</p>
             <p class="hvStepWhen">${escapeHtml(timings.step1)}</p>
             <p class="hvStepGuide">Give people a heads-up — post it wherever you'd normally reach them.</p>
-            <textarea class="hvTextarea" id="hvHeadsUpMessage">${escapeHtml(headsUpMessage)}</textarea>
+            ${channelBar("step1")}
+            <textarea class="hvTextarea" id="hvMsgStep1">${escapeHtml(communityState.step1.drafts.whatsapp)}</textarea>
             <div class="hvBtnRow">
-              <button type="button" class="hvActionBtn" data-copy-target="hvHeadsUpMessage">Copy message</button>
+              <button type="button" class="hvActionBtn" data-copy-target="hvMsgStep1">Copy message</button>
             </div>
           </div>
 
@@ -723,9 +815,10 @@
             <p class="hvStepTitle">2 · Share the order link</p>
             <p class="hvStepWhen">${escapeHtml(timings.step2)}</p>
             <p class="hvStepGuide">Share the link so people can order.</p>
-            <textarea class="hvTextarea" id="hvShareLinkMessage">${escapeHtml(shareLinkMessage)}</textarea>
+            ${channelBar("step2")}
+            <textarea class="hvTextarea" id="hvMsgStep2">${escapeHtml(communityState.step2.drafts.whatsapp)}</textarea>
             <div class="hvBtnRow">
-              <button type="button" class="hvActionBtn" data-copy-target="hvShareLinkMessage">Copy message</button>
+              <button type="button" class="hvActionBtn" data-copy-target="hvMsgStep2">Copy message</button>
             </div>
             ${linkRow}
           </div>
@@ -763,15 +856,18 @@
         }
       }
 
-      // Step 2 — when ordering opens.
+      // Step 2 — reflect the drop's ACTUAL state via computeDropState
+      // (the same logic behind the pre-open banner), not just whether
+      // opens_at is set.
       let step2;
-      const openDate = formatDateLong(drop.opens_at);
-      if (drop.opens_at != null && openDate){
-        step2 = `Send when ordering opens — ${openDate}`;
-      } else if (computeDropState(drop) === "live"){
-        step2 = "Ordering is open now";
+      const dropState = computeDropState(drop);
+      if (dropState === "pre-open"){
+        const openDate = formatDateLong(drop.opens_at);
+        step2 = openDate ? `Send when ordering opens — ${openDate}` : "Send when ordering opens";
+      } else if (dropState === "closed"){
+        step2 = "Ordering has closed";
       } else {
-        step2 = "Send when ordering opens";
+        step2 = "Ordering is open now";
       }
 
       return { step1, step2 };
@@ -805,6 +901,27 @@
     }
 
     function wireCommunitySection(orderLink){
+      // Channel selectors — preserve the current channel's edit on switch.
+      document.querySelectorAll(".hvChannelBar").forEach((bar) => {
+        const step = bar.dataset.step;
+        bar.querySelectorAll(".hvChannelPill").forEach((pill) => {
+          pill.addEventListener("click", () => {
+            const channel = pill.dataset.channel;
+            const st = communityState && communityState[step];
+            if (!st || channel === st.active) return;
+            const ta = document.getElementById(textareaIdFor(step));
+            if (!ta) return;
+            // Save the current channel's live edit, then load the new one.
+            st.drafts[st.active] = ta.value;
+            st.active = channel;
+            ta.value = st.drafts[channel];
+            bar.querySelectorAll(".hvChannelPill").forEach((p) => {
+              p.classList.toggle("active", p.dataset.channel === channel);
+            });
+          });
+        });
+      });
+
       // Copy-message buttons (read live textarea contents).
       document.querySelectorAll("[data-copy-target]").forEach((btn) => {
         btn.addEventListener("click", async () => {
