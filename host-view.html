@@ -39,11 +39,27 @@
     }
 
     .hvPage{
-      max-width:780px;
+      max-width:1040px;
       margin:0 auto;
       padding:48px 20px 64px;
       display:grid;
       gap:20px;
+    }
+
+    /* Two-region layout: activation (left) | order insight (right, sticky) */
+    .hvLayout{
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) 340px;
+      gap:20px;
+      align-items:start;
+    }
+
+    .hvLayoutAside{
+      position:sticky;
+      top:24px;
+      display:grid;
+      gap:16px;
+      min-width:0;
     }
 
     /* Header / drop identity */
@@ -300,19 +316,13 @@
       margin:0;
     }
 
-    /* Step 2 — two columns on desktop (message | order link + QR) */
-    .hvStep2Cols{
-      display:grid;
-      grid-template-columns:1fr minmax(220px, 280px);
-      gap:18px;
-      align-items:start;
-    }
-
-    .hvStep2Left,
-    .hvStep2Right{
-      display:grid;
-      gap:10px;
-      min-width:0;
+    /* Subtle "when to send" line under each step heading */
+    .hvStepWhen{
+      font-size:12px;
+      font-weight:700;
+      color:#8b6b3f;
+      letter-spacing:.01em;
+      margin:-2px 0 2px;
     }
 
     .hvTextarea{
@@ -483,8 +493,12 @@
       .hvStatValue{
         font-size:26px;
       }
-      .hvStep2Cols{
+      .hvLayout{
         grid-template-columns:1fr;
+      }
+      .hvLayoutAside{
+        position:static;
+        top:auto;
       }
     }
   </style>
@@ -681,6 +695,9 @@
         `
         : `<p class="hvStepGuide">The order link will appear here once this drop has a link name set.</p>`;
 
+      // "When to send" guidance, derived from the ordering-open date (opens_at).
+      const timings = computeStepTimings(drop);
+
       return `
         <div class="hvCommunity">
           <div class="hvCommunityHead">
@@ -692,6 +709,7 @@
 
           <div class="hvStep">
             <p class="hvStepTitle">1 · Give your community a heads-up</p>
+            <p class="hvStepWhen">${escapeHtml(timings.step1)}</p>
             <p class="hvStepGuide">A few days before, give people a heads-up — post it wherever you'd normally reach them.</p>
             <textarea class="hvTextarea" id="hvHeadsUpMessage">${escapeHtml(headsUpMessage)}</textarea>
             <div class="hvBtnRow">
@@ -703,21 +721,52 @@
 
           <div class="hvStep">
             <p class="hvStepTitle">2 · Share the order link</p>
+            <p class="hvStepWhen">${escapeHtml(timings.step2)}</p>
             <p class="hvStepGuide">When ordering opens, share the link so people can order.</p>
-            <div class="hvStep2Cols">
-              <div class="hvStep2Left">
-                <textarea class="hvTextarea" id="hvShareLinkMessage">${escapeHtml(shareLinkMessage)}</textarea>
-                <div class="hvBtnRow">
-                  <button type="button" class="hvActionBtn" data-copy-target="hvShareLinkMessage">Copy message</button>
-                </div>
-              </div>
-              <div class="hvStep2Right">
-                ${linkRow}
-              </div>
+            <textarea class="hvTextarea" id="hvShareLinkMessage">${escapeHtml(shareLinkMessage)}</textarea>
+            <div class="hvBtnRow">
+              <button type="button" class="hvActionBtn" data-copy-target="hvShareLinkMessage">Copy message</button>
             </div>
+            ${linkRow}
           </div>
         </div>
       `;
+    }
+
+    // Derive gentle "when to send" lines from the ordering-open date (opens_at).
+    // No open date available → date-free phrasing. opens_at − 2 days in the
+    // past → "as soon as you can" rather than a stale date.
+    function computeStepTimings(drop){
+      const opensAtMs = drop.opens_at != null ? new Date(drop.opens_at).getTime() : NaN;
+
+      if (isNaN(opensAtMs)){
+        return {
+          step1: "A few days before ordering opens",
+          step2: "Send when ordering opens",
+        };
+      }
+
+      const openDate = formatDateLong(drop.opens_at);
+      const step2 = openDate ? `Send when ordering opens — ${openDate}` : "Send when ordering opens";
+
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      const minusTwo = new Date(opensAtMs);
+      minusTwo.setDate(minusTwo.getDate() - 2);
+      minusTwo.setHours(0, 0, 0, 0);
+
+      let step1;
+      if (minusTwo.getTime() < todayStart.getTime()){
+        step1 = "A few days before — as soon as you can";
+      } else {
+        const minusTwoLong = formatDateLong(minusTwo.toISOString());
+        step1 = minusTwoLong
+          ? `A few days before — around ${minusTwoLong}`
+          : "A few days before ordering opens";
+      }
+
+      return { step1, step2 };
     }
 
     async function copyTextToClipboard(text){
@@ -843,45 +892,49 @@
 
         ${noteHTML}
 
-        ${buildCommunitySection(drop, orderLink)}
+        <div class="hvLayout">
+          ${buildCommunitySection(drop, orderLink)}
 
-        <div class="hvCard">
-          <div class="hvStatRow">
-            <p class="hvStatLabel">Orders placed</p>
-            <p class="hvStatValue" id="hvOrderCount">${orderCount}</p>
-          </div>
+          <div class="hvLayoutAside">
+            <div class="hvCard">
+              <div class="hvStatRow">
+                <p class="hvStatLabel">Orders placed</p>
+                <p class="hvStatValue" id="hvOrderCount">${orderCount}</p>
+              </div>
 
-          <div class="hvDivider"></div>
+              <div class="hvDivider"></div>
 
-          <div class="hvCapacity">
-            <div class="hvCapacityHead">
-              <p class="hvCapacityLabel">Capacity filled</p>
-              <span class="hvCapacityPct" id="hvCapacityPct">${pct}%</span>
+              <div class="hvCapacity">
+                <div class="hvCapacityHead">
+                  <p class="hvCapacityLabel">Capacity filled</p>
+                  <span class="hvCapacityPct" id="hvCapacityPct">${pct}%</span>
+                </div>
+                <div class="hvCapacityTrack">
+                  <div class="hvCapacityFill" id="hvCapacityFill" style="width:${pct}%"></div>
+                </div>
+                <p class="hvCapacityMeta" id="hvCapacityMeta">
+                  ${capacityUsed} of ${capacityTotal} units taken
+                </p>
+              </div>
             </div>
-            <div class="hvCapacityTrack">
-              <div class="hvCapacityFill" id="hvCapacityFill" style="width:${pct}%"></div>
+
+            ${hostShareEnabled ? `
+            <div class="hvShareCard">
+              <p class="hvShareLabel">Your share</p>
+              <p class="hvShareValue" id="hvShareValue">${formatMoneyPence(hostSharePence)}</p>
+              ${hostShareDescriptor ? `<p class="hvShareHint">${escapeHtml(hostShareDescriptor)}</p>` : ""}
             </div>
-            <p class="hvCapacityMeta" id="hvCapacityMeta">
-              ${capacityUsed} of ${capacityTotal} units taken
-            </p>
+            ` : ""}
+
+            ${fundraisingEnabled ? `
+            <div class="hvShareCard">
+              <p class="hvShareLabel">Fundraising</p>
+              <p class="hvShareValue" id="hvFundraisingValue">${formatMoneyPence(fundraisingPence)}</p>
+              ${fundraisingText ? `<p class="hvShareHint">${escapeHtml(fundraisingText)}</p>` : ""}
+            </div>
+            ` : ""}
           </div>
         </div>
-
-        ${hostShareEnabled ? `
-        <div class="hvShareCard">
-          <p class="hvShareLabel">Your share</p>
-          <p class="hvShareValue" id="hvShareValue">${formatMoneyPence(hostSharePence)}</p>
-          ${hostShareDescriptor ? `<p class="hvShareHint">${escapeHtml(hostShareDescriptor)}</p>` : ""}
-        </div>
-        ` : ""}
-
-        ${fundraisingEnabled ? `
-        <div class="hvShareCard">
-          <p class="hvShareLabel">Fundraising</p>
-          <p class="hvShareValue" id="hvFundraisingValue">${formatMoneyPence(fundraisingPence)}</p>
-          ${fundraisingText ? `<p class="hvShareHint">${escapeHtml(fundraisingText)}</p>` : ""}
-        </div>
-        ` : ""}
 
         <div class="hvFooter">
           <button type="button" id="hvRefreshBtn" class="hvRefreshLink">Refresh</button>
