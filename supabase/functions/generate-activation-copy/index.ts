@@ -14,7 +14,7 @@ const MODEL = "claude-sonnet-4-6";
 // stops the invention we've seen (meal-type, frequency) without constraining
 // good output. A case that lacks its signals simply stays conservative until
 // a later prompt feeds them.
-const COPY_FLOOR = `Rules for the line(s) you write: use only the facts given above. Never invent or guess — (a) how often this happens: do not say 'once', 'weekly', 'first time', 'regular', or imply any frequency, unless a cadence is provided; (b) the meal or service type: do not say 'breakfast', 'lunch', 'dinner' or 'dinner service' — describe only what the drop name and details tell you; (c) the fulfilment method: only mention collection or delivery if you are told which; (d) any number, count or price you were not given; (e) any menu item beyond a dish explicitly provided. Voice: warm, calm, confident, local — never hype, fake urgency, exclamation marks, or marketplace clichés like 'boost', 'trending', 'limited-time' or 'don't miss out'.`;
+const COPY_FLOOR = `Rules for the line(s) you write: use only the facts given above. Never invent or guess — (a) how often this happens: do not say 'once', 'weekly', 'first time', 'regular', or imply any frequency, unless a cadence is provided; (b) the meal or service type: do not say 'breakfast', 'lunch', 'dinner' or 'dinner service' — describe only what the drop name and details tell you; (c) the fulfilment method: only mention collection or delivery if you are told which; (d) any number, count or price you were not given; (e) any menu item beyond a dish explicitly provided. Voice: warm, calm, confident, local — never hype, fake urgency, exclamation marks, or marketplace clichés like 'boost', 'trending', 'limited-time' or 'don't miss out'. Platform words: never use the word 'drop' to name the event, and never mention 'Hearth'. These are internal words the customer doesn't need — describe the occasion in plain terms (the food, the venue, the date).`;
 
 function buildSystemPrompt(tagline: string | null, voiceSample: string | null): string {
   let prompt = `You write short, warm copy for independent food businesses.
@@ -98,16 +98,16 @@ function buildPrompt(input: CopyInput): string {
 
   switch (touchpoint) {
     case "monday_reveal_hook":
-      return `Write a single punchy hook line for a food drop reveal post. Around 80 characters maximum.
+      return `Write a single punchy hook line for a reveal post. Around 80 characters maximum.
 Vendor: ${vendor_name}. Drop: '${drop_name}' at ${host} on ${delivery_day}.
 One line only. No emojis. Warm and intriguing. Do not invent specific menu items — keep it to the type of food and occasion.
 Output only the line, nothing else.`;
 
     case "monday_reveal":
-      return `Write a social media post for ${vendor_name} announcing their upcoming '${drop_name}' food drop at ${host} this ${delivery_day}. Ordering opens ${opensWhen} — do not include a link yet. Build warm anticipation. 2–3 sentences. Do not invent specific food items or menu details — keep it to what you know from the context given.`;
+      return `Write a social media post for ${vendor_name} announcing their upcoming '${drop_name}' at ${host} this ${delivery_day}. Ordering opens ${opensWhen} — do not include a link yet. Build warm anticipation. 2–3 sentences. Do not invent specific food items or menu details — keep it to what you know from the context given.`;
 
     case "tuesday_host":
-      return `Write a WhatsApp message from ${host} to their members about ${vendor_name}'s '${drop_name}' food drop this ${delivery_day}. Written as the venue or club organiser — a trusted community heads-up, not a vendor promotion. Mention ordering opens ${opensWhen} and capacity is ${cap}. 3–4 short sentences, casual and warm.`;
+      return `Write a WhatsApp message from ${host} to their members about ${vendor_name}'s '${drop_name}' this ${delivery_day}. Written as the venue or club organiser — a trusted community heads-up, not a vendor promotion. Mention ordering opens ${opensWhen} and capacity is ${cap}. 3–4 short sentences, casual and warm.`;
 
     case "thursday_vendor":
       return `Write a short WhatsApp message from ${vendor_name} to their customers announcing that ordering is NOW open for '${drop_name}' at ${host} on ${delivery_day}. ${capacity ? `${capacity} slots available.` : ""} Direct and warm — 1–2 sentences only. Do not include the ordering link or closing time — these will be added automatically.`;
@@ -116,7 +116,7 @@ Output only the line, nothing else.`;
       return `Write a very short WhatsApp message from ${host} dropping the live ordering link in their group. Under 15 words. Mention ${cap} remaining and include this link: ${ordering_url}. Nothing else.`;
 
     case "friday_post_drop":
-      return `Write a short social media post from ${vendor_name} after completing their '${drop_name}' food drop. Warm and grateful. Hint that the next one is coming. 2 sentences.`;
+      return `Write a short social media post from ${vendor_name} after completing their '${drop_name}'. Warm and grateful. Hint that the next one is coming. 2 sentences.`;
 
     case "early_access_email":
       return `Write 1–2 warm sentences for an early access email from ${vendor_name} to a previous customer.
@@ -124,7 +124,7 @@ They get to order '${drop_name}' at ${host} on ${delivery_day} before the public
 Only use facts given here — do not invent details. Plain, warm language. Output only the sentences, nothing else.`;
 
     case "post_drop_thankyou":
-      return `Write 1–2 warm sentences thanking a customer for ordering from ${vendor_name}'s '${drop_name}' drop on ${delivery_day}.
+      return `Write 1–2 warm sentences thanking a customer for ordering from ${vendor_name}'s '${drop_name}' on ${delivery_day}.
 Mention that more drops are coming. Do not invent specific details. Plain, warm language. Output only the sentences, nothing else.`;
 
     case "poster_hook":

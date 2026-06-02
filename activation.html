@@ -2410,7 +2410,7 @@
         ? `orders open ${fmtTime(new Date(opensAt))} on ${actFormatMenuCardDate(opensAt)}`
         : `orders open soon`;
       templates['tuesday_host'] =
-        `Hey everyone — just to let you know, we've got ${vendorName} coming to ${hostName} on ${actRelDay(summary.delivery_start, true)}. They're doing a pre-order drop — ${opensClause} and capacity is limited to ${capPhrase} so worth ordering early. I'll share the link when it's live.`;
+        `Hey everyone — just to let you know, we've got ${vendorName} coming to ${hostName} on ${actRelDay(summary.delivery_start, true)}. It's pre-order only — ${opensClause} and capacity is limited to ${capPhrase} so worth ordering early. I'll share the link when it's live.`;
 
       // Card 4 — vendor WhatsApp
       const c4 = `${dropName} orders are now open. ${capPhrase} slots available — order here: ${orderingLink}` +
@@ -2424,7 +2424,7 @@
       // Card 6 — capacity signal
       const soldOut = (remaining === 0) || (capTotalNum != null && capTotalNum > 0 && used >= capTotalNum);
       templates['friday_capacity'] = soldOut
-        ? `Tonight's drop is full. Next one coming soon.`
+        ? `We're full for tonight. Next one coming soon.`
         : `Only ${remaining == null ? capPhrase : remaining} slots left for ${dropName} today. Order here: ${orderingLink}`;
 
       // Card 8 — post-drop caption
