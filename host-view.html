@@ -325,6 +325,45 @@
       margin:-2px 0 2px;
     }
 
+    /* Collapsible step disclosure — the title row is the toggle */
+    .hvStepToggle{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      width:100%;
+      background:none;
+      border:none;
+      padding:0;
+      margin:0;
+      cursor:pointer;
+      text-align:left;
+      font-family:inherit;
+      color:inherit;
+    }
+
+    .hvStepChevron{
+      flex-shrink:0;
+      font-size:20px;
+      line-height:1;
+      color:#8b6b3f;
+      transform:rotate(0deg);
+      transition:transform .18s ease;
+    }
+
+    .hvStepToggle[aria-expanded="true"] .hvStepChevron{
+      transform:rotate(90deg);
+    }
+
+    .hvStepBody{
+      display:grid;
+      gap:10px;
+    }
+
+    .hvStepBody.hvStepBody--collapsed{
+      display:none;
+    }
+
     /* Channel selector — subtle segmented control */
     .hvChannelBar{
       justify-self:start;
@@ -822,6 +861,13 @@
       // "When to send" guidance, derived from the ordering-open date (opens_at).
       const timings = computeStepTimings(drop);
 
+      // Auto-expand the step that matches the drop's current state; collapse
+      // the other (the host can still open it). Closed → both collapsed.
+      // Manual toggles override this initial state (see wireCommunitySection).
+      const dropState = computeDropState(drop);
+      const step1Open = dropState === "pre-open";
+      const step2Open = dropState === "live";
+
       return `
         <div class="hvCommunity">
           <div class="hvCommunityHead">
@@ -832,28 +878,38 @@
           <div class="hvDivider"></div>
 
           <div class="hvStep">
-            <p class="hvStepTitle">1 · Give your community a heads-up</p>
-            <p class="hvStepWhen">${escapeHtml(timings.step1)}</p>
-            <p class="hvStepGuide">Give people a heads-up — post it wherever you'd normally reach them.</p>
-            ${channelBar("step1")}
-            <textarea class="hvTextarea" id="hvMsgStep1">${escapeHtml(communityState.step1.drafts.whatsapp)}</textarea>
-            <div class="hvBtnRow">
-              <button type="button" class="hvActionBtn" data-copy-target="hvMsgStep1">Copy message</button>
+            <button type="button" class="hvStepToggle" data-step-toggle="step1" aria-expanded="${step1Open}" aria-controls="hvStepBody-step1">
+              <span class="hvStepTitle">1 · Give your community a heads-up</span>
+              <span class="hvStepChevron" aria-hidden="true">›</span>
+            </button>
+            <div class="hvStepBody${step1Open ? "" : " hvStepBody--collapsed"}" id="hvStepBody-step1">
+              <p class="hvStepWhen">${escapeHtml(timings.step1)}</p>
+              <p class="hvStepGuide">Give people a heads-up — post it wherever you'd normally reach them.</p>
+              ${channelBar("step1")}
+              <textarea class="hvTextarea" id="hvMsgStep1">${escapeHtml(communityState.step1.drafts.whatsapp)}</textarea>
+              <div class="hvBtnRow">
+                <button type="button" class="hvActionBtn" data-copy-target="hvMsgStep1">Copy message</button>
+              </div>
             </div>
           </div>
 
           <div class="hvDivider"></div>
 
           <div class="hvStep">
-            <p class="hvStepTitle">2 · Share the order link</p>
-            <p class="hvStepWhen">${escapeHtml(timings.step2)}</p>
-            <p class="hvStepGuide">Share the link so people can order.</p>
-            ${channelBar("step2")}
-            <textarea class="hvTextarea" id="hvMsgStep2">${escapeHtml(communityState.step2.drafts.whatsapp)}</textarea>
-            <div class="hvBtnRow">
-              <button type="button" class="hvActionBtn" data-copy-target="hvMsgStep2">Copy message</button>
+            <button type="button" class="hvStepToggle" data-step-toggle="step2" aria-expanded="${step2Open}" aria-controls="hvStepBody-step2">
+              <span class="hvStepTitle">2 · Share the order link</span>
+              <span class="hvStepChevron" aria-hidden="true">›</span>
+            </button>
+            <div class="hvStepBody${step2Open ? "" : " hvStepBody--collapsed"}" id="hvStepBody-step2">
+              <p class="hvStepWhen">${escapeHtml(timings.step2)}</p>
+              <p class="hvStepGuide">Share the link so people can order.</p>
+              ${channelBar("step2")}
+              <textarea class="hvTextarea" id="hvMsgStep2">${escapeHtml(communityState.step2.drafts.whatsapp)}</textarea>
+              <div class="hvBtnRow">
+                <button type="button" class="hvActionBtn" data-copy-target="hvMsgStep2">Copy message</button>
+              </div>
+              ${linkRow}
             </div>
-            ${linkRow}
           </div>
         </div>
       `;
@@ -934,6 +990,20 @@
     }
 
     function wireCommunitySection(orderLink){
+      // Collapsible step disclosures — the title row toggles its body.
+      // Native <button> gives keyboard operability for free; aria-expanded
+      // and the chevron reflect state. A manual toggle overrides the
+      // auto-expanded initial state set in buildCommunitySection.
+      document.querySelectorAll(".hvStepToggle").forEach((toggle) => {
+        toggle.addEventListener("click", () => {
+          const next = toggle.getAttribute("aria-expanded") !== "true";
+          toggle.setAttribute("aria-expanded", String(next));
+          const bodyId = toggle.getAttribute("aria-controls");
+          const body = bodyId ? document.getElementById(bodyId) : null;
+          if (body) body.classList.toggle("hvStepBody--collapsed", !next);
+        });
+      });
+
       // Channel selectors — preserve the current channel's edit on switch.
       document.querySelectorAll(".hvChannelBar").forEach((bar) => {
         const step = bar.dataset.step;
