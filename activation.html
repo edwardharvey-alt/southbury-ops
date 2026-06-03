@@ -1611,10 +1611,16 @@
         ? { instagram: true,  poster: 'till',        channels: ['whatsapp', 'social'] }
         : { instagram: false, poster: 'noticeboard', channels: ['whatsapp'] };
 
-      if (openness === 'open'   && hasHost)  return { openness, card4, cards: [1,2,3,4,5,6,7,8,9], optional: [] };
-      if (openness === 'open'   && !hasHost) return { openness, card4, cards: [1,3,4,6,7,8,9],     optional: [] };
-      if (openness === 'closed' && hasHost)  return { openness, card4, cards: [2,3,4,5,7,9],       optional: [4] };
-      /* closed && !hasHost */                return { openness, card4, cards: [3,4,7,9],           optional: [4] };
+      // Card 5 ("Ask your host to drop the link") deliverable descriptor — a
+      // closed drop drops the public 'social' channel and reframes the copy.
+      const card5 = openness === 'open'
+        ? { channels: ['whatsapp', 'email', 'social'] }
+        : { channels: ['whatsapp', 'email'] };
+
+      if (openness === 'open'   && hasHost)  return { openness, card4, card5, cards: [1,2,3,4,5,6,7,8,9], optional: [] };
+      if (openness === 'open'   && !hasHost) return { openness, card4, card5, cards: [1,3,4,6,7,8,9],     optional: [] };
+      if (openness === 'closed' && hasHost)  return { openness, card4, card5, cards: [2,3,4,5,7,9],       optional: [4] };
+      /* closed && !hasHost */                return { openness, card4, card5, cards: [3,4,7,9],           optional: [4] };
     }
 
     // Returns the activation log entries for a specific drop from
@@ -2510,7 +2516,7 @@
               <div class="act-guidance-row">
                 <input type="text" class="act-guidance-input"
                   data-touchpoint="${escapeHtml(tp)}"
-                  placeholder="e.g. shorter, more casual, mention the match is on that evening...">
+                  placeholder="${escapeHtml(opts.guidancePlaceholder || 'e.g. shorter, more casual, mention the match is on that evening...')}">
               </div>` : ''}
             <div class="act-message-edit-row">
               <button
@@ -3068,14 +3074,22 @@
       // Card 5 — host link drop (is-host) — only in profiles that include it
       if (inProfile(5)) {
         const primedDay = actWeekday(summary.delivery_start, -3) || 'earlier in the week';
+        // Archetype-aware deliverables (resolved in getDropProfile).
+        const card5Deliverables = profile.card5 || { channels: ['whatsapp', 'email', 'social'] };
+        const card5Channels = ['WhatsApp', 'email'];
+        if (card5Deliverables.channels.includes('social')) card5Channels.push('social');
+        const card5Desc = profile.openness === 'open'
+          ? `A second short message for ${eHost} — just the link and slot count. The community has been primed since ${escapeHtml(primedDay)}. This is the curtain going up.`
+          : `A second short message for ${eHost} to forward — just the link and the slots left.`;
         cards.push(messageCard({
           typeClass: 'is-host',
           cardNum: 5,
           label: labels[4],
           title: 'Ask your host to drop the link',
-          desc: `A second short message for ${eHost} — just the link and slot count. The community has been primed since ${escapeHtml(primedDay)}. This is the curtain going up.`,
+          desc: card5Desc,
           messageText: templates['thursday_host_link'],
-          channels: ['WhatsApp', 'email', 'social'],
+          channels: card5Channels,
+          guidancePlaceholder: 'e.g. shorter, more casual, mention when ordering closes...',
           touchpointKey: 'thursday_host_link'
         }));
       }
@@ -3739,9 +3753,13 @@
         if (errorNote) errorNote.textContent = '';
 
         try {
+          // Archetype-aware poster framing: 'till' (open, walk-up) or
+          // 'noticeboard' (closed, pinned sheet). Resolved in getDropProfile.
+          const posterType = getDropProfile(state.summaryById[dropId])?.card4?.poster || 'till';
           const body = {
             touchpoint: 'poster_hook',
             ...actBuildDropContext(dropId),
+            posterType,
             guidance,
           };
 
