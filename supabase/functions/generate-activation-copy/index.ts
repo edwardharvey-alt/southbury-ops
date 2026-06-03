@@ -81,13 +81,16 @@ interface CopyInput {
   fulfilment_mode?: string | null;
   reveal_dish?: string | null;
   cadence?: string | null;
+  // Card 4 poster framing: 'till' (open/walk-up, default) | 'noticeboard'
+  // (closed/pinned sheet). Read only by the poster_hook case.
+  posterType?: string | null;
 }
 
 function buildPrompt(input: CopyInput): string {
   const {
     touchpoint, vendor_name, drop_name, host_name,
     delivery_day, opens_day, opens_time, closes_time,
-    capacity, ordering_url, fulfilment_mode, reveal_dish, cadence
+    capacity, ordering_url, fulfilment_mode, reveal_dish, cadence, posterType
   } = input;
 
   const host = host_name || "their neighbourhood";
@@ -128,6 +131,16 @@ Only use facts given here — do not invent details. Plain, warm language. Outpu
 Mention that more drops are coming. Do not invent specific details. Plain, warm language. Output only the sentences, nothing else.`;
 
     case "poster_hook":
+      if (posterType === "noticeboard") {
+        return `Task: Write a single calm line for a sheet pinned to a noticeboard, advertising ${vendor_name}'s food. A QR code sits directly beneath this line and carries the 'Scan to order' call to action.
+
+Facts:
+- What's available: ${reveal_dish || drop_name}${host_name ? `, at ${host_name}` : ""}
+- When: ${delivery_day}
+- This drop is: ${cadence || "standalone"}  (event = a one-off; series = part of a regular rhythm; standalone = a single planned occasion)
+
+Rules: Write ONE line of 12 words or fewer, present tense. Name what's available and that it can be ordered ahead. The QR beneath carries the order CTA, so do NOT add an order instruction yourself. MUST NOT mention a till, a counter, walking up, walking in, or collecting at this spot — the reader is at a noticeboard, not at the vendor's counter. Hearth voice: warm and factual, no urgency, no hype. If a reveal dish is given you may lead with it. On frequency: if a series, you may hint at the regular rhythm; if an event, a one-off framing is fine; if standalone, say nothing about how often it happens. Do NOT use the word 'drop' or explain what one is. Do NOT include any number or count — the sheet is printed and cannot update. Return only the line — no quotation marks, no markdown, nothing else.`;
+      }
       return `Task: Write a single short line for a printed poster beside the till in ${vendor_name}'s shop. Ordering is open now and a QR code sits directly beneath this line. Make a walk-in customer want to order ahead today.
 
 Facts:

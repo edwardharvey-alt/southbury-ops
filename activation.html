@@ -3753,9 +3753,13 @@
         if (errorNote) errorNote.textContent = '';
 
         try {
+          // Archetype-aware poster framing: 'till' (open, walk-up) or
+          // 'noticeboard' (closed, pinned sheet). Resolved in getDropProfile.
+          const posterType = getDropProfile(state.summaryById[dropId])?.card4?.poster || 'till';
           const body = {
             touchpoint: 'poster_hook',
             ...actBuildDropContext(dropId),
+            posterType,
             guidance,
           };
 
