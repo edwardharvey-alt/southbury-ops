@@ -335,6 +335,85 @@
       margin: 0 0 6px;
     }
 
+    /* Collapsible touchpoint disclosure — the heading row is the toggle.
+       Mirrors the host-view "Share with your community" collapse pattern. */
+    .act-tp-toggle {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 0;
+      margin: 0;
+      cursor: pointer;
+      text-align: left;
+      font-family: inherit;
+      color: inherit;
+    }
+
+    .act-tp-heading {
+      display: block;
+      min-width: 0;
+    }
+
+    .act-tp-title {
+      display: block;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 400;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    .act-tp-chevron {
+      flex-shrink: 0;
+      font-size: 20px;
+      line-height: 1.2;
+      color: var(--home-muted);
+      transform: rotate(0deg);
+      transition: transform 0.18s ease;
+    }
+
+    .act-tp-toggle[aria-expanded="true"] .act-tp-chevron {
+      transform: rotate(90deg);
+    }
+
+    /* Right-side header cluster: optional channel badge + chevron. */
+    .act-tp-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Non-interactive label naming a single-channel touchpoint's destination.
+       Calm Hearth sand/brown pill — the slot the ordering-open card will later
+       replace with a channel selector. */
+    .act-channel-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #8b6b3f;
+      background: rgba(139,107,63,0.10);
+      border: 1px solid rgba(139,107,63,0.18);
+      border-radius: 999px;
+      padding: 3px 9px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .act-tp-body {
+      margin-top: 10px;
+    }
+
+    .act-tp-body.act-tp-body--collapsed {
+      display: none;
+    }
+
     .act-touchpoint p {
       margin: 0 0 12px;
       color: var(--home-muted);
@@ -439,6 +518,126 @@
       margin: 0 0 4px;
     }
 
+    /* Two-region per-drop layout: timeline (left) | live-stats aside (right,
+       sticky on desktop). Mirrors host-view's hvLayout / hvLayoutAside. */
+    .act-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .act-layout-main {
+      min-width: 0;
+    }
+
+    .act-layout-aside {
+      position: sticky;
+      top: 24px;
+      margin-top: 18px;
+      display: grid;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    /* Live-stats card — mirrors host-view's hvCard / hvStat* styling. */
+    .act-stat-card {
+      background: #fff;
+      border: 1px solid #e9e3d8;
+      border-radius: 18px;
+      box-shadow: 0 2px 12px rgba(15,23,42,0.04);
+      padding: 20px 20px 22px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .act-stat-eyebrow {
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #8b6b3f;
+      margin: 0;
+    }
+
+    .act-stat-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .act-stat-label {
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      margin: 0;
+    }
+
+    .act-stat-value {
+      font-size: 30px;
+      font-weight: 950;
+      letter-spacing: -0.03em;
+      color: #1f2937;
+      margin: 0;
+      line-height: 1;
+    }
+
+    .act-stat-value--sm {
+      font-size: 22px;
+    }
+
+    .act-stat-divider {
+      height: 1px;
+      background: rgba(15,23,42,0.06);
+    }
+
+    .act-capacity {
+      display: grid;
+      gap: 10px;
+    }
+
+    .act-capacity-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .act-capacity-pct {
+      font-size: 14px;
+      font-weight: 900;
+      color: #1f2937;
+      letter-spacing: -0.01em;
+    }
+
+    .act-capacity-track {
+      position: relative;
+      width: 100%;
+      height: 10px;
+      background: rgba(15,23,42,0.07);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .act-capacity-fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 0%;
+      background: var(--home-accent);
+      border-radius: 999px;
+      transition: width 0.45s ease;
+    }
+
+    .act-capacity-meta {
+      font-size: 12px;
+      font-weight: 700;
+      color: #6b7280;
+      margin: 0;
+    }
+
     .act-message-preview {
       background: rgba(139,107,63,0.04);
       border-left: 3px solid var(--home-border);
@@ -537,6 +736,18 @@
       .act-timeline {
         padding-left: 16px;
         border-left-width: 2px;
+      }
+
+      /* Single column on mobile: aside stacks below the timeline, not sticky. */
+      .act-layout {
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+
+      .act-layout-aside {
+        position: static;
+        top: auto;
+        margin-top: 0;
       }
 
       .act-touchpoint {
@@ -1111,6 +1322,8 @@
       messageDrafts: {},
       guidanceDrafts: {},
       expandedMessageCards: {},
+      cardExpanded: {},  // cardNum (string) → explicit user toggle override; survives re-render
+      _activationDropPhase: 'pre-open',  // current drop phase, drives auto-expand
       sendingEmail: {},  // touchpoint → true while in-flight
       generateLoading: {},  // touchpoint → true while AI copy generates
       emailBodyGenerated: {},  // touchpoint → true once body auto-generated
@@ -1467,6 +1680,11 @@
       const d = new Date(isoString);
       if (isNaN(d.getTime())) return '';
       return fmtTime(d);
+    }
+
+    function formatMoneyPence(pence){
+      const n = Number(pence || 0);
+      return '£' + (n / 100).toFixed(2);
     }
 
     function actLog(touchpoint, action, meta = {}){
@@ -2142,19 +2360,77 @@
       return { done: false, locked: false, html: actionHtml };
     }
 
+    // Which activation phase a card belongs to — drives auto-expand on render.
+    // PRE-OPEN: 1,2,3 · LIVE: 4,5,6,7 · CLOSED: 8,9
+    function actCardPhase(cardNum){
+      const n = Number(cardNum);
+      if (n === 1 || n === 2 || n === 3) return 'pre-open';
+      if (n === 4 || n === 5 || n === 6 || n === 7) return 'live';
+      return 'closed';
+    }
+
+    // Whether a card should render expanded. An explicit user toggle (stored
+    // in state.cardExpanded, keyed by card number) always wins so manual
+    // toggles survive the frequent re-renders. Otherwise auto-expand only the
+    // current-phase cards that are neither done nor locked; everything else
+    // (done, locked, other-phase) starts collapsed.
+    function actCardOpen(cardNum, done, locked){
+      const key = String(cardNum);
+      if (state.cardExpanded[key] !== undefined) return state.cardExpanded[key];
+      if (done || locked) return false;
+      return actCardPhase(cardNum) === state._activationDropPhase;
+    }
+
+    // Wraps a touchpoint card in the collapse-to-expand disclosure shell: an
+    // always-visible heading-row <button> toggle (label + title + chevron) and
+    // a collapsible body holding the description + actions.
+    function actTouchpointShell(opts){
+      const open = !!opts.open;
+      const bodyId = opts.bodyId;
+      // Optional, non-interactive channel badge naming where a single-channel
+      // message goes. Lives in the header meta cluster beside the chevron.
+      const channelBadge = opts.channel
+        ? `<span class="act-channel-badge">${escapeHtml(opts.channel)}</span>`
+        : '';
+      return `
+        <div class="${opts.classes}">
+          <button type="button" class="act-tp-toggle" data-act="toggle-card"
+            data-card="${opts.cardNum}"
+            aria-expanded="${open ? 'true' : 'false'}" aria-controls="${bodyId}">
+            <span class="act-tp-heading">
+              <span class="act-day-label">${escapeHtml(opts.label || '')}</span>
+              <span class="act-tp-title">${opts.title || ''}</span>
+            </span>
+            <span class="act-tp-meta">
+              ${channelBadge}
+              <span class="act-tp-chevron" aria-hidden="true">›</span>
+            </span>
+          </button>
+          <div class="act-tp-body${open ? '' : ' act-tp-body--collapsed'}" id="${bodyId}">
+            ${opts.bodyHtml}
+          </div>
+        </div>
+      `;
+    }
+
     function tpCard(opts){
       const res = actActionArea(opts.touchpointKey || null, !!opts.locked, opts.lockedNote || '', opts.actionHtml || '');
       const classes = ['act-touchpoint', opts.typeClass];
       if (res.locked) classes.push('is-locked');
       if (res.done) classes.push('is-done');
-      return `
-        <div class="${classes.join(' ')}">
-          <div class="act-day-label">${escapeHtml(opts.label || '')}</div>
-          <h4>${opts.title}</h4>
-          <p>${opts.desc}</p>
-          <div class="act-actions">${res.html}</div>
-        </div>
-      `;
+      const open = (opts.open != null)
+        ? opts.open
+        : actCardOpen(opts.cardNum, res.done, res.locked);
+      return actTouchpointShell({
+        classes: classes.join(' '),
+        cardNum: opts.cardNum,
+        label: opts.label,
+        title: opts.title,
+        channel: opts.channel,
+        bodyHtml: `<p>${opts.desc}</p>\n          <div class="act-actions">${res.html}</div>`,
+        open,
+        bodyId: 'act-tp-body-' + opts.cardNum
+      });
     }
 
     // Message card: the prepared message stays visible inline, with one
@@ -2243,11 +2519,13 @@
 
       return tpCard({
         typeClass: opts.typeClass,
+        cardNum: opts.cardNum,
         label: opts.label,
         title: opts.title,
         desc: opts.desc,
         actionHtml,
-        touchpointKey: null  // done state handled inline above
+        touchpointKey: null,  // done state handled inline above
+        open: actCardOpen(opts.cardNum, !!entry, false)
       });
     }
 
@@ -2326,11 +2604,14 @@
 
       return tpCard({
         typeClass: opts.typeClass,
+        cardNum: opts.cardNum,
         label: opts.label,
         title: opts.title,
+        channel: opts.channel,
         desc: opts.desc,
         actionHtml,
-        touchpointKey: null  // done state handled inline above
+        touchpointKey: null,  // done state handled inline above
+        open: actCardOpen(opts.cardNum, !!entry, !!opts.locked)
       });
     }
 
@@ -2361,6 +2642,11 @@
       const orderingLink = getOrderingLink(rawDrop);
       const hasHost = !!summary.host_name;
       const status = statusOf(summary);
+
+      // Drive auto-expand: 'live' → LIVE phase, 'closed' → CLOSED phase,
+      // anything else (published/scheduled/open/upcoming) → PRE-OPEN phase.
+      state._activationDropPhase =
+        status === 'live' ? 'live' : (status === 'closed' ? 'closed' : 'pre-open');
 
       const profile = getDropProfile(summary);
       const profileCards = profile.cards;
@@ -2513,10 +2799,7 @@
         })
         .join('');
 
-      const card1Html = `
-        <div class="act-touchpoint is-vendor${getLogEntry('monday_reveal') ? ' is-done' : ''}">
-          <div class="act-day-label">${escapeHtml(labels[0])}</div>
-          <h4>${escapeHtml(card1Title)}</h4>
+      const card1Body = `
           <p>${escapeHtml(card1Desc)}</p>
           <div class="act-actions">
             <div class="act-reveal-fields">
@@ -2543,15 +2826,24 @@
             </div>
             <button class="act-copy-btn primary" id="act-downloadMenuCardBtn" type="button" data-act="download" disabled>Download menu card</button>
           </div>
-        </div>
       `;
-      cards.push(card1Html);
+      cards.push(actTouchpointShell({
+        classes: `act-touchpoint is-vendor${getLogEntry('monday_reveal') ? ' is-done' : ''}`,
+        cardNum: 1,
+        label: labels[0],
+        title: escapeHtml(card1Title),
+        channel: 'Instagram',
+        bodyHtml: card1Body,
+        open: actCardOpen(1, !!getLogEntry('monday_reveal'), false),
+        bodyId: 'act-tp-body-1'
+      }));
       }
 
       // Card 2 — host awareness (is-host) — only in profiles that include it
       if (inProfile(2)) {
         cards.push(messageCard({
           typeClass: 'is-host',
+          cardNum: 2,
           label: labels[1],
           title: 'Share with your host',
           desc: `Ask ${eHost} to let their community know what's coming. This message goes into their channel in their own voice — Hearth prepares it, they send it.`,
@@ -2571,8 +2863,10 @@
         const card3Locked = totalOrdersAcrossDrops === 0;
         cards.push(emailCard({
           typeClass: 'is-auto',
+          cardNum: 3,
           label: labels[2],
           title: 'Early access for previous customers',
+          channel: 'Email',
           desc: 'Previous customers get access before the public link goes live. Review and confirm the email below.',
           subject: state.emailDrafts['thursday_early_access'].subject,
           body: state.emailDrafts['thursday_early_access'].body,
@@ -2671,10 +2965,7 @@
         `;
       }
 
-      const card4Html = `
-        <div class="act-touchpoint is-vendor${card4Entry ? ' is-done' : ''}">
-          <div class="act-day-label">${escapeHtml(labels[3])}</div>
-          <h4>Tell your customers ordering is live</h4>
+      const card4Body = `
           <p>Send this when ordering opens. WhatsApp gets 45–60% click-through versus 2–5% for email — but use whatever channel your customers are on. Download the image for Instagram.</p>
           <div class="act-actions">
             <div class="menuCardArtworkFrame" id="act-ordersOpenFrame" style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
@@ -2718,9 +3009,16 @@
               target="_blank">Print poster</a>
             ${card4MessageArea}
           </div>
-        </div>
       `;
-      cards.push(card4Html);
+      cards.push(actTouchpointShell({
+        classes: `act-touchpoint is-vendor${card4Entry ? ' is-done' : ''}`,
+        cardNum: 4,
+        label: labels[3],
+        title: 'Tell your customers ordering is live',
+        bodyHtml: card4Body,
+        open: actCardOpen(4, !!card4Entry, false),
+        bodyId: 'act-tp-body-4'
+      }));
       }
 
       // Card 5 — host link drop (is-host) — only in profiles that include it
@@ -2728,6 +3026,7 @@
         const primedDay = actWeekday(summary.delivery_start, -3) || 'earlier in the week';
         cards.push(messageCard({
           typeClass: 'is-host',
+          cardNum: 5,
           label: labels[4],
           title: 'Ask your host to drop the link',
           desc: `A second short message for ${eHost} — just the link and slot count. The community has been primed since ${escapeHtml(primedDay)}. This is the curtain going up.`,
@@ -2774,10 +3073,7 @@
           type="button" data-act="download-capacity" disabled>Download image</button>
       `;
 
-      const card6Html = `
-        <div class="act-touchpoint is-prompted${card6Locked ? ' is-locked' : ''}${card6Entry ? ' is-done' : ''}">
-          <div class="act-day-label">${escapeHtml(labels[5])}</div>
-          <h4>Share your capacity signal</h4>
+      const card6Body = `
           <p>If you're approaching capacity, post an Instagram Story. Real scarcity
           is honest — it validates the drop for people who ordered and trains future
           customers to act earlier next time.</p>
@@ -2787,9 +3083,17 @@
               : `${card6ArtworkHtml}${card6CopyArea}`
             }
           </div>
-        </div>
       `;
-      cards.push(card6Html);
+      cards.push(actTouchpointShell({
+        classes: `act-touchpoint is-prompted${card6Locked ? ' is-locked' : ''}${card6Entry ? ' is-done' : ''}`,
+        cardNum: 6,
+        label: labels[5],
+        title: 'Share your capacity signal',
+        channel: 'Instagram',
+        bodyHtml: card6Body,
+        open: actCardOpen(6, !!card6Entry, card6Locked),
+        bodyId: 'act-tp-body-6'
+      }));
       }
 
       // Cards 7, 8, 9 — present in all profiles, but wrapped with
@@ -2799,9 +3103,10 @@
       if (inProfile(7)) {
         cards.push(tpCard({
           typeClass: 'is-auto',
+          cardNum: 7,
           label: labels[6],
-          title: 'Notify customers when orders are ready',
-          desc: 'When you mark an order Ready in Service Board, the platform sends an SMS to that customer automatically. Nothing to do here — keep Service Board open during service.',
+          title: 'Order-ready notifications are automatic',
+          desc: "There's nothing to send from here. When you mark an order Ready on the Service Board during service, the platform notifies that customer automatically. Keep the Service Board open while you work.",
           actionHtml: `<a class="act-copy-btn" href="${HearthNav.withVendor('./service-board.html')}">Open Service Board</a>`
         }));
       }
@@ -2841,8 +3146,10 @@
         `;
         cards.push(tpCard({
           typeClass: 'is-prompted',
+          cardNum: 8,
           label: labels[7],
           title: 'Close the loop on social',
+          channel: 'Instagram',
           desc: "Post a real moment from the drop — food leaving the kitchen, the venue, a community moment. Unpolished is fine. Then post the sold-out confirmation if you haven't already.",
           actionHtml: card8ActionHtml,
           locked: status !== 'closed',
@@ -2855,8 +3162,10 @@
       if (inProfile(9)) {
         cards.push(emailCard({
           typeClass: 'is-auto',
+          cardNum: 9,
           label: labels[8],
           title: 'Thank-you email to every customer',
+          channel: 'Email',
           desc: 'A warm, brief thank-you goes to everyone who ordered. Review and confirm before it sends.',
           subject: state.emailDrafts['saturday_thankyou'].subject,
           body: state.emailDrafts['saturday_thankyou'].body,
@@ -2867,13 +3176,58 @@
         }));
       }
 
+      // Sticky live-stats aside — mirrors host-view's order-insight aside.
+      // All figures come from the summary object already in scope (the same
+      // v_drop_summary row driving statusOf and the capacity artwork); no
+      // extra fetch. No "your share" card — that is host-only.
+      const asideCapNum = (capTotalNum != null && capTotalNum > 0) ? capTotalNum : 0;
+      const asideCapPct = asideCapNum > 0
+        ? Math.min(100, Math.round((used / asideCapNum) * 100))
+        : 0;
+      const asideGmvPence = summary.drop_gmv_pence;
+      const asideShowGmv = asideGmvPence != null;
+      const asideHtml = `
+        <div class="act-stat-card">
+          <p class="act-stat-eyebrow">This drop, live</p>
+          <div class="act-stat-row">
+            <p class="act-stat-label">Orders placed</p>
+            <p class="act-stat-value">${orderCount}</p>
+          </div>
+          <div class="act-stat-divider"></div>
+          <div class="act-capacity">
+            <div class="act-capacity-head">
+              <p class="act-stat-label">Capacity filled</p>
+              <span class="act-capacity-pct">${asideCapPct}%</span>
+            </div>
+            <div class="act-capacity-track">
+              <div class="act-capacity-fill" style="width:${asideCapPct}%"></div>
+            </div>
+            <p class="act-capacity-meta">${asideCapNum > 0
+              ? `${used} of ${asideCapNum} orders taken`
+              : 'No capacity limit set'}</p>
+          </div>
+          ${asideShowGmv ? `
+          <div class="act-stat-divider"></div>
+          <div class="act-stat-row">
+            <p class="act-stat-label">Revenue</p>
+            <p class="act-stat-value act-stat-value--sm">${formatMoneyPence(asideGmvPence)}</p>
+          </div>
+          ` : ''}
+        </div>
+      `;
+
       content.innerHTML = `
         <button class="act-back-link" type="button" data-act="back">← All drops</button>
         <div class="act-drop-header">
           <h3 class="act-drop-title">${eName}</h3>
           <p class="act-drop-context">${contextLine(summary)}</p>
         </div>
-        <div class="act-timeline">${cards.join('')}</div>
+        <div class="act-layout">
+          <div class="act-layout-main">
+            <div class="act-timeline">${cards.join('')}</div>
+          </div>
+          <aside class="act-layout-aside">${asideHtml}</aside>
+        </div>
       `;
 
       actSetupMenuCard(summary, rawDrop);
@@ -2946,6 +3300,7 @@
       // Reset per-drop edit state so drafts from a previous drop don't bleed through.
       state.messageDrafts = {};
       state.expandedMessageCards = {};
+      state.cardExpanded = {};  // clear manual disclosure overrides for the new drop
       renderDropView(dropId);
       // Auto-generate all message cards on first drop selection.
       // AI is the starting point — vendor edits from the generated draft.
@@ -2980,7 +3335,7 @@
       });
       // Auto-generate the till poster line once — but only if no saved line
       // exists, so a vendor's saved edit is never clobbered. When reveal_line
-      // already has content the field is seeded from it (in card4Html) and we
+      // already has content the field is seeded from it (in Card 4) and we
       // leave it alone.
       const savedPosterLine = (state.rawById[dropId]?.reveal_line || '').trim();
       if (!savedPosterLine && !state.posterHookGenerated?.[dropId]) {
@@ -3015,6 +3370,29 @@
     }
 
     byId('activationContent').addEventListener('click', async function (e) {
+      // Collapse-to-expand disclosure toggle on a touchpoint card. The body
+      // is a sibling of the toggle button, so card actions never match here.
+      const toggle = e.target.closest('[data-act="toggle-card"]');
+      if (toggle) {
+        const next = toggle.getAttribute('aria-expanded') !== 'true';
+        toggle.setAttribute('aria-expanded', String(next));
+        const body = byId(toggle.getAttribute('aria-controls'));
+        if (body) body.classList.toggle('act-tp-body--collapsed', !next);
+        // Remember the manual override so it survives the frequent re-renders.
+        state.cardExpanded[toggle.dataset.card] = next;
+        // Cards 1/4/6 hold html2canvas artworks whose scale is computed from
+        // frame width; a collapsed (display:none) body has zero width, so the
+        // initial scale was skipped. Recompute on expand. Each function
+        // early-returns when its frame is absent or zero-width, so calling all
+        // three unconditionally is safe and cheap.
+        if (next) {
+          actUpdateMenuCardScale();
+          actUpdateOrdersOpenScale();
+          actUpdateCapacityScale();
+        }
+        return;
+      }
+
       const dropLink = e.target.closest('a[data-drop-id]');
       if (dropLink) { e.preventDefault(); showDropView(dropLink.dataset.dropId); return; }
 
