@@ -1933,6 +1933,7 @@ Reveal hook field — `#dropRevealLine` is now a `<textarea>` (4 rows, `maxlengt
 - T5-C4 — Drop activation guide — vendor-facing communication playbook (Part 1: Drop Studio; Part 2: guide page) — open
 - T5-C5 — Cadence visibility and consistency mechanics (Part 1: dashboard/scorecard; Part 2: gap alerts via T5-11) — open
 - T5-C6 — AI-powered vendor activation plan — post-onboarding personalised first-8-drops strategy — open
+- T-drop-anticipation-window-default — Drop Studio: default opens_at to delivery_start so publish=announce and the publish→opens gap is the anticipation window. Pre-launch.
 
 GenAI shared principles (model choice, hard rules, cost framing) live in
 BACKLOG.md alongside the ticket specs that depend on them — read there before
