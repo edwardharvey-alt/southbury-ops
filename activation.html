@@ -1567,18 +1567,46 @@
       ];
     }
 
+    // Host types whose audience is effectively public — anyone can walk past
+    // and order, so the public-Instagram sequence applies. Everything else
+    // hosted (office, school, care_home, place_of_worship, university,
+    // private_host, venue, other, and any future/unknown type) is treated as
+    // CLOSED — the conservative default, since over-sharing a closed venue's
+    // drop publicly is the worse error.
+    const OPEN_HOST_TYPES = new Set([
+      'pub', 'club', 'gym', 'market', 'neighbourhood' /* legacy */
+    ]);
+
+    // Resolves whether a drop's audience is 'open' (public) or 'closed'
+    // (private to the host's people). Host-driven — drop_type is consulted
+    // ONLY in the legacy fallback below.
+    function resolveOpenness(summary) {
+      const hasHost = !!summary.host_name;
+      if (!hasHost) return 'open';
+      // v_drop_summary does not expose host_type yet. Until that view change
+      // lands, host_type is undefined here, so fall back to the legacy signal
+      // (drop_type === 'event' ⇒ closed) — leaving today's classification
+      // unchanged. This branch retires itself once host_type is exposed.
+      if (summary.host_type === undefined) {
+        return summary.drop_type === 'event' ? 'closed' : 'open';
+      }
+      return OPEN_HOST_TYPES.has(summary.host_type) ? 'open' : 'closed';
+    }
+
     // Returns the set of touchpoint card numbers relevant for this drop,
-    // based on two axes: host present / absent, public / private (event).
-    // optionalCards are shown but don't block progress completion and are
-    // marked "(optional)" in their title.
+    // selected on two axes: openness (open / closed, host-driven via
+    // resolveOpenness) and host present / absent. A closed drop drops the
+    // public-Instagram cards (reveal 1, capacity 6, post-drop 8) and keeps
+    // the host + email + ordering-open cards. optionalCards are shown but
+    // don't block progress completion and are marked "(optional)" in title.
     function getDropProfile(summary) {
       const hasHost = !!summary.host_name;
-      const isPrivate = summary.drop_type === 'event';
+      const openness = resolveOpenness(summary);
 
-      if (!isPrivate && hasHost)  return { cards: [1,2,3,4,5,6,7,8,9], optional: [] };
-      if (!isPrivate && !hasHost) return { cards: [1,3,4,6,7,8,9],     optional: [] };
-      if (isPrivate  && hasHost)  return { cards: [1,2,5,7,8,9],       optional: [1] };
-      /* isPrivate && !hasHost */  return { cards: [1,7,8,9],           optional: [1] };
+      if (openness === 'open'   && hasHost)  return { cards: [1,2,3,4,5,6,7,8,9], optional: [] };
+      if (openness === 'open'   && !hasHost) return { cards: [1,3,4,6,7,8,9],     optional: [] };
+      if (openness === 'closed' && hasHost)  return { cards: [2,3,4,5,7,9],       optional: [4] };
+      /* closed && !hasHost */                return { cards: [3,4,7,9],           optional: [4] };
     }
 
     // Returns the activation log entries for a specific drop from
