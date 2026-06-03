@@ -802,6 +802,8 @@ or timing." Depends on real series data from T4-1.
 
 Dependency: T4-1 (recurring series — complete)
 
+Note: when built, T4-29's plain-English observations should adopt the repetition-layer voice (Hearth_Repetition_Layer_Voice_Spec.md). Copy held until real series data exists — do not write trend copy against synthetic data.
+
 T4-30: Onboarding delivery model audit ✓ COMPLETE
 Audited and confirmed. detectArchetype() in hearth-intelligence.js
 flags aggregator vendors when primary_goal includes reduce_aggregators
@@ -2288,6 +2290,8 @@ Hearth_Drop_Communications_Architecture.md section 10 (habit formation
 principles), T5-C6 (vendor activation plan — sets the expectation that
 T5-C5 mechanics then reinforce throughout the vendor's journey).
 
+Vendor-facing copy authored in Hearth_Repetition_Layer_Voice_Spec.md (canonical repetition-layer voice spec).
+
 T5-C6: AI-powered vendor activation plan
 
 **Status:** Open. Tier 5. Should surface at the end of onboarding —
@@ -2423,6 +2427,8 @@ T5-C5 (cadence mechanics — the two tickets form one coherent arc from
 "here is your plan" through to "here is how you are doing against it"),
 T4-23 (first-drop guidance card — T5-C6 supersedes T4-23's first-drop
 guidance with a fully personalised plan).
+
+Vendor-facing copy authored in Hearth_Repetition_Layer_Voice_Spec.md (canonical repetition-layer voice spec).
 
 T5-12: Vendor customer data import — advanced
 Extend T4-14 to support connections to existing vendor systems: email
@@ -2709,6 +2715,38 @@ Design requirements:
 Dependencies: T5-8 (interest registration), T5-9 (recommendation engine V1), real drop data.
 Cross-reference: T5-C5 (cadence visibility and consistency mechanics — overlapping scope), T5-C6 (vendor activation plan).
 Status: Open. Post-launch.
+
+Vendor-facing copy authored in Hearth_Repetition_Layer_Voice_Spec.md (canonical repetition-layer voice spec).
+
+**T-drop-anticipation-window-default: Drop Studio — default ordering-open time to create an anticipation window**
+
+**Status:** Open. Tier 5 (comms-architecture-derived). Pre-launch relevant — shapes the first drop a vendor creates.
+
+**The problem**
+
+Drop Studio currently defaults `opens_at` to immediate open: a published drop is orderable straight away. This directly contradicts the Drop Communications Architecture (T5-C1 output), which is built around a window between announce and ordering opens — the Monday menu reveal, the Tuesday host message, the anticipation the comms doc calls "part of the product." If ordering is live the instant a drop is published, that window cannot exist. The platform is quietly fighting its own communications model on the most important screen, and the vendor never learns the announce-then-open rhythm because the default never asks them to. This is a contradiction between the locked strategy and the build, not a cosmetic gap.
+
+**Fix shape (not built)**
+
+- Anchor `opens_at` to `delivery_start`, not to publish time. Default it to roughly the evening before delivery (≈24h prior), editable. The gap between whenever the vendor publishes and that opens time becomes the anticipation window automatically — set delivery for Friday, finish setup on Monday, and the vendor has a four-day reveal window with no effort. Publishing is the announce; `opens_at` is when ordering goes live; the gap is the product.
+- Name and explain the gap in the Timing pane. A short line in voice, e.g.: "Ordering opens Thursday evening. The days before are your window to reveal the menu and build anticipation — share it, but customers can't order yet." This stops a vendor reading the delay as a bug.
+- Nudge, don't force. Keep an explicit "open now" choice for last-minute or event drops, mirroring the series-as-default stance in T5-C5 mechanic 2.
+- Coherent re-derivation. `opens_at` (and `closes_at`) should re-derive when the delivery date changes. Sits directly adjacent to the known re-derivation gap in T5-B44 — decide whether to fix together.
+
+**Guardrails**
+
+- Audit-first. Before any build prompt, confirm the actual current default in `drop-manager.html` (the Timing pane) rather than assuming it — standing discipline, doubly worth it given the adjacent T5-B44 timing-derivation fragility.
+- The anticipation window is also the home for interest registration (T5-8) and the comms reveal touchpoints (T5-25 menu card image; T5-C2 / T5-C4 announce messages). Defaulting `opens_at` forward enables all of them, not just the reveal.
+
+**Where it surfaces:** Drop Studio Timing pane (default value + explanatory line). Connects to the Review-pane "Promotion plan" checklist already shipped under T5-C4 (PARTIAL, 2026-05-30).
+
+**Relationship to T5-C5 mechanic 2:** same principle — Drop Studio's defaults and nudges should encode the model's intent, not the path of least resistance — and the two land in adjacent panes. Ticketed separately but design together.
+
+**Dependencies:** none hard. Relates to T5-B44 (timing re-derivation), T5-8 (interest registration), T5-25 (menu card reveal), T5-C2 / T5-C4 (announce touchpoints), T5-C5 mechanic 2 (series nudge).
+
+**Cross-reference:** Hearth_Repetition_Layer_Voice_Spec.md (section 4), T5-C1 (closed — design brief).
+
+**Priority:** pre-launch. If Healthy Habits Cafe creates their first drop under today's default, ordering opens immediately and the announce window is lost on the drop that matters most. The dry run (T-support-dryrun-checklist) is where this would surface — address it before then.
 
 **T-CONTENT-1: Landing page proof quote — Healthy Habits Cafe**
 Tier: Content. Not a build ticket.
