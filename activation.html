@@ -379,6 +379,33 @@
       transform: rotate(90deg);
     }
 
+    /* Right-side header cluster: optional channel badge + chevron. */
+    .act-tp-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Non-interactive label naming a single-channel touchpoint's destination.
+       Calm Hearth sand/brown pill — the slot the ordering-open card will later
+       replace with a channel selector. */
+    .act-channel-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #8b6b3f;
+      background: rgba(139,107,63,0.10);
+      border: 1px solid rgba(139,107,63,0.18);
+      border-radius: 999px;
+      padding: 3px 9px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
     .act-tp-body {
       margin-top: 10px;
     }
@@ -2360,6 +2387,11 @@
     function actTouchpointShell(opts){
       const open = !!opts.open;
       const bodyId = opts.bodyId;
+      // Optional, non-interactive channel badge naming where a single-channel
+      // message goes. Lives in the header meta cluster beside the chevron.
+      const channelBadge = opts.channel
+        ? `<span class="act-channel-badge">${escapeHtml(opts.channel)}</span>`
+        : '';
       return `
         <div class="${opts.classes}">
           <button type="button" class="act-tp-toggle" data-act="toggle-card"
@@ -2369,7 +2401,10 @@
               <span class="act-day-label">${escapeHtml(opts.label || '')}</span>
               <span class="act-tp-title">${opts.title || ''}</span>
             </span>
-            <span class="act-tp-chevron" aria-hidden="true">›</span>
+            <span class="act-tp-meta">
+              ${channelBadge}
+              <span class="act-tp-chevron" aria-hidden="true">›</span>
+            </span>
           </button>
           <div class="act-tp-body${open ? '' : ' act-tp-body--collapsed'}" id="${bodyId}">
             ${opts.bodyHtml}
@@ -2391,6 +2426,7 @@
         cardNum: opts.cardNum,
         label: opts.label,
         title: opts.title,
+        channel: opts.channel,
         bodyHtml: `<p>${opts.desc}</p>\n          <div class="act-actions">${res.html}</div>`,
         open,
         bodyId: 'act-tp-body-' + opts.cardNum
@@ -2571,6 +2607,7 @@
         cardNum: opts.cardNum,
         label: opts.label,
         title: opts.title,
+        channel: opts.channel,
         desc: opts.desc,
         actionHtml,
         touchpointKey: null,  // done state handled inline above
@@ -2795,6 +2832,7 @@
         cardNum: 1,
         label: labels[0],
         title: escapeHtml(card1Title),
+        channel: 'Instagram',
         bodyHtml: card1Body,
         open: actCardOpen(1, !!getLogEntry('monday_reveal'), false),
         bodyId: 'act-tp-body-1'
@@ -2828,6 +2866,7 @@
           cardNum: 3,
           label: labels[2],
           title: 'Early access for previous customers',
+          channel: 'Email',
           desc: 'Previous customers get access before the public link goes live. Review and confirm the email below.',
           subject: state.emailDrafts['thursday_early_access'].subject,
           body: state.emailDrafts['thursday_early_access'].body,
@@ -3050,6 +3089,7 @@
         cardNum: 6,
         label: labels[5],
         title: 'Share your capacity signal',
+        channel: 'Instagram',
         bodyHtml: card6Body,
         open: actCardOpen(6, !!card6Entry, card6Locked),
         bodyId: 'act-tp-body-6'
@@ -3065,8 +3105,8 @@
           typeClass: 'is-auto',
           cardNum: 7,
           label: labels[6],
-          title: 'Notify customers when orders are ready',
-          desc: 'When you mark an order Ready in Service Board, the platform sends an SMS to that customer automatically. Nothing to do here — keep Service Board open during service.',
+          title: 'Order-ready notifications are automatic',
+          desc: "There's nothing to send from here. When you mark an order Ready on the Service Board during service, the platform notifies that customer automatically. Keep the Service Board open while you work.",
           actionHtml: `<a class="act-copy-btn" href="${HearthNav.withVendor('./service-board.html')}">Open Service Board</a>`
         }));
       }
@@ -3109,6 +3149,7 @@
           cardNum: 8,
           label: labels[7],
           title: 'Close the loop on social',
+          channel: 'Instagram',
           desc: "Post a real moment from the drop — food leaving the kitchen, the venue, a community moment. Unpolished is fine. Then post the sold-out confirmation if you haven't already.",
           actionHtml: card8ActionHtml,
           locked: status !== 'closed',
@@ -3124,6 +3165,7 @@
           cardNum: 9,
           label: labels[8],
           title: 'Thank-you email to every customer',
+          channel: 'Email',
           desc: 'A warm, brief thank-you goes to everyone who ordered. Review and confirm before it sends.',
           subject: state.emailDrafts['saturday_thankyou'].subject,
           body: state.emailDrafts['saturday_thankyou'].body,
