@@ -83,6 +83,12 @@
       gap:20px;
     }
 
+    /* Step wrapper — only one visible at a time */
+    .sgStep{
+      display:grid;
+      gap:20px;
+    }
+
     .sgHeader{
       display:grid;
       gap:8px;
@@ -114,6 +120,25 @@
       margin:0;
     }
 
+    /* Context line (e.g. the email entered in Step 1) */
+    .sgContext{
+      font-size:13px;
+      font-weight:700;
+      color:#4b5563;
+      background:#fbf8f3;
+      border:1px solid #e9e3d8;
+      border-radius:10px;
+      padding:9px 12px;
+      margin:0;
+      line-height:1.45;
+      word-break:break-word;
+    }
+
+    .sgContext strong{
+      color:#1f2937;
+      font-weight:900;
+    }
+
     /* Form */
     .sgForm{
       display:grid;
@@ -134,6 +159,13 @@
       margin:0;
     }
 
+    .sgLabel .sgOptional{
+      font-weight:700;
+      text-transform:none;
+      letter-spacing:0;
+      color:#9ca3af;
+    }
+
     .sgInput{
       appearance:none;
       width:100%;
@@ -148,6 +180,13 @@
       color:#1f2937;
       font-family:inherit;
       transition:border-color .15s ease, background .15s ease, box-shadow .15s ease;
+    }
+
+    textarea.sgInput{
+      min-height:88px;
+      padding:11px 14px;
+      line-height:1.5;
+      resize:vertical;
     }
 
     .sgInput:focus{
@@ -203,8 +242,72 @@
       line-height:1.45;
     }
 
-    .sgError[hidden]{
-      display:none !important;
+    .sgNotice{
+      font-size:13px;
+      font-weight:700;
+      color:#047857;
+      background:rgba(4,120,87,0.08);
+      border:1px solid rgba(4,120,87,0.18);
+      border-radius:10px;
+      padding:10px 12px;
+      margin:0;
+      line-height:1.45;
+    }
+
+    /* Inline link shown beneath an error (e.g. "Sign in instead") */
+    .sgInlineLink{
+      justify-self:start;
+      font-size:13px;
+      font-weight:900;
+      color:var(--sg-brand-primary);
+      text-decoration:none;
+      margin:0;
+    }
+
+    .sgInlineLink:hover{
+      text-decoration:underline;
+    }
+
+    /* Subtle text-button action (e.g. resend code) */
+    .sgResendRow{
+      text-align:center;
+      margin:0;
+    }
+
+    .sgLinkBtn{
+      appearance:none;
+      background:none;
+      border:none;
+      cursor:pointer;
+      font-family:inherit;
+      font-size:13px;
+      font-weight:800;
+      color:#6b7280;
+      padding:2px 4px;
+    }
+
+    .sgLinkBtn:hover:not(:disabled){
+      color:var(--sg-brand-primary);
+      text-decoration:underline;
+    }
+
+    .sgLinkBtn:disabled{
+      opacity:.6;
+      cursor:not-allowed;
+    }
+
+    /* Step 3 confirmation (replaces the form on success) */
+    .sgConfirm{
+      display:grid;
+      gap:10px;
+    }
+
+    .sgConfirmText{
+      font-size:15px;
+      font-weight:700;
+      color:#4b5563;
+      line-height:1.6;
+      margin:0;
     }
 
     /* Terms small print */
@@ -227,7 +330,6 @@
       text-decoration:underline;
     }
 
-
     /* Secondary link */
     .sgFoot{
       text-align:center;
@@ -245,6 +347,8 @@
     .sgFoot a:hover{
       text-decoration:underline;
     }
+
+    [hidden]{ display:none !important; }
 
     @media (max-width:600px){
       .sgPage{
@@ -268,54 +372,146 @@
     </div>
 
     <div class="sgCard">
-      <div class="sgHeader">
-        <p class="sgEyebrow">New vendor</p>
-        <h1 class="sgTitle">Start your Hearth</h1>
-        <p class="sgSub">Create your vendor account with an email and password.</p>
+
+      <!-- STEP 1 — email -->
+      <div class="sgStep" id="sgStep1">
+        <div class="sgHeader">
+          <p class="sgEyebrow">New vendor</p>
+          <h1 class="sgTitle">Start your Hearth</h1>
+          <p class="sgSub">Enter the email you'd like to use, and we'll continue from there.</p>
+        </div>
+
+        <form class="sgForm" id="sgForm1" novalidate>
+          <div class="sgField">
+            <label class="sgLabel" for="sgEmail">Email address</label>
+            <input
+              class="sgInput"
+              type="email"
+              id="sgEmail"
+              name="email"
+              autocomplete="email"
+              inputmode="email"
+              placeholder="you@yourvendor.co.uk"
+              required
+            />
+          </div>
+          <p class="sgError" id="sgError1" hidden></p>
+          <button class="sgButton" type="submit" id="sgSubmit1">Continue</button>
+        </form>
       </div>
 
-      <form class="sgForm" id="sgForm" novalidate>
-        <div class="sgField">
-          <label class="sgLabel" for="sgEmail">Email address</label>
-          <input
-            class="sgInput"
-            type="email"
-            id="sgEmail"
-            name="email"
-            autocomplete="email"
-            inputmode="email"
-            placeholder="you@yourvendor.co.uk"
-            required
-          />
+      <!-- STEP 2 — code + password -->
+      <div class="sgStep" id="sgStep2" hidden>
+        <div class="sgHeader">
+          <p class="sgEyebrow">Activate your account</p>
+          <h1 class="sgTitle">Enter your code</h1>
+          <p class="sgSub">We've sent a 6-digit code to your email. Enter it below and choose a password.</p>
         </div>
-        <div class="sgField">
-          <label class="sgLabel" for="sgPassword">Password</label>
-          <input
-            class="sgInput"
-            type="password"
-            id="sgPassword"
-            name="password"
-            autocomplete="new-password"
-            placeholder="Create a password"
-            required
-          />
+
+        <p class="sgContext" id="sgEmailContext"></p>
+
+        <form class="sgForm" id="sgForm2" novalidate>
+          <div class="sgField">
+            <label class="sgLabel" for="sgCode">6-digit code</label>
+            <input
+              class="sgInput"
+              type="text"
+              id="sgCode"
+              name="code"
+              autocomplete="one-time-code"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              maxlength="6"
+              placeholder="000000"
+              required
+            />
+          </div>
+          <div class="sgField">
+            <label class="sgLabel" for="sgPassword">Create a password</label>
+            <input
+              class="sgInput"
+              type="password"
+              id="sgPassword"
+              name="password"
+              autocomplete="new-password"
+              placeholder="At least 8 characters"
+              required
+            />
+          </div>
+          <p class="sgError" id="sgError2" hidden></p>
+          <a class="sgInlineLink" id="sgLoginLink" href="./login.html" hidden>Sign in instead →</a>
+          <p class="sgNotice" id="sgNotice2" hidden></p>
+          <button class="sgButton" type="submit" id="sgSubmit2">Activate account</button>
+          <p class="sgResendRow">
+            <button type="button" class="sgLinkBtn" id="sgResend">Didn't get it? Send a new code</button>
+          </p>
+          <p class="sgTerms">By activating your account you agree to Hearth's <a href="./vendor-terms.html">vendor terms</a>.</p>
+        </form>
+      </div>
+
+      <!-- STEP 3 — request access (soft reject) -->
+      <div class="sgStep" id="sgStep3" hidden>
+        <div class="sgHeader">
+          <p class="sgEyebrow">Request access</p>
+          <h1 class="sgTitle">Tell us about you</h1>
+          <p class="sgSub">We're onboarding vendors gradually. Share a few details and we'll be in touch when a spot opens.</p>
         </div>
-        <div class="sgField">
-          <label class="sgLabel" for="sgPasswordConfirm">Confirm password</label>
-          <input
-            class="sgInput"
-            type="password"
-            id="sgPasswordConfirm"
-            name="password_confirm"
-            autocomplete="new-password"
-            placeholder="Confirm your password"
-            required
-          />
+
+        <form class="sgForm" id="sgForm3" novalidate>
+          <div class="sgField">
+            <label class="sgLabel" for="sgBusiness">Business name</label>
+            <input
+              class="sgInput"
+              type="text"
+              id="sgBusiness"
+              name="business_name"
+              autocomplete="organization"
+              placeholder="Your business name"
+              required
+            />
+          </div>
+          <div class="sgField">
+            <label class="sgLabel" for="sgEmail3">Email address</label>
+            <input
+              class="sgInput"
+              type="email"
+              id="sgEmail3"
+              name="email"
+              autocomplete="email"
+              inputmode="email"
+              placeholder="you@yourvendor.co.uk"
+              required
+            />
+          </div>
+          <div class="sgField">
+            <label class="sgLabel" for="sgArea">Area</label>
+            <input
+              class="sgInput"
+              type="text"
+              id="sgArea"
+              name="area"
+              autocomplete="address-level2"
+              placeholder="Where you're based"
+              required
+            />
+          </div>
+          <div class="sgField">
+            <label class="sgLabel" for="sgNote">Anything else <span class="sgOptional">(optional)</span></label>
+            <textarea
+              class="sgInput"
+              id="sgNote"
+              name="note"
+              placeholder="Tell us a little about what you make"
+            ></textarea>
+          </div>
+          <p class="sgError" id="sgError3" hidden></p>
+          <button class="sgButton" type="submit" id="sgSubmit3">Request access</button>
+        </form>
+
+        <div class="sgConfirm" id="sgConfirm" hidden>
+          <p class="sgConfirmText">Thanks — we'll be in touch when a spot opens.</p>
         </div>
-        <p class="sgError" id="sgError" hidden></p>
-        <button class="sgButton" type="submit" id="sgSubmit">Get started</button>
-        <p class="sgTerms">By continuing you agree to Hearth's <a href="./vendor-terms.html">vendor terms</a>.</p>
-      </form>
+      </div>
 
     </div>
 
@@ -323,80 +519,298 @@
   </div>
 
   <script>
+    // Supabase client is used only for the final signInWithPassword once the
+    // account has been activated. All three Edge Function calls below are
+    // plain fetch with the anon apikey header (the functions are public).
     const _sb = supabase.createClient(
       window.HEARTH_CONFIG.SUPABASE_URL,
       window.HEARTH_CONFIG.SUPABASE_ANON_KEY
     );
 
-    const formEl = document.getElementById("sgForm");
-    const emailEl = document.getElementById("sgEmail");
-    const passwordEl = document.getElementById("sgPassword");
-    const confirmEl = document.getElementById("sgPasswordConfirm");
-    const submitEl = document.getElementById("sgSubmit");
-    const errorEl = document.getElementById("sgError");
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const MIN_PASSWORD_LENGTH = 8; // matches verify-activation policy
 
-    function showError(message){
-      errorEl.textContent = message;
-      errorEl.hidden = false;
+    const state = { email: "" };
+
+    // --- Edge Function helper: public functions, anon apikey, no Authorization.
+    async function callFunction(name, body){
+      const res = await fetch(
+        `${window.HEARTH_CONFIG.SUPABASE_URL}/functions/v1/${name}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify(body)
+        }
+      );
+      let data = {};
+      try { data = await res.json(); } catch (_) { data = {}; }
+      return { status: res.status, ok: res.ok, data: data || {} };
     }
 
-    function clearError(){
-      errorEl.textContent = "";
-      errorEl.hidden = true;
+    function show(el){ if (el) el.hidden = false; }
+    function hide(el){ if (el) el.hidden = true; }
+
+    function setStep(n){
+      hide(document.getElementById("sgStep1"));
+      hide(document.getElementById("sgStep2"));
+      hide(document.getElementById("sgStep3"));
+      show(document.getElementById("sgStep" + n));
     }
 
-    formEl.addEventListener("submit", async (event) => {
+    // ---------- STEP 1 — email ----------
+    const form1El = document.getElementById("sgForm1");
+    const email1El = document.getElementById("sgEmail");
+    const submit1El = document.getElementById("sgSubmit1");
+    const error1El = document.getElementById("sgError1");
+
+    function setError1(msg){ error1El.textContent = msg; show(error1El); }
+    function clearError1(){ error1El.textContent = ""; hide(error1El); }
+
+    function setStep1Busy(busy){
+      submit1El.disabled = busy;
+      email1El.disabled = busy;
+      submit1El.textContent = busy ? "Checking…" : "Continue";
+    }
+
+    form1El.addEventListener("submit", async (event) => {
       event.preventDefault();
-      clearError();
+      clearError1();
 
-      const email = (emailEl.value || "").trim();
+      const email = (email1El.value || "").trim().toLowerCase();
       if (!email){
-        showError("Please enter your email address.");
+        setError1("Please enter your email address.");
+        return;
+      }
+      if (!EMAIL_RE.test(email)){
+        setError1("That doesn't look like a valid email address.");
         return;
       }
 
-      const looksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-      if (!looksValid){
-        showError("That doesn't look like a valid email address.");
-        return;
-      }
-
-      const password = passwordEl.value || "";
-      if (password.length < 8){
-        showError("Password must be at least 8 characters.");
-        return;
-      }
-
-      const confirm = confirmEl.value || "";
-      if (password !== confirm){
-        showError("Passwords do not match.");
-        return;
-      }
-
-      submitEl.disabled = true;
-      emailEl.disabled = true;
-      passwordEl.disabled = true;
-      confirmEl.disabled = true;
-      submitEl.textContent = "Creating account…";
-
+      setStep1Busy(true);
       try {
-        const { error } = await _sb.auth.signUp({ email, password });
-
-        if (error) throw error;
-
-        window.location.replace("./auth-callback.html");
+        const r = await callFunction("request-activation", { email });
+        if (r.status === 200 && r.data.status === "code_sent"){
+          state.email = email;
+          enterStep2();
+        } else if (r.status === 200 && r.data.status === "not_approved"){
+          state.email = email;
+          enterStep3();
+        } else {
+          setError1("Something went wrong. Please try again.");
+          setStep1Busy(false);
+        }
       } catch (err){
         console.error(err);
-        showError(
-          (err && err.message)
-            ? err.message
-            : "Something went wrong. Please try again."
-        );
-        submitEl.disabled = false;
-        emailEl.disabled = false;
-        passwordEl.disabled = false;
-        confirmEl.disabled = false;
-        submitEl.textContent = "Get started";
+        setError1("We couldn't reach Hearth just now. Please check your connection and try again.");
+        setStep1Busy(false);
+      }
+    });
+
+    // ---------- STEP 2 — code + password ----------
+    const form2El = document.getElementById("sgForm2");
+    const codeEl = document.getElementById("sgCode");
+    const passwordEl = document.getElementById("sgPassword");
+    const submit2El = document.getElementById("sgSubmit2");
+    const error2El = document.getElementById("sgError2");
+    const notice2El = document.getElementById("sgNotice2");
+    const loginLinkEl = document.getElementById("sgLoginLink");
+    const resendEl = document.getElementById("sgResend");
+    const emailContextEl = document.getElementById("sgEmailContext");
+
+    function setError2(msg){
+      error2El.textContent = msg;
+      show(error2El);
+      hide(notice2El);
+    }
+    function clearError2(){ error2El.textContent = ""; hide(error2El); }
+    function setNotice2(msg){
+      notice2El.textContent = msg;
+      show(notice2El);
+      hide(error2El);
+    }
+
+    function setStep2Busy(busy){
+      submit2El.disabled = busy;
+      codeEl.disabled = busy;
+      passwordEl.disabled = busy;
+      resendEl.disabled = busy;
+      submit2El.textContent = busy ? "Activating…" : "Activate account";
+    }
+
+    function enterStep2(){
+      emailContextEl.innerHTML = "We sent a code to <strong></strong>.";
+      emailContextEl.querySelector("strong").textContent = state.email;
+      codeEl.value = "";
+      passwordEl.value = "";
+      clearError2();
+      hide(notice2El);
+      hide(loginLinkEl);
+      setStep2Busy(false);
+      setStep(2);
+      codeEl.focus();
+    }
+
+    form2El.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearError2();
+      hide(loginLinkEl);
+
+      const code = (codeEl.value || "").trim();
+      const password = passwordEl.value || "";
+
+      if (!/^[0-9]{6}$/.test(code)){
+        setError2("Please enter the 6-digit code from your email.");
+        return;
+      }
+      if (password.length < MIN_PASSWORD_LENGTH){
+        setError2("Password must be at least 8 characters.");
+        return;
+      }
+
+      setStep2Busy(true);
+      try {
+        const r = await callFunction("verify-activation", {
+          email: state.email,
+          code: code,
+          password: password
+        });
+
+        if (r.status === 200 && r.data.status === "activated"){
+          // Account created server-side — sign in and flow through
+          // auth-callback.html into onboarding (same target login.html uses).
+          submit2El.textContent = "Signing you in…";
+          const { error } = await _sb.auth.signInWithPassword({
+            email: state.email,
+            password: password
+          });
+          if (error) throw error;
+          window.location.replace("./auth-callback.html");
+          return;
+        }
+
+        const code400 = r.data.error;
+        if (r.status === 400 && code400 === "invalid_code"){
+          setError2("That code doesn't match — check it and try again.");
+        } else if (r.status === 400 && code400 === "expired"){
+          setError2("That code has expired. Request a new one below.");
+        } else if (r.status === 400 && code400 === "locked"){
+          setError2("Too many attempts — request a new code below.");
+        } else if (r.status === 409 && code400 === "exists"){
+          setError2("An account already exists for this email.");
+          show(loginLinkEl);
+        } else {
+          setError2("Something went wrong. Please try again.");
+        }
+        setStep2Busy(false);
+      } catch (err){
+        console.error(err);
+        setError2("We couldn't reach Hearth just now. Please check your connection and try again.");
+        setStep2Busy(false);
+      }
+    });
+
+    resendEl.addEventListener("click", async () => {
+      clearError2();
+      hide(notice2El);
+      hide(loginLinkEl);
+
+      resendEl.disabled = true;
+      submit2El.disabled = true;
+      resendEl.textContent = "Sending…";
+      try {
+        const r = await callFunction("request-activation", { email: state.email });
+        if (r.status === 200 && r.data.status === "code_sent"){
+          setNotice2("New code sent.");
+        } else if (r.status === 200 && r.data.status === "not_approved"){
+          enterStep3();
+          return;
+        } else {
+          setError2("We couldn't send a new code. Please try again.");
+        }
+      } catch (err){
+        console.error(err);
+        setError2("We couldn't reach Hearth just now. Please check your connection and try again.");
+      } finally {
+        resendEl.disabled = false;
+        submit2El.disabled = false;
+        resendEl.textContent = "Didn't get it? Send a new code";
+      }
+    });
+
+    // ---------- STEP 3 — request access ----------
+    const form3El = document.getElementById("sgForm3");
+    const businessEl = document.getElementById("sgBusiness");
+    const email3El = document.getElementById("sgEmail3");
+    const areaEl = document.getElementById("sgArea");
+    const noteEl = document.getElementById("sgNote");
+    const submit3El = document.getElementById("sgSubmit3");
+    const error3El = document.getElementById("sgError3");
+    const confirm3El = document.getElementById("sgConfirm");
+
+    function setError3(msg){ error3El.textContent = msg; show(error3El); }
+    function clearError3(){ error3El.textContent = ""; hide(error3El); }
+
+    function setStep3Busy(busy){
+      submit3El.disabled = busy;
+      businessEl.disabled = busy;
+      email3El.disabled = busy;
+      areaEl.disabled = busy;
+      noteEl.disabled = busy;
+      submit3El.textContent = busy ? "Sending…" : "Request access";
+    }
+
+    function enterStep3(){
+      if (state.email) email3El.value = state.email;
+      clearError3();
+      setStep3Busy(false);
+      setStep(3);
+      businessEl.focus();
+    }
+
+    form3El.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearError3();
+
+      const business = (businessEl.value || "").trim();
+      const email = (email3El.value || "").trim().toLowerCase();
+      const area = (areaEl.value || "").trim();
+      const note = (noteEl.value || "").trim();
+
+      if (!business){
+        setError3("Please tell us your business name.");
+        return;
+      }
+      if (!EMAIL_RE.test(email)){
+        setError3("That doesn't look like a valid email address.");
+        return;
+      }
+      if (!area){
+        setError3("Please tell us roughly where you're based.");
+        return;
+      }
+
+      setStep3Busy(true);
+      try {
+        const r = await callFunction("request-access", {
+          business_name: business,
+          email: email,
+          area: area,
+          note: note
+        });
+        if (r.status === 200 && r.data.status === "received"){
+          hide(form3El);
+          show(confirm3El);
+        } else {
+          setError3("Something went wrong. Please try again.");
+          setStep3Busy(false);
+        }
+      } catch (err){
+        console.error(err);
+        setError3("We couldn't reach Hearth just now. Please check your connection and try again.");
+        setStep3Busy(false);
       }
     });
   </script>
