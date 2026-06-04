@@ -804,55 +804,12 @@
               return;
             }
 
-            submitEl.textContent = 'Sending invite…';
-
-            let inviteOk = false;
-            try {
-              const inviteRes = await fetch(
-                `${window.HEARTH_CONFIG.SUPABASE_URL}/functions/v1/invite-vendor`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'apikey': window.HEARTH_CONFIG.SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${currentSession.access_token}`
-                  },
-                  body: JSON.stringify({ email: email })
-                }
-              );
-              if (inviteRes.ok) {
-                inviteOk = true;
-              } else {
-                let inviteErr = {};
-                try { inviteErr = await inviteRes.json(); } catch (_) {}
-                console.error('Invite failed:', inviteErr);
-              }
-            } catch (inviteEx) {
-              console.error('Invite request failed:', inviteEx);
-            }
-
-            // Vendor was created either way — refresh the list so the new
-            // vendor and updated count appear immediately.
+            // The vendor row is the approval. With the self-serve front door
+            // live, no tokenised invite is sent — the vendor self-activates at
+            // lovehearth.co.uk. Surface the approval, refresh the list, close.
+            showSuccess('Vendor approved — they can sign up at lovehearth.co.uk.');
             loadVendors(currentSession);
-
-            if (inviteOk) {
-              // Full success: close the modal and clear the form. The new row
-              // appearing in the refreshed list is the confirmation.
-              closeModal();
-            } else {
-              // Vendor created but invite failed — keep the modal open and
-              // surface the partial outcome so the admin knows to send manually.
-              // Clear the inputs so the row isn't accidentally re-submitted.
-              nameEl.value = '';
-              slugEl.value = '';
-              emailEl.value = '';
-              displayNameEl.value = '';
-              delete slugEl.dataset.edited;
-              showError('Vendor created but invite failed — send manually from Supabase.');
-              isSubmitting = false;
-              submitEl.disabled = false;
-              submitEl.textContent = 'Create vendor';
-            }
+            closeModal();
           } catch (err) {
             console.error('Vendor creation failed:', err);
             showError((err && err.message) || 'Something went wrong. Please try again.');
