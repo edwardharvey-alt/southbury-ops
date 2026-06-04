@@ -100,7 +100,15 @@
     }
 
     .adminHeader {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
       margin-bottom: 24px;
+    }
+    .adminHeaderTitle {
+      flex: 1;
+      min-width: 0;
     }
     .adminHeader h1 {
       font-family: var(--h-font-display, 'Cormorant Garamond', serif);
@@ -110,6 +118,177 @@
       margin: 0;
       color: var(--h-stone);
       font-size: 0.875rem;
+    }
+
+    .addVendorBtn {
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      flex-shrink: 0;
+      background: var(--pa-accent);
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 8px;
+      white-space: nowrap;
+      transition: box-shadow 0.15s ease, transform 0.08s ease;
+    }
+    .addVendorBtn:hover {
+      box-shadow: 0 4px 14px rgba(196, 81, 26, 0.28);
+    }
+    .addVendorBtn:active {
+      transform: translateY(1px);
+    }
+
+    .modalOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(15, 11, 8, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .modalCard {
+      background: var(--pa-surface);
+      border: 1px solid var(--pa-border);
+      border-radius: 16px;
+      box-shadow: 0 16px 48px rgba(15, 11, 8, 0.18);
+      width: 100%;
+      max-width: 460px;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      padding: 28px;
+      display: grid;
+      gap: 18px;
+    }
+    .modalHeader {
+      display: grid;
+      gap: 6px;
+    }
+    .modalHeader h2 {
+      font-family: var(--h-font-display, 'Cormorant Garamond', serif);
+      font-size: 28px;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin: 0;
+    }
+    .modalSub {
+      margin: 0;
+      color: var(--pa-muted);
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+    .modalForm {
+      display: grid;
+      gap: 14px;
+    }
+    .modalField {
+      display: grid;
+      gap: 6px;
+    }
+    .modalLabel {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--pa-muted);
+    }
+    .modalLabel .optional {
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--pa-muted);
+      opacity: 0.7;
+    }
+    .modalInput {
+      appearance: none;
+      width: 100%;
+      box-sizing: border-box;
+      min-height: 44px;
+      padding: 0 13px;
+      border: 1px solid var(--pa-border);
+      border-radius: 10px;
+      background: #fff;
+      font-size: 15px;
+      color: var(--pa-text);
+      font-family: inherit;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .modalInput:focus {
+      outline: none;
+      border-color: var(--pa-accent);
+      box-shadow: 0 0 0 3px rgba(196, 81, 26, 0.12);
+    }
+    .modalInput:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .modalError {
+      font-size: 13px;
+      font-weight: 600;
+      color: #b45309;
+      background: rgba(180, 83, 9, 0.08);
+      border: 1px solid rgba(180, 83, 9, 0.18);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin: 0;
+      line-height: 1.45;
+    }
+    .modalSuccess {
+      font-size: 13px;
+      font-weight: 600;
+      color: #047857;
+      background: rgba(4, 120, 87, 0.08);
+      border: 1px solid rgba(4, 120, 87, 0.18);
+      border-radius: 10px;
+      padding: 12px;
+      margin: 0;
+      line-height: 1.5;
+    }
+    .modalActions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 2px;
+    }
+    .modalBtn {
+      appearance: none;
+      cursor: pointer;
+      min-height: 44px;
+      padding: 0 18px;
+      border-radius: 8px;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      font-family: inherit;
+      transition: box-shadow 0.15s ease, transform 0.08s ease, background 0.12s ease;
+    }
+    .modalBtnSecondary {
+      background: transparent;
+      border: 1px solid var(--pa-border);
+      color: var(--pa-text);
+    }
+    .modalBtnSecondary:hover:not(:disabled) {
+      background: var(--h-bone, #f8f5ef);
+    }
+    .modalBtnPrimary {
+      background: var(--pa-accent);
+      border: 1px solid var(--pa-accent);
+      color: #fff;
+    }
+    .modalBtnPrimary:hover:not(:disabled) {
+      box-shadow: 0 4px 14px rgba(196, 81, 26, 0.28);
+    }
+    .modalBtn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+    .modalBtn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
 
     .vendorTableWrap {
@@ -236,8 +415,11 @@
 
     <section id="adminContent" class="pa-state" hidden>
       <header class="adminHeader">
-        <h1>Vendors</h1>
-        <p class="adminSubhead" id="vendorCount">Loading…</p>
+        <div class="adminHeaderTitle">
+          <h1>Vendors</h1>
+          <p class="adminSubhead" id="vendorCount">Loading…</p>
+        </div>
+        <button type="button" class="addVendorBtn" id="addVendorBtn">Add vendor</button>
       </header>
 
       <section class="vendorTableWrap" id="vendorTableWrap" hidden>
@@ -264,6 +446,40 @@
       <section class="vendorError" id="vendorError" hidden>
         <p>Couldn't load vendors. Try refreshing the page.</p>
       </section>
+
+      <div class="modalOverlay" id="addVendorOverlay" hidden>
+        <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="addVendorTitle">
+          <div class="modalHeader">
+            <h2 id="addVendorTitle">Provision a vendor</h2>
+            <p class="modalSub">Create a vendor workspace and send an invite email.</p>
+          </div>
+
+          <form class="modalForm" id="addVendorForm" novalidate>
+            <div class="modalField">
+              <label class="modalLabel" for="avName">Business name</label>
+              <input class="modalInput" type="text" id="avName" placeholder="e.g. Southbury Farm Pizza Company" required />
+            </div>
+            <div class="modalField">
+              <label class="modalLabel" for="avSlug">Slug</label>
+              <input class="modalInput" type="text" id="avSlug" placeholder="auto-generated from name" required />
+            </div>
+            <div class="modalField">
+              <label class="modalLabel" for="avEmail">Contact email</label>
+              <input class="modalInput" type="email" id="avEmail" placeholder="owner@vendor.co.uk" required />
+            </div>
+            <div class="modalField">
+              <label class="modalLabel" for="avDisplayName">Display name <span class="optional">(optional)</span></label>
+              <input class="modalInput" type="text" id="avDisplayName" placeholder="Shorter trading name" />
+            </div>
+            <p class="modalError" id="avError" hidden></p>
+            <p class="modalSuccess" id="avSuccess" hidden></p>
+            <div class="modalActions">
+              <button class="modalBtn modalBtnSecondary" type="button" id="avCancel">Cancel</button>
+              <button class="modalBtn modalBtnPrimary" type="submit" id="avSubmit">Create vendor</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -278,6 +494,10 @@
       const vendorTableBodyEl = document.getElementById('vendorTableBody');
       const vendorEmptyEl = document.getElementById('vendorEmpty');
       const vendorErrorEl = document.getElementById('vendorError');
+
+      // Session captured by the auth gate, reused by the Add vendor modal
+      // (mirrors the currentSession pattern in platform-admin-vendor.html).
+      let currentSession = null;
 
       vendorTableBodyEl.addEventListener('click', (e) => {
         const row = e.target.closest('.vendorRow');
@@ -441,6 +661,208 @@
         }
       }
 
+      function setupAddVendorModal() {
+        const openBtn = document.getElementById('addVendorBtn');
+        const overlayEl = document.getElementById('addVendorOverlay');
+        const formEl = document.getElementById('addVendorForm');
+        const nameEl = document.getElementById('avName');
+        const slugEl = document.getElementById('avSlug');
+        const emailEl = document.getElementById('avEmail');
+        const displayNameEl = document.getElementById('avDisplayName');
+        const cancelEl = document.getElementById('avCancel');
+        const submitEl = document.getElementById('avSubmit');
+        const errorEl = document.getElementById('avError');
+        const successEl = document.getElementById('avSuccess');
+
+        let isSubmitting = false;
+
+        function generateSlug(name) {
+          return name
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+        }
+
+        function showError(msg) {
+          errorEl.textContent = msg;
+          errorEl.hidden = false;
+          successEl.hidden = true;
+        }
+
+        function showSuccess(msg) {
+          successEl.textContent = msg;
+          successEl.hidden = false;
+          errorEl.hidden = true;
+        }
+
+        function clearMessages() {
+          errorEl.hidden = true;
+          successEl.hidden = true;
+        }
+
+        function resetForm() {
+          formEl.reset();
+          delete slugEl.dataset.edited;
+          clearMessages();
+          submitEl.disabled = false;
+          submitEl.textContent = 'Create vendor';
+          isSubmitting = false;
+        }
+
+        function openModal() {
+          resetForm();
+          overlayEl.hidden = false;
+          nameEl.focus();
+        }
+
+        function closeModal() {
+          overlayEl.hidden = true;
+          resetForm();
+        }
+
+        openBtn.addEventListener('click', openModal);
+        cancelEl.addEventListener('click', closeModal);
+        overlayEl.addEventListener('click', (e) => {
+          if (e.target === overlayEl) closeModal();
+        });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !overlayEl.hidden) closeModal();
+        });
+
+        nameEl.addEventListener('blur', () => {
+          if (!slugEl.dataset.edited) {
+            slugEl.value = generateSlug(nameEl.value);
+          }
+        });
+        slugEl.addEventListener('input', () => {
+          slugEl.dataset.edited = '1';
+        });
+
+        formEl.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          if (isSubmitting) return;
+          isSubmitting = true;
+          clearMessages();
+
+          const name = (nameEl.value || '').trim();
+          const slug = (slugEl.value || '').trim();
+          const email = (emailEl.value || '').trim();
+          const displayName = (displayNameEl.value || '').trim();
+
+          if (!name) { showError('Business name is required.'); isSubmitting = false; return; }
+          if (!slug) { showError('Slug is required.'); isSubmitting = false; return; }
+          if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            showError('A valid contact email is required.');
+            isSubmitting = false;
+            return;
+          }
+
+          if (!currentSession) {
+            showError('Your session has expired. Refresh the page and try again.');
+            isSubmitting = false;
+            return;
+          }
+
+          submitEl.disabled = true;
+          submitEl.textContent = 'Creating…';
+
+          try {
+            const response = await fetch(
+              `${window.HEARTH_CONFIG.SUPABASE_URL}/functions/v1/create-vendor`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'apikey': window.HEARTH_CONFIG.SUPABASE_ANON_KEY,
+                  'Authorization': `Bearer ${currentSession.access_token}`
+                },
+                body: JSON.stringify({
+                  name: name,
+                  slug: slug,
+                  display_name: displayName || name,
+                  email: email
+                })
+              }
+            );
+
+            if (!response.ok) {
+              let err = {};
+              try { err = await response.json(); } catch (_) {}
+              if (response.status === 409) {
+                showError(err.error || 'A vendor with this slug already exists.');
+              } else if (response.status === 401 || response.status === 403) {
+                showError(err.error || 'Not authorised to create vendors.');
+              } else {
+                throw new Error(err.error || err.message || 'Vendor creation failed');
+              }
+              isSubmitting = false;
+              submitEl.disabled = false;
+              submitEl.textContent = 'Create vendor';
+              return;
+            }
+
+            submitEl.textContent = 'Sending invite…';
+
+            let inviteOk = false;
+            try {
+              const inviteRes = await fetch(
+                `${window.HEARTH_CONFIG.SUPABASE_URL}/functions/v1/invite-vendor`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': window.HEARTH_CONFIG.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${currentSession.access_token}`
+                  },
+                  body: JSON.stringify({ email: email })
+                }
+              );
+              if (inviteRes.ok) {
+                inviteOk = true;
+              } else {
+                let inviteErr = {};
+                try { inviteErr = await inviteRes.json(); } catch (_) {}
+                console.error('Invite failed:', inviteErr);
+              }
+            } catch (inviteEx) {
+              console.error('Invite request failed:', inviteEx);
+            }
+
+            // Vendor was created either way — refresh the list so the new
+            // vendor and updated count appear immediately.
+            loadVendors(currentSession);
+
+            if (inviteOk) {
+              // Full success: close the modal and clear the form. The new row
+              // appearing in the refreshed list is the confirmation.
+              closeModal();
+            } else {
+              // Vendor created but invite failed — keep the modal open and
+              // surface the partial outcome so the admin knows to send manually.
+              // Clear the inputs so the row isn't accidentally re-submitted.
+              nameEl.value = '';
+              slugEl.value = '';
+              emailEl.value = '';
+              displayNameEl.value = '';
+              delete slugEl.dataset.edited;
+              showError('Vendor created but invite failed — send manually from Supabase.');
+              isSubmitting = false;
+              submitEl.disabled = false;
+              submitEl.textContent = 'Create vendor';
+            }
+          } catch (err) {
+            console.error('Vendor creation failed:', err);
+            showError((err && err.message) || 'Something went wrong. Please try again.');
+            isSubmitting = false;
+            submitEl.disabled = false;
+            submitEl.textContent = 'Create vendor';
+          }
+        });
+      }
+
       try {
         const supabase = window.supabase.createClient(
           window.HEARTH_CONFIG.SUPABASE_URL,
@@ -476,7 +898,9 @@
           return;
         }
 
+        currentSession = session;
         showAdminContent(data.email || '');
+        setupAddVendorModal();
         loadVendors(session);
       } catch (err) {
         console.error('platform-admin auth gate failed:', err);
