@@ -78,20 +78,26 @@ Deno.serve(async (req) => {
 
     // Resolve the caller. Same logic for both ops. actor is set only
     // from the auth path that succeeds, never from the request body.
+    //
+    // The decision keys on whether getUser() resolved a REAL user, not
+    // on whether an Authorization header is present. A genuinely
+    // anonymous host's Supabase client still sends
+    // Authorization: Bearer <anon key>, so getUser() returns no user —
+    // in that case we must fall through to the host_token path rather
+    // than 401. Mirrors host-view-summary's anonymous-host handling.
     let actor: "vendor" | "host";
 
+    const anonClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!
+    );
     const authHeader = req.headers.get("Authorization");
-    if (authHeader) {
-      // Vendor path — verify JWT, map user to vendor, confirm ownership.
-      const anonClient = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!
-      );
-      const { data: { user }, error: authError } = await anonClient.auth.getUser(
-        authHeader.replace("Bearer ", "")
-      );
-      if (authError || !user) return jsonResponse({ error: "Unauthorized" }, 401);
+    const { data: { user } = { user: null } } = authHeader
+      ? await anonClient.auth.getUser(authHeader.replace("Bearer ", ""))
+      : { data: { user: null } };
 
+    if (user) {
+      // Vendor path — map the resolved user to a vendor, confirm ownership.
       const { data: vendor, error: vendorError } = await serviceClient
         .from("vendors")
         .select("id")
@@ -109,25 +115,27 @@ Deno.serve(async (req) => {
         .eq("vendor_id", vendor.id)
         .maybeSingle();
       if (dropError) return jsonResponse({ error: "Drop lookup failed" }, 500);
-      if (!drop) return jsonResponse({ error: "Drop not found" }, 404);
+      if (!drop) return jsonResponse({ error: "Drop not found" }, 403);
 
       actor = "vendor";
     } else if (typeof body.host_token === "string" && body.host_token) {
-      // Host path — validate the token against THIS drop's host token.
+      // Host path — no real user resolved; validate the token against
+      // THIS drop's host token.
       const host_token = body.host_token;
       const { data: tokenRow, error: tokenError } = await serviceClient
         .from("drop_host_tokens")
         .select("host_access_token")
         .eq("drop_id", drop_id)
         .maybeSingle();
-      if (tokenError) return jsonResponse({ error: "not_authorised" }, 403);
-      if (!tokenRow) return jsonResponse({ error: "not_authorised" }, 403);
+      if (tokenError) return jsonResponse({ error: "Unauthorized" }, 401);
+      if (!tokenRow) return jsonResponse({ error: "Unauthorized" }, 401);
       if (tokenRow.host_access_token !== host_token) {
-        return jsonResponse({ error: "not_authorised" }, 403);
+        return jsonResponse({ error: "Unauthorized" }, 401);
       }
 
       actor = "host";
     } else {
+      // No real user and no valid host token.
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
