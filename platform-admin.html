@@ -806,10 +806,22 @@
 
             // The vendor row is the approval. With the self-serve front door
             // live, no tokenised invite is sent — the vendor self-activates at
-            // lovehearth.co.uk. Surface the approval, refresh the list, close.
+            // lovehearth.co.uk. Surface the approval and refresh the list, but
+            // keep the modal open so the admin can read the approval line and
+            // either add another vendor or close it manually. Clear the inputs
+            // (and the slug "edited" flag) so the row can't be resubmitted, and
+            // restore the submit button — without calling clearMessages(), which
+            // would hide the approval message we just showed.
             showSuccess('Vendor approved — they can sign up at lovehearth.co.uk.');
             loadVendors(currentSession);
-            closeModal();
+            nameEl.value = '';
+            slugEl.value = '';
+            emailEl.value = '';
+            displayNameEl.value = '';
+            delete slugEl.dataset.edited;
+            isSubmitting = false;
+            submitEl.disabled = false;
+            submitEl.textContent = 'Create vendor';
           } catch (err) {
             console.error('Vendor creation failed:', err);
             showError((err && err.message) || 'Something went wrong. Please try again.');
