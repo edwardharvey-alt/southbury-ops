@@ -1567,28 +1567,15 @@
       ];
     }
 
-    // Host types whose audience is effectively public — anyone can walk past
-    // and order, so the public-Instagram sequence applies. Everything else
-    // hosted (office, school, care_home, place_of_worship, university,
-    // private_host, venue, other, and any future/unknown type) is treated as
-    // CLOSED — the conservative default, since over-sharing a closed venue's
-    // drop publicly is the worse error.
-    const OPEN_HOST_TYPES = new Set([
-      'pub', 'club', 'gym', 'market', 'neighbourhood' /* legacy */
-    ]);
-
-    // Resolves whether a drop's audience is 'open' (public) or 'closed'
-    // (private to the host's people). Host-driven — drop_type is consulted
-    // ONLY in the legacy fallback below.
     function resolveOpenness(summary) {
-      const hasHost = !!summary.host_name;
-      // Interim default (activation step 1): any drop anchored to a host is treated
-      // as community/closed — the host leads activation and the public Instagram
-      // cards (reveal, capacity, post-drop) are suppressed. A drop with no host
-      // (neighbourhood) stays open. Replaced in step 2 by an explicit vendor-set
-      // audience field on the drop; OPEN_HOST_TYPES is left defined for that work
-      // and is intentionally unused for now.
-      return hasHost ? 'closed' : 'open';
+      // An explicit vendor-set audience wins (set in Drop Studio for Hosted drops).
+      if (summary.audience_scope === 'public') return 'open';
+      if (summary.audience_scope === 'community') return 'closed';
+      // No explicit signal: derive. Events are private; a drop with no host is an
+      // open neighbourhood drop; any other host-anchored drop defaults to
+      // community/closed — host leads, public posts off.
+      if (summary.drop_type === 'event') return 'closed';
+      return summary.host_name ? 'closed' : 'open';
     }
 
     // Returns the set of touchpoint card numbers relevant for this drop,
