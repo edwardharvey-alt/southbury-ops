@@ -1235,6 +1235,15 @@
                       <div class="helperText" id="dropTypeHelper">Open to your area. Individuals each pay for their own order.</div>
                     </div>
 
+                    <div class="field hidden" id="audienceScopeField">
+                      <label for="audienceScope">Who's this for?</label>
+                      <select id="audienceScope">
+                        <option value="community">This host's community</option>
+                        <option value="public">Open to anyone with the link</option>
+                      </select>
+                      <div class="helperText">This shapes how Hearth helps you share the drop. A community drop keeps to your host's own channels; open it up and the public posts come back into the plan too.</div>
+                    </div>
+
                   </div>
                 </div>
 
@@ -3337,6 +3346,7 @@
       byId("dropName").value = d.name || "";
       byId("dropSlug").value = d.slug || "";
       byId("dropType").value = d.drop_type || "neighbourhood";
+      byId("audienceScope").value = d.audience_scope || "community";
       byId("dropIntro").value = d.drop_intro || "";
       updateDropIntroCount();
       byId("notesInternal").value = d.notes_internal || "";
@@ -3662,6 +3672,8 @@
       if (dropTypeHelper) {
         dropTypeHelper.textContent = DROP_TYPE_HELPERS[dropType] || DROP_TYPE_HELPERS.neighbourhood;
       }
+      const audienceScopeField = byId("audienceScopeField");
+      if (audienceScopeField) audienceScopeField.classList.toggle("hidden", dropType !== "community");
       const isEvent = dropType === "event";
       const capacitySection = byId("capacitySection");
       const expectedGuestsSection = byId("expectedGuestsSection");
@@ -4119,6 +4131,7 @@
         name: byId("dropName").value.trim(),
         slug: slugify(byId("dropSlug").value.trim()),
         drop_type: byId("dropType").value,
+        audience_scope: byId("dropType").value === "community" ? byId("audienceScope").value : null,
         host_id: byId("hostSelect").value || null,
         drop_intro: byId("dropIntro").value.trim() || null,
         // reveal_line and reveal_product_id are owned by Activation now.
@@ -4179,6 +4192,7 @@
         slug: dropData.slug,
         name: dropData.name,
         drop_type: dropData.drop_type,
+        audience_scope: dropData.audience_scope,
         fulfilment_mode: dropData.fulfilment_mode,
         collection_point_description: dropData.collection_point_description,
         delivery_area_description: dropData.delivery_area_description,
@@ -5494,7 +5508,7 @@
       });
 
       [
-        "dropType", "hostSelect", "notesInternal",
+        "dropType", "audienceScope", "hostSelect", "notesInternal",
         "fulfilmentMode", "collectionPointDescription", "deliveryAreaDescription", "customerNotesEnabled",
         "centrePostcode", "radiusKm", "capacityTotal", "expectedGuests",
         "deliveryStartTime", "deliveryEndTime",
