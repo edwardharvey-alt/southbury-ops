@@ -1730,14 +1730,25 @@
     }
 
     function actLog(touchpoint, action, meta = {}){
+      const dropId = state.selectedDropId || null;
       state.activationLog.push({
         touchpoint,
         action,
-        dropId: state.selectedDropId || null,
+        dropId,
         timestamp: new Date().toISOString(),
         ...meta
       });
       renderDropView(state.selectedDropId);
+      // Persist alongside the in-memory update so the log survives reloads.
+      // Non-blocking: the UI has already updated; a persist failure is logged
+      // but never surfaced and never interrupts the flow.
+      if (dropId) {
+        sb.functions.invoke('activation-events', {
+          body: { op: 'log', drop_id: dropId, touchpoint, action, meta }
+        }).then(({ error }) => {
+          if (error) console.error('activation-events log failed', error);
+        }).catch(e => console.error('activation-events log failed', e));
+      }
     }
 
     async function actCopyToClipboard(text, btn, originalLabel) {
@@ -3359,6 +3370,34 @@
       state.messageDrafts = {};
       state.expandedMessageCards = {};
       state.cardExpanded = {};  // clear manual disclosure overrides for the new drop
+      // Hydrate this drop's activation log from the persisted store so
+      // done-states and progress survive reloads. Replace only this drop's
+      // entries — other drops' in-memory entries are left intact so the
+      // landing-page progress for already-visited drops is unaffected.
+      try {
+        const { data: logRows, error: logError } = await sb.functions.invoke('activation-events', {
+          body: { op: 'list', drop_id: dropId }
+        });
+        if (logError) {
+          console.error('activation-events list failed', logError);
+        } else if (Array.isArray(logRows)) {
+          state.activationLog = state.activationLog.filter(e => e.dropId !== dropId);
+          // Rows arrive newest-first; reverse to oldest-first so getLogEntry()
+          // (first match wins) returns the earliest entry per touchpoint,
+          // matching the in-memory push order.
+          logRows.slice().reverse().forEach(row => {
+            state.activationLog.push({
+              touchpoint: row.touchpoint,
+              action: row.action,
+              dropId: row.drop_id,
+              timestamp: row.created_at,
+              ...(row.meta || {})
+            });
+          });
+        }
+      } catch (e) {
+        console.error('activation-events list failed', e);
+      }
       renderDropView(dropId);
       // Auto-generate all message cards on first drop selection.
       // AI is the starting point — vendor edits from the generated draft.
