@@ -1402,12 +1402,12 @@
 
                     <div class="field">
                       <label for="deliveryStartTime">From</label>
-                      <input id="deliveryStartTime" type="time" />
+                      <select id="deliveryStartTime"></select>
                     </div>
 
                     <div class="field">
                       <label for="deliveryEndTime">To</label>
-                      <input id="deliveryEndTime" type="time" />
+                      <select id="deliveryEndTime"></select>
                     </div>
                   </div>
 
@@ -1525,7 +1525,7 @@
                       <label for="opensAtDate">Open for Orders</label>
                       <div class="studioGrid2" style="gap:8px;">
                         <input id="opensAtDate" type="date" />
-                        <input id="opensAtTime" type="time" />
+                        <select id="opensAtTime"></select>
                       </div>
                     </div>
                   </div>
@@ -1535,7 +1535,7 @@
                       <label for="closesAtDate">Orders close</label>
                       <div class="studioGrid2" style="gap:8px;">
                         <input id="closesAtDate" type="date" />
-                        <input id="closesAtTime" type="time" />
+                        <select id="closesAtTime"></select>
                       </div>
                     </div>
                   </div>
@@ -2057,6 +2057,46 @@
       if (Number.isNaN(d.getTime())) return "";
       const pad = (n) => String(n).padStart(2, "0");
       return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    // Renders a 12-hour label (lowercase am/pm, no leading zero on the hour)
+    // for a 24h "HH:MM" value. "00:00" -> "12:00 am", "12:00" -> "12:00 pm".
+    function formatTimeLabel(value) {
+      const [hStr, mStr] = String(value).split(":");
+      const h = Number(hStr);
+      const m = mStr ?? "00";
+      const period = h < 12 ? "am" : "pm";
+      const hour12 = h % 12 === 0 ? 12 : h % 12;
+      return `${hour12}:${m} ${period}`;
+    }
+
+    // Populates a <select> with 15-minute increments (00:00 -> 23:45). Option
+    // value is 24h "HH:MM"; label is 12h via formatTimeLabel. If selectedValue
+    // is an off-increment time, prepend an exact option for it so existing
+    // odd-time drops still display; then select the matching option.
+    function buildTimeOptions(selectEl, selectedValue) {
+      if (!selectEl) return;
+      selectEl.innerHTML = "";
+      const increments = [];
+      for (let h = 0; h < 24; h++) {
+        for (let m = 0; m < 60; m += 15) {
+          increments.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+        }
+      }
+      const hasValue = Boolean(selectedValue);
+      if (hasValue && !increments.includes(selectedValue)) {
+        const opt = document.createElement("option");
+        opt.value = selectedValue;
+        opt.textContent = formatTimeLabel(selectedValue);
+        selectEl.appendChild(opt);
+      }
+      increments.forEach((value) => {
+        const opt = document.createElement("option");
+        opt.value = value;
+        opt.textContent = formatTimeLabel(value);
+        selectEl.appendChild(opt);
+      });
+      if (hasValue) selectEl.value = selectedValue;
     }
 
     function combineDateTime(dateStr, timeStr) {
@@ -3392,8 +3432,8 @@
       clearDiscountTiersError();
 
       byId("deliveryDate").value = formatDateInput(d.delivery_start);
-      byId("deliveryStartTime").value = formatTimeInput(d.delivery_start);
-      byId("deliveryEndTime").value = formatTimeInput(d.delivery_end);
+      buildTimeOptions(byId("deliveryStartTime"), formatTimeInput(d.delivery_start));
+      buildTimeOptions(byId("deliveryEndTime"), formatTimeInput(d.delivery_end));
 
       const openPattern = d.opens_at ? "scheduled" : "immediate";
       document.querySelectorAll('input[name="openPattern"]').forEach((radio) => {
@@ -3401,9 +3441,9 @@
       });
 
       byId("opensAtDate").value = formatDateInput(d.opens_at);
-      byId("opensAtTime").value = formatTimeInput(d.opens_at);
+      buildTimeOptions(byId("opensAtTime"), formatTimeInput(d.opens_at));
       byId("closesAtDate").value = formatDateInput(d.closes_at);
-      byId("closesAtTime").value = formatTimeInput(d.closes_at);
+      buildTimeOptions(byId("closesAtTime"), formatTimeInput(d.closes_at));
 
       byId("fundraisingEnabled").checked = Boolean(d.fundraising_enabled);
       byId("fundraisingModel").value = d.fundraising_model || "";
@@ -6072,6 +6112,10 @@
         console.log('Supabase session on init:', session?.user?.id ?? 'NO SESSION');
 
         attachEvents();
+        // Populate the time dropdowns up-front so they are never empty before a
+        // drop loads or for a fresh draft; populateForm re-seeds with real values.
+        ["deliveryStartTime", "deliveryEndTime", "opensAtTime", "closesAtTime"]
+          .forEach((id) => buildTimeOptions(byId(id), ""));
         updateStatusFilterSummary();
         updateTypeFilterSummary();
         await loadVendorId();
