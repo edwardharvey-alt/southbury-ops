@@ -1582,15 +1582,13 @@
     // ONLY in the legacy fallback below.
     function resolveOpenness(summary) {
       const hasHost = !!summary.host_name;
-      if (!hasHost) return 'open';
-      // v_drop_summary does not expose host_type yet. Until that view change
-      // lands, host_type is undefined here, so fall back to the legacy signal
-      // (drop_type === 'event' ⇒ closed) — leaving today's classification
-      // unchanged. This branch retires itself once host_type is exposed.
-      if (summary.host_type === undefined) {
-        return summary.drop_type === 'event' ? 'closed' : 'open';
-      }
-      return OPEN_HOST_TYPES.has(summary.host_type) ? 'open' : 'closed';
+      // Interim default (activation step 1): any drop anchored to a host is treated
+      // as community/closed — the host leads activation and the public Instagram
+      // cards (reveal, capacity, post-drop) are suppressed. A drop with no host
+      // (neighbourhood) stays open. Replaced in step 2 by an explicit vendor-set
+      // audience field on the drop; OPEN_HOST_TYPES is left defined for that work
+      // and is intentionally unused for now.
+      return hasHost ? 'closed' : 'open';
     }
 
     // Returns the set of touchpoint card numbers relevant for this drop,
