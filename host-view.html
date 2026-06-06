@@ -1038,6 +1038,27 @@
         });
       });
 
+      // Non-blocking persist of a host share so the vendor surface can later
+      // see the host has acted. Reuses the existing _sb client (host-token
+      // path on the activation-events Edge Function — actor is stamped 'host'
+      // server-side from the token, never sent from here). Fire-and-forget:
+      // never alters the copy behaviour, only logs on failure.
+      function logHostShare(touchpoint){
+        if (!_sb || !state.dropId || !state.token) return;
+        _sb.functions.invoke("activation-events", {
+          body: { op: "log", drop_id: state.dropId, touchpoint, action: "shared", host_token: state.token }
+        }).then(({ error }) => { if (error) console.error("activation-events log failed", error); })
+          .catch((e) => console.error("activation-events log failed", e));
+      }
+
+      // Touchpoint mapping must match the vendor-side cardKeyMap so both
+      // surfaces agree: heads-up (Step 1) → tuesday_host; order-link share
+      // (Step 2 message) → thursday_host_link.
+      const SHARE_TOUCHPOINTS = {
+        hvMsgStep1: "tuesday_host",
+        hvMsgStep2: "thursday_host_link",
+      };
+
       // Copy-message buttons (read live textarea contents).
       document.querySelectorAll("[data-copy-target]").forEach((btn) => {
         btn.addEventListener("click", async () => {
@@ -1046,6 +1067,8 @@
           try {
             await copyTextToClipboard(target.value);
             flashCopied(btn);
+            const tp = SHARE_TOUCHPOINTS[btn.dataset.copyTarget];
+            if (tp) logHostShare(tp);
           } catch (err){
             console.error("copy failed", err);
           }
@@ -1059,6 +1082,7 @@
           try {
             await copyTextToClipboard(orderLink);
             flashCopied(copyLinkBtn);
+            logHostShare("thursday_host_link");
           } catch (err){
             console.error("copy failed", err);
           }
