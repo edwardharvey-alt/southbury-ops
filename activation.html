@@ -2372,7 +2372,13 @@
       return {
         vendor_name:     state.vendor?.display_name || '',
         drop_name:       rawDrop.name || '',
-        host_name:       rawDrop.host_name || null,
+        // host_name lives on the v_drop_summary row, not the raw drops row
+        // (which carries host_id only). Sourcing it from rawDrop left this
+        // always null, so the EF fell back to "their neighbourhood" even for
+        // hosted drops. Prefer the summary — same field the rest of the page
+        // uses for hasHost — so hosted drops name their venue and only true
+        // neighbourhood drops (null host) get the EF's neighbourhood fallback.
+        host_name:       summary?.host_name || rawDrop.host_name || null,
         delivery_day:    deliveryDay,
         opens_day:       opensDay,
         opens_time:      fmtT(rawDrop.opens_at),
@@ -2715,6 +2721,13 @@
         return optionalCards.has(cardNum);
       }
 
+      // Helper: append the "(optional)" title marker generically for
+      // whichever card(s) profile.optional contains — never a hardcoded
+      // card index. Card 1 keeps its own richer optional treatment below.
+      function optionalTitle(cardNum, title) {
+        return isOptional(cardNum) ? `${title} (optional)` : title;
+      }
+
       const dropName = summary.drop_name || rawDrop.name || 'Your drop';
       const hostName = summary.host_name || '';
       const vendorName = vendor.display_name || vendor.name || 'your kitchen';
@@ -2898,7 +2911,7 @@
           typeClass: 'is-host',
           cardNum: 2,
           label: labels[1],
-          title: 'Share with your host',
+          title: optionalTitle(2, 'Share with your host'),
           desc: `Ask ${eHost} to let their community know what's coming. This message goes into their channel in their own voice — Hearth prepares it, they send it.`,
           messageText: templates['tuesday_host'],
           channels: ['WhatsApp', 'email', 'social'],
@@ -2918,7 +2931,7 @@
           typeClass: 'is-auto',
           cardNum: 3,
           label: labels[2],
-          title: 'Early access for previous customers',
+          title: optionalTitle(3, 'Early access for previous customers'),
           channel: 'Email',
           desc: 'Previous customers get access before the public link goes live. Review and confirm the email below.',
           subject: state.emailDrafts['thursday_early_access'].subject,
@@ -3075,7 +3088,7 @@
         classes: `act-touchpoint is-vendor${card4Entry ? ' is-done' : ''}`,
         cardNum: 4,
         label: labels[3],
-        title: 'Tell your customers ordering is live',
+        title: optionalTitle(4, 'Tell your customers ordering is live'),
         bodyHtml: card4Body,
         open: actCardOpen(4, !!card4Entry, false),
         bodyId: 'act-tp-body-4'
@@ -3096,7 +3109,7 @@
           typeClass: 'is-host',
           cardNum: 5,
           label: labels[4],
-          title: 'Ask your host to drop the link',
+          title: optionalTitle(5, 'Ask your host to drop the link'),
           desc: card5Desc,
           messageText: templates['thursday_host_link'],
           channels: card5Channels,
@@ -3157,7 +3170,7 @@
         classes: `act-touchpoint is-prompted${card6Locked ? ' is-locked' : ''}${card6Entry ? ' is-done' : ''}`,
         cardNum: 6,
         label: labels[5],
-        title: 'Share your capacity signal',
+        title: optionalTitle(6, 'Share your capacity signal'),
         channel: 'Instagram',
         bodyHtml: card6Body,
         open: actCardOpen(6, !!card6Entry, card6Locked),
@@ -3174,7 +3187,7 @@
           typeClass: 'is-auto',
           cardNum: 7,
           label: labels[6],
-          title: 'Order-ready notifications are automatic',
+          title: optionalTitle(7, 'Order-ready notifications are automatic'),
           desc: "There's nothing to send from here. When you mark an order Ready on the Service Board during service, the platform notifies that customer automatically. Keep the Service Board open while you work.",
           actionHtml: `<a class="act-copy-btn" href="${HearthNav.withVendor('./service-board.html')}">Open Service Board</a>`
         }));
@@ -3217,7 +3230,7 @@
           typeClass: 'is-prompted',
           cardNum: 8,
           label: labels[7],
-          title: 'Close the loop on social',
+          title: optionalTitle(8, 'Close the loop on social'),
           channel: 'Instagram',
           desc: "Post a real moment from the drop — food leaving the kitchen, the venue, a community moment. Unpolished is fine. Then post the sold-out confirmation if you haven't already.",
           actionHtml: card8ActionHtml,
@@ -3233,7 +3246,7 @@
           typeClass: 'is-auto',
           cardNum: 9,
           label: labels[8],
-          title: 'Thank-you email to every customer',
+          title: optionalTitle(9, 'Thank-you email to every customer'),
           channel: 'Email',
           desc: 'A warm, brief thank-you goes to everyone who ordered. Review and confirm before it sends.',
           subject: state.emailDrafts['saturday_thankyou'].subject,
