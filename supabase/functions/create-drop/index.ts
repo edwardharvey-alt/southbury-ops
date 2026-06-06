@@ -19,6 +19,7 @@ const ALLOWED_FIELDS = new Set([
   "name",
   "slug",
   "drop_type",
+  "audience_scope",
   "status",
   "drop_intro",
   "reveal_line",

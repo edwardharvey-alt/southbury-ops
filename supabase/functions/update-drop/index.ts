@@ -24,6 +24,7 @@ const ALLOWED_FIELDS = new Set([
   "name",
   "slug",
   "drop_type",
+  "audience_scope",
   "host_id",
   "notes_internal",
   "drop_intro",
@@ -65,6 +66,7 @@ const ALLOWED_FIELDS = new Set([
 ]);
 
 const VALID_DROP_TYPES = new Set(["neighbourhood", "hosted", "community", "event"]);
+const VALID_AUDIENCE_SCOPES = new Set(["public", "community"]);
 const VALID_FUNDRAISING_MODELS = new Set(["percentage", "per_order"]);
 const VALID_HOST_SHARE_MODELS = new Set(["percentage", "per_order", "fixed"]);
 
@@ -190,6 +192,13 @@ Deno.serve(async (req) => {
       const dt = update.drop_type;
       if (dt !== null && (typeof dt !== "string" || !VALID_DROP_TYPES.has(dt))) {
         return jsonResponse({ error: "Invalid drop_type" }, 400);
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(update, "audience_scope")) {
+      const as = update.audience_scope;
+      if (as !== null && (typeof as !== "string" || !VALID_AUDIENCE_SCOPES.has(as))) {
+        return jsonResponse({ error: "Invalid audience_scope" }, 400);
       }
     }
 
