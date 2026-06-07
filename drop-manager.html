@@ -1878,6 +1878,7 @@
       showInactiveMenuItems: false,
       discountTiers: [],
       timingAdjustOpen: false,
+      timingTouched: { opensAt: false, closesAt: false },
       dragState: {
         key: null,
         categoryName: null
@@ -2307,6 +2308,24 @@
       }
       if (!opensPart && !closesPart) { el.textContent = "Set your ordering window below."; return; }
       el.textContent = [opensPart, closesPart].filter(Boolean).join(", and ") + ".";
+    }
+
+    function setDateTimeControls(dateId, timeSelectId, ts) {
+      byId(dateId).value = formatDateInput(ts);
+      buildTimeOptions(byId(timeSelectId), formatTimeInput(ts));
+    }
+
+    function deriveTimingFromDelivery() {
+      const deliveryStart = combineDateTime(byId("deliveryDate").value, byId("deliveryStartTime").value);
+      if (!deliveryStart) return;
+      const startMs = new Date(deliveryStart).getTime();
+      if (!state.timingTouched.closesAt) {
+        setDateTimeControls("closesAtDate", "closesAtTime", startMs - 2 * 60 * 60 * 1000);
+      }
+      if (getOpenPattern() === "scheduled" && !state.timingTouched.opensAt) {
+        setDateTimeControls("opensAtDate", "opensAtTime", startMs - 24 * 60 * 60 * 1000);
+      }
+      renderOrderWindowSentence();
     }
 
     function getLiveDropFromForm() {
@@ -3460,6 +3479,7 @@
       buildTimeOptions(byId("opensAtTime"), formatTimeInput(d.opens_at));
       byId("closesAtDate").value = formatDateInput(d.closes_at);
       buildTimeOptions(byId("closesAtTime"), formatTimeInput(d.closes_at));
+      state.timingTouched = { opensAt: false, closesAt: false };
 
       byId("fundraisingEnabled").checked = Boolean(d.fundraising_enabled);
       byId("fundraisingModel").value = d.fundraising_model || "";
@@ -5594,6 +5614,7 @@
         ensureSeriesDayMatchesDropDateIfDefault();
         renderConditionalFields();
         renderSeriesPreview();
+        deriveTimingFromDelivery();
         markDirty();
       });
 
@@ -5602,6 +5623,11 @@
         if (!el) return;
         el.addEventListener("change", clearDuplicateBanner);
         el.addEventListener("input", clearDuplicateBanner);
+      });
+
+      byId("deliveryStartTime").addEventListener("change", () => {
+        deriveTimingFromDelivery();
+        markDirty();
       });
 
       document.querySelectorAll('.capacityModePill').forEach(pill => {
@@ -5626,10 +5652,16 @@
         markDirty();
       });
 
-      ["opensAtDate", "opensAtTime", "closesAtDate", "closesAtTime"].forEach((id) => {
+      const opensFieldIds = ["opensAtDate", "opensAtTime"];
+      const closesFieldIds = ["closesAtDate", "closesAtTime"];
+      [...opensFieldIds, ...closesFieldIds].forEach((id) => {
         const el = byId(id);
         if (!el) return;
-        el.addEventListener("change", renderOrderWindowSentence);
+        el.addEventListener("change", () => {
+          if (opensFieldIds.includes(id)) state.timingTouched.opensAt = true;
+          if (closesFieldIds.includes(id)) state.timingTouched.closesAt = true;
+          renderOrderWindowSentence();
+        });
       });
 
       byId("orderWindowAdjustBtn").addEventListener("click", () => {
