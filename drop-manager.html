@@ -1472,7 +1472,6 @@
                             <th>Day</th>
                             <th>From</th>
                             <th>To</th>
-                            <th>Orders Close</th>
                             <th></th>
                           </tr>
                         </thead>
@@ -2327,6 +2326,16 @@
         setDateTimeControls("opensAtDate", "opensAtTime", startMs - 24 * 60 * 60 * 1000);
       }
       renderOrderWindowSentence();
+    }
+
+    function deriveOccurrenceTiming(dateStr, fulfilmentStart, scheduled) {
+      const deliveryStart = combineDateTime(dateStr, fulfilmentStart);
+      if (!deliveryStart) return { opens_at: null, closes_at: null };
+      const startMs = new Date(deliveryStart).getTime();
+      return {
+        opens_at: scheduled ? new Date(startMs - 24 * 60 * 60 * 1000).toISOString() : null,
+        closes_at: new Date(startMs - 2 * 60 * 60 * 1000).toISOString(),
+      };
     }
 
     function getLiveDropFromForm() {
@@ -3926,8 +3935,7 @@
             id: uidSuffix(),
             day_of_week: getDayOfWeekFromDateInput(byId("deliveryDate")?.value),
             fulfilment_start: "19:00",
-            fulfilment_end: "20:00",
-            order_close_time: "18:00"
+            fulfilment_end: "20:00"
           }
         ];
       }
@@ -3951,7 +3959,6 @@
           </td>
           <td><input class="js-schedule-start" type="time" value="${row.fulfilment_start || ""}" /></td>
           <td><input class="js-schedule-end" type="time" value="${row.fulfilment_end || ""}" /></td>
-          <td><input class="js-schedule-close" type="time" value="${row.order_close_time || ""}" /></td>
           <td><button class="btnGhost js-remove-schedule-row" type="button">Remove</button></td>
         </tr>
       `).join("");
@@ -4402,8 +4409,7 @@
           occurrences.push({
             dateStr,
             fulfilment_start: row.fulfilment_start,
-            fulfilment_end: row.fulfilment_end,
-            order_close_time: row.order_close_time || null
+            fulfilment_end: row.fulfilment_end
           });
         });
 
@@ -4472,8 +4478,9 @@
           payload.series_position = 1;
           payload.delivery_start = combineDateTime(first.dateStr, first.fulfilment_start);
           payload.delivery_end = combineDateTime(first.dateStr, first.fulfilment_end);
-          payload.closes_at = first.order_close_time ? combineDateTime(first.dateStr, first.order_close_time) : null;
-          payload.opens_at = dropData.opens_at; // Keep form value for first drop
+          const firstTiming = deriveOccurrenceTiming(first.dateStr, first.fulfilment_start, getOpenPattern() === "scheduled");
+          payload.opens_at = firstTiming.opens_at;
+          payload.closes_at = firstTiming.closes_at;
           // status: "draft" is intentionally not written here (audit Section 4.2 —
           // the saveDrop series branch only fires when isRecurring && !alreadyInSeries
           // and the recurring toggle only appears on draft drops, so the value would
@@ -4508,6 +4515,7 @@
             for (let idx = 0; idx < remainingOccurrences.length; idx++) {
               const occ = remainingOccurrences[idx];
               const position = idx + 2;
+              const occTiming = deriveOccurrenceTiming(occ.dateStr, occ.fulfilment_start, getOpenPattern() === "scheduled");
               const siblingFields = {
                 ...siblingBase,
                 slug: buildUniqueSlug(`${payload.slug}-${position}`),
@@ -4515,8 +4523,8 @@
                 series_position: position,
                 delivery_start: combineDateTime(occ.dateStr, occ.fulfilment_start),
                 delivery_end: combineDateTime(occ.dateStr, occ.fulfilment_end),
-                closes_at: occ.order_close_time ? combineDateTime(occ.dateStr, occ.order_close_time) : null,
-                opens_at: null,
+                closes_at: occTiming.closes_at,
+                opens_at: occTiming.opens_at,
                 status: "draft"
               };
 
@@ -5271,7 +5279,6 @@
       row.day_of_week = tr.querySelector(".js-schedule-day").value;
       row.fulfilment_start = tr.querySelector(".js-schedule-start").value;
       row.fulfilment_end = tr.querySelector(".js-schedule-end").value;
-      row.order_close_time = tr.querySelector(".js-schedule-close").value;
       renderSeriesPreview();
       markDirty();
     }
@@ -5722,8 +5729,7 @@
           id: uidSuffix(),
           day_of_week: getDayOfWeekFromDateInput(byId("deliveryDate")?.value),
           fulfilment_start: "19:00",
-          fulfilment_end: "20:00",
-          order_close_time: "18:00"
+          fulfilment_end: "20:00"
         });
         renderScheduleRows();
         renderSeriesPreview();
