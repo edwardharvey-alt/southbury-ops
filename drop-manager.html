@@ -1878,7 +1878,7 @@
       showInactiveMenuItems: false,
       discountTiers: [],
       timingAdjustOpen: false,
-      timingTouched: { opensAt: false, closesAt: false },
+      timingTouched: { opensAt: false, closesAt: false, openPattern: false },
       dragState: {
         key: null,
         categoryName: null
@@ -2307,7 +2307,8 @@
         opensPart = "Ordering opens as soon as you publish";
       }
       if (!opensPart && !closesPart) { el.textContent = "Set your ordering window below."; return; }
-      el.textContent = [opensPart, closesPart].filter(Boolean).join(", and ") + ".";
+      const sentence = [opensPart, closesPart].filter(Boolean).join(", and ") + ".";
+      el.textContent = sentence.charAt(0).toUpperCase() + sentence.slice(1);
     }
 
     function setDateTimeControls(dateId, timeSelectId, ts) {
@@ -3479,7 +3480,7 @@
       buildTimeOptions(byId("opensAtTime"), formatTimeInput(d.opens_at));
       byId("closesAtDate").value = formatDateInput(d.closes_at);
       buildTimeOptions(byId("closesAtTime"), formatTimeInput(d.closes_at));
-      state.timingTouched = { opensAt: false, closesAt: false };
+      state.timingTouched = { opensAt: false, closesAt: false, openPattern: false };
 
       byId("fundraisingEnabled").checked = Boolean(d.fundraising_enabled);
       byId("fundraisingModel").value = d.fundraising_model || "";
@@ -4601,8 +4602,8 @@
       deliveryStart.setHours(19, 0, 0, 0);
       const deliveryEnd = new Date(deliveryStart);
       deliveryEnd.setHours(20, 0, 0, 0);
-      const closesAt = new Date(deliveryStart);
-      closesAt.setHours(18, 0, 0, 0);
+      const opensAt = new Date(deliveryStart.getTime() - 24 * 60 * 60 * 1000);
+      const closesAt = new Date(deliveryStart.getTime() - 2 * 60 * 60 * 1000);
 
       const slug = buildUniqueSlug(`new-drop-${uidSuffix()}`);
 
@@ -4620,7 +4621,7 @@
         capacity_category_id: null,
         capacity_category: null,
         capacity_units_total: 40,
-        opens_at: null,
+        opens_at: opensAt.toISOString(),
         closes_at: closesAt.toISOString(),
         delivery_start: deliveryStart.toISOString(),
         delivery_end: deliveryEnd.toISOString(),
@@ -5630,6 +5631,15 @@
         markDirty();
       });
 
+      byId("dropType").addEventListener("change", () => {
+        if (byId("dropType").value === "event" && !state.timingTouched.openPattern) {
+          byId("openImmediateToggle").checked = true;
+          renderConditionalFields();
+          renderOrderWindowSentence();
+        }
+        markDirty();
+      });
+
       document.querySelectorAll('.capacityModePill').forEach(pill => {
         pill.addEventListener('click', () => {
           setCapacityMode(pill.dataset.mode);
@@ -5647,6 +5657,10 @@
       }
 
       byId("openImmediateToggle").addEventListener("change", () => {
+        state.timingTouched.openPattern = true;
+        if (getOpenPattern() === "scheduled") {
+          deriveTimingFromDelivery();
+        }
         renderConditionalFields();
         renderOrderWindowSentence();
         markDirty();
