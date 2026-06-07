@@ -1709,6 +1709,7 @@
         </div>
 
         <div class="heroBodyCard">
+          <div class="statusNotice hidden" id="previewBanner"></div>
           <div class="statusNotice hidden" id="pageStatusNotice"></div>
           <div class="errorBox" id="errorBox"></div>
         </div>
@@ -2358,20 +2359,55 @@
       }
 
       async function loadDropContext() {
+        const previewId = getQueryParam("preview");
         state.dropSlug = getQueryParam("drop");
+        state.drop = null;
+        state.isPreview = false;
 
-        if (!state.dropSlug) {
-          throw new Error("Missing drop slug in URL. Expected format: order.html?drop=your-drop-slug");
+        /* Authenticated draft preview: only when ?preview=<drop_id> is present and a
+           vendor session exists. get-drop verifies ownership server-side and returns
+           the owner's draft (no status gate). Any failure falls through to the normal
+           anon customer path below, leaving the real customer experience unchanged. */
+        if (previewId) {
+          try {
+            const { data: sessData } = await supabase.auth.getSession();
+            if (sessData && sessData.session) {
+              const { data: inv, error: invErr } = await supabase.functions.invoke("get-drop", { body: { drop_id: previewId } });
+              if (!invErr && inv && !inv.error && inv.id) {
+                state.drop = {
+                  id: inv.id, slug: inv.slug, name: inv.name, status: inv.status,
+                  drop_type: inv.drop_type, drop_intro: inv.drop_intro, vendor_id: inv.vendor_id,
+                  host_id: inv.host_id, window_group_id: inv.window_group_id,
+                  opens_at: inv.opens_at, closes_at: inv.closes_at,
+                  delivery_start: inv.delivery_start, delivery_end: inv.delivery_end,
+                  fulfilment_mode: inv.fulfilment_mode, capacity_units_total: inv.capacity_units_total,
+                  capacity_category: inv.capacity_category, capacity_category_id: inv.capacity_category_id,
+                  delivery_area_type: inv.delivery_area_type, allowed_postcode_prefixes: inv.allowed_postcode_prefixes,
+                  discount_tiers: inv.discount_tiers,
+                };
+                state.isPreview = true;
+              }
+            }
+          } catch (e) { /* fall through to anon path */ }
         }
 
-        const dropRes = await supabase
-          .from("drops")
-          .select("id, slug, name, status, drop_type, drop_intro, vendor_id, host_id, window_group_id, opens_at, closes_at, delivery_start, delivery_end, fulfilment_mode, capacity_units_total, capacity_category, capacity_category_id, delivery_area_type, allowed_postcode_prefixes, discount_tiers")
-          .eq("slug", state.dropSlug)
-          .single();
+        if (!state.drop) {
+          if (!state.dropSlug) {
+            throw new Error("Missing drop slug in URL. Expected format: order.html?drop=your-drop-slug");
+          }
+          const dropRes = await supabase
+            .from("drops")
+            .select("id, slug, name, status, drop_type, drop_intro, vendor_id, host_id, window_group_id, opens_at, closes_at, delivery_start, delivery_end, fulfilment_mode, capacity_units_total, capacity_category, capacity_category_id, delivery_area_type, allowed_postcode_prefixes, discount_tiers")
+            .eq("slug", state.dropSlug)
+            .maybeSingle();
 
-        if (dropRes.error) throw dropRes.error;
-        state.drop = dropRes.data;
+          if (dropRes.error) throw dropRes.error;
+          state.drop = dropRes.data;
+        }
+
+        if (!state.drop) {
+          throw new Error("This drop isn’t available — it may be unpublished or no longer running.");
+        }
 
         const summaryRes = await supabase
           .from("v_drop_public")
@@ -2386,10 +2422,13 @@
           .from("vendors")
           .select("id, display_name, name, tagline, logo_url, hero_image_url, website_url, brand_primary_color, brand_secondary_color, brand_text_on_primary, powered_by_hearth_visible")
           .eq("id", state.drop.vendor_id)
-          .single();
+          .maybeSingle();
 
         if (vendorRes.error) throw vendorRes.error;
         state.vendor = vendorRes.data;
+        if (!state.vendor) {
+          throw new Error("This drop isn’t available — it may be unpublished or no longer running.");
+        }
 
         if (state.drop.host_id) {
           const hostRes = await supabase
@@ -2623,6 +2662,17 @@
 
       function renderHero() {
         applyVendorBranding();
+
+        const previewBanner = byId("previewBanner");
+        if (previewBanner) {
+          if (state.isPreview) {
+            previewBanner.textContent = "Preview — this drop isn’t published yet. Live capacity isn’t shown here.";
+            previewBanner.className = "statusNotice";
+          } else {
+            previewBanner.textContent = "";
+            previewBanner.className = "statusNotice hidden";
+          }
+        }
 
         const dropTitle = stripWindowSuffix(state.drop?.name || state.dropSummary?.drop_name || "Available now");
         const timingLabel = formatDateTimeRange(state.drop?.delivery_start, state.drop?.delivery_end);

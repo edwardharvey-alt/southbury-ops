@@ -5373,7 +5373,9 @@
     function previewOrderPage() {
       const url = getShareUrl();
       if (!url) throw new Error("No drop link available yet.");
-      window.open(url, "_blank");
+      const id = state.drop?.id || state.selectedDropId;
+      const previewUrl = id ? url + (url.includes("?") ? "&" : "?") + "preview=" + encodeURIComponent(id) : url;
+      window.open(previewUrl, "_blank");
     }
 
     function openServiceBoard() {
