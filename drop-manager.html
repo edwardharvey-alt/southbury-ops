@@ -4868,16 +4868,25 @@
       const body = byId("eventWindowRowsBody");
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td><input class="js-ew-start" type="time" /></td>
-        <td><input class="js-ew-end" type="time" /></td>
-        <td><input class="js-ew-close" type="time" /></td>
+        <td><select class="js-ew-start"></select></td>
+        <td><select class="js-ew-end"></select></td>
+        <td><select class="js-ew-close"></select></td>
         <td><button class="btnGhost js-remove-ew-row" type="button">Remove</button></td>
       `;
       body.appendChild(tr);
-      /* Auto-populate Close from From when Close is still empty */
+      /* Populate each time select with the 15-min increments (#314) plus a leading
+         blank "--:--" sentinel. Create-only rows start empty, so value stays "" until
+         the vendor picks a time — preserving the skip-empty logic in
+         handleCreateEventWindows (an unfilled row is never saved as a midnight window). */
+      tr.querySelectorAll(".js-ew-start, .js-ew-end, .js-ew-close").forEach((sel) => {
+        buildTimeOptions(sel, "");
+        sel.insertAdjacentHTML("afterbegin", '<option value="">--:--</option>');
+        sel.value = "";
+      });
+      /* Auto-populate Close from From when Close is still empty (selects fire change) */
       const startInput = tr.querySelector(".js-ew-start");
       const closeInput = tr.querySelector(".js-ew-close");
-      startInput.addEventListener("input", () => {
+      startInput.addEventListener("change", () => {
         if (!closeInput.value) closeInput.value = startInput.value;
       });
     }
