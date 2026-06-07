@@ -1517,26 +1517,42 @@
                       <input type="checkbox" id="openImmediateToggle" checked />
                       <span>Open for orders straight away</span>
                     </label>
-                    <button type="button" id="orderWindowAdjustBtn" style="padding:0;background:none;border:none;cursor:pointer;text-decoration:underline;">Adjust</button>
                   </div>
 
-                  <div class="studioGrid2 hidden" id="scheduledOpenFields" style="margin-top:10px;">
-                    <div class="field">
-                      <label for="opensAtDate">Open for Orders</label>
-                      <div class="studioGrid2" style="gap:8px;">
-                        <input id="opensAtDate" type="date" />
-                        <select id="opensAtTime"></select>
-                      </div>
+                  <div class="field hidden" id="scheduledOpenFields" style="margin-top:10px;">
+                    <label for="openLeadSelect">Ordering opens</label>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <select id="openLeadSelect">
+                        <option value="720">12 hours</option>
+                        <option value="1440" selected>1 day</option>
+                        <option value="2880">2 days</option>
+                        <option value="4320">3 days</option>
+                        <option value="10080">1 week</option>
+                      </select>
+                      <span class="helperText">before each drop</span>
+                    </div>
+                    <div style="display:none;">
+                      <input id="opensAtDate" type="date" />
+                      <select id="opensAtTime"></select>
                     </div>
                   </div>
 
-                  <div id="closeOrdersSection" class="studioGrid2" style="margin-top:10px;">
-                    <div class="field">
-                      <label for="closesAtDate">Orders close</label>
-                      <div class="studioGrid2" style="gap:8px;">
-                        <input id="closesAtDate" type="date" />
-                        <select id="closesAtTime"></select>
-                      </div>
+                  <div id="closeOrdersSection" class="field" style="margin-top:10px;">
+                    <label for="closeLeadSelect">Orders close</label>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <select id="closeLeadSelect">
+                        <option value="120" selected>2 hours</option>
+                        <option value="240">4 hours</option>
+                        <option value="360">6 hours</option>
+                        <option value="720">12 hours</option>
+                        <option value="1440">1 day</option>
+                        <option value="2880">2 days</option>
+                      </select>
+                      <span class="helperText">before each drop</span>
+                    </div>
+                    <div style="display:none;">
+                      <input id="closesAtDate" type="date" />
+                      <select id="closesAtTime"></select>
                     </div>
                   </div>
                 </div>
@@ -2317,15 +2333,37 @@
       buildTimeOptions(byId(timeSelectId), formatTimeInput(ts));
     }
 
+    function getOpenLeadMinutes() { return parseInt(byId("openLeadSelect").value, 10) || 1440; }
+    function getCloseLeadMinutes() { return parseInt(byId("closeLeadSelect").value, 10) || 120; }
+    function nearestLeadOption(minutes, selectEl) {
+      let best = null, bestDiff = Infinity;
+      for (const opt of selectEl.options) {
+        const diff = Math.abs(parseInt(opt.value, 10) - minutes);
+        if (diff < bestDiff) { bestDiff = diff; best = opt.value; }
+      }
+      return best;
+    }
+    function recapCloseOptions() {
+      const scheduled = getOpenPattern() === "scheduled";
+      const openLead = getOpenLeadMinutes();
+      const sel = byId("closeLeadSelect");
+      for (const opt of sel.options) {
+        opt.disabled = scheduled && parseInt(opt.value, 10) >= openLead;
+      }
+      if (sel.options[sel.selectedIndex] && sel.options[sel.selectedIndex].disabled) {
+        let pick = null;
+        for (const opt of sel.options) { if (!opt.disabled) pick = opt.value; }
+        if (pick != null) sel.value = pick;
+      }
+    }
+
     function deriveTimingFromDelivery() {
       const deliveryStart = combineDateTime(byId("deliveryDate").value, byId("deliveryStartTime").value);
-      if (!deliveryStart) return;
+      if (!deliveryStart) { renderOrderWindowSentence(); return; }
       const startMs = new Date(deliveryStart).getTime();
-      if (!state.timingTouched.closesAt) {
-        setDateTimeControls("closesAtDate", "closesAtTime", startMs - 2 * 60 * 60 * 1000);
-      }
-      if (getOpenPattern() === "scheduled" && !state.timingTouched.opensAt) {
-        setDateTimeControls("opensAtDate", "opensAtTime", startMs - 24 * 60 * 60 * 1000);
+      setDateTimeControls("closesAtDate", "closesAtTime", startMs - getCloseLeadMinutes() * 60 * 1000);
+      if (getOpenPattern() === "scheduled") {
+        setDateTimeControls("opensAtDate", "opensAtTime", startMs - getOpenLeadMinutes() * 60 * 1000);
       }
       renderOrderWindowSentence();
     }
@@ -2335,8 +2373,8 @@
       if (!deliveryStart) return { opens_at: null, closes_at: null };
       const startMs = new Date(deliveryStart).getTime();
       return {
-        opens_at: scheduled ? new Date(startMs - 24 * 60 * 60 * 1000).toISOString() : null,
-        closes_at: new Date(startMs - 2 * 60 * 60 * 1000).toISOString(),
+        opens_at: scheduled ? new Date(startMs - getOpenLeadMinutes() * 60 * 1000).toISOString() : null,
+        closes_at: new Date(startMs - getCloseLeadMinutes() * 60 * 1000).toISOString(),
       };
     }
 
@@ -3491,6 +3529,14 @@
       buildTimeOptions(byId("opensAtTime"), formatTimeInput(d.opens_at));
       byId("closesAtDate").value = formatDateInput(d.closes_at);
       buildTimeOptions(byId("closesAtTime"), formatTimeInput(d.closes_at));
+      const delivMs = d.delivery_start ? new Date(d.delivery_start).getTime() : null;
+      if (delivMs && d.opens_at) {
+        byId("openLeadSelect").value = nearestLeadOption(Math.round((delivMs - new Date(d.opens_at).getTime()) / 60000), byId("openLeadSelect"));
+      }
+      if (delivMs && d.closes_at) {
+        byId("closeLeadSelect").value = nearestLeadOption(Math.round((delivMs - new Date(d.closes_at).getTime()) / 60000), byId("closeLeadSelect"));
+      }
+      recapCloseOptions();
       state.timingTouched = { opensAt: false, closesAt: false, openPattern: false };
 
       byId("fundraisingEnabled").checked = Boolean(d.fundraising_enabled);
@@ -3805,10 +3851,9 @@
       byId("seriesDropCountField").classList.toggle("hidden", endMode !== "drop_count");
 
       const openPattern = getOpenPattern();
-      const newSeries = recurring && !state.drop?.series_id;
-      byId("orderWindowAdjustBtn").classList.toggle("hidden", newSeries);
-      byId("scheduledOpenFields").classList.toggle("hidden", newSeries || !(state.timingAdjustOpen && openPattern === "scheduled"));
-      byId("closeOrdersSection").classList.toggle("hidden", newSeries || !state.timingAdjustOpen);
+      byId("scheduledOpenFields").classList.toggle("hidden", openPattern !== "scheduled");
+      byId("closeOrdersSection").classList.remove("hidden");
+      recapCloseOptions();
 
       /* Event windows (T4-15) — show section only when a host is selected */
       const liveDrop = getLiveDropFromForm() || state.drop;
@@ -5669,11 +5714,9 @@
 
       byId("openImmediateToggle").addEventListener("change", () => {
         state.timingTouched.openPattern = true;
-        if (getOpenPattern() === "scheduled") {
-          deriveTimingFromDelivery();
-        }
         renderConditionalFields();
-        renderOrderWindowSentence();
+        recapCloseOptions();
+        deriveTimingFromDelivery();
         markDirty();
       });
 
@@ -5689,10 +5732,15 @@
         });
       });
 
-      byId("orderWindowAdjustBtn").addEventListener("click", () => {
-        state.timingAdjustOpen = !state.timingAdjustOpen;
-        byId("orderWindowAdjustBtn").textContent = state.timingAdjustOpen ? "Done" : "Adjust";
-        renderConditionalFields();
+      byId("openLeadSelect").addEventListener("change", () => {
+        recapCloseOptions();
+        deriveTimingFromDelivery();
+        markDirty();
+      });
+
+      byId("closeLeadSelect").addEventListener("change", () => {
+        deriveTimingFromDelivery();
+        markDirty();
       });
 
       byId("dropName").addEventListener("input", () => {
