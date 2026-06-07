@@ -2295,15 +2295,17 @@
       const el = byId("orderWindowSentence");
       if (!el) return;
       const scheduled = getOpenPattern() === "scheduled";
+      const perDrop = getRepeatPattern() === "recurring" && !state.drop?.series_id;
+      const lead = perDrop ? "Each drop opens" : "Ordering opens";
       const weekday = (d) => d ? new Date(d + "T00:00").toLocaleDateString("en-GB", { weekday: "long" }) : "";
       const cD = byId("closesAtDate").value, cT = byId("closesAtTime").value;
       const oD = byId("opensAtDate").value, oT = byId("opensAtTime").value;
       const closesPart = (cD && cT) ? `closes ${weekday(cD)} at ${formatTimeLabel(cT)}` : "";
       let opensPart;
       if (scheduled) {
-        opensPart = (oD && oT) ? `Ordering opens ${weekday(oD)} at ${formatTimeLabel(oT)}` : "";
+        opensPart = (oD && oT) ? `${lead} ${weekday(oD)} at ${formatTimeLabel(oT)}` : "";
       } else {
-        opensPart = "Ordering opens as soon as you publish";
+        opensPart = perDrop ? "Each drop opens straight away" : "Ordering opens as soon as you publish";
       }
       if (!opensPart && !closesPart) { el.textContent = "Set your ordering window below."; return; }
       const sentence = [opensPart, closesPart].filter(Boolean).join(", and ") + ".";
@@ -3803,8 +3805,10 @@
       byId("seriesDropCountField").classList.toggle("hidden", endMode !== "drop_count");
 
       const openPattern = getOpenPattern();
-      byId("scheduledOpenFields").classList.toggle("hidden", !(state.timingAdjustOpen && openPattern === "scheduled"));
-      byId("closeOrdersSection").classList.toggle("hidden", !state.timingAdjustOpen);
+      const newSeries = recurring && !state.drop?.series_id;
+      byId("orderWindowAdjustBtn").classList.toggle("hidden", newSeries);
+      byId("scheduledOpenFields").classList.toggle("hidden", newSeries || !(state.timingAdjustOpen && openPattern === "scheduled"));
+      byId("closeOrdersSection").classList.toggle("hidden", newSeries || !state.timingAdjustOpen);
 
       /* Event windows (T4-15) — show section only when a host is selected */
       const liveDrop = getLiveDropFromForm() || state.drop;
@@ -5719,6 +5723,7 @@
           ensureRecurringStartDateFromDropDate();
           ensureSeriesDayMatchesDropDateIfDefault();
           renderConditionalFields();
+          renderOrderWindowSentence();
           renderSeriesPreview();
           markDirty();
         });
