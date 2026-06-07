@@ -3573,16 +3573,20 @@
       byId("hostShareCustomerVisible").value = String(Boolean(d.host_share_customer_visible));
 
       /* T5-C5 series nudge — fresh per drop. A brand-new draft gets the drop_type
-         default pre-selected; an existing drop / series occurrence instead reflects
-         its OWN saved pattern (series membership), never the drop_type nudge. Setting
-         it deterministically here also stops a prior new-draft's choice carrying over. */
+         default pre-selected. Every EXISTING drop displays as a single editable
+         one-off: the recurring controls (schedule rows, series count) are create-time
+         only and cannot regenerate a series for a saved drop (saveDrop gates series
+         creation on !alreadyInSeries), so showing them for a series occurrence is an
+         editable-but-inert trap. Display only — a series occurrence keeps its own
+         delivery/open/close editable and its series_id is never touched here or on save
+         (series_id is only written inside the new-series branch). Setting it
+         deterministically also stops a prior new-draft's choice carrying over. */
       state.repeatPatternTouched = false;
       if (state.isNewDraft) {
         applyRepeatPatternDefault();
       } else {
-        const savedPattern = d.series_id ? "recurring" : "one_off";
-        const savedRadio = document.querySelector(`input[name="repeatPattern"][value="${savedPattern}"]`);
-        if (savedRadio) savedRadio.checked = true;
+        const oneOffRadio = document.querySelector('input[name="repeatPattern"][value="one_off"]');
+        if (oneOffRadio) oneOffRadio.checked = true;
       }
 
       renderConditionalFields();
