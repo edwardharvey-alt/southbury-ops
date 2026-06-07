@@ -4007,11 +4007,21 @@
               <option value="6" ${row.day_of_week === "6" ? "selected" : ""}>Saturday</option>
             </select>
           </td>
-          <td><input class="js-schedule-start" type="time" value="${row.fulfilment_start || ""}" /></td>
-          <td><input class="js-schedule-end" type="time" value="${row.fulfilment_end || ""}" /></td>
+          <td><select class="js-schedule-start"></select></td>
+          <td><select class="js-schedule-end"></select></td>
           <td><button class="btnGhost js-remove-schedule-row" type="button">Remove</button></td>
         </tr>
       `).join("");
+
+      // Populate the FROM/TO selects after the rows are in the DOM, mirroring the
+      // top-level time fields (#314). buildTimeOptions needs a real element, so
+      // this runs post-innerHTML; off-increment values are preserved by the helper.
+      body.querySelectorAll("tr[data-row-id]").forEach((tr) => {
+        const row = state.seriesRows.find((r) => r.id === tr.dataset.rowId);
+        if (!row) return;
+        buildTimeOptions(tr.querySelector(".js-schedule-start"), row.fulfilment_start || "");
+        buildTimeOptions(tr.querySelector(".js-schedule-end"), row.fulfilment_end || "");
+      });
     }
 
     function renderSeriesPreview() {
