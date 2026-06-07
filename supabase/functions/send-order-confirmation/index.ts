@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { buildFromHeader, FROM_ORDERS } from "../_shared/email.ts";
 
 // Sends the customer-facing order_confirmed email via Resend.
 //
@@ -71,13 +72,6 @@ function formatDeliveryWindow(start: string | null, end: string | null): string 
   if (!endD) return `${dateStr}, from ${startStr}`;
   const endStr = timeFmt.format(endD);
   return `${dateStr}, between ${startStr} and ${endStr}`;
-}
-
-// Email sender. From header always quotes display_name to survive
-// commas/other special chars per RFC 5322.
-function buildFromHeader(displayName: string): string {
-  const safe = String(displayName || "").replace(/"/g, "");
-  return `"${safe}" <orders@lovehearth.co.uk>`;
 }
 
 type Selection = {
@@ -463,7 +457,7 @@ Deno.serve(async (req) => {
 
     // 8. Send via Resend.
     const resendPayload: Record<string, unknown> = {
-      from: buildFromHeader(vendor.display_name || vendor.name || "Hearth"),
+      from: buildFromHeader(vendor.display_name || vendor.name || "Hearth", FROM_ORDERS),
       to: order.customer_email,
       subject,
       html: htmlBody,

@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { buildFromHeader, FROM_HELLO } from "../_shared/email.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 const RESEND_URL = "https://api.resend.com/emails";
@@ -77,7 +78,7 @@ Deno.serve(async (req) => {
     // ---- Vendor ownership -------------------------------------------
     const { data: vendor, error: vendorErr } = await sb
       .from("vendors")
-      .select("id, display_name, brand_primary_color")
+      .select("id, display_name, name, email, brand_primary_color")
       .eq("id", vendor_id)
       .eq("auth_user_id", user.id)
       .maybeSingle();
@@ -231,7 +232,8 @@ ${paragraphs}
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from:    "orders@lovehearth.co.uk",
+            from:    buildFromHeader(vendor.display_name || vendor.name, FROM_HELLO),
+            ...(vendor.email ? { reply_to: vendor.email } : {}),
             to:      recipient.email,
             subject,
             html,
