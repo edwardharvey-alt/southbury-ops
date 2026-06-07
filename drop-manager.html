@@ -1455,6 +1455,7 @@
                     <label><input type="radio" name="repeatPattern" value="one_off" checked /> One-off drop</label>
                     <label><input type="radio" name="repeatPattern" value="recurring" /> Recurring</label>
                   </div>
+                  <div class="helperText" style="margin-top:6px;">Most vendors who build a customer habit start with a recurring series. A one-off is right for events — but your regular drops work best as something your customers can expect, same day, same rhythm.</div>
 
                   <div class="repeatBlock hidden" id="recurringBlock">
                     <div class="row space" style="margin-bottom:8px;">
@@ -1894,6 +1895,8 @@
       discountTiers: [],
       timingAdjustOpen: false,
       timingTouched: { opensAt: false, closesAt: false, openPattern: false },
+      isNewDraft: false,
+      repeatPatternTouched: false,
       dragState: {
         key: null,
         categoryName: null
@@ -2301,6 +2304,23 @@
     function getRepeatPattern() {
       const checked = document.querySelector('input[name="repeatPattern"]:checked');
       return checked ? checked.value : "one_off";
+    }
+
+    /* T5-C5 series nudge — value-setting only; callers gate on state.isNewDraft +
+       state.repeatPatternTouched (the new-draft / manual-override guard, mirroring
+       #317's open-pattern default). Neighbourhood → recurring series of 10;
+       event / hosted → one-off. Never forces — every choice stays editable. */
+    function applyRepeatPatternDefault() {
+      const type = byId("dropType").value || "neighbourhood";
+      const recurring = type === "neighbourhood";
+      const radio = document.querySelector(
+        `input[name="repeatPattern"][value="${recurring ? "recurring" : "one_off"}"]`
+      );
+      if (radio) radio.checked = true;
+      if (recurring) {
+        byId("seriesEndMode").value = "drop_count";
+        byId("seriesDropCount").value = "10";
+      }
     }
 
     function getOpenPattern() {
@@ -3552,6 +3572,23 @@
       byId("hostShareFixedPence").value = d.host_share_fixed_pence == null ? "" : (d.host_share_fixed_pence / 100).toFixed(2);
       byId("hostShareCustomerVisible").value = String(Boolean(d.host_share_customer_visible));
 
+      /* T5-C5 series nudge — fresh per drop. A brand-new draft gets the drop_type
+         default pre-selected. Every EXISTING drop displays as a single editable
+         one-off: the recurring controls (schedule rows, series count) are create-time
+         only and cannot regenerate a series for a saved drop (saveDrop gates series
+         creation on !alreadyInSeries), so showing them for a series occurrence is an
+         editable-but-inert trap. Display only — a series occurrence keeps its own
+         delivery/open/close editable and its series_id is never touched here or on save
+         (series_id is only written inside the new-series branch). Setting it
+         deterministically also stops a prior new-draft's choice carrying over. */
+      state.repeatPatternTouched = false;
+      if (state.isNewDraft) {
+        applyRepeatPatternDefault();
+      } else {
+        const oneOffRadio = document.querySelector('input[name="repeatPattern"][value="one_off"]');
+        if (oneOffRadio) oneOffRadio.checked = true;
+      }
+
       renderConditionalFields();
       renderHostOptions();
       renderHostPreview();
@@ -4486,6 +4523,10 @@
     async function saveDrop(showSuccess = true) {
       if (!state.selectedDropId || !state.drop) return;
 
+      /* T5-C5: once the vendor saves, the new-draft nudge session ends — later
+         reloads reflect the saved pattern (series membership), not the default. */
+      state.isNewDraft = false;
+
       let dropData = readDropFromForm();
       if (!dropData.slug) throw new Error("Drop Link Name is required.");
 
@@ -4707,6 +4748,7 @@
 
       state.selectedDropId = data.id;
       state.currentStage = "basics";
+      state.isNewDraft = true;   // T5-C5: this load applies the drop_type repeat default
       await refreshAll();
       isDirty = false;
       scrollToDropTitle();
@@ -5715,6 +5757,14 @@
           renderConditionalFields();
           renderOrderWindowSentence();
         }
+        /* T5-C5 series nudge — same new-draft / manual-override guard: re-default the
+           repeat pattern by drop_type only while this is an untouched new draft. */
+        if (state.isNewDraft && !state.repeatPatternTouched) {
+          applyRepeatPatternDefault();
+          renderConditionalFields();
+          renderScheduleRows();
+          renderSeriesPreview();
+        }
         markDirty();
       });
 
@@ -5790,6 +5840,7 @@
 
       document.querySelectorAll('input[name="repeatPattern"]').forEach((radio) => {
         radio.addEventListener("change", () => {
+          state.repeatPatternTouched = true;   // T5-C5: manual choice wins over the drop_type default
           ensureRecurringStartDateFromDropDate();
           ensureSeriesDayMatchesDropDateIfDefault();
           renderConditionalFields();
@@ -6142,6 +6193,7 @@
         const card = e.target.closest(".dropCard");
         if (card && !e.target.closest(".js-duplicate-drop") && !e.target.closest(".js-copy-host-link")) {
           state.selectedDropId = card.dataset.dropId;
+          state.isNewDraft = false;   // T5-C5: loading an existing drop never re-defaults the pattern
           try {
             await loadSelectedDrop();
             state.currentStage = "basics";
