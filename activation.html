@@ -2736,7 +2736,8 @@
 
       // Card 1 — reveal caption
       const c1 = [];
-      c1.push(`${dropName} is coming ${actRelDay(summary.delivery_start, false)}.`);
+      const c1Venue = summary.host_name || rawDrop.host_name || '';
+      c1.push(`${dropName} is coming${c1Venue ? ` to ${c1Venue}` : ''} ${actRelDay(summary.delivery_start, false)}.`);
       if (revealLine) c1.push(revealLine);
       c1.push(`Orders open ${actOpensPhrase(opensAt)}. Capacity is limited to ${capPhrase} orders.`);
       if (orderingLink) c1.push(orderingLink);
