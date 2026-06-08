@@ -1495,6 +1495,88 @@ with name and email. Writes to customer_relationships with source =
 interest. Vendor sees interest count in Drop Studio labelled "Signals
 building". Dependency: T3-9.
 
+T-comms-automation: Behaviour-triggered comms automation + plain-language
+insight prompts
+
+**Status:** Open. Tier 5 (intelligence/comms-derived). Competitor-derived
+(Owner.com).
+
+Two parts, both layering onto existing work:
+
+(a) Behaviour-triggered re-engagement — automated, event-driven sends
+(post-first-order, lapsed customer, drop-day) that fire the touchpoints
+already mapped in the Drop Communications Architecture via the comms
+engine (T5-11) and its channel routing, rather than relying on manual
+prompts.
+
+(b) Plain-language insight prompts — surface intelligence-engine findings
+as single-line, actionable nudges in the vendor's voice (e.g. "Your Friday
+drops fill fastest — keep the rhythm"), not charts. Aligns with the
+Insights reframe as a demand-visibility and cadence-coaching engine
+(May 2026 strategy session), not a reporting dashboard.
+
+**Voice guardrail:** all generated copy follows the repetition-layer voice
+spec and banned-word list (no boost/convert/funnel/campaign/promotion/etc.);
+creative fields are AI-first-draft, vendor-edited, never blank templates.
+
+**Relations:** T5-11 (comms engine), intelligence-engine track,
+repetition-layer voice spec, Drop Communications Architecture.
+
+**Note:** larger build; design-before-code. Capture only — sits with the
+intelligence-engine track, not near-term.
+
+T-aggregator-savings-calculator: Vendor-facing aggregator cost comparison
+
+**Status:** Open. Tier 5 (vendor onboarding / positioning).
+Competitor-derived (Slerp).
+
+A simple vendor-facing tool showing, in plain pounds, what a vendor
+currently hands to aggregators (their commission rate x monthly volume)
+versus operating through Hearth — making "complement today, displace the
+aggregator habit over time" concrete and numeric.
+
+Use: vendor onboarding and the dry run; reinforces the May 2026 positioning
+(lead with control, name the aggregator problem plainly) and draws on the
+Aggregator Evidence File (T-strategy-1).
+
+**Voice guardrail:** factual and restrained; no marketplace or urgency
+language; frame as an honest comparison, not a sales pitch.
+
+**Scope:** could be a calculator on the landing page or a standalone
+onboarding asset — decide in design.
+
+**Relations:** T-strategy-1 (Aggregator Evidence File), vendor onboarding
+flow, landing page.
+
+**Note:** design-before-code.
+
+T-notify-next-time: Sold-out waitlist / demand capture
+
+**Status:** Open. Competitor-derived (Hotplate item waitlist).
+
+When a drop or item reaches capacity, let customers leave a contact to be
+notified when the vendor next runs it. Captures demand that exceeded supply
+— a direct input to capacity-setting and the intelligence layer. Distinct
+from pre-open interest registration (T5-8): this is post-fill demand. High
+value, low complexity.
+
+**Relations:** T5-8 (interest registration), intelligence engine.
+
+T-cart-hold-timer: Visible cart-hold countdown
+
+**Status:** Open. Competitor-derived (Hotplate cart timer).
+
+We already hold an order for a set time; this surfaces that hold as a
+visible per-customer countdown that releases items back to available
+capacity on expiry. Protects fill rate and fairness on oversubscribed
+drops.
+
+**Guardrail:** audit-first — confirm the current order-hold mechanism in
+the order flow before any design or build; framing must read as honest
+scarcity, not manufactured urgency.
+
+**Relations:** order flow.
+
 ## Hearth AI Strategy
 
 ### Why AI is central to Hearth's competitive position

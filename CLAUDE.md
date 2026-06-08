@@ -1934,6 +1934,10 @@ Reveal hook field — `#dropRevealLine` is now a `<textarea>` (4 rows, `maxlengt
 - T5-C5 — Cadence visibility and consistency mechanics (Part 1: dashboard/scorecard; Part 2: gap alerts via T5-11) — open
 - T5-C6 — AI-powered vendor activation plan — post-onboarding personalised first-8-drops strategy — open
 - T-drop-anticipation-window-default — Drop Studio: default opens_at to delivery_start so publish=announce and the publish→opens gap is the anticipation window. Pre-launch.
+- T-comms-automation — Behaviour-triggered comms automation + plain-language insight prompts (competitor-derived, Owner.com) — open
+- T-aggregator-savings-calculator — Vendor-facing aggregator cost comparison (competitor-derived, Slerp) — open
+- T-notify-next-time — Sold-out waitlist / demand capture (competitor-derived, Hotplate) — open
+- T-cart-hold-timer — Visible cart-hold countdown (competitor-derived, Hotplate) — open
 
 GenAI shared principles (model choice, hard rules, cost framing) live in
 BACKLOG.md alongside the ticket specs that depend on them — read there before
