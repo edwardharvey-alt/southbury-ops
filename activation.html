@@ -2909,9 +2909,24 @@
 
         let card2Action;
         if (card2Entry) {
-          // Sent / done — keep Copy link available quietly.
+          // Done — keep Copy link available quietly. The done line is
+          // action-aware: an email send always takes precedence over a later
+          // link copy, so a copy-only completion (e.g. a host with no email)
+          // never falsely reads "Sent". getLogEntry returns the FIRST match by
+          // touchpoint and isn't action-aware, so inspect the log by action
+          // here for the wording. (Touchpoint presence still drives the
+          // done/progress state itself — unchanged.)
+          const card2EmailSent = state.activationLog.find(
+            e => e.touchpoint === 'tuesday_host' && e.action === 'host_email_sent'
+          );
+          const card2DoneEntry = card2EmailSent || state.activationLog.find(
+            e => e.touchpoint === 'tuesday_host' && e.action === 'host_link_copied'
+          ) || card2Entry;
+          const card2DoneLine = card2EmailSent
+            ? `✓ Sent to ${card2Host} · ${formatLogTime(card2DoneEntry.timestamp)}`
+            : `✓ Link copied · ${formatLogTime(card2DoneEntry.timestamp)}`;
           card2Action = `
-            <div class="act-done-state">✓ Sent to ${card2Host} · ${formatLogTime(card2Entry.timestamp)}</div>
+            <div class="act-done-state">${card2DoneLine}</div>
             <div class="act-channel-row">
               <button class="act-copy-btn" type="button" data-act="copy-host-link">Copy link</button>
             </div>
@@ -2947,6 +2962,11 @@
           cardNum: 2,
           label: labels[1],
           title: optionalTitle(2, 'Share with your host'),
+          // EMAIL header pill — same mechanism as the email cards (Card 3/9
+          // pass channel: 'Email'); actTouchpointShell renders the shared
+          // .act-channel-badge (CSS upper-cases it). Card 2's primary action
+          // is the email send, so EMAIL is the correct pill.
+          channel: 'Email',
           bodyHtml: card2Body,
           open: actCardOpen(2, !!card2Entry, false),
           bodyId: 'act-tp-body-2'
