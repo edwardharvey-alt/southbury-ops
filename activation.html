@@ -2902,6 +2902,14 @@
         const card2Entry = getLogEntry('tuesday_host');
         const card2Host = eHost || 'your host';
         const card2NoEmail = !!(state.hostHandoffNoEmail && state.hostHandoffNoEmail[dropId]);
+        // Transient "Copied ✓" confirmation for Copy link, driven through
+        // rendered state (not a post-render button flash, which actLog's
+        // re-render destroys). Survives the re-render and works in every
+        // state — including when the done line already reads "Sent to {host}"
+        // and clicking the retained Copy link changes nothing else. The flag
+        // is set in the copy-host-link handler and cleared ~2s later.
+        const card2Copied = !!(state.card2LinkCopied && state.card2LinkCopied[dropId]);
+        const card2CopyLabel = card2Copied ? 'Copied ✓' : 'Copy link';
 
         // Shared inline slot for transport / link-build failure messages.
         const card2ErrorSlot = `<div class="act-copy-error" data-error-key="tuesday_host"
@@ -2928,7 +2936,7 @@
           card2Action = `
             <div class="act-done-state">${card2DoneLine}</div>
             <div class="act-channel-row">
-              <button class="act-copy-btn" type="button" data-act="copy-host-link">Copy link</button>
+              <button class="act-copy-btn" type="button" data-act="copy-host-link">${card2CopyLabel}</button>
             </div>
             ${card2ErrorSlot}
           `;
@@ -2937,7 +2945,7 @@
           card2Action = `
             <div class="act-note">${card2Host} has no email on file — copy their link and send it across however you usually reach them.</div>
             <div class="act-channel-row">
-              <button class="act-copy-btn primary" type="button" data-act="copy-host-link">Copy link</button>
+              <button class="act-copy-btn primary" type="button" data-act="copy-host-link">${card2CopyLabel}</button>
             </div>
             ${card2ErrorSlot}
           `;
@@ -2946,7 +2954,7 @@
           card2Action = `
             <div class="act-channel-row">
               <button class="act-copy-btn primary" type="button" data-act="email-host-share">Email share page to ${card2Host}</button>
-              <button class="act-copy-btn" type="button" data-act="copy-host-link">Copy link</button>
+              <button class="act-copy-btn" type="button" data-act="copy-host-link">${card2CopyLabel}</button>
             </div>
             ${card2ErrorSlot}
           `;
@@ -4056,7 +4064,19 @@
           const url = `${window.location.origin}/host-view.html?drop=${encodeURIComponent(slug)}&t=${encodeURIComponent(tokenResp.host_access_token)}`;
           const originalLabel = copyHostLink.textContent;
           await actCopyToClipboard(url, copyHostLink, originalLabel);
+          // Transient "Copied ✓" confirmation, driven through rendered state so
+          // it survives the actLog re-render and shows in every state (including
+          // when the done line already reads "Sent to {host}"). Set BEFORE
+          // actLog so the re-render reads it; clear ~2s later and re-render —
+          // but only if still on the same drop, so we don't re-render a drop
+          // the user has navigated away from.
+          state.card2LinkCopied = state.card2LinkCopied || {};
+          state.card2LinkCopied[dropId] = true;
           actLog('tuesday_host', 'host_link_copied');
+          setTimeout(() => {
+            if (state.card2LinkCopied) delete state.card2LinkCopied[dropId];
+            if (state.selectedDropId === dropId) renderDropView(dropId);
+          }, 2000);
         } catch (err) {
           console.error('[activation] copy host link failed:', err);
           if (note) note.textContent = 'No host link could be built for this drop.';
