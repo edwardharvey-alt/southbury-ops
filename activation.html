@@ -2891,17 +2891,65 @@
       }));
       }
 
-      // Card 2 — host awareness (is-host) — only in profiles that include it
+      // Card 2 — host handoff (is-host) — only in profiles that include it.
+      // Rendered directly (not via messageCard) so the send / copy-link
+      // handoff UI is bespoke. messageCard() is shared with Card 5 and the
+      // caption cards and must NOT change (A2 — Card 2 host handoff). The
+      // card hands the host to their own share page (host-view.html), where
+      // they customise and post in their own voice — so there is no textarea,
+      // no AI draft/Regenerate, and no per-channel copy here.
       if (inProfile(2)) {
-        cards.push(messageCard({
-          typeClass: 'is-host',
+        const card2Entry = getLogEntry('tuesday_host');
+        const card2Host = eHost || 'your host';
+        const card2NoEmail = !!(state.hostHandoffNoEmail && state.hostHandoffNoEmail[dropId]);
+
+        // Shared inline slot for transport / link-build failure messages.
+        const card2ErrorSlot = `<div class="act-copy-error" data-error-key="tuesday_host"
+              style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>`;
+
+        let card2Action;
+        if (card2Entry) {
+          // Sent / done — keep Copy link available quietly.
+          card2Action = `
+            <div class="act-done-state">✓ Sent to ${card2Host} · ${formatLogTime(card2Entry.timestamp)}</div>
+            <div class="act-channel-row">
+              <button class="act-copy-btn" type="button" data-act="copy-host-link">Copy link</button>
+            </div>
+            ${card2ErrorSlot}
+          `;
+        } else if (card2NoEmail) {
+          // Host has no email on file — foreground Copy link.
+          card2Action = `
+            <div class="act-note">${card2Host} has no email on file — copy their link and send it across however you usually reach them.</div>
+            <div class="act-channel-row">
+              <button class="act-copy-btn primary" type="button" data-act="copy-host-link">Copy link</button>
+            </div>
+            ${card2ErrorSlot}
+          `;
+        } else {
+          // Default — primary email send + quiet Copy link fallback.
+          card2Action = `
+            <div class="act-channel-row">
+              <button class="act-copy-btn primary" type="button" data-act="email-host-share">Email share page to ${card2Host}</button>
+              <button class="act-copy-btn" type="button" data-act="copy-host-link">Copy link</button>
+            </div>
+            ${card2ErrorSlot}
+          `;
+        }
+
+        const card2Body = `
+          <p>${card2Host} can reach their community in a way nothing from you can. Send them their share page — it carries a short message for them to post in their own words, and the order link to add once ordering opens.</p>
+          <div class="act-actions">${card2Action}</div>
+        `;
+
+        cards.push(actTouchpointShell({
+          classes: `act-touchpoint is-host${card2Entry ? ' is-done' : ''}`,
           cardNum: 2,
           label: labels[1],
           title: optionalTitle(2, 'Share with your host'),
-          desc: `Ask ${eHost} to let their community know what's coming. This message goes into their channel in their own voice — Hearth prepares it, they send it.`,
-          messageText: templates['tuesday_host'],
-          channels: ['WhatsApp', 'email', 'social'],
-          touchpointKey: 'tuesday_host'
+          bodyHtml: card2Body,
+          open: actCardOpen(2, !!card2Entry, false),
+          bodyId: 'act-tp-body-2'
         }));
       }
 
@@ -3891,6 +3939,107 @@
           // in its expanded state (no re-render) so the note survives.
           const note = document.querySelector(`.act-email-send-error[data-error-key="${tp}"]`);
           if (note) note.textContent = 'Send failed — check your connection and try again.';
+        }
+        return;
+      }
+
+      // Card 2 host handoff — email the host their share page. Mirrors the
+      // confirm-email handler above, plus the one branch the email cards
+      // don't have: a success-with-skip (HTTP 200, sent:0, no error key)
+      // when the host has no email on file, which must NOT log a send.
+      const emailHostShare = e.target.closest('[data-act="email-host-share"]');
+      if (emailHostShare) {
+        e.preventDefault();
+        const dropId = state.selectedDropId;
+        const errSlot = document.querySelector('.act-copy-error[data-error-key="tuesday_host"]');
+        if (errSlot) errSlot.textContent = '';
+
+        const originalLabel = emailHostShare.textContent;
+        emailHostShare.disabled = true;
+        emailHostShare.textContent = 'Sending…';
+
+        try {
+          const { data, error } = await sb.functions.invoke('send-host-activation-email', {
+            body: { vendor_id: state.vendor.id, drop_id: dropId },
+          });
+
+          // Success-with-skip FIRST: host has no email (HTTP 200, sent:0, no
+          // error key — does not throw). Don't log a send; switch to the
+          // no-email state so Copy link is foregrounded.
+          if (!error && data && data.skipped === 'no_host_email') {
+            state.hostHandoffNoEmail = state.hostHandoffNoEmail || {};
+            state.hostHandoffNoEmail[dropId] = true;
+            renderDropView(dropId);
+            return;
+          }
+
+          // Otherwise surface failures. A non-2xx response sets `error`
+          // (transport) and carries the function's { error } body in the
+          // Response on error.context; a 200-with-error sets data.error.
+          // Extract the code so no_token / host_not_found can be messaged
+          // distinctly from a generic connection failure.
+          if (error || (data && data.error)) {
+            let code = (data && data.error) ? String(data.error) : '';
+            if (error && error.context && typeof error.context.json === 'function') {
+              try {
+                const body = await error.context.json();
+                if (body && body.error) code = String(body.error);
+              } catch (_) { /* body not JSON — leave code empty */ }
+            }
+            const e2 = new Error(code || 'send_failed');
+            e2.code = code;
+            throw e2;
+          }
+
+          // Real send → done.
+          const sent  = data?.sent  ?? 0;
+          const total = data?.total ?? 0;
+          actLog('tuesday_host', 'host_email_sent', { sent, total });
+        } catch (err) {
+          console.error('[activation] host email send failed:', err);
+          emailHostShare.disabled = false;
+          emailHostShare.textContent = originalLabel;
+          const code = err?.code || '';
+          const note = document.querySelector('.act-copy-error[data-error-key="tuesday_host"]');
+          if (note) {
+            note.textContent = (code === 'no_token' || code === 'host_not_found')
+              ? "Couldn't build a link for this host — flag this drop."
+              : 'Send failed — check your connection and try again.';
+          }
+        }
+        return;
+      }
+
+      // Card 2 host handoff — copy the host's share-page link (fallback for
+      // hosts with no email, and always available once sent). Mirrors
+      // drop-manager.html's copy-host-link: get-drop-host-token → host-view URL.
+      const copyHostLink = e.target.closest('[data-act="copy-host-link"]');
+      if (copyHostLink) {
+        e.preventDefault();
+        const dropId = state.selectedDropId;
+        const slug = state.rawById?.[dropId]?.slug;
+        const note = document.querySelector('.act-copy-error[data-error-key="tuesday_host"]');
+        if (note) note.textContent = '';
+
+        if (!slug) {
+          if (note) note.textContent = 'No host link could be built for this drop.';
+          return;
+        }
+
+        try {
+          const { data: tokenResp, error: tokenErr } =
+            await sb.functions.invoke('get-drop-host-token', { body: { drop_id: dropId } });
+          if (tokenErr || tokenResp?.error || !tokenResp?.host_access_token) {
+            if (note) note.textContent = 'No host link could be built for this drop.';
+            return;
+          }
+          const url = `${window.location.origin}/host-view.html?drop=${encodeURIComponent(slug)}&t=${encodeURIComponent(tokenResp.host_access_token)}`;
+          const originalLabel = copyHostLink.textContent;
+          await actCopyToClipboard(url, copyHostLink, originalLabel);
+          actLog('tuesday_host', 'host_link_copied');
+        } catch (err) {
+          console.error('[activation] copy host link failed:', err);
+          if (note) note.textContent = 'No host link could be built for this drop.';
         }
         return;
       }
