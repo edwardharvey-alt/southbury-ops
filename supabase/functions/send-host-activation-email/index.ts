@@ -151,13 +151,13 @@ Deno.serve(async (req) => {
     const text = [
       `Hi ${greetingName},`,
       "",
-      `${vendorName} is at ${venue} on ${deliveryDate} for ${drop.name}. Here's your page to share it with your group, in your own words — and to post the ordering link once it opens:`,
+      `We're bringing ${drop.name} to ${venue} on ${deliveryDate}. Here's your share page — it has a short message to post to your group in your own words, and the ordering link to add once it opens.`,
       "",
       link,
       "",
-      "Everything's ready to copy on the page, and the link stays good for the whole drop, so keep this to hand.",
+      "No pressure at all — but a word from you reaches your group in a way nothing from us can, so even a quick post makes a real difference. The link stays live for the whole drop, so keep it to hand.",
       "",
-      "Thanks for hosting.",
+      "Thanks for having us.",
     ].join("\n");
 
     // Wrap the plain-text body in the same branded HTML shell the other
