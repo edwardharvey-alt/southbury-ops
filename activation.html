@@ -1650,7 +1650,9 @@
         9: 'Send thank-you email'
       };
 
-      const loggedKeys = new Set(log.map(e => e.touchpoint));
+      // Ignore host-origin events so host shares can't inflate the vendor's
+      // progress count (actor !== 'host' leaves legacy/null-actor rows as-is).
+      const loggedKeys = new Set(log.filter(e => e.actor !== 'host').map(e => e.touchpoint));
 
       // Only count non-optional cards that actually have a loggable key
       // toward progress. Card 7 (key null) is passive and never completes,
@@ -1700,7 +1702,11 @@
     }
 
     function getLogEntry(touchpoint){
-      return state.activationLog.find(e => e.touchpoint === touchpoint) || null;
+      // Vendor completion only: ignore host-origin events so a host copying
+      // their message on host-view can never mark a vendor card done.
+      // actor !== 'host' (not === 'vendor') so legacy/null-actor rows keep
+      // counting exactly as before.
+      return state.activationLog.find(e => e.touchpoint === touchpoint && e.actor !== 'host') || null;
     }
 
     function formatLogTime(isoString){
@@ -2925,10 +2931,10 @@
           // here for the wording. (Touchpoint presence still drives the
           // done/progress state itself — unchanged.)
           const card2EmailSent = state.activationLog.find(
-            e => e.touchpoint === 'tuesday_host' && e.action === 'host_email_sent'
+            e => e.touchpoint === 'tuesday_host' && e.action === 'host_email_sent' && e.actor !== 'host'
           );
           const card2DoneEntry = card2EmailSent || state.activationLog.find(
-            e => e.touchpoint === 'tuesday_host' && e.action === 'host_link_copied'
+            e => e.touchpoint === 'tuesday_host' && e.action === 'host_link_copied' && e.actor !== 'host'
           ) || card2Entry;
           const card2DoneLine = card2EmailSent
             ? `✓ Sent to ${card2Host} · ${formatLogTime(card2DoneEntry.timestamp)}`
@@ -3466,7 +3472,13 @@
               action: row.action,
               dropId: row.drop_id,
               timestamp: row.created_at,
-              ...(row.meta || {})
+              ...(row.meta || {}),
+              // actor ('vendor'|'host') stamped server-side. Kept AFTER the
+              // meta spread so meta can never clobber it. Host-origin events
+              // stay in the log (available for later use) but are excluded
+              // from vendor done-state/progress (see getLogEntry /
+              // getDropProgress / Card 2 done-line guards).
+              actor: row.actor
             });
           });
         }
