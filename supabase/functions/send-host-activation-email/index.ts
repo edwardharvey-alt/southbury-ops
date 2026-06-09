@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     if (authError || !user) return jsonResponse({ error: "Unauthorized" }, 401);
 
     // ---- Body -------------------------------------------------------
-    let body: { vendor_id?: string; drop_id?: string };
+    let body: { vendor_id?: string; drop_id?: string; variant?: string };
     try {
       body = await req.json();
     } catch {
@@ -68,6 +68,11 @@ Deno.serve(async (req) => {
     const { vendor_id, drop_id } = body;
     if (!vendor_id) return jsonResponse({ error: "vendor_id is required" }, 400);
     if (!drop_id)   return jsonResponse({ error: "drop_id is required" }, 400);
+
+    // Which template to send. Any value other than 'reminder' (including
+    // absent) resolves to 'handoff', so Card 2's existing call — which sends
+    // no variant — is unchanged.
+    const variant = body.variant === "reminder" ? "reminder" : "handoff";
 
     const sb = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -146,19 +151,39 @@ Deno.serve(async (req) => {
     const deliveryDate = drop.delivery_start ? fmtDay(drop.delivery_start) : "soon";
     const greetingName = (host.contact_name || "").trim() || "there";
 
-    const subject = `Your share page for ${drop.name}`;
-
-    const text = [
-      `Hi ${greetingName},`,
-      "",
-      `We're bringing ${drop.name} to ${venue} on ${deliveryDate}. Here's your share page — it has a short message to post to your group in your own words, and the ordering link to add once it opens.`,
-      "",
-      link,
-      "",
-      "No pressure at all — but a word from you reaches your group in a way nothing from us can, so even a quick post makes a real difference. The link stays live for the whole drop, so keep it to hand.",
-      "",
-      "Thanks for having us.",
-    ].join("\n");
+    // Subject + body are the ONLY thing the variant changes. The reminder
+    // (Card 5, Thursday) reuses greetingName / drop.name / venue / link and
+    // deliberately omits deliveryDate. The handoff (else, Card 2, Tuesday)
+    // copy is unchanged.
+    let subject: string;
+    let text: string;
+    if (variant === "reminder") {
+      subject = `Ordering's now open — ${drop.name}`;
+      text = [
+        `Hi ${greetingName},`,
+        "",
+        `Ordering for ${drop.name} at ${venue} is now open — the link on your share page is live and ready to post.`,
+        "",
+        link,
+        "",
+        "If you haven't shared it with your group yet, now's the moment — if you already have, thank you. No rush either way.",
+        "",
+        "Thanks again for having us.",
+      ].join("\n");
+    } else {
+      subject = `Your share page for ${drop.name}`;
+      text = [
+        `Hi ${greetingName},`,
+        "",
+        `We're bringing ${drop.name} to ${venue} on ${deliveryDate}. Here's your share page — it has a short message to post to your group in your own words, and the ordering link to add once it opens.`,
+        "",
+        link,
+        "",
+        "No pressure at all — but a word from you reaches your group in a way nothing from us can, so even a quick post makes a real difference. The link stays live for the whole drop, so keep it to hand.",
+        "",
+        "Thanks for having us.",
+      ].join("\n");
+    }
 
     // Wrap the plain-text body in the same branded HTML shell the other
     // senders use — paragraphs split on blank lines, URLs auto-linked in
