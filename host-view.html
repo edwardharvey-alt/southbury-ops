@@ -675,9 +675,18 @@
       }
 
       try {
+        // Session-less client. persistSession:false makes the auth client use
+        // in-memory storage instead of localStorage, so it never reads a
+        // logged-in vendor's sb-<ref>-auth-token session on this shared origin.
+        // With no session loaded, functions.invoke sends the anon publishable
+        // key as Authorization; activation-events' getUser resolves no user and
+        // falls to the host_token branch, correctly stamping actor='host'.
+        // (No distinct storageKey needed — persistSession:false bypasses
+        // localStorage entirely.)
         _sb = window.supabase.createClient(
           window.HEARTH_CONFIG.SUPABASE_URL,
-          window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+          window.HEARTH_CONFIG.SUPABASE_ANON_KEY,
+          { auth: { persistSession: false, autoRefreshToken: false } }
         );
       } catch (initErr){
         renderEmpty(
