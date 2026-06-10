@@ -1709,6 +1709,14 @@
       return state.activationLog.find(e => e.touchpoint === touchpoint && e.actor !== 'host') || null;
     }
 
+    function getHostShareSignal(touchpoint){
+      // Host's own share, server-stamped actor='host' (host-view logHostShare).
+      // Read SEPARATELY from getLogEntry, which excludes host events.
+      return state.activationLog.find(e =>
+        e.touchpoint === touchpoint && e.actor === 'host' && e.action === 'shared'
+      ) || null;
+    }
+
     function formatLogTime(isoString){
       const d = new Date(isoString);
       if (isNaN(d.getTime())) return '';
@@ -2907,14 +2915,14 @@
       if (inProfile(2)) {
         const card2Entry = getLogEntry('tuesday_host');
         const card2Host = eHost || 'your host';
-        const card2NoEmail = !!(state.hostHandoffNoEmail && state.hostHandoffNoEmail[dropId]);
+        const card2NoEmail = !!(state.hostNoEmail && state.hostNoEmail['tuesday_host'] && state.hostNoEmail['tuesday_host'][dropId]);
         // Transient "Copied ✓" confirmation for Copy link, driven through
         // rendered state (not a post-render button flash, which actLog's
         // re-render destroys). Survives the re-render and works in every
         // state — including when the done line already reads "Sent to {host}"
         // and clicking the retained Copy link changes nothing else. The flag
         // is set in the copy-host-link handler and cleared ~2s later.
-        const card2Copied = !!(state.card2LinkCopied && state.card2LinkCopied[dropId]);
+        const card2Copied = !!(state.hostLinkCopied && state.hostLinkCopied['tuesday_host'] && state.hostLinkCopied['tuesday_host'][dropId]);
         const card2CopyLabel = card2Copied ? 'Copied ✓' : 'Copy link';
 
         // Shared inline slot for transport / link-build failure messages.
@@ -2942,7 +2950,7 @@
           card2Action = `
             <div class="act-done-state">${card2DoneLine}</div>
             <div class="act-channel-row">
-              <button class="act-copy-btn" type="button" data-act="copy-host-link">${card2CopyLabel}</button>
+              <button class="act-copy-btn" type="button" data-act="copy-host-link" data-touchpoint="tuesday_host">${card2CopyLabel}</button>
             </div>
             ${card2ErrorSlot}
           `;
@@ -2951,7 +2959,7 @@
           card2Action = `
             <div class="act-note">${card2Host} has no email on file — copy their link and send it across however you usually reach them.</div>
             <div class="act-channel-row">
-              <button class="act-copy-btn primary" type="button" data-act="copy-host-link">${card2CopyLabel}</button>
+              <button class="act-copy-btn primary" type="button" data-act="copy-host-link" data-touchpoint="tuesday_host">${card2CopyLabel}</button>
             </div>
             ${card2ErrorSlot}
           `;
@@ -2959,8 +2967,8 @@
           // Default — primary email send + quiet Copy link fallback.
           card2Action = `
             <div class="act-channel-row">
-              <button class="act-copy-btn primary" type="button" data-act="email-host-share">Email share page to ${card2Host}</button>
-              <button class="act-copy-btn" type="button" data-act="copy-host-link">${card2CopyLabel}</button>
+              <button class="act-copy-btn primary" type="button" data-act="email-host-share" data-touchpoint="tuesday_host">Email share page to ${card2Host}</button>
+              <button class="act-copy-btn" type="button" data-act="copy-host-link" data-touchpoint="tuesday_host">${card2CopyLabel}</button>
             </div>
             ${card2ErrorSlot}
           `;
@@ -3990,8 +3998,12 @@
       const emailHostShare = e.target.closest('[data-act="email-host-share"]');
       if (emailHostShare) {
         e.preventDefault();
+        const tp = emailHostShare.dataset.touchpoint;
+        // Card 2 hands the host their share page (handoff); the later Card 5
+        // reminder reuses this handler with tp='thursday_host_link' (reminder).
+        const variant = tp === 'thursday_host_link' ? 'reminder' : 'handoff';
         const dropId = state.selectedDropId;
-        const errSlot = document.querySelector('.act-copy-error[data-error-key="tuesday_host"]');
+        const errSlot = document.querySelector(`.act-copy-error[data-error-key="${tp}"]`);
         if (errSlot) errSlot.textContent = '';
 
         const originalLabel = emailHostShare.textContent;
@@ -4000,15 +4012,16 @@
 
         try {
           const { data, error } = await sb.functions.invoke('send-host-activation-email', {
-            body: { vendor_id: state.vendor.id, drop_id: dropId },
+            body: { vendor_id: state.vendor.id, drop_id: dropId, variant },
           });
 
           // Success-with-skip FIRST: host has no email (HTTP 200, sent:0, no
           // error key — does not throw). Don't log a send; switch to the
           // no-email state so Copy link is foregrounded.
           if (!error && data && data.skipped === 'no_host_email') {
-            state.hostHandoffNoEmail = state.hostHandoffNoEmail || {};
-            state.hostHandoffNoEmail[dropId] = true;
+            state.hostNoEmail = state.hostNoEmail || {};
+            state.hostNoEmail[tp] = state.hostNoEmail[tp] || {};
+            state.hostNoEmail[tp][dropId] = true;
             renderDropView(dropId);
             return;
           }
@@ -4034,13 +4047,13 @@
           // Real send → done.
           const sent  = data?.sent  ?? 0;
           const total = data?.total ?? 0;
-          actLog('tuesday_host', 'host_email_sent', { sent, total });
+          actLog(tp, 'host_email_sent', { sent, total });
         } catch (err) {
           console.error('[activation] host email send failed:', err);
           emailHostShare.disabled = false;
           emailHostShare.textContent = originalLabel;
           const code = err?.code || '';
-          const note = document.querySelector('.act-copy-error[data-error-key="tuesday_host"]');
+          const note = document.querySelector(`.act-copy-error[data-error-key="${tp}"]`);
           if (note) {
             note.textContent = (code === 'no_token' || code === 'host_not_found')
               ? "Couldn't build a link for this host — flag this drop."
@@ -4056,9 +4069,10 @@
       const copyHostLink = e.target.closest('[data-act="copy-host-link"]');
       if (copyHostLink) {
         e.preventDefault();
+        const tp = copyHostLink.dataset.touchpoint;
         const dropId = state.selectedDropId;
         const slug = state.rawById?.[dropId]?.slug;
-        const note = document.querySelector('.act-copy-error[data-error-key="tuesday_host"]');
+        const note = document.querySelector(`.act-copy-error[data-error-key="${tp}"]`);
         if (note) note.textContent = '';
 
         if (!slug) {
@@ -4082,11 +4096,12 @@
           // actLog so the re-render reads it; clear ~2s later and re-render —
           // but only if still on the same drop, so we don't re-render a drop
           // the user has navigated away from.
-          state.card2LinkCopied = state.card2LinkCopied || {};
-          state.card2LinkCopied[dropId] = true;
-          actLog('tuesday_host', 'host_link_copied');
+          state.hostLinkCopied = state.hostLinkCopied || {};
+          state.hostLinkCopied[tp] = state.hostLinkCopied[tp] || {};
+          state.hostLinkCopied[tp][dropId] = true;
+          actLog(tp, 'host_link_copied');
           setTimeout(() => {
-            if (state.card2LinkCopied) delete state.card2LinkCopied[dropId];
+            if (state.hostLinkCopied?.[tp]) delete state.hostLinkCopied[tp][dropId];
             if (state.selectedDropId === dropId) renderDropView(dropId);
           }, 2000);
         } catch (err) {
