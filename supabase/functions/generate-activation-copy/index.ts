@@ -77,6 +77,7 @@ interface CopyInput {
   website_url: string | null;   // new
   brand_voice?: string | null;
   guidance?: string | null;     // optional vendor steer for regeneration
+  channel?: string | null;       // 'whatsapp' (default) | 'social' — vendor_open only
   // Signals assembled by actBuildDropContext on the frontend; read per case.
   fulfilment_mode?: string | null;
   reveal_dish?: string | null;
@@ -90,8 +91,10 @@ function buildPrompt(input: CopyInput): string {
   const {
     touchpoint, vendor_name, drop_name, host_name,
     delivery_day, opens_day, opens_time, closes_time,
-    capacity, ordering_url, fulfilment_mode, reveal_dish, cadence, posterType
+    capacity, ordering_url, fulfilment_mode, reveal_dish, cadence, posterType, channel
   } = input;
+
+  const ch = channel === 'social' ? 'social' : 'whatsapp';   // default/unknown → whatsapp
 
   const host = host_name || "their neighbourhood";
   const cap = capacity ? `${capacity} orders` : "limited orders";
@@ -113,6 +116,9 @@ Output only the line, nothing else.`;
       return `Write a WhatsApp message from ${host} to their members about ${vendor_name}'s '${drop_name}' this ${delivery_day}. Written as the venue or club organiser — a trusted community heads-up, not a vendor promotion. Mention ordering opens ${opensWhen} and capacity is ${cap}. 3–4 short sentences, casual and warm.`;
 
     case "vendor_open":
+      if (ch === 'social') {
+        return `Write a short social caption announcing that ordering is NOW open for '${drop_name}'${host_name ? ` at ${host}` : ''}. This is a public post for the vendor's own social (Instagram or Facebook) — a standalone caption, NOT a direct message, so do not address it to "you" or "our customers". Warm, proud, and calm — 1–2 sentences. ${capacity ? `Capacity is limited to ${capacity}.` : ""} You may note it is pre-order only and places are limited if it reads naturally. Do not include the ordering link or closing time — these are added automatically.`;
+      }
       return `Write a short WhatsApp message from ${vendor_name} to their customers announcing that ordering is NOW open for '${drop_name}' at ${host} on ${delivery_day}. ${capacity ? `${capacity} slots available.` : ""} Direct and warm — 1–2 sentences only. Do not include the ordering link or closing time — these will be added automatically.`;
 
     case "host_link":
