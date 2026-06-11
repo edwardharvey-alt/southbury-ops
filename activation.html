@@ -1650,9 +1650,15 @@
         9: 'Send thank-you email'
       };
 
-      // Ignore host-origin events so host shares can't inflate the vendor's
-      // progress count (actor !== 'host' leaves legacy/null-actor rows as-is).
-      const loggedKeys = new Set(log.filter(e => e.actor !== 'host').map(e => e.touchpoint));
+      // The only host-origin event that counts toward vendor progress is the
+      // Card 5 link-share (the host is the legitimate finisher of that
+      // touchpoint); every other host event stays excluded (the #332 fix).
+      const loggedKeys = new Set(
+        log.filter(e =>
+          e.actor !== 'host' ||
+          (e.touchpoint === 'thursday_host_link' && e.action === 'shared')
+        ).map(e => e.touchpoint)
+      );
 
       // Only count non-optional cards that actually have a loggable key
       // toward progress. Card 7 (key null) is passive and never completes,
@@ -3171,26 +3177,85 @@
       }));
       }
 
-      // Card 5 — host link drop (is-host) — only in profiles that include it
+      // Card 5 — host link share (is-host) — only in profiles that include it.
+      // Bespoke render mirroring Card 2's actTouchpointShell handoff shell
+      // (5b-ii). The public ordering-link relay is gone: the live link in the
+      // host's hands is what reaches their group, so this card is a quiet nudge
+      // to the host, not a vendor-broadcast message. DONE is reached either by
+      // a host-origin share signal (the host is the legitimate finisher) or by
+      // a vendor nudge/copy. messageCard() is no longer called here.
       if (inProfile(5)) {
-        const primedDay = actWeekday(summary.delivery_start, -3) || 'earlier in the week';
-        // Archetype-aware deliverables (resolved in getDropProfile).
-        const card5Deliverables = profile.card5 || { channels: ['whatsapp', 'email', 'social'] };
-        const card5Channels = ['WhatsApp', 'email'];
-        if (card5Deliverables.channels.includes('social')) card5Channels.push('social');
-        const card5Desc = profile.openness === 'open'
-          ? `A second short message for ${eHost} — just the link and slot count. The community has been primed since ${escapeHtml(primedDay)}. This is the curtain going up.`
-          : `A second short message for ${eHost} to forward — just the link and the slots left.`;
-        cards.push(messageCard({
-          typeClass: 'is-host',
+        const card5Host = eHost || 'your host';
+        const hostShared = getHostShareSignal('thursday_host_link');
+        const vendorEntry = getLogEntry('thursday_host_link');
+        const card5Done = !!(hostShared || vendorEntry);
+
+        // No-email status: reuse a no-email finding from EITHER this card's own
+        // send or Card 2's earlier handoff for the SAME host, so the vendor is
+        // never asked to discover it twice.
+        const card5NoEmail = !!(
+          (state.hostNoEmail && state.hostNoEmail['thursday_host_link'] && state.hostNoEmail['thursday_host_link'][dropId]) ||
+          (state.hostNoEmail && state.hostNoEmail['tuesday_host'] && state.hostNoEmail['tuesday_host'][dropId])
+        );
+        const card5Copied = !!(state.hostLinkCopied && state.hostLinkCopied['thursday_host_link'] && state.hostLinkCopied['thursday_host_link'][dropId]);
+        const card5CopyLabel = card5Copied ? 'Copied ✓' : 'Copy link';
+
+        // Shared inline slot for transport / link-build failure messages
+        // (same markup/style as Card 2's).
+        const card5ErrorSlot = `<div class="act-copy-error" data-error-key="thursday_host_link"
+              style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>`;
+
+        let card5Body;
+        if (card5Done) {
+          // Done — collapse to a single done-line, by priority. A host share is
+          // a proxy signal (no precise vendor-side timestamp), so it carries no
+          // "· {time}"; vendor actions do.
+          let card5DoneLine;
+          if (hostShared) {
+            card5DoneLine = `${card5Host} looks to have shared the link.`;
+          } else if (vendorEntry.action === 'host_email_sent') {
+            card5DoneLine = `Nudge sent to ${card5Host} · ${formatLogTime(vendorEntry.timestamp)}`;
+          } else {
+            card5DoneLine = `Share page copied.`;
+          }
+          card5Body = `<div class="act-actions"><div class="act-done-state">${card5DoneLine}</div></div>`;
+        } else {
+          // Active — the nudge. A single desc covers both host profiles.
+          const card5Desc = `The live link in ${card5Host}'s hands is what reaches their group — a word from them carries further than anything from you. If they've not shared it yet, a quiet nudge is all it takes.`;
+          let card5Action;
+          if (card5NoEmail) {
+            // Host has no email on file — foreground Copy link.
+            card5Action = `
+              <div class="act-note">${card5Host} has no email on file — copy their share page and send it across however you usually reach them.</div>
+              <div class="act-channel-row">
+                <button class="act-copy-btn primary" type="button" data-act="copy-host-link" data-touchpoint="thursday_host_link">${card5CopyLabel}</button>
+              </div>
+              ${card5ErrorSlot}
+            `;
+          } else {
+            // Default — primary email nudge (5b-i handler derives variant='reminder').
+            card5Action = `
+              <div class="act-channel-row">
+                <button class="act-copy-btn primary" type="button" data-act="email-host-share" data-touchpoint="thursday_host_link">Email a nudge to ${card5Host}</button>
+              </div>
+              ${card5ErrorSlot}
+            `;
+          }
+          card5Body = `
+            <p>${card5Desc}</p>
+            <div class="act-actions">${card5Action}</div>
+          `;
+        }
+
+        cards.push(actTouchpointShell({
+          classes: `act-touchpoint is-host${card5Done ? ' is-done' : ''}`,
           cardNum: 5,
           label: labels[4],
-          title: optionalTitle(5, 'Ask your host to drop the link'),
-          desc: card5Desc,
-          messageText: templates['thursday_host_link'],
-          channels: card5Channels,
-          guidancePlaceholder: 'e.g. shorter, more casual, mention when ordering closes...',
-          touchpointKey: 'thursday_host_link'
+          title: optionalTitle(5, 'Ask your host to share the link'),
+          channel: 'Email',
+          bodyHtml: card5Body,
+          open: actCardOpen(5, card5Done, false),
+          bodyId: 'act-tp-body-5'
         }));
       }
 
