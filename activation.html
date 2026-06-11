@@ -3932,6 +3932,8 @@
               const cd = state.channelDrafts['vendor_open'];
               cd.drafts[cd.active] = draft;
               cd.generated[cd.active] = true;
+              state.messageGenerated = state.messageGenerated || {};
+              state.messageGenerated[tp] = true;  // mirror — keeps the auto-gen-once guard + error-state label working
             } else {
               state.messageDrafts[tp] = draft;
               state.messageGenerated = state.messageGenerated || {};
