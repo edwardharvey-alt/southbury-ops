@@ -3419,6 +3419,13 @@ update-drop/index.ts — port the same checks across. Drop Studio is the
 only client today, but a non-Drop-Studio client could insert nonsense
 rows via create-drop.
 
+Pass A / A2 addendum (Build Coherence Audit): when retrofitting
+create-drop, also add app-layer validation of `drop_type` and
+`audience_scope` so the function returns friendly, specific errors.
+The DB CHECK constraints (`drop_type IN (neighbourhood, community,
+event)`) already backstop integrity, so this is UX, not a
+correctness gap. Source: Build Coherence Audit Pass A / A2.
+
 T5-B11: Drop Studio readiness checklist — surface capacity row
 explicitly. The Review pane checklist in `drop-manager.html`
 (renderReview, lines 3217–3221) shows five rows: Basics complete,
@@ -4438,6 +4445,21 @@ After fix, either publish refuses with a clear error, or
 `orders_close` is correctly re-derived and the drop appears in
 the live list.
 
+**Pass A addendum (Build Coherence Audit / A4, 2026-06-10):**
+
+1. **Re-test the original repro before building.** The UI
+   re-derivation half (delivery-date change →
+   `deriveTimingFromDelivery` in `drop-manager.html`) appears
+   already fixed in current source — do NOT build against the
+   stale repro. Confirm against live source first.
+2. **Add a publish-time guard.** Enforce `closes_at > now()`
+   (and consider `delivery_start > now()`) in
+   `evaluateLiveReadiness` (`transition-drop-status`) and its
+   client mirror `getLiveReadiness` (`drop-manager.html`), so a
+   stale or duplicated old-date draft cannot publish
+   already-closed. This is the cross-link to T-A1-dup-gap, which
+   produces exactly such a stale-timing draft.
+
 **Out of scope:** broader drop scheduling refactor (recurring
 drop schedules, multi-window timing). This ticket is the narrow
 publish-validation + re-derivation gap.
@@ -4476,6 +4498,121 @@ T-hearth-intelligence-revenue-field-audit — audit hearth-intelligence.js for s
 **Fix shape (not built):** grep `revenue_pence` across `assets/hearth-intelligence.js`, identify every read site, trace `d` back to its source (raw row from which view? from which EF response?), confirm the field is actually populated. For each broken read, switch to the canonical field name. Verify against the same surfaces the intelligence module renders into (insights.html, customers.html, home.html).
 
 **Cross-reference:** operational learning #56 (the consolidated revenue/scope-source correctness rule).
+
+### Build Coherence Audit — Pass A (drop lifecycle, timing & type)
+
+Tickets surfaced by Build Coherence Audit Pass A
+(`audit/Hearth_Build_Coherence_Audit.md`, Pass A — drop lifecycle,
+timing & type). Pre-launch items first, in build order (lifecycle
+last); post-launch capture stubs follow. T5-B44 (Pass A / A4) and
+T5-B10 (Pass A / A2 app-layer validation) are updated in place in the
+Tier 5-B list above rather than duplicated here.
+
+#### Pre-launch (do in this order; lifecycle last)
+
+T-A1-dup-gap — Duplicating a drop discards the announce→open gap
+
+**Status:** Open. Pre-launch. Source: Pass A / A1.
+
+**Problem:** `duplicateDrop` (`drop-manager.html` ~4786) sets
+`opens_at` / `closes_at` to null, so a duplicated drop loads as "open
+immediately" and silently loses the source drop's anticipation window
+unless the vendor manually re-sets the toggle. If duplication is how
+each week's drop is made, every repeat loses its reveal window —
+directly fighting the comms model that treats the announce→open gap as
+part of the product.
+
+**Fix shape (not built):** carry the source's open pattern across on
+duplicate, or re-default to `createNewDrop`'s 24h-lead pattern.
+Audit-first: confirm current `duplicateDrop` behaviour against live
+source before building.
+
+**Cross-reference:** T5-B44 (a duplicated old-date draft is exactly the
+stale-timing case its publish-time guard should catch).
+
+T-A2-orphan-hosted — Remove dead `'hosted'` drop_type from update-drop
+
+**Status:** Open. Pre-launch (tiny, zero-risk hygiene). Source:
+Pass A / A2.
+
+**Problem:** `update-drop` `VALID_DROP_TYPES` includes `'hosted'`,
+which no surface writes and the DB `drop_type` CHECK constraint
+(`{neighbourhood, community, event}`) would reject anyway.
+`update-drop` also permits `drop_type = null`.
+
+**Fix shape (not built):** remove `'hosted'` from `VALID_DROP_TYPES`
+and disallow null `drop_type` on the update path. No live rows carry
+`'hosted'` (verified: 127 drops, only the three real values).
+
+T-A6-lifecycle — Drop status lifecycle: live→closed→completed via scheduled job
+
+**Status:** Open — DESIGN SPEC PENDING (do not build until the spec is
+agreed in chat). Pre-launch, sequenced LAST in the pre-launch batch.
+Source: Pass A / A6.
+
+**Decision:** build the full stored-status lifecycle (not the
+derived-status alternative). The status CHECK constraint already
+permits `draft / scheduled / live / closed / completed / cancelled /
+archived`, but nothing currently writes `scheduled` / `closed` /
+`completed` — they are an unfinished lifecycle (UI branches and the
+anon SELECT policy already reference them; no transition engine
+exists). A published drop stays `'live'` forever; customer ordering is
+unaffected (time-gated in `order.html`) but vendor surfaces never
+resolve and activation's closed states never light up.
+
+**Open design decisions (settle in the design spec before any build):**
+
+- (a) **Scheduler mechanism** — `pg_cron` is NOT enabled, so either
+  enable `pg_cron` or use a Supabase scheduled Edge Function
+  (preference: EF, keeping `transition-drop-status` the single status
+  writer).
+- (b) **Transition triggers** — `live`→`closed` on `closes_at`
+  passing; `closed`→`completed` on `delivery_end` passing; whether to
+  also add a `draft` / `scheduled` front-half.
+- (c) **Idempotent backfill** of the existing `live` rows whose
+  windows have passed, touching only `status='live'` / `'closed'` rows
+  (never `draft` / `cancelled` / `archived`).
+- (d) **Public-listing scope review** — review the anon SELECT policy /
+  `v_drop_public` scope (currently `'live','scheduled','completed'`) so
+  a `'closed'` drop doesn't disappear from the public listing
+  mid-window, and so `'completed'` showing publicly is intended.
+
+#### Post-launch (capture stubs)
+
+T-A3-host-type-source — Single source of truth for the host_type set
+
+**Status:** Open. Post-launch. Source: Pass A / A3. Consolidate the
+13-value `host_type` set to one shared source across the three pickers
++ the DB constraint. No bug today (constraint matches pickers) —
+drift-prevention only.
+
+T-schema-regen — Regenerate SCHEMA.md from the live DB
+
+**Status:** Open. Post-launch. Source: Pass A spillover. `SCHEMA.md` is
+stale — it omits `audience_scope` and lists a 7-value `host_type` set
+that conflicts with the live 13-value constraint. Regenerate from the
+live DB (the regeneration query is at the top of `SCHEMA.md`).
+
+T-A1-window-gap — Optional anticipation gap for multi-window event siblings
+
+**Status:** Open. Post-launch (low priority). Source: Pass A / A1.
+Multi-window event siblings hardcode `opens_at = now`; give event
+windows an optional anticipation gap. Immediate-open is defensible for
+events, so this is low priority.
+
+T-A4-merged-timing-validation — Validate the merged stored timing on update-drop
+
+**Status:** Open. Post-launch (latent). Source: Pass A / A4.
+`update-drop` validates timing only within a single payload; it should
+validate the merged stored result (payload merged over the existing
+row). Latent today because Drop Studio always sends a full timing set;
+matters for future partial-update / API callers.
+
+T-dup-updated-at-trigger — Drop one of two identical updated_at triggers on drops
+
+**Status:** Open. Post-launch. Source: Pass A / A6 (trigger dump).
+`drops` has two identical `updated_at` triggers
+(`set_updated_at_drops` and `trg_drops_updated_at`); drop one.
 
 ### Tier 6 — Production readiness
 
