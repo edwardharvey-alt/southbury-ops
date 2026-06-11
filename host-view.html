@@ -1061,11 +1061,11 @@
       }
 
       // Touchpoint mapping must match the vendor-side cardKeyMap so both
-      // surfaces agree: heads-up (Step 1) → tuesday_host; order-link share
-      // (Step 2 message) → thursday_host_link.
+      // surfaces agree: heads-up (Step 1) → host_heads_up; order-link share
+      // (Step 2 message) → host_link.
       const SHARE_TOUCHPOINTS = {
-        hvMsgStep1: "tuesday_host",
-        hvMsgStep2: "thursday_host_link",
+        hvMsgStep1: "host_heads_up",
+        hvMsgStep2: "host_link",
       };
 
       // Copy-message buttons (read live textarea contents).
@@ -1091,7 +1091,7 @@
           try {
             await copyTextToClipboard(orderLink);
             flashCopied(copyLinkBtn);
-            logHostShare("thursday_host_link");
+            logHostShare("host_link");
           } catch (err){
             console.error("copy failed", err);
           }

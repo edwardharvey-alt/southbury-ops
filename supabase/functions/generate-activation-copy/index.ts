@@ -100,25 +100,25 @@ function buildPrompt(input: CopyInput): string {
     : opens_day || "soon";
 
   switch (touchpoint) {
-    case "monday_reveal_hook":
+    case "menu_reveal_hook":
       return `Write a single punchy hook line for a reveal post. Around 80 characters maximum.
 Vendor: ${vendor_name}. Drop: '${drop_name}' at ${host} on ${delivery_day}.
 One line only. No emojis. Warm and intriguing. Do not invent specific menu items — keep it to the type of food and occasion.
 Output only the line, nothing else.`;
 
-    case "monday_reveal":
+    case "menu_reveal":
       return `Write a social media post for ${vendor_name} announcing their upcoming '${drop_name}'${host_name ? ` at ${host_name}` : ''} this ${delivery_day}. Ordering opens ${opensWhen} — do not include a link yet. Build warm anticipation. 2–3 sentences. Do not invent specific food items or menu details — keep it to what you know from the context given.`;
 
-    case "tuesday_host":
+    case "host_heads_up":
       return `Write a WhatsApp message from ${host} to their members about ${vendor_name}'s '${drop_name}' this ${delivery_day}. Written as the venue or club organiser — a trusted community heads-up, not a vendor promotion. Mention ordering opens ${opensWhen} and capacity is ${cap}. 3–4 short sentences, casual and warm.`;
 
-    case "thursday_vendor":
+    case "vendor_open":
       return `Write a short WhatsApp message from ${vendor_name} to their customers announcing that ordering is NOW open for '${drop_name}' at ${host} on ${delivery_day}. ${capacity ? `${capacity} slots available.` : ""} Direct and warm — 1–2 sentences only. Do not include the ordering link or closing time — these will be added automatically.`;
 
-    case "thursday_host_link":
+    case "host_link":
       return `Write a very short WhatsApp message from ${host} dropping the live ordering link in their group. Under 15 words. Mention ${cap} remaining and include this link: ${ordering_url}. Nothing else.`;
 
-    case "friday_post_drop":
+    case "post_drop":
       return `Write a short social media post from ${vendor_name} after completing their '${drop_name}'. Warm and grateful. Hint that the next one is coming. 2 sentences.`;
 
     case "early_access_email":
