@@ -2685,7 +2685,12 @@
       // triggers a re-render mid-edit.
       document.querySelectorAll('[data-act="message-textarea"]').forEach(ta => {
         const tp = ta.dataset.touchpoint;
-        if (tp) state.messageDrafts[tp] = ta.value;
+        if (tp === 'vendor_open') {
+          const cd = state.channelDrafts?.['vendor_open'];
+          if (cd) cd.drafts[cd.active] = ta.value;
+        } else if (tp) {
+          state.messageDrafts[tp] = ta.value;
+        }
       });
 
       const content = byId('activationContent');
@@ -2774,6 +2779,9 @@
       const c4 = `${dropName} orders are now open. ${capPhrase} slots available — order here: ${orderingLink}` +
         (closesTime ? `\n\nOrders close at ${closesTime}.` : '');
       templates['vendor_open'] = c4;
+      const c4Social = `Ordering is now open for ${dropName}${c1Venue ? ` at ${c1Venue}` : ''}. Pre-order only and places are limited — order here: ${orderingLink}`
+        + (closesTime ? `\n\nOrders close at ${closesTime}.` : '');
+      templates['vendor_open_social'] = c4Social;
 
       // Card 5 — host link
       templates['host_link'] =
@@ -3040,11 +3048,18 @@
         ? 'Noticeboard line — the line on the sheet you pin up'
         : 'Till poster line — the line a walk-in customer reads by the till';
 
-      // Initialise Card 4 message draft
-      if (!state.messageDrafts['vendor_open']) {
-        state.messageDrafts['vendor_open'] = templates['vendor_open'] || '';
+      // Initialise Card 4 per-channel draft store
+      if (!state.channelDrafts) state.channelDrafts = {};
+      if (!state.channelDrafts['vendor_open']) {
+        const chans = (card4Deliverables.channels) || ['whatsapp'];
+        const drafts = {};
+        if (chans.includes('whatsapp')) drafts.whatsapp = templates['vendor_open'] || '';
+        if (chans.includes('social'))   drafts.social   = templates['vendor_open_social'] || '';
+        state.channelDrafts['vendor_open'] = { active: 'whatsapp', drafts, generated: {} };
       }
-      const card4Text = state.messageDrafts['vendor_open'];
+      const card4Channels = state.channelDrafts['vendor_open'];
+      const card4Active = card4Channels.active;
+      const card4Text = card4Channels.drafts[card4Active] || '';
       const card4Expanded = !!state.expandedMessageCards['vendor_open'];
 
       let card4MessageArea;
@@ -3058,9 +3073,9 @@
           <div class="act-message-edit">
             <textarea data-act="message-textarea" data-touchpoint="vendor_open"
               rows="5">${escapeHtml(card4Text)}</textarea>
-            ${state.messageGenerated?.['vendor_open']
+            ${card4Channels.generated[card4Active]
               ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
-            ${state.messageGenerated?.['vendor_open'] ? `
+            ${card4Channels.generated[card4Active] ? `
               <div class="act-guidance-row">
                 <input type="text" class="act-guidance-input"
                   data-touchpoint="vendor_open"
@@ -3071,7 +3086,7 @@
                 data-act="generate-copy"
                 data-touchpoint="vendor_open"
                 class="act-copy-btn">
-                ${state.messageGenerated?.['vendor_open'] ? '↺ Regenerate →' : '✦ Generate →'}
+                ${card4Channels.generated[card4Active] ? '↺ Regenerate →' : '✦ Generate →'}
               </button>
               <button class="act-copy-btn" type="button"
                 data-act="collapse-message"
@@ -3092,9 +3107,9 @@
       } else {
         card4MessageArea = `
           <div class="act-message-preview">${escapeHtml(card4Text)}</div>
-          ${state.messageGenerated?.['vendor_open']
+          ${card4Channels.generated[card4Active]
             ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
-          ${state.messageGenerated?.['vendor_open'] ? `
+          ${card4Channels.generated[card4Active] ? `
             <div class="act-guidance-row">
               <input type="text" class="act-guidance-input"
                 data-touchpoint="vendor_open"
@@ -3104,7 +3119,7 @@
             <button class="act-copy-btn" type="button"
               data-act="generate-copy"
               data-touchpoint="vendor_open">
-              ${state.messageGenerated?.['vendor_open'] ? '↺ Regenerate →' : '✦ Generate →'}
+              ${card4Channels.generated[card4Active] ? '↺ Regenerate →' : '✦ Generate →'}
             </button>
             <button class="act-copy-btn" type="button"
               data-act="expand-message"
@@ -3718,8 +3733,15 @@
         const ta = document.querySelector(
           `[data-act="message-textarea"][data-touchpoint="${tp}"]`
         );
-        if (ta) state.messageDrafts[tp] = ta.value;
-        const text = state.messageDrafts[tp] || '';
+        let text;
+        if (tp === 'vendor_open') {
+          const cd = state.channelDrafts?.['vendor_open'];
+          if (ta && cd) cd.drafts[cd.active] = ta.value;
+          text = (cd && cd.drafts[cd.active]) || '';
+        } else {
+          if (ta) state.messageDrafts[tp] = ta.value;
+          text = state.messageDrafts[tp] || '';
+        }
         const originalLabel = copyMsg.textContent;
         await actCopyToClipboard(text, copyMsg, originalLabel);
         actLog(tp, copyMsg.dataset.action || 'message_copied');
@@ -3874,11 +3896,15 @@
         const errorNote = document.querySelector(`.act-copy-error[data-error-key="${tp}"]`);
         if (errorNote) errorNote.textContent = '';
 
+        const activeChannel = tp === 'vendor_open'
+          ? (state.channelDrafts?.['vendor_open']?.active || 'whatsapp') : undefined;
+
         try {
           const body = {
             touchpoint: tpMap[tp],
             ...actBuildDropContext(dropId),
             guidance,
+            ...(activeChannel ? { channel: activeChannel } : {}),
           };
 
           const { data, error } = await sb.functions.invoke('generate-activation-copy', { body });
@@ -3902,9 +3928,15 @@
             // On success always re-render the card in expanded state so the
             // generated text is shown. The re-render rebuilds the button, so
             // no manual button reset is needed here.
-            state.messageDrafts[tp] = draft;
-            state.messageGenerated = state.messageGenerated || {};
-            state.messageGenerated[tp] = true;
+            if (tp === 'vendor_open') {
+              const cd = state.channelDrafts['vendor_open'];
+              cd.drafts[cd.active] = draft;
+              cd.generated[cd.active] = true;
+            } else {
+              state.messageDrafts[tp] = draft;
+              state.messageGenerated = state.messageGenerated || {};
+              state.messageGenerated[tp] = true;
+            }
             state.expandedMessageCards[tp] = true;
             state.generateLoading[tp] = false;
             // Sync the live textarea (if one is mounted) before the re-render:
