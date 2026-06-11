@@ -1627,15 +1627,15 @@
       // variants). Card 7 is a passive auto-card that never logs, so it has
       // no key and is excluded from counting below.
       const cardKeyMap = {
-        1: 'monday_reveal',
-        2: 'tuesday_host',
-        3: 'thursday_early_access',
-        4: 'thursday_vendor_whatsapp',
-        5: 'thursday_host_link',
-        6: 'friday_capacity',
+        1: 'menu_reveal',
+        2: 'host_heads_up',
+        3: 'early_access',
+        4: 'vendor_open',
+        5: 'host_link',
+        6: 'capacity_signal',
         7: null,
-        8: 'friday_post_drop',
-        9: 'saturday_thankyou'
+        8: 'post_drop',
+        9: 'thank_you'
       };
 
       const cardTitleMap = {
@@ -1656,7 +1656,7 @@
       const loggedKeys = new Set(
         log.filter(e =>
           e.actor !== 'host' ||
-          (e.touchpoint === 'thursday_host_link' && e.action === 'shared')
+          (e.touchpoint === 'host_link' && e.action === 'shared')
         ).map(e => e.touchpoint)
       );
 
@@ -2308,7 +2308,7 @@
     }
 
     // Wire the reveal textarea + product select inside Card 1's action
-    // area. Mirrors templates['monday_reveal'] inline so the Copy caption
+    // area. Mirrors templates['menu_reveal'] inline so the Copy caption
     // button always copies the latest text without waiting for the save.
     function actInitRevealFields(dropId, summary, rawDrop) {
       const productEl = byId('act-revealProduct');
@@ -2761,32 +2761,32 @@
       if (revealLine) c1.push(revealLine);
       c1.push(`Orders open ${actOpensPhrase(opensAt)}. Capacity is limited to ${capPhrase} orders.`);
       if (orderingLink) c1.push(orderingLink);
-      templates['monday_reveal'] = c1.join('\n\n');
+      templates['menu_reveal'] = c1.join('\n\n');
 
       // Card 2 — host awareness
       const opensClause = opensAt && !isNaN(new Date(opensAt).getTime())
         ? `orders open ${fmtTime(new Date(opensAt))} on ${actFormatMenuCardDate(opensAt)}`
         : `orders open soon`;
-      templates['tuesday_host'] =
+      templates['host_heads_up'] =
         `Hey everyone — just to let you know, we've got ${vendorName} coming to ${hostName} on ${actRelDay(summary.delivery_start, true)}. It's pre-order only — ${opensClause} and capacity is limited to ${capPhrase} so worth ordering early. I'll share the link when it's live.`;
 
       // Card 4 — vendor WhatsApp
       const c4 = `${dropName} orders are now open. ${capPhrase} slots available — order here: ${orderingLink}` +
         (closesTime ? `\n\nOrders close at ${closesTime}.` : '');
-      templates['thursday_vendor_whatsapp'] = c4;
+      templates['vendor_open'] = c4;
 
       // Card 5 — host link
-      templates['thursday_host_link'] =
+      templates['host_link'] =
         `Orders are live — ${capPhrase} slots available. Order here: ${orderingLink}`;
 
       // Card 6 — capacity signal
       const soldOut = (remaining === 0) || (capTotalNum != null && capTotalNum > 0 && used >= capTotalNum);
-      templates['friday_capacity'] = soldOut
+      templates['capacity_signal'] = soldOut
         ? `We're full for tonight. Next one coming soon.`
         : `Only ${remaining == null ? capPhrase : remaining} slots left for ${dropName} today. Order here: ${orderingLink}`;
 
       // Card 8 — post-drop caption
-      templates['friday_post_drop'] =
+      templates['post_drop'] =
         `${dropName} is done for tonight. ${orderCount} orders fulfilled.\n\n` +
         `Thanks to everyone who ordered${hostName ? `, and to ${hostName} for having us` : ''} — see you next time.`;
 
@@ -2802,11 +2802,11 @@
 
       // Preserve any edits the vendor has made to email fields
       if (!state.emailDrafts) state.emailDrafts = {};
-      if (!state.emailDrafts['thursday_early_access']) {
-        state.emailDrafts['thursday_early_access'] = { subject: emailSubject3, body: emailBody3 };
+      if (!state.emailDrafts['early_access']) {
+        state.emailDrafts['early_access'] = { subject: emailSubject3, body: emailBody3 };
       }
-      if (!state.emailDrafts['saturday_thankyou']) {
-        state.emailDrafts['saturday_thankyou'] = { subject: emailSubject9, body: emailBody9 };
+      if (!state.emailDrafts['thank_you']) {
+        state.emailDrafts['thank_you'] = { subject: emailSubject9, body: emailBody9 };
       }
 
       // --- cards ---
@@ -2825,37 +2825,37 @@
         ? 'Create a menu card asset for your client or to share on social if relevant to this drop.'
         : 'Post your menu card to Instagram before ordering opens. Start the anticipation early — this is the moment that seeds the algorithm for your drop day.';
       let card1CaptionArea;
-      if (getLogEntry('monday_reveal')) {
-        card1CaptionArea = `<div class="act-done-state">✓ Caption copied · ${formatLogTime(getLogEntry('monday_reveal').timestamp)}</div>`;
+      if (getLogEntry('menu_reveal')) {
+        card1CaptionArea = `<div class="act-done-state">✓ Caption copied · ${formatLogTime(getLogEntry('menu_reveal').timestamp)}</div>`;
       } else {
         // Editable caption draft, seeded from the assembled template.
-        if (!state.messageDrafts['monday_reveal']) {
-          state.messageDrafts['monday_reveal'] = templates['monday_reveal'];
+        if (!state.messageDrafts['menu_reveal']) {
+          state.messageDrafts['menu_reveal'] = templates['menu_reveal'];
         }
-        const card1Caption = state.messageDrafts['monday_reveal'];
+        const card1Caption = state.messageDrafts['menu_reveal'];
         card1CaptionArea = `
           <div class="act-message-edit">
             <textarea
               data-act="message-textarea"
-              data-touchpoint="monday_reveal"
+              data-touchpoint="menu_reveal"
               rows="5">${escapeHtml(card1Caption)}</textarea>
-            ${state.messageGenerated?.['monday_reveal'] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
-            ${state.messageGenerated?.['monday_reveal'] ? `
+            ${state.messageGenerated?.['menu_reveal'] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
+            ${state.messageGenerated?.['menu_reveal'] ? `
               <div class="act-guidance-row">
                 <input type="text" class="act-guidance-input"
-                  data-touchpoint="monday_reveal"
+                  data-touchpoint="menu_reveal"
                   placeholder="e.g. shorter, more intriguing, mention it's their first drop at this venue...">
               </div>` : ''}
             <div class="act-message-edit-row">
               <button
                 data-act="generate-copy"
-                data-touchpoint="monday_reveal"
+                data-touchpoint="menu_reveal"
                 class="act-copy-btn">
-                ${state.messageGenerated?.['monday_reveal'] ? '↺ Regenerate →' : '✦ Generate →'}
+                ${state.messageGenerated?.['menu_reveal'] ? '↺ Regenerate →' : '✦ Generate →'}
               </button>
-              ${copyBtn('Copy caption', 'monday_reveal', 'caption_copied', false)}
+              ${copyBtn('Copy caption', 'menu_reveal', 'caption_copied', false)}
             </div>
-            <div class="act-copy-error" data-error-key="monday_reveal"
+            <div class="act-copy-error" data-error-key="menu_reveal"
               style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
           </div>
         `;
@@ -2900,13 +2900,13 @@
           </div>
       `;
       cards.push(actTouchpointShell({
-        classes: `act-touchpoint is-vendor${getLogEntry('monday_reveal') ? ' is-done' : ''}`,
+        classes: `act-touchpoint is-vendor${getLogEntry('menu_reveal') ? ' is-done' : ''}`,
         cardNum: 1,
         label: labels[0],
         title: escapeHtml(card1Title),
         channel: 'Instagram',
         bodyHtml: card1Body,
-        open: actCardOpen(1, !!getLogEntry('monday_reveal'), false),
+        open: actCardOpen(1, !!getLogEntry('menu_reveal'), false),
         bodyId: 'act-tp-body-1'
       }));
       }
@@ -2919,20 +2919,20 @@
       // they customise and post in their own voice — so there is no textarea,
       // no AI draft/Regenerate, and no per-channel copy here.
       if (inProfile(2)) {
-        const card2Entry = getLogEntry('tuesday_host');
+        const card2Entry = getLogEntry('host_heads_up');
         const card2Host = eHost || 'your host';
-        const card2NoEmail = !!(state.hostNoEmail && state.hostNoEmail['tuesday_host'] && state.hostNoEmail['tuesday_host'][dropId]);
+        const card2NoEmail = !!(state.hostNoEmail && state.hostNoEmail['host_heads_up'] && state.hostNoEmail['host_heads_up'][dropId]);
         // Transient "Copied ✓" confirmation for Copy link, driven through
         // rendered state (not a post-render button flash, which actLog's
         // re-render destroys). Survives the re-render and works in every
         // state — including when the done line already reads "Sent to {host}"
         // and clicking the retained Copy link changes nothing else. The flag
         // is set in the copy-host-link handler and cleared ~2s later.
-        const card2Copied = !!(state.hostLinkCopied && state.hostLinkCopied['tuesday_host'] && state.hostLinkCopied['tuesday_host'][dropId]);
+        const card2Copied = !!(state.hostLinkCopied && state.hostLinkCopied['host_heads_up'] && state.hostLinkCopied['host_heads_up'][dropId]);
         const card2CopyLabel = card2Copied ? 'Copied ✓' : 'Copy link';
 
         // Shared inline slot for transport / link-build failure messages.
-        const card2ErrorSlot = `<div class="act-copy-error" data-error-key="tuesday_host"
+        const card2ErrorSlot = `<div class="act-copy-error" data-error-key="host_heads_up"
               style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>`;
 
         let card2Action;
@@ -2945,10 +2945,10 @@
           // here for the wording. (Touchpoint presence still drives the
           // done/progress state itself — unchanged.)
           const card2EmailSent = state.activationLog.find(
-            e => e.touchpoint === 'tuesday_host' && e.action === 'host_email_sent' && e.actor !== 'host'
+            e => e.touchpoint === 'host_heads_up' && e.action === 'host_email_sent' && e.actor !== 'host'
           );
           const card2DoneEntry = card2EmailSent || state.activationLog.find(
-            e => e.touchpoint === 'tuesday_host' && e.action === 'host_link_copied' && e.actor !== 'host'
+            e => e.touchpoint === 'host_heads_up' && e.action === 'host_link_copied' && e.actor !== 'host'
           ) || card2Entry;
           const card2DoneLine = card2EmailSent
             ? `✓ Sent to ${card2Host} · ${formatLogTime(card2DoneEntry.timestamp)}`
@@ -2956,7 +2956,7 @@
           card2Action = `
             <div class="act-done-state">${card2DoneLine}</div>
             <div class="act-channel-row">
-              <button class="act-copy-btn" type="button" data-act="copy-host-link" data-touchpoint="tuesday_host">${card2CopyLabel}</button>
+              <button class="act-copy-btn" type="button" data-act="copy-host-link" data-touchpoint="host_heads_up">${card2CopyLabel}</button>
             </div>
             ${card2ErrorSlot}
           `;
@@ -2965,7 +2965,7 @@
           card2Action = `
             <div class="act-note">${card2Host} has no email on file — copy their link and send it across however you usually reach them.</div>
             <div class="act-channel-row">
-              <button class="act-copy-btn primary" type="button" data-act="copy-host-link" data-touchpoint="tuesday_host">${card2CopyLabel}</button>
+              <button class="act-copy-btn primary" type="button" data-act="copy-host-link" data-touchpoint="host_heads_up">${card2CopyLabel}</button>
             </div>
             ${card2ErrorSlot}
           `;
@@ -2973,8 +2973,8 @@
           // Default — primary email send + quiet Copy link fallback.
           card2Action = `
             <div class="act-channel-row">
-              <button class="act-copy-btn primary" type="button" data-act="email-host-share" data-touchpoint="tuesday_host">Email share page to ${card2Host}</button>
-              <button class="act-copy-btn" type="button" data-act="copy-host-link" data-touchpoint="tuesday_host">${card2CopyLabel}</button>
+              <button class="act-copy-btn primary" type="button" data-act="email-host-share" data-touchpoint="host_heads_up">Email share page to ${card2Host}</button>
+              <button class="act-copy-btn" type="button" data-act="copy-host-link" data-touchpoint="host_heads_up">${card2CopyLabel}</button>
             </div>
             ${card2ErrorSlot}
           `;
@@ -3016,12 +3016,12 @@
           title: optionalTitle(3, 'Early access for previous customers'),
           channel: 'Email',
           desc: 'Previous customers get access before the public link goes live. Review and confirm the email below.',
-          subject: state.emailDrafts['thursday_early_access'].subject,
-          body: state.emailDrafts['thursday_early_access'].body,
+          subject: state.emailDrafts['early_access'].subject,
+          body: state.emailDrafts['early_access'].body,
           note: card3Locked ? null : `Sends to customers who have previously ordered from you.`,
           locked: card3Locked,
           lockedNote: 'No previous customers yet — this unlocks once someone has ordered from you.',
-          touchpointKey: 'thursday_early_access'
+          touchpointKey: 'early_access'
         }));
       }
 
@@ -3030,7 +3030,7 @@
       // always show; only the message + channel buttons flip to a done
       // state once one of the channels has been copied.
       if (inProfile(4)) {
-      const card4Entry = getLogEntry('thursday_vendor_whatsapp');
+      const card4Entry = getLogEntry('vendor_open');
 
       // Archetype-aware deliverables for this drop (resolved in getDropProfile).
       const card4Deliverables = profile.card4 || { instagram: true, poster: 'till', channels: ['whatsapp', 'social'] };
@@ -3041,11 +3041,11 @@
         : 'Till poster line — the line a walk-in customer reads by the till';
 
       // Initialise Card 4 message draft
-      if (!state.messageDrafts['thursday_vendor_whatsapp']) {
-        state.messageDrafts['thursday_vendor_whatsapp'] = templates['thursday_vendor_whatsapp'] || '';
+      if (!state.messageDrafts['vendor_open']) {
+        state.messageDrafts['vendor_open'] = templates['vendor_open'] || '';
       }
-      const card4Text = state.messageDrafts['thursday_vendor_whatsapp'];
-      const card4Expanded = !!state.expandedMessageCards['thursday_vendor_whatsapp'];
+      const card4Text = state.messageDrafts['vendor_open'];
+      const card4Expanded = !!state.expandedMessageCards['vendor_open'];
 
       let card4MessageArea;
       if (card4Entry) {
@@ -3056,66 +3056,66 @@
       } else if (card4Expanded) {
         card4MessageArea = `
           <div class="act-message-edit">
-            <textarea data-act="message-textarea" data-touchpoint="thursday_vendor_whatsapp"
+            <textarea data-act="message-textarea" data-touchpoint="vendor_open"
               rows="5">${escapeHtml(card4Text)}</textarea>
-            ${state.messageGenerated?.['thursday_vendor_whatsapp']
+            ${state.messageGenerated?.['vendor_open']
               ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
-            ${state.messageGenerated?.['thursday_vendor_whatsapp'] ? `
+            ${state.messageGenerated?.['vendor_open'] ? `
               <div class="act-guidance-row">
                 <input type="text" class="act-guidance-input"
-                  data-touchpoint="thursday_vendor_whatsapp"
+                  data-touchpoint="vendor_open"
                   placeholder="e.g. more urgent, mention it's first come first served...">
               </div>` : ''}
             <div class="act-message-edit-row">
               <button
                 data-act="generate-copy"
-                data-touchpoint="thursday_vendor_whatsapp"
+                data-touchpoint="vendor_open"
                 class="act-copy-btn">
-                ${state.messageGenerated?.['thursday_vendor_whatsapp'] ? '↺ Regenerate →' : '✦ Generate →'}
+                ${state.messageGenerated?.['vendor_open'] ? '↺ Regenerate →' : '✦ Generate →'}
               </button>
               <button class="act-copy-btn" type="button"
                 data-act="collapse-message"
-                data-touchpoint="thursday_vendor_whatsapp">Done editing</button>
+                data-touchpoint="vendor_open">Done editing</button>
               <button class="act-copy-btn" type="button"
                 data-act="copy-message"
-                data-touchpoint="thursday_vendor_whatsapp"
+                data-touchpoint="vendor_open"
                 data-action="message_copied">Copy for WhatsApp</button>
               ${card4ShowSocial ? `<button class="act-copy-btn" type="button"
                 data-act="copy-message"
-                data-touchpoint="thursday_vendor_whatsapp"
+                data-touchpoint="vendor_open"
                 data-action="message_copied">Copy for social</button>` : ''}
             </div>
-            <div class="act-copy-error" data-error-key="thursday_vendor_whatsapp"
+            <div class="act-copy-error" data-error-key="vendor_open"
               style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
           </div>
         `;
       } else {
         card4MessageArea = `
           <div class="act-message-preview">${escapeHtml(card4Text)}</div>
-          ${state.messageGenerated?.['thursday_vendor_whatsapp']
+          ${state.messageGenerated?.['vendor_open']
             ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
-          ${state.messageGenerated?.['thursday_vendor_whatsapp'] ? `
+          ${state.messageGenerated?.['vendor_open'] ? `
             <div class="act-guidance-row">
               <input type="text" class="act-guidance-input"
-                data-touchpoint="thursday_vendor_whatsapp"
+                data-touchpoint="vendor_open"
                 placeholder="e.g. more urgent, mention it's first come first served...">
             </div>` : ''}
           <div class="act-channel-row">
             <button class="act-copy-btn" type="button"
               data-act="generate-copy"
-              data-touchpoint="thursday_vendor_whatsapp">
-              ${state.messageGenerated?.['thursday_vendor_whatsapp'] ? '↺ Regenerate →' : '✦ Generate →'}
+              data-touchpoint="vendor_open">
+              ${state.messageGenerated?.['vendor_open'] ? '↺ Regenerate →' : '✦ Generate →'}
             </button>
             <button class="act-copy-btn" type="button"
               data-act="expand-message"
-              data-touchpoint="thursday_vendor_whatsapp">Edit</button>
+              data-touchpoint="vendor_open">Edit</button>
             <button class="act-copy-btn" type="button"
               data-act="copy-message"
-              data-touchpoint="thursday_vendor_whatsapp"
+              data-touchpoint="vendor_open"
               data-action="message_copied">Copy for WhatsApp</button>
             ${card4ShowSocial ? `<button class="act-copy-btn" type="button"
               data-act="copy-message"
-              data-touchpoint="thursday_vendor_whatsapp"
+              data-touchpoint="vendor_open"
               data-action="message_copied">Copy for social</button>` : ''}
           </div>
         `;
@@ -3186,23 +3186,23 @@
       // a vendor nudge/copy. messageCard() is no longer called here.
       if (inProfile(5)) {
         const card5Host = eHost || 'your host';
-        const hostShared = getHostShareSignal('thursday_host_link');
-        const vendorEntry = getLogEntry('thursday_host_link');
+        const hostShared = getHostShareSignal('host_link');
+        const vendorEntry = getLogEntry('host_link');
         const card5Done = !!(hostShared || vendorEntry);
 
         // No-email status: reuse a no-email finding from EITHER this card's own
         // send or Card 2's earlier handoff for the SAME host, so the vendor is
         // never asked to discover it twice.
         const card5NoEmail = !!(
-          (state.hostNoEmail && state.hostNoEmail['thursday_host_link'] && state.hostNoEmail['thursday_host_link'][dropId]) ||
-          (state.hostNoEmail && state.hostNoEmail['tuesday_host'] && state.hostNoEmail['tuesday_host'][dropId])
+          (state.hostNoEmail && state.hostNoEmail['host_link'] && state.hostNoEmail['host_link'][dropId]) ||
+          (state.hostNoEmail && state.hostNoEmail['host_heads_up'] && state.hostNoEmail['host_heads_up'][dropId])
         );
-        const card5Copied = !!(state.hostLinkCopied && state.hostLinkCopied['thursday_host_link'] && state.hostLinkCopied['thursday_host_link'][dropId]);
+        const card5Copied = !!(state.hostLinkCopied && state.hostLinkCopied['host_link'] && state.hostLinkCopied['host_link'][dropId]);
         const card5CopyLabel = card5Copied ? 'Copied ✓' : 'Copy link';
 
         // Shared inline slot for transport / link-build failure messages
         // (same markup/style as Card 2's).
-        const card5ErrorSlot = `<div class="act-copy-error" data-error-key="thursday_host_link"
+        const card5ErrorSlot = `<div class="act-copy-error" data-error-key="host_link"
               style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>`;
 
         let card5Body;
@@ -3228,7 +3228,7 @@
             card5Action = `
               <div class="act-note">${card5Host} has no email on file — copy their share page and send it across however you usually reach them.</div>
               <div class="act-channel-row">
-                <button class="act-copy-btn primary" type="button" data-act="copy-host-link" data-touchpoint="thursday_host_link">${card5CopyLabel}</button>
+                <button class="act-copy-btn primary" type="button" data-act="copy-host-link" data-touchpoint="host_link">${card5CopyLabel}</button>
               </div>
               ${card5ErrorSlot}
             `;
@@ -3236,7 +3236,7 @@
             // Default — primary email nudge (5b-i handler derives variant='reminder').
             card5Action = `
               <div class="act-channel-row">
-                <button class="act-copy-btn primary" type="button" data-act="email-host-share" data-touchpoint="thursday_host_link">Email a nudge to ${card5Host}</button>
+                <button class="act-copy-btn primary" type="button" data-act="email-host-share" data-touchpoint="host_link">Email a nudge to ${card5Host}</button>
               </div>
               ${card5ErrorSlot}
             `;
@@ -3267,10 +3267,10 @@
       const card6Locked = !(status === 'live' ||
         (capTotalNum != null && capTotalNum > 0 && orderCount >= 0.5 * capTotalNum));
 
-      const card6Entry = getLogEntry('friday_capacity');
+      const card6Entry = getLogEntry('capacity_signal');
       const card6CopyArea = card6Entry
         ? `<div class="act-done-state">✓ Sent · ${formatLogTime(card6Entry.timestamp)}</div>`
-        : copyBtn('Copy capacity post', 'friday_capacity', 'post_copied', false);
+        : copyBtn('Copy capacity post', 'capacity_signal', 'post_copied', false);
 
       const card6ArtworkHtml = card6Locked ? '' : `
         <div class="menuCardArtworkFrame" id="act-capacityFrame"
@@ -3337,33 +3337,33 @@
       // Card 8 — post-drop content (is-prompted, locked until closed)
       if (inProfile(8)) {
         // Editable caption draft, seeded from the assembled template.
-        if (!state.messageDrafts['friday_post_drop']) {
-          state.messageDrafts['friday_post_drop'] = templates['friday_post_drop'];
+        if (!state.messageDrafts['post_drop']) {
+          state.messageDrafts['post_drop'] = templates['post_drop'];
         }
-        const card8Caption = state.messageDrafts['friday_post_drop'];
+        const card8Caption = state.messageDrafts['post_drop'];
         const card8ActionHtml = `
           <div class="act-message-edit">
             <textarea
               data-act="message-textarea"
-              data-touchpoint="friday_post_drop"
+              data-touchpoint="post_drop"
               rows="5">${escapeHtml(card8Caption)}</textarea>
-            ${state.messageGenerated?.['friday_post_drop'] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
-            ${state.messageGenerated?.['friday_post_drop'] ? `
+            ${state.messageGenerated?.['post_drop'] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
+            ${state.messageGenerated?.['post_drop'] ? `
               <div class="act-guidance-row">
                 <input type="text" class="act-guidance-input"
-                  data-touchpoint="friday_post_drop"
+                  data-touchpoint="post_drop"
                   placeholder="e.g. warmer, mention the sold-out moment, include the next drop date...">
               </div>` : ''}
             <div class="act-message-edit-row">
               <button
                 data-act="generate-copy"
-                data-touchpoint="friday_post_drop"
+                data-touchpoint="post_drop"
                 class="act-copy-btn">
                 ✦ Generate →
               </button>
-              ${copyBtn('Copy post-drop caption', 'friday_post_drop', 'caption_copied', false)}
+              ${copyBtn('Copy post-drop caption', 'post_drop', 'caption_copied', false)}
             </div>
-            <div class="act-copy-error" data-error-key="friday_post_drop"
+            <div class="act-copy-error" data-error-key="post_drop"
               style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
           </div>
         `;
@@ -3377,7 +3377,7 @@
           actionHtml: card8ActionHtml,
           locked: status !== 'closed',
           lockedNote: 'This prompt appears once your drop closes.',
-          touchpointKey: 'friday_post_drop'
+          touchpointKey: 'post_drop'
         }));
       }
 
@@ -3390,12 +3390,12 @@
           title: optionalTitle(9, 'Thank-you email to every customer'),
           channel: 'Email',
           desc: 'A warm, brief thank-you goes to everyone who ordered. Review and confirm before it sends.',
-          subject: state.emailDrafts['saturday_thankyou'].subject,
-          body: state.emailDrafts['saturday_thankyou'].body,
+          subject: state.emailDrafts['thank_you'].subject,
+          body: state.emailDrafts['thank_you'].body,
           note: `Sends to ${orderCount} customer${orderCount === 1 ? '' : 's'} who ordered from this drop.`,
           locked: status !== 'closed',
           lockedNote: 'This confirms once your drop closes.',
-          touchpointKey: 'saturday_thankyou'
+          touchpointKey: 'thank_you'
         }));
       }
 
@@ -3563,11 +3563,11 @@
       // AI is the starting point — vendor edits from the generated draft.
       // Staggered to avoid simultaneous API calls.
       const messageCardTouchpoints = [
-        'monday_reveal',
-        'tuesday_host',
-        'thursday_vendor_whatsapp',
-        'thursday_host_link',
-        'friday_post_drop',
+        'menu_reveal',
+        'host_heads_up',
+        'vendor_open',
+        'host_link',
+        'post_drop',
       ];
       messageCardTouchpoints.forEach((tp, i) => {
         if (!state.messageGenerated?.[tp]) {
@@ -3580,7 +3580,7 @@
         }
       });
       // Auto-generate email cards on drop selection
-      ['thursday_early_access', 'saturday_thankyou'].forEach((tp, i) => {
+      ['early_access', 'thank_you'].forEach((tp, i) => {
         if (!state.emailBodyGenerated?.[tp]) {
           setTimeout(() => {
             const genBtn = document.querySelector(
@@ -3779,8 +3779,8 @@
         if (!rawDrop) return;
 
         const emailTpMap = {
-          thursday_early_access: 'early_access_email',
-          saturday_thankyou:     'post_drop_thankyou',
+          early_access: 'early_access_email',
+          thank_you:     'post_drop_thankyou',
         };
         if (!emailTpMap[tp]) return;
 
@@ -3853,11 +3853,11 @@
         // carry an editable textarea + Generate button. Keys confirmed
         // against the card-key map and the Edge Function's buildPrompt.
         const tpMap = {
-          monday_reveal:            'monday_reveal',
-          tuesday_host:             'tuesday_host',
-          thursday_vendor_whatsapp: 'thursday_vendor',
-          thursday_host_link:       'thursday_host_link',
-          friday_post_drop:         'friday_post_drop',
+          menu_reveal:            'menu_reveal',
+          host_heads_up:             'host_heads_up',
+          vendor_open: 'vendor_open',
+          host_link:       'host_link',
+          post_drop:         'post_drop',
         };
         if (!tpMap[tp]) return;
 
@@ -3892,7 +3892,7 @@
             // always accurate while the AI writes only the warm opener.
             // Other touchpoints use the generated copy verbatim.
             let draft;
-            if (tp === 'thursday_vendor_whatsapp') {
+            if (tp === 'vendor_open') {
               const orderingUrl = `https://lovehearth.co.uk/order.html?drop=${rawDrop.slug}`;
               const closeTime = fmtT(rawDrop.closes_at) || 'tonight';
               draft = `${data.copy}\n\nOrder here: ${orderingUrl}\n\nOrders close at ${closeTime}.`;
@@ -4006,8 +4006,8 @@
 
         // Map touchpoint key → Edge Function name
         const fnMap = {
-          thursday_early_access: 'send-early-access-email',
-          saturday_thankyou:     'send-post-drop-thankyou',
+          early_access: 'send-early-access-email',
+          thank_you:     'send-post-drop-thankyou',
         };
         const fnName = fnMap[tp];
 
@@ -4065,8 +4065,8 @@
         e.preventDefault();
         const tp = emailHostShare.dataset.touchpoint;
         // Card 2 hands the host their share page (handoff); the later Card 5
-        // reminder reuses this handler with tp='thursday_host_link' (reminder).
-        const variant = tp === 'thursday_host_link' ? 'reminder' : 'handoff';
+        // reminder reuses this handler with tp='host_link' (reminder).
+        const variant = tp === 'host_link' ? 'reminder' : 'handoff';
         const dropId = state.selectedDropId;
         const errSlot = document.querySelector(`.act-copy-error[data-error-key="${tp}"]`);
         if (errSlot) errSlot.textContent = '';
