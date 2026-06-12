@@ -463,6 +463,11 @@
       color: #fff;
     }
 
+    .act-channel-bar{ display:inline-flex; gap:4px; padding:4px; background:rgba(139,107,63,0.08); border:1px solid rgba(139,107,63,0.16); border-radius:999px; margin-bottom:10px; }
+    .act-channel-pill{ font-family:'Figtree', system-ui, sans-serif; font-size:12px; font-weight:800; letter-spacing:-0.01em; color:#6b7280; background:none; border:none; border-radius:999px; padding:6px 14px; cursor:pointer; transition:background .2s ease, color .2s ease; }
+    .act-channel-pill:hover{ color:#1f2937; }
+    .act-channel-pill.is-active{ background:#fff; color:#6b4c1f; box-shadow:0 1px 3px rgba(15,23,42,0.08); }
+
     .act-copy-btn.primary:hover {
       filter: brightness(0.96);
     }
@@ -3035,8 +3040,10 @@
 
       // Card 4 — ordering open (is-vendor) with visual asset. Rendered
       // directly (not via messageCard) so the artwork + download button
-      // always show; only the message + channel buttons flip to a done
-      // state once one of the channels has been copied.
+      // always show. On single-channel (WhatsApp-only) drops the message +
+      // channel buttons flip to a done state once the channel has been
+      // copied; multi-channel drops never hard-lock — both channels stay
+      // reachable via the pill bar.
       if (inProfile(4)) {
       const card4Entry = getLogEntry('vendor_open');
 
@@ -3060,10 +3067,17 @@
       const card4Channels = state.channelDrafts['vendor_open'];
       const card4Active = card4Channels.active;
       const card4Text = card4Channels.drafts[card4Active] || '';
+      const card4Labels = { whatsapp: 'WhatsApp', social: 'Social' };
+      const card4PillBar = card4ShowSocial ? `
+        <div class="act-channel-bar">
+          ${Object.keys(card4Channels.drafts).map(ch => `
+            <button type="button" class="act-channel-pill${ch === card4Active ? ' is-active' : ''}"
+              data-act="switch-channel" data-touchpoint="vendor_open" data-channel="${ch}">${card4Labels[ch] || ch}</button>`).join('')}
+        </div>` : '';
       const card4Expanded = !!state.expandedMessageCards['vendor_open'];
 
       let card4MessageArea;
-      if (card4Entry) {
+      if (card4Entry && !card4ShowSocial) {
         card4MessageArea = `
           <div class="act-message-preview">${escapeHtml(card4Text)}</div>
           <div class="act-done-state">✓ Sent · ${formatLogTime(card4Entry.timestamp)}</div>
@@ -3071,6 +3085,7 @@
       } else if (card4Expanded) {
         card4MessageArea = `
           <div class="act-message-edit">
+            ${card4PillBar}
             <textarea data-act="message-textarea" data-touchpoint="vendor_open"
               rows="5">${escapeHtml(card4Text)}</textarea>
             ${card4Channels.generated[card4Active]
@@ -3092,13 +3107,8 @@
                 data-act="collapse-message"
                 data-touchpoint="vendor_open">Done editing</button>
               <button class="act-copy-btn" type="button"
-                data-act="copy-message"
-                data-touchpoint="vendor_open"
-                data-action="message_copied">Copy for WhatsApp</button>
-              ${card4ShowSocial ? `<button class="act-copy-btn" type="button"
-                data-act="copy-message"
-                data-touchpoint="vendor_open"
-                data-action="message_copied">Copy for social</button>` : ''}
+                data-act="copy-message" data-touchpoint="vendor_open"
+                data-action="message_copied">Copy</button>
             </div>
             <div class="act-copy-error" data-error-key="vendor_open"
               style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
@@ -3106,6 +3116,7 @@
         `;
       } else {
         card4MessageArea = `
+          ${card4PillBar}
           <div class="act-message-preview">${escapeHtml(card4Text)}</div>
           ${card4Channels.generated[card4Active]
             ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
@@ -3125,13 +3136,8 @@
               data-act="expand-message"
               data-touchpoint="vendor_open">Edit</button>
             <button class="act-copy-btn" type="button"
-              data-act="copy-message"
-              data-touchpoint="vendor_open"
-              data-action="message_copied">Copy for WhatsApp</button>
-            ${card4ShowSocial ? `<button class="act-copy-btn" type="button"
-              data-act="copy-message"
-              data-touchpoint="vendor_open"
-              data-action="message_copied">Copy for social</button>` : ''}
+              data-act="copy-message" data-touchpoint="vendor_open"
+              data-action="message_copied">Copy</button>
           </div>
         `;
       }
@@ -3707,6 +3713,21 @@
         e.preventDefault();
         state.expandedMessageCards[expandMsg.dataset.touchpoint] = true;
         renderDropView(state.selectedDropId);
+        return;
+      }
+
+      // Switch active channel on a per-channel message card (Card 4)
+      const switchCh = e.target.closest('[data-act="switch-channel"]');
+      if (switchCh) {
+        const tp = switchCh.dataset.touchpoint;
+        const ch = switchCh.dataset.channel;
+        const cd = state.channelDrafts?.[tp];
+        if (cd && ch && ch !== cd.active) {
+          const ta = document.querySelector(`[data-act="message-textarea"][data-touchpoint="${tp}"]`);
+          if (ta) cd.drafts[cd.active] = ta.value;   // preserve the edit before switching
+          cd.active = ch;
+          renderDropView(state.selectedDropId);
+        }
         return;
       }
 
