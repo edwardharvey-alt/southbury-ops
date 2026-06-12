@@ -94,7 +94,7 @@ function buildPrompt(input: CopyInput): string {
     capacity, ordering_url, fulfilment_mode, reveal_dish, cadence, posterType, channel
   } = input;
 
-  const ch = channel === 'social' ? 'social' : 'whatsapp';   // default/unknown → whatsapp
+  const ch = (channel === 'social' || channel === 'email') ? channel : 'whatsapp';   // default/unknown → whatsapp
 
   const host = host_name || "their neighbourhood";
   const cap = capacity ? `${capacity} orders` : "limited orders";
@@ -118,6 +118,9 @@ Output only the line, nothing else.`;
     case "vendor_open":
       if (ch === 'social') {
         return `Write a short social caption announcing that ordering is NOW open for '${drop_name}'${host_name ? ` at ${host}` : ''}. This is a public post for the vendor's own social (Instagram or Facebook) — a standalone caption, NOT a direct message, so do not address it to "you" or "our customers". Warm, proud, and calm — 1–2 sentences. ${capacity ? `Capacity is limited to ${capacity}.` : ""} You may note it is pre-order only and places are limited if it reads naturally. Do not include the ordering link or closing time — these are added automatically.`;
+      }
+      if (ch === 'email') {
+        return `Write a short email from ${vendor_name} to their customers announcing that ordering is NOW open for '${drop_name}'${host_name ? ` at ${host}` : ''} on ${delivery_day}. Begin with a subject line on its own first line, prefixed "Subject: ". Then 2–3 short sentences — warm, direct, the kind of email a customer is glad to receive. ${capacity ? `Capacity is limited to ${capacity}.` : ""} Do not include the ordering link or closing time — these are added automatically.`;
       }
       return `Write a short WhatsApp message from ${vendor_name} to their customers announcing that ordering is NOW open for '${drop_name}' at ${host} on ${delivery_day}. ${capacity ? `${capacity} slots available.` : ""} Direct and warm — 1–2 sentences only. Do not include the ordering link or closing time — these will be added automatically.`;
 
