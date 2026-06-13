@@ -3114,9 +3114,9 @@
       // flipping one re-runs the social draft with socialOptions and the
       // choice persists on card4Channels.socialOptions for later generates.
       const card4Social = card4Channels.socialOptions;
-      const card4SocialToggles = (card4Active === 'social') ? `
+      const card4SocialToggles = (card4Active === 'social' || card4Active === 'whatsapp') ? `
         <div class="act-social-toggles">
-          <button type="button" class="act-social-toggle${card4Social.hashtags ? ' is-on' : ''}" data-act="social-toggle" data-option="hashtags" aria-pressed="${!!card4Social.hashtags}">Hashtags</button>
+          ${card4Active === 'social' ? `<button type="button" class="act-social-toggle${card4Social.hashtags ? ' is-on' : ''}" data-act="social-toggle" data-option="hashtags" aria-pressed="${!!card4Social.hashtags}">Hashtags</button>` : ''}
           <button type="button" class="act-social-toggle${card4Social.emojis ? ' is-on' : ''}" data-act="social-toggle" data-option="emojis" aria-pressed="${!!card4Social.emojis}">Emojis</button>
         </div>` : '';
       // Default the multi-channel card to its editor (pills, social toggles,
@@ -4013,7 +4013,7 @@
 
         // Social format toggles travel with every social Generate/adjust
         // (button, chip, free-text) so the EF honours the current state.
-        const socialOptions = (tp === 'vendor_open' && activeChannel === 'social')
+        const socialOptions = (tp === 'vendor_open' && (activeChannel === 'social' || activeChannel === 'whatsapp'))
           ? (state.channelDrafts['vendor_open'].socialOptions || { hashtags: false, emojis: false })
           : undefined;
 
