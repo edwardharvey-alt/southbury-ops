@@ -85,6 +85,14 @@ interface CopyInput {
   // Card 4 poster framing: 'till' (open/walk-up, default) | 'noticeboard'
   // (closed/pinned sheet). Read only by the poster_hook case.
   posterType?: string | null;
+  // ADJUST mode: the draft currently on screen. When non-empty the function
+  // revises this text (applying `guidance` as the change to make) instead of
+  // generating fresh. Absent/empty → GENERATE exactly as before.
+  currentText?: string | null;
+  // Social formatting toggles — honoured only on the social branch
+  // (channel 'social' / 'instagram'); ignored on whatsapp/email. Both keys
+  // default false; an absent object adds nothing (backward compatible).
+  socialOptions?: { hashtags?: boolean; emojis?: boolean } | null;
 }
 
 function buildPrompt(input: CopyInput): string {
@@ -165,6 +173,23 @@ Rules: Write ONE line of 12 words or fewer, present tense, that reads as an invi
   }
 }
 
+// (B) Social formatting block — hashtags / emojis. Appended ONLY on the social
+// branch, and only when a socialOptions object is supplied (absent = unchanged
+// behaviour). Each key defaults false. These sit on top of COPY_FLOOR and the
+// brand voice — restraint always wins, nothing here introduces hype.
+function buildSocialOptions(opts?: { hashtags?: boolean; emojis?: boolean } | null): string {
+  if (!opts) return "";
+  const wantHashtags = opts.hashtags === true;
+  const wantEmojis = opts.emojis === true;
+  const hashtagRule = wantHashtags
+    ? "Hashtags: you may add 1 to 3 relevant, restrained hashtags drawn from the place and the type of food — local and specific. No trend-chasing and no generic engagement tags (nothing like #foodie, #instafood, #yum); never more than three."
+    : "Hashtags: do not use any hashtags.";
+  const emojiRule = wantEmojis
+    ? "Emojis: a tasteful one or two are fine where they read naturally — never more, and never decorative rows."
+    : "Emojis: do not use any emojis.";
+  return `\n\nSocial formatting (this is a public social caption): ${hashtagRule} ${emojiRule} These never override the rules above — keep the same calm, restrained voice.`;
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   const jsonResponse = (body: unknown, status: number) =>
@@ -215,13 +240,43 @@ Deno.serve(async (req) => {
     }
     const systemPrompt = buildSystemPrompt(tagline, voiceSample);
 
-    // ---- Generate ---------------------------------------------------
+    // ---- Generate / Adjust -----------------------------------------
     // Append the shared guardrail floor to EVERY case here (before any vendor
     // guidance) so all touchpoints inherit it from one place.
-    const userPrompt = `${buildPrompt(input)}\n\n${COPY_FLOOR}`;
-    const finalPrompt = input.guidance?.trim()
-      ? `${userPrompt}\n\nAdditional instruction from the vendor: "${input.guidance.trim()}"`
-      : userPrompt;
+    let userPrompt = `${buildPrompt(input)}\n\n${COPY_FLOOR}`;
+
+    // (B) Social formatting options — hashtags / emojis. Only meaningful on the
+    // social branch; a no-op on whatsapp/email and when socialOptions is absent.
+    const isSocial = input.channel === "social" || input.channel === "instagram";
+    if (isSocial && input.socialOptions) {
+      userPrompt += buildSocialOptions(input.socialOptions);
+    }
+
+    // The vendor steer is standardised on the existing `guidance` field. In
+    // GENERATE it is emphasis (unchanged behaviour); in ADJUST it is the change
+    // to apply to the on-screen draft.
+    const instruction = input.guidance?.trim() || "";
+    const currentText = input.currentText?.trim() || "";
+
+    let finalPrompt: string;
+    if (currentText) {
+      // (A) ADJUST — revise the existing draft rather than writing a new one.
+      finalPrompt =
+        `${userPrompt}\n\nYou are revising an existing message, not writing a new one. ` +
+        `Here is the current version:\n---\n${currentText}\n---\n` +
+        (instruction
+          ? `Apply this change: "${instruction}". `
+          : `Tighten and improve it lightly while keeping its meaning. `) +
+        `Return the full revised message. Keep the ordering link and every key fact ` +
+        `(such as capacity and closing time) exactly as they appear unless the change ` +
+        `explicitly asks otherwise. Change only what is needed — do not rewrite it into ` +
+        `a different message and do not invent new facts.`;
+    } else {
+      // GENERATE — unchanged behaviour. `guidance` acts as emphasis.
+      finalPrompt = instruction
+        ? `${userPrompt}\n\nAdditional instruction from the vendor: "${instruction}"`
+        : userPrompt;
+    }
 
     const anthropicRes = await fetch(ANTHROPIC_URL, {
       method: "POST",
