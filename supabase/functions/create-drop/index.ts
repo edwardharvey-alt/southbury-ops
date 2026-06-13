@@ -45,6 +45,8 @@ const ALLOWED_FIELDS = new Set([
   "series_position",
 ]);
 
+const VALID_DROP_TYPES = new Set(["neighbourhood", "community", "event"]);
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   const jsonResponse = (body: unknown, status: number) =>
@@ -120,6 +122,10 @@ Deno.serve(async (req) => {
 
     if (!insert.name || !insert.slug) {
       return jsonResponse({ error: "name and slug are required" }, 400);
+    }
+
+    if (insert.drop_type !== undefined && !VALID_DROP_TYPES.has(insert.drop_type as string)) {
+      return jsonResponse({ error: "Invalid drop_type" }, 400);
     }
 
     const { data, error } = await serviceClient

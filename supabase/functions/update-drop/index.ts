@@ -65,7 +65,7 @@ const ALLOWED_FIELDS = new Set([
   "series_position",
 ]);
 
-const VALID_DROP_TYPES = new Set(["neighbourhood", "hosted", "community", "event"]);
+const VALID_DROP_TYPES = new Set(["neighbourhood", "community", "event"]);
 const VALID_AUDIENCE_SCOPES = new Set(["public", "community"]);
 const VALID_FUNDRAISING_MODELS = new Set(["percentage", "per_order"]);
 const VALID_HOST_SHARE_MODELS = new Set(["percentage", "per_order", "fixed"]);
