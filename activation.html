@@ -3597,47 +3597,21 @@
         console.error('activation-events list failed', e);
       }
       renderDropView(dropId);
-      // Auto-generate all message cards on first drop selection.
-      // AI is the starting point — vendor edits from the generated draft.
-      // Staggered to avoid simultaneous API calls.
-      const messageCardTouchpoints = [
-        'menu_reveal',
-        'host_heads_up',
-        'vendor_open',
-        'host_link',
-        'post_drop',
-      ];
-      messageCardTouchpoints.forEach((tp, i) => {
-        if (!state.messageGenerated?.[tp]) {
-          setTimeout(() => {
-            const genBtn = document.querySelector(
-              `[data-act="generate-copy"][data-touchpoint="${tp}"]`
-            );
-            if (genBtn) genBtn.click();
-          }, i * 400);
-        }
-      });
-      // Auto-generate email cards on drop selection
-      ['early_access', 'thank_you'].forEach((tp, i) => {
-        if (!state.emailBodyGenerated?.[tp]) {
-          setTimeout(() => {
-            const genBtn = document.querySelector(
-              `[data-act="generate-email-body"][data-touchpoint="${tp}"]`
-            );
-            if (genBtn) genBtn.click();
-          }, (messageCardTouchpoints.length + i + 1) * 400);
-        }
-      });
-      // Auto-generate the till poster line once — but only if no saved line
-      // exists, so a vendor's saved edit is never clobbered. When reveal_line
-      // already has content the field is seeded from it (in Card 4) and we
-      // leave it alone.
+      // Message and email cards stand on their static seeds on load — no
+      // auto-generate on drop selection, so there is no jarring seed → AI
+      // draft text-swap. The vendor generates per card when they choose to
+      // (handlers left intact).
+      //
+      // The till poster line is the one exception: its Card 4 field is BLANK
+      // without a saved reveal_line (no static seed), so we auto-generate it
+      // once — but only when no saved line exists, so a vendor's saved edit is
+      // never clobbered. A single quiet field, not a multi-card swap.
       const savedPosterLine = (state.rawById[dropId]?.reveal_line || '').trim();
       if (!savedPosterLine && !state.posterHookGenerated?.[dropId]) {
         setTimeout(() => {
           const phBtn = document.querySelector('[data-act="generate-poster-hook"]');
           if (phBtn) phBtn.click();
-        }, (messageCardTouchpoints.length + 3) * 400);
+        }, 400);
       }
     }
 
