@@ -463,7 +463,10 @@
       color: #fff;
     }
 
-    .act-channel-bar{ display:inline-flex; gap:4px; padding:4px; background:rgba(139,107,63,0.08); border:1px solid rgba(139,107,63,0.16); border-radius:999px; margin-bottom:10px; }
+    .act-channel-bar{ display:inline-flex; gap:4px; padding:4px; background:rgba(139,107,63,0.08); border:1px solid rgba(139,107,63,0.16); border-radius:999px; margin-bottom:10px; align-self: flex-start; }
+    .act-zone{ display:flex; flex-direction:column; gap:10px; align-items:flex-start; padding-top:18px; border-top:1px solid #efe9df; }
+    .act-zone:first-child{ padding-top:0; border-top:none; }
+    .act-zone-label{ font-family:'Figtree', system-ui, sans-serif; font-size:11px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#9a8b73; margin-bottom:2px; }
     .act-channel-pill{ font-family:'Figtree', system-ui, sans-serif; font-size:12px; font-weight:800; letter-spacing:-0.01em; color:#6b7280; background:none; border:none; border-radius:999px; padding:6px 14px; cursor:pointer; transition:background .2s ease, color .2s ease; }
     .act-channel-pill:hover{ color:#1f2937; }
     .act-channel-pill.is-active{ background:#fff; color:#6b4c1f; box-shadow:0 1px 3px rgba(15,23,42,0.08); }
@@ -973,7 +976,8 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      width: 100%;
+      width: 720px;
+      max-width: 100%;
     }
 
     .act-message-edit textarea {
@@ -1598,7 +1602,7 @@
       // Instagram image and the 'social' copy channel, and its poster is a
       // pinned-up noticeboard sheet rather than a till-side card.
       const card4 = openness === 'open'
-        ? { instagram: true,  poster: 'till',        channels: ['whatsapp', 'social'] }
+        ? { instagram: true,  poster: 'till',        channels: ['whatsapp', 'social', 'email'] }
         : { instagram: false, poster: 'noticeboard', channels: ['whatsapp'] };
 
       // Card 5 ("Ask your host to drop the link") deliverable descriptor — a
@@ -2692,7 +2696,7 @@
         const tp = ta.dataset.touchpoint;
         if (tp === 'vendor_open') {
           const cd = state.channelDrafts?.['vendor_open'];
-          if (cd) cd.drafts[cd.active] = ta.value;
+          if (cd) cd.drafts[ta.dataset.channel || cd.active] = ta.value;
         } else if (tp) {
           state.messageDrafts[tp] = ta.value;
         }
@@ -2787,6 +2791,9 @@
       const c4Social = `Ordering is now open for ${dropName}${c1Venue ? ` at ${c1Venue}` : ''}. Pre-order only and places are limited — order here: ${orderingLink}`
         + (closesTime ? `\n\nOrders close at ${closesTime}.` : '');
       templates['vendor_open_social'] = c4Social;
+      const c4Email = `Subject: Ordering's open for ${dropName}\n\n${dropName} ordering is now open${c1Venue ? ` at ${c1Venue}` : ''}. Pre-order only — order here: ${orderingLink}`
+        + (closesTime ? `\n\nOrders close at ${closesTime}.` : '');
+      templates['vendor_open_email'] = c4Email;
 
       // Card 5 — host link
       templates['host_link'] =
@@ -3062,12 +3069,13 @@
         const drafts = {};
         if (chans.includes('whatsapp')) drafts.whatsapp = templates['vendor_open'] || '';
         if (chans.includes('social'))   drafts.social   = templates['vendor_open_social'] || '';
+        if (chans.includes('email'))    drafts.email    = templates['vendor_open_email'] || '';
         state.channelDrafts['vendor_open'] = { active: 'whatsapp', drafts, generated: {} };
       }
       const card4Channels = state.channelDrafts['vendor_open'];
       const card4Active = card4Channels.active;
       const card4Text = card4Channels.drafts[card4Active] || '';
-      const card4Labels = { whatsapp: 'WhatsApp', social: 'Social' };
+      const card4Labels = { whatsapp: 'WhatsApp', social: 'Social', email: 'Email' };
       const card4PillBar = card4ShowSocial ? `
         <div class="act-channel-bar">
           ${Object.keys(card4Channels.drafts).map(ch => `
@@ -3087,15 +3095,15 @@
           <div class="act-message-edit">
             ${card4PillBar}
             <textarea data-act="message-textarea" data-touchpoint="vendor_open"
-              rows="5">${escapeHtml(card4Text)}</textarea>
+              data-channel="${card4Active}"
+              rows="8">${escapeHtml(card4Text)}</textarea>
             ${card4Channels.generated[card4Active]
               ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
-            ${card4Channels.generated[card4Active] ? `
-              <div class="act-guidance-row">
-                <input type="text" class="act-guidance-input"
-                  data-touchpoint="vendor_open"
-                  placeholder="e.g. more urgent, mention it's first come first served...">
-              </div>` : ''}
+            <div class="act-guidance-row">
+              <input type="text" class="act-guidance-input"
+                data-touchpoint="vendor_open"
+                placeholder="e.g. more urgent, mention it's first come first served...">
+            </div>
             <div class="act-message-edit-row">
               <button
                 data-act="generate-copy"
@@ -3143,48 +3151,57 @@
       }
 
       const card4Body = `
-          <p>Send this the moment ordering opens — use whatever channel your customers actually check. A WhatsApp or a quick email both work; the image and poster are there if you want them.</p>
+          <p>Tell your customers ordering's open — through whatever they actually check. The poster and image are there if you want them.</p>
           <div class="act-actions">
-            ${card4ShowInstagram ? `<div class="menuCardArtworkFrame" id="act-ordersOpenFrame" style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
-              <div class="act-orders-open-artwork" id="act-ordersOpenArtwork">
-                <img class="act-orders-open-artwork__image" id="act-ordersOpenImage" alt="" crossorigin="anonymous" />
-                <div class="act-orders-open-artwork__tint" aria-hidden="true"></div>
-                <div class="act-orders-open-artwork__centre">
-                  <div class="act-orders-open-artwork__headline">Orders open</div>
-                  <div class="act-orders-open-artwork__dropname" id="act-ordersOpenDropName"></div>
-                </div>
-                <div class="act-orders-open-artwork__closing" id="act-ordersOpenClosing"></div>
-                <div class="act-orders-open-artwork__skeleton" id="act-ordersOpenSkeleton">Loading…</div>
+            <div class="act-zone">
+              <div class="act-zone-label">The message — for your customers</div>
+              ${card4MessageArea}
+            </div>
+            <div class="act-zone">
+              <div class="act-zone-label">A poster — for your counter</div>
+              <div class="act-poster-hook" style="width:100%;">
+                <label class="act-field-label" for="act-posterHookInput">${card4PosterLabel}</label>
+                <input type="text" class="act-guidance-input" id="act-posterHookInput"
+                  maxlength="90"
+                  placeholder="e.g. Order ahead for Friday — collect hot at 6pm"
+                  value="${escapeHtml(state.rawById[dropId]?.reveal_line || '')}" />
+                ${state.posterHookGenerated?.[dropId] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
+                ${state.posterHookGenerated?.[dropId] ? `
+                  <div class="act-guidance-row">
+                    <input type="text" class="act-guidance-input"
+                      data-touchpoint="poster_hook"
+                      placeholder="e.g. shorter, mention collection time, more playful...">
+                  </div>` : ''}
+                <button
+                  data-act="generate-poster-hook"
+                  class="act-copy-btn">
+                  ${state.posterHookGenerated?.[dropId] ? '↺ Regenerate →' : '✦ Generate →'}
+                </button>
+                <div class="act-copy-error" data-error-key="poster_hook"
+                  style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
               </div>
+              <a class="act-copy-btn"
+                id="act-posterBtn"
+                href="#"
+                data-act="open-poster"
+                target="_blank">Print poster</a>
             </div>
-            <button class="act-copy-btn primary" id="act-downloadOrdersOpenBtn" type="button" data-act="download-orders-open" disabled>Download image</button>` : ''}
-            <div class="act-poster-hook" style="width:100%;">
-              <label class="act-field-label" for="act-posterHookInput">${card4PosterLabel}</label>
-              <input type="text" class="act-guidance-input" id="act-posterHookInput"
-                maxlength="90"
-                placeholder="e.g. Order ahead for Friday — collect hot at 6pm"
-                value="${escapeHtml(state.rawById[dropId]?.reveal_line || '')}" />
-              ${state.posterHookGenerated?.[dropId] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
-              ${state.posterHookGenerated?.[dropId] ? `
-                <div class="act-guidance-row">
-                  <input type="text" class="act-guidance-input"
-                    data-touchpoint="poster_hook"
-                    placeholder="e.g. shorter, mention collection time, more playful...">
-                </div>` : ''}
-              <button
-                data-act="generate-poster-hook"
-                class="act-copy-btn">
-                ${state.posterHookGenerated?.[dropId] ? '↺ Regenerate →' : '✦ Generate →'}
-              </button>
-              <div class="act-copy-error" data-error-key="poster_hook"
-                style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
-            </div>
-            <a class="act-copy-btn"
-              id="act-posterBtn"
-              href="#"
-              data-act="open-poster"
-              target="_blank">Print poster</a>
-            ${card4MessageArea}
+            ${card4ShowInstagram ? `<div class="act-zone">
+              <div class="act-zone-label">An image — for social</div>
+              <div class="menuCardArtworkFrame" id="act-ordersOpenFrame" style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
+                <div class="act-orders-open-artwork" id="act-ordersOpenArtwork">
+                  <img class="act-orders-open-artwork__image" id="act-ordersOpenImage" alt="" crossorigin="anonymous" />
+                  <div class="act-orders-open-artwork__tint" aria-hidden="true"></div>
+                  <div class="act-orders-open-artwork__centre">
+                    <div class="act-orders-open-artwork__headline">Orders open</div>
+                    <div class="act-orders-open-artwork__dropname" id="act-ordersOpenDropName"></div>
+                  </div>
+                  <div class="act-orders-open-artwork__closing" id="act-ordersOpenClosing"></div>
+                  <div class="act-orders-open-artwork__skeleton" id="act-ordersOpenSkeleton">Loading…</div>
+                </div>
+              </div>
+              <button class="act-copy-btn primary" id="act-downloadOrdersOpenBtn" type="button" data-act="download-orders-open" disabled>Download image</button>
+            </div>` : ''}
           </div>
       `;
       cards.push(actTouchpointShell({
@@ -3580,47 +3597,21 @@
         console.error('activation-events list failed', e);
       }
       renderDropView(dropId);
-      // Auto-generate all message cards on first drop selection.
-      // AI is the starting point — vendor edits from the generated draft.
-      // Staggered to avoid simultaneous API calls.
-      const messageCardTouchpoints = [
-        'menu_reveal',
-        'host_heads_up',
-        'vendor_open',
-        'host_link',
-        'post_drop',
-      ];
-      messageCardTouchpoints.forEach((tp, i) => {
-        if (!state.messageGenerated?.[tp]) {
-          setTimeout(() => {
-            const genBtn = document.querySelector(
-              `[data-act="generate-copy"][data-touchpoint="${tp}"]`
-            );
-            if (genBtn) genBtn.click();
-          }, i * 400);
-        }
-      });
-      // Auto-generate email cards on drop selection
-      ['early_access', 'thank_you'].forEach((tp, i) => {
-        if (!state.emailBodyGenerated?.[tp]) {
-          setTimeout(() => {
-            const genBtn = document.querySelector(
-              `[data-act="generate-email-body"][data-touchpoint="${tp}"]`
-            );
-            if (genBtn) genBtn.click();
-          }, (messageCardTouchpoints.length + i + 1) * 400);
-        }
-      });
-      // Auto-generate the till poster line once — but only if no saved line
-      // exists, so a vendor's saved edit is never clobbered. When reveal_line
-      // already has content the field is seeded from it (in Card 4) and we
-      // leave it alone.
+      // Message and email cards stand on their static seeds on load — no
+      // auto-generate on drop selection, so there is no jarring seed → AI
+      // draft text-swap. The vendor generates per card when they choose to
+      // (handlers left intact).
+      //
+      // The till poster line is the one exception: its Card 4 field is BLANK
+      // without a saved reveal_line (no static seed), so we auto-generate it
+      // once — but only when no saved line exists, so a vendor's saved edit is
+      // never clobbered. A single quiet field, not a multi-card swap.
       const savedPosterLine = (state.rawById[dropId]?.reveal_line || '').trim();
       if (!savedPosterLine && !state.posterHookGenerated?.[dropId]) {
         setTimeout(() => {
           const phBtn = document.querySelector('[data-act="generate-poster-hook"]');
           if (phBtn) phBtn.click();
-        }, (messageCardTouchpoints.length + 3) * 400);
+        }, 400);
       }
     }
 
