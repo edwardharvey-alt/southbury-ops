@@ -463,7 +463,7 @@
       color: #fff;
     }
 
-    .act-channel-bar{ display:inline-flex; gap:4px; padding:4px; background:rgba(139,107,63,0.08); border:1px solid rgba(139,107,63,0.16); border-radius:999px; margin-bottom:10px; }
+    .act-channel-bar{ display:inline-flex; gap:4px; padding:4px; background:rgba(139,107,63,0.08); border:1px solid rgba(139,107,63,0.16); border-radius:999px; margin-bottom:10px; align-self: flex-start; }
     .act-zone{ display:flex; flex-direction:column; gap:10px; align-items:flex-start; padding-top:18px; border-top:1px solid #efe9df; }
     .act-zone:first-child{ padding-top:0; border-top:none; }
     .act-zone-label{ font-family:'Figtree', system-ui, sans-serif; font-size:11px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#9a8b73; margin-bottom:2px; }
@@ -3096,15 +3096,14 @@
             ${card4PillBar}
             <textarea data-act="message-textarea" data-touchpoint="vendor_open"
               data-channel="${card4Active}"
-              rows="5">${escapeHtml(card4Text)}</textarea>
+              rows="8">${escapeHtml(card4Text)}</textarea>
             ${card4Channels.generated[card4Active]
               ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
-            ${card4Channels.generated[card4Active] ? `
-              <div class="act-guidance-row">
-                <input type="text" class="act-guidance-input"
-                  data-touchpoint="vendor_open"
-                  placeholder="e.g. more urgent, mention it's first come first served...">
-              </div>` : ''}
+            <div class="act-guidance-row">
+              <input type="text" class="act-guidance-input"
+                data-touchpoint="vendor_open"
+                placeholder="e.g. more urgent, mention it's first come first served...">
+            </div>
             <div class="act-message-edit-row">
               <button
                 data-act="generate-copy"
