@@ -65,7 +65,7 @@ const ALLOWED_FIELDS = new Set([
   "series_position",
 ]);
 
-const VALID_DROP_TYPES = new Set(["neighbourhood", "hosted", "community", "event"]);
+const VALID_DROP_TYPES = new Set(["neighbourhood", "community", "event"]);
 const VALID_AUDIENCE_SCOPES = new Set(["public", "community"]);
 const VALID_FUNDRAISING_MODELS = new Set(["percentage", "per_order"]);
 const VALID_HOST_SHARE_MODELS = new Set(["percentage", "per_order", "fixed"]);
@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
     // ---- Save-time invariants (Audit A hybrid) ----
     if (Object.prototype.hasOwnProperty.call(update, "drop_type")) {
       const dt = update.drop_type;
-      if (dt !== null && (typeof dt !== "string" || !VALID_DROP_TYPES.has(dt))) {
+      if (typeof dt !== "string" || !VALID_DROP_TYPES.has(dt)) {
         return jsonResponse({ error: "Invalid drop_type" }, 400);
       }
     }

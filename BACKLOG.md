@@ -4556,7 +4556,17 @@ stale-timing case its publish-time guard should catch).
 
 T-A2-orphan-hosted — Remove dead `'hosted'` drop_type from update-drop
 
-**Status:** Open. Pre-launch (tiny, zero-risk hygiene). Source:
+**Status:** ✓ COMPLETE 2026-06-13 (#354). Built across two commits on
+`fix/align-drop-type-validation`: (1) removed `'hosted'` from
+`update-drop` `VALID_DROP_TYPES` (now the canonical 3-value set
+`{neighbourhood, community, event}`); added the same set + a
+present-but-invalid `drop_type` check to `create-drop` (closing the
+T5-B10 / Pass A A2 create-drop addendum for `drop_type`). (2) removed
+the null guard on `update-drop`'s `drop_type` check so a drop must
+always carry a type (DB CHECK backs this; the frontend always sends a
+non-null value); added `audience_scope` validation to `create-drop`
+(allowing null, which derives downstream). Ed deploys both functions
+before merging PR #354. Pre-launch (tiny, zero-risk hygiene). Source:
 Pass A / A2.
 
 **Problem:** `update-drop` `VALID_DROP_TYPES` includes `'hosted'`,
