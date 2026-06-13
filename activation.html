@@ -471,6 +471,13 @@
     .act-channel-pill:hover{ color:#1f2937; }
     .act-channel-pill.is-active{ background:#fff; color:#6b4c1f; box-shadow:0 1px 3px rgba(15,23,42,0.08); }
 
+    /* One-tap adjustment chips on the vendor_open composer. Deliberately
+       lighter than the channel pills — these refine the current draft, they
+       are not a primary control. */
+    .act-chip-row{ display:inline-flex; flex-wrap:wrap; gap:6px; align-self:flex-start; }
+    .act-chip{ font-family:'Figtree', system-ui, sans-serif; font-size:12px; font-weight:700; letter-spacing:-0.01em; color:#6b4c1f; background:rgba(139,107,63,0.07); border:1px solid rgba(139,107,63,0.18); border-radius:999px; padding:5px 12px; cursor:pointer; transition:background .2s ease, border-color .2s ease; }
+    .act-chip:hover{ background:rgba(139,107,63,0.13); border-color:rgba(139,107,63,0.30); }
+
     .act-copy-btn.primary:hover {
       filter: brightness(0.96);
     }
@@ -2409,6 +2416,15 @@
       };
     }
 
+    // Strips the platform-assembled tail from a vendor_open draft, leaving
+    // only the AI-written opener. The assembled draft is shaped
+    // `<opener>\n\nOrder here: <url>\n\nOrders close at <time>.` — for an
+    // ADJUST we send only the opener to the EF; the link + close line are
+    // re-appended on the success path exactly as for a fresh generate.
+    function actOpenerOnly(text){
+      return String(text || '').split('\n\nOrder here:')[0];
+    }
+
     // ---- Per-drop view: card builders --------------------------------
 
     function copyBtn(label, touchpoint, action, primary){
@@ -3099,6 +3115,12 @@
               rows="8">${escapeHtml(card4Text)}</textarea>
             ${card4Channels.generated[card4Active]
               ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
+            <div class="act-chip-row">
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="vendor_open" data-instruction="Make it shorter and more concise">Shorter</button>
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="vendor_open" data-instruction="Make it warmer and more personal">Warmer</button>
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="vendor_open" data-instruction="Add a little more detail about the food or the offer">More detail</button>
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="vendor_open" data-instruction="Mention honestly that places are limited — real capacity, no manufactured urgency">Mention it's limited</button>
+            </div>
             <div class="act-guidance-row">
               <input type="text" class="act-guidance-input"
                 data-touchpoint="vendor_open"
@@ -3874,6 +3896,22 @@
         return;
       }
 
+      // One-tap adjustment chip: writes its instruction into the touchpoint's
+      // guidance input, then triggers the Generate button. With a generated
+      // draft already present, the generate-copy handler routes this through
+      // the EF's ADJUST mode (currentText sent); otherwise it's a fresh
+      // generate steered by the instruction.
+      const adjustChip = e.target.closest('[data-act="adjust-chip"]');
+      if (adjustChip) {
+        e.preventDefault();
+        const tp = adjustChip.dataset.touchpoint;
+        const guidanceEl = document.querySelector(`.act-guidance-input[data-touchpoint="${tp}"]`);
+        if (guidanceEl) guidanceEl.value = adjustChip.dataset.instruction || '';
+        const genBtn = document.querySelector(`[data-act="generate-copy"][data-touchpoint="${tp}"]`);
+        if (genBtn) genBtn.click();
+        return;
+      }
+
       const generateCopy = e.target.closest('[data-act="generate-copy"]');
       if (generateCopy) {
         e.preventDefault();
@@ -3911,12 +3949,23 @@
         const activeChannel = tp === 'vendor_open'
           ? (state.channelDrafts?.['vendor_open']?.active || 'whatsapp') : undefined;
 
+        // ADJUST vs GENERATE: if there's a vendor steer AND an existing
+        // generated vendor_open draft, send the current opener as currentText
+        // so the EF refines it (ADJUST mode). A seed or empty box with no
+        // generated draft falls through to a fresh GENERATE, unchanged.
+        let currentText;
+        if (tp === 'vendor_open' && guidance) {
+          const cd = state.channelDrafts?.['vendor_open'];
+          if (cd && cd.generated?.[cd.active]) currentText = actOpenerOnly(cd.drafts[cd.active]);
+        }
+
         try {
           const body = {
             touchpoint: tpMap[tp],
             ...actBuildDropContext(dropId),
             guidance,
             ...(activeChannel ? { channel: activeChannel } : {}),
+            ...(currentText ? { currentText } : {}),
           };
 
           const { data, error } = await sb.functions.invoke('generate-activation-copy', { body });
