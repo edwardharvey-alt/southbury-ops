@@ -478,6 +478,16 @@
     .act-chip{ font-family:'Figtree', system-ui, sans-serif; font-size:12px; font-weight:700; letter-spacing:-0.01em; color:#6b4c1f; background:rgba(139,107,63,0.07); border:1px solid rgba(139,107,63,0.18); border-radius:999px; padding:5px 12px; cursor:pointer; transition:background .2s ease, border-color .2s ease; }
     .act-chip:hover{ background:rgba(139,107,63,0.13); border-color:rgba(139,107,63,0.30); }
 
+    /* Persistent on/off format toggles for the Social channel. Read as
+       settings, not one-tap adjustments — off is a subtle outline with an
+       empty dot; on (.is-on) fills with brand colour and a light dot. */
+    .act-social-toggles{ display:inline-flex; gap:8px; align-self:flex-start; margin-top:8px; }
+    .act-social-toggle{ display:inline-flex; align-items:center; gap:7px; font-family:'Figtree', system-ui, sans-serif; font-size:12px; font-weight:700; letter-spacing:-0.01em; color:#6b4c1f; background:#fff; border:1px solid rgba(139,107,63,0.30); border-radius:8px; padding:6px 12px; cursor:pointer; transition:background .2s ease, border-color .2s ease, color .2s ease; }
+    .act-social-toggle::before{ content:''; width:9px; height:9px; border-radius:50%; border:1.5px solid rgba(139,107,63,0.45); background:transparent; transition:background .2s ease, border-color .2s ease; }
+    .act-social-toggle:hover{ border-color:rgba(139,107,63,0.55); }
+    .act-social-toggle.is-on{ background:#8B6B3F; border-color:#8B6B3F; color:#fff; }
+    .act-social-toggle.is-on::before{ background:#fff; border-color:#fff; }
+
     .act-copy-btn.primary:hover {
       filter: brightness(0.96);
     }
@@ -3086,9 +3096,11 @@
         if (chans.includes('whatsapp')) drafts.whatsapp = templates['vendor_open'] || '';
         if (chans.includes('social'))   drafts.social   = templates['vendor_open_social'] || '';
         if (chans.includes('email'))    drafts.email    = templates['vendor_open_email'] || '';
-        state.channelDrafts['vendor_open'] = { active: 'whatsapp', drafts, generated: {} };
+        state.channelDrafts['vendor_open'] = { active: 'whatsapp', drafts, generated: {}, socialOptions: { hashtags: false, emojis: false } };
       }
       const card4Channels = state.channelDrafts['vendor_open'];
+      // Defensive guard for stores created before socialOptions existed.
+      if (!card4Channels.socialOptions) card4Channels.socialOptions = { hashtags: false, emojis: false };
       const card4Active = card4Channels.active;
       const card4Text = card4Channels.drafts[card4Active] || '';
       const card4Labels = { whatsapp: 'WhatsApp', social: 'Social', email: 'Email' };
@@ -3097,6 +3109,15 @@
           ${Object.keys(card4Channels.drafts).map(ch => `
             <button type="button" class="act-channel-pill${ch === card4Active ? ' is-active' : ''}"
               data-act="switch-channel" data-touchpoint="vendor_open" data-channel="${ch}">${card4Labels[ch] || ch}</button>`).join('')}
+        </div>` : '';
+      // Persistent format toggles for the Social channel only. Default off;
+      // flipping one re-runs the social draft with socialOptions and the
+      // choice persists on card4Channels.socialOptions for later generates.
+      const card4Social = card4Channels.socialOptions;
+      const card4SocialToggles = (card4Active === 'social') ? `
+        <div class="act-social-toggles">
+          <button type="button" class="act-social-toggle${card4Social.hashtags ? ' is-on' : ''}" data-act="social-toggle" data-option="hashtags" aria-pressed="${!!card4Social.hashtags}">Hashtags</button>
+          <button type="button" class="act-social-toggle${card4Social.emojis ? ' is-on' : ''}" data-act="social-toggle" data-option="emojis" aria-pressed="${!!card4Social.emojis}">Emojis</button>
         </div>` : '';
       const card4Expanded = !!state.expandedMessageCards['vendor_open'];
 
@@ -3110,6 +3131,7 @@
         card4MessageArea = `
           <div class="act-message-edit">
             ${card4PillBar}
+            ${card4SocialToggles}
             <textarea data-act="message-textarea" data-touchpoint="vendor_open"
               data-channel="${card4Active}"
               rows="8">${escapeHtml(card4Text)}</textarea>
@@ -3912,6 +3934,31 @@
         return;
       }
 
+      // Persistent Social format toggle (Hashtags / Emojis): flips the stored
+      // socialOptions state, then re-runs the social draft via the same
+      // adjust/generate path. The instruction nudges the EF to add/remove the
+      // format element; socialOptions on the body carries the durable state.
+      const socialToggle = e.target.closest('[data-act="social-toggle"]');
+      if (socialToggle) {
+        e.preventDefault();
+        const cd = state.channelDrafts?.['vendor_open'];
+        if (!cd) return;
+        if (!cd.socialOptions) cd.socialOptions = { hashtags:false, emojis:false };
+        const opt = socialToggle.dataset.option;
+        const newVal = !cd.socialOptions[opt];
+        cd.socialOptions[opt] = newVal;
+        socialToggle.classList.toggle('is-on', newVal);
+        socialToggle.setAttribute('aria-pressed', String(newVal));
+        const instr = opt === 'hashtags'
+          ? (newVal ? 'Add one to three relevant, local hashtags.' : 'Remove the hashtags.')
+          : (newVal ? 'Add a tasteful emoji or two where it reads naturally.' : 'Remove any emojis.');
+        const guidanceEl = document.querySelector('.act-guidance-input[data-touchpoint="vendor_open"]');
+        if (guidanceEl) guidanceEl.value = instr;
+        const genBtn = document.querySelector('[data-act="generate-copy"][data-touchpoint="vendor_open"]');
+        if (genBtn) genBtn.click();
+        return;
+      }
+
       const generateCopy = e.target.closest('[data-act="generate-copy"]');
       if (generateCopy) {
         e.preventDefault();
@@ -3959,6 +4006,12 @@
           if (cd && cd.generated?.[cd.active]) currentText = actOpenerOnly(cd.drafts[cd.active]);
         }
 
+        // Social format toggles travel with every social Generate/adjust
+        // (button, chip, free-text) so the EF honours the current state.
+        const socialOptions = (tp === 'vendor_open' && activeChannel === 'social')
+          ? (state.channelDrafts['vendor_open'].socialOptions || { hashtags: false, emojis: false })
+          : undefined;
+
         try {
           const body = {
             touchpoint: tpMap[tp],
@@ -3966,6 +4019,7 @@
             guidance,
             ...(activeChannel ? { channel: activeChannel } : {}),
             ...(currentText ? { currentText } : {}),
+            ...(socialOptions ? { socialOptions } : {}),
           };
 
           const { data, error } = await sb.functions.invoke('generate-activation-copy', { body });
