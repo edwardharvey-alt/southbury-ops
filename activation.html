@@ -3119,7 +3119,12 @@
           <button type="button" class="act-social-toggle${card4Social.hashtags ? ' is-on' : ''}" data-act="social-toggle" data-option="hashtags" aria-pressed="${!!card4Social.hashtags}">Hashtags</button>
           <button type="button" class="act-social-toggle${card4Social.emojis ? ' is-on' : ''}" data-act="social-toggle" data-option="emojis" aria-pressed="${!!card4Social.emojis}">Emojis</button>
         </div>` : '';
-      const card4Expanded = !!state.expandedMessageCards['vendor_open'];
+      // Default the multi-channel card to its editor (pills, social toggles,
+      // chips, refine input visible on landing) rather than the collapsed
+      // preview — but honour an explicit collapse/expand the vendor chose.
+      const card4Expanded = ('vendor_open' in (state.expandedMessageCards || {}))
+        ? !!state.expandedMessageCards['vendor_open']
+        : card4ShowSocial;
 
       let card4MessageArea;
       if (card4Entry && !card4ShowSocial) {
