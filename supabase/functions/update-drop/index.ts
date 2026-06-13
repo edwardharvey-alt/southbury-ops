@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
     // ---- Save-time invariants (Audit A hybrid) ----
     if (Object.prototype.hasOwnProperty.call(update, "drop_type")) {
       const dt = update.drop_type;
-      if (dt !== null && (typeof dt !== "string" || !VALID_DROP_TYPES.has(dt))) {
+      if (typeof dt !== "string" || !VALID_DROP_TYPES.has(dt)) {
         return jsonResponse({ error: "Invalid drop_type" }, 400);
       }
     }

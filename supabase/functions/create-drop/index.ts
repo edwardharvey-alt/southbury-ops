@@ -46,6 +46,7 @@ const ALLOWED_FIELDS = new Set([
 ]);
 
 const VALID_DROP_TYPES = new Set(["neighbourhood", "community", "event"]);
+const VALID_AUDIENCE_SCOPES = new Set(["public", "community"]);
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -126,6 +127,10 @@ Deno.serve(async (req) => {
 
     if (insert.drop_type !== undefined && !VALID_DROP_TYPES.has(insert.drop_type as string)) {
       return jsonResponse({ error: "Invalid drop_type" }, 400);
+    }
+
+    if (insert.audience_scope !== undefined && !VALID_AUDIENCE_SCOPES.has(insert.audience_scope as string)) {
+      return jsonResponse({ error: "Invalid audience_scope" }, 400);
     }
 
     const { data, error } = await serviceClient
