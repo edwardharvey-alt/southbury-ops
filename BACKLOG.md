@@ -2800,6 +2800,30 @@ Status: Open. Post-launch.
 
 Vendor-facing copy authored in Hearth_Repetition_Layer_Voice_Spec.md (canonical repetition-layer voice spec).
 
+**T5-C8: Platform-sent visual email — primary email path; customer-list import as the unlock**
+Tier: 5 (comms-architecture-derived). Strategic platform feature. Depends on customer-list infrastructure. Post-launch — not activation-pass blocking.
+
+The email touchpoint on the activation surface is currently copy-paste plain text. This ticket reframes it: the highest-value version of "email your customers" is one Hearth sends — branded, visual, one tap — because that is the action that makes loading customer details into the platform worthwhile. The owned customer list is the compounding asset the model rests on; every drop adds named, opted-in local customers, and each makes the next easier to fill. Platform-sent visual email is therefore the most natural on-ramp to the customer import the strategy depends on. Copy-paste stays as the graceful fallback for vendors who won't or can't load contacts.
+
+Behaviour: when a vendor has customers loaded (imported, or accumulated from prior drops), the email touchpoint's primary action is "Send to your customers" — visual, branded, no design effort. When they don't, the surface nudges them toward importing (lightly, in voice) and offers the copy-paste text so they're never blocked. Copy-paste remains available always, as the backup.
+
+Fix shape (not built): a restrained, branded HTML template — the drop's food image, vendor identity (logo/colours per the brand layer; Hearth frames subtly, vendor fills), the announcement copy (reuse the existing email seed/AI copy), one clear "Order" button to the drop link, the close time. Sent via Resend (already wired), from a sender that reads as the vendor. Triggered by the vendor from the activation email zone; sends to the relevant segment (T5-C2 rule — same vendor, same/adjacent area), honouring the early-access insider mechanic where relevant.
+
+Guardrails:
+- Restraint over polish. The bar is "a beautiful, simple note with the dish on it," not "a marketing campaign." An over-designed template loses the warm-personal quality and fights the voice.
+- Consent and lawful basis. Marketing email to a vendor's list requires confirmed permission (UK GDPR/PECR). Imported lists need an explicit lawful-basis confirmation at import; order-accumulated customers need the right opt-in. Unsubscribe handling is mandatory and built in.
+- Deliverability. Sending on behalf of many vendors needs care (send subdomain DNS exists; SPF/DKIM/DMARC alignment; reputation). Decide shared vs per-vendor sender early.
+- Never auto-send. The platform prepares; the vendor approves the segment and presses send.
+- Copy-paste is never removed. It is the fallback; the feature degrades gracefully.
+
+Where it surfaces: activation surface, Card 4 (vendor_open) email zone — send-primary when a list exists, copy-fallback otherwise. The automated email touchpoints (early_access, thank_you) the comms engine already sends should adopt the same template once it exists.
+
+Open decisions: from-address model (vendor-display via Hearth vs per-vendor domain auth); single vs segmented send for v1; consent mechanics for imported vs order-accumulated contacts; how hard to nudge import without it feeling like pressure.
+
+Dependencies: T-customers-page-import-entry + customers workspace (hard), Resend (wired).
+Cross-reference: T5-11 (comms engine — this extends it with the visual template + vendor-triggered send), T5-C2 (consent capture, segmentation), T5-C3 (WhatsApp API — companion channel), Hearth_Drop_Communications_Architecture.md (email role; early-access insider mechanic).
+Status: Open. Post-launch. Larger build than copy-paste (template + send infra + compliance + list dependency); must not block the current activation pass — copy-paste email is the correct interim.
+
 **T-drop-anticipation-window-default: Drop Studio — default ordering-open time to create an anticipation window**
 
 **Status:** Open. Tier 5 (comms-architecture-derived). Pre-launch relevant — shapes the first drop a vendor creates.
