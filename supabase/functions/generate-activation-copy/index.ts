@@ -173,21 +173,32 @@ Rules: Write ONE line of 12 words or fewer, present tense, that reads as an invi
   }
 }
 
-// (B) Social formatting block — hashtags / emojis. Appended ONLY on the social
-// branch, and only when a socialOptions object is supplied (absent = unchanged
-// behaviour). Each key defaults false. These sit on top of COPY_FLOOR and the
-// brand voice — restraint always wins, nothing here introduces hype.
-function buildSocialOptions(opts?: { hashtags?: boolean; emojis?: boolean } | null): string {
+// (B) Format options block — hashtags + emojis on social, emojis on WhatsApp.
+// Appended only when a socialOptions object is supplied (absent = unchanged
+// behaviour) and the channel supports it; a no-op on email/unknown. Each key
+// defaults false. These sit on top of COPY_FLOOR and the brand voice —
+// restraint always wins, nothing here introduces hype.
+function buildFormatOptions(channel: string, opts?: { hashtags?: boolean; emojis?: boolean } | null): string {
   if (!opts) return "";
-  const wantHashtags = opts.hashtags === true;
+  const isSocial = channel === "social" || channel === "instagram";
+  const isWhatsapp = channel === "whatsapp";
+  if (!isSocial && !isWhatsapp) return "";   // email / unknown: no format options
+
   const wantEmojis = opts.emojis === true;
-  const hashtagRule = wantHashtags
-    ? "Hashtags: you may add 1 to 3 relevant, restrained hashtags drawn from the place and the type of food — local and specific. No trend-chasing and no generic engagement tags (nothing like #foodie, #instafood, #yum); never more than three."
-    : "Hashtags: do not use any hashtags.";
   const emojiRule = wantEmojis
     ? "Emojis: a tasteful one or two are fine where they read naturally — never more, and never decorative rows."
     : "Emojis: do not use any emojis.";
-  return `\n\nSocial formatting (this is a public social caption): ${hashtagRule} ${emojiRule} These never override the rules above — keep the same calm, restrained voice.`;
+
+  if (isSocial) {
+    const wantHashtags = opts.hashtags === true;
+    const hashtagRule = wantHashtags
+      ? "Hashtags: you may add 1 to 3 relevant, restrained hashtags drawn from the place and the type of food — local and specific. No trend-chasing and no generic engagement tags (nothing like #foodie, #instafood, #yum); never more than three."
+      : "Hashtags: do not use any hashtags.";
+    return `\n\nSocial formatting (this is a public social caption): ${hashtagRule} ${emojiRule} These never override the rules above — keep the same calm, restrained voice.`;
+  }
+
+  // WhatsApp: emoji rule only — hashtags never belong in a personal message.
+  return `\n\nWhatsApp formatting (this is a personal message to customers): ${emojiRule} This never overrides the rules above — keep the same calm, restrained voice.`;
 }
 
 Deno.serve(async (req) => {
@@ -245,11 +256,12 @@ Deno.serve(async (req) => {
     // guidance) so all touchpoints inherit it from one place.
     let userPrompt = `${buildPrompt(input)}\n\n${COPY_FLOOR}`;
 
-    // (B) Social formatting options — hashtags / emojis. Only meaningful on the
-    // social branch; a no-op on whatsapp/email and when socialOptions is absent.
+    // (B) Format options — hashtags + emojis on social, emojis on WhatsApp;
+    // a no-op on email and when socialOptions is absent.
     const isSocial = input.channel === "social" || input.channel === "instagram";
-    if (isSocial && input.socialOptions) {
-      userPrompt += buildSocialOptions(input.socialOptions);
+    const isWhatsapp = input.channel === "whatsapp";
+    if ((isSocial || isWhatsapp) && input.socialOptions) {
+      userPrompt += buildFormatOptions(input.channel, input.socialOptions);
     }
 
     // The vendor steer is standardised on the existing `guidance` field. In
