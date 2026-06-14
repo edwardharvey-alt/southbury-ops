@@ -475,13 +475,19 @@
     .act-photo-controls{ display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; }
     .act-photo-controls__swatches{ flex:0 1 auto; max-width:240px; }
     .act-photo-controls__upload{ flex:0 0 132px; }
-    #act-socialImageUploadContainer{ max-width:132px; }
+    #act-socialImageUploadContainer,
+    #act-revealImageUploadContainer{ max-width:132px; }
     /* Quiet, compact styling for the upload helper in this context only. */
-    #act-socialImageUploadContainer .hpu-add-btn{ padding:9px 14px; font-size:12px; white-space:nowrap; }
-    #act-socialImageUploadContainer .hpu-btn{ padding:7px 12px; font-size:12px; }
-    #act-socialImageUploadContainer .hpu-guidance{ margin-top:8px; background:none; border:none; border-radius:0; padding:0; }
-    #act-socialImageUploadContainer .hpu-guidance > summary{ padding:0; font-size:12px; font-weight:600; color:#9a8b73; }
-    #act-socialImageUploadContainer .hpu-guidance[open] > summary{ border-bottom:none; }
+    #act-socialImageUploadContainer .hpu-add-btn,
+    #act-revealImageUploadContainer .hpu-add-btn{ padding:9px 14px; font-size:12px; white-space:nowrap; }
+    #act-socialImageUploadContainer .hpu-btn,
+    #act-revealImageUploadContainer .hpu-btn{ padding:7px 12px; font-size:12px; }
+    #act-socialImageUploadContainer .hpu-guidance,
+    #act-revealImageUploadContainer .hpu-guidance{ margin-top:8px; background:none; border:none; border-radius:0; padding:0; }
+    #act-socialImageUploadContainer .hpu-guidance > summary,
+    #act-revealImageUploadContainer .hpu-guidance > summary{ padding:0; font-size:12px; font-weight:600; color:#9a8b73; }
+    #act-socialImageUploadContainer .hpu-guidance[open] > summary,
+    #act-revealImageUploadContainer .hpu-guidance[open] > summary{ border-bottom:none; }
     .act-channel-pill{ font-family:'Figtree', system-ui, sans-serif; font-size:12px; font-weight:800; letter-spacing:-0.01em; color:#6b7280; background:none; border:none; border-radius:999px; padding:6px 14px; cursor:pointer; transition:background .2s ease, color .2s ease; }
     .act-channel-pill:hover{ color:#1f2937; }
     .act-channel-pill.is-active{ background:#fff; color:#6b4c1f; box-shadow:0 1px 3px rgba(15,23,42,0.08); }
@@ -1860,15 +1866,9 @@
       // Brand-colour solid is the last-resort fallback.
       artworkEl.style.setProperty("--vendor-brand-primary", (vendor && vendor.brand_primary_color) || "#8B6B3F");
 
-      // Image fallback chain: reveal product photo → vendor hero → solid.
-      let imageUrl = "";
-      if (rawDrop && rawDrop.reveal_product_id) {
-        const product = (products || []).find(
-          (p) => String(p.id) === String(rawDrop.reveal_product_id)
-        );
-        if (product && product.image_url) imageUrl = String(product.image_url);
-      }
-      if (!imageUrl && vendor && vendor.hero_image_url) imageUrl = String(vendor.hero_image_url);
+      // Honour the drop's chosen photo via the shared resolver (social pick →
+      // reveal product → vendor hero), so the menu card matches the other cards.
+      const imageUrl = resolveDropSocialImage(rawDrop, vendor);
 
       // Explicit pixel geometry against the 540×540 source box so the
       // html2canvas scale:2 export matches the preview exactly.
@@ -2508,13 +2508,22 @@
           })
         : null;
 
-      // New signal: the reveal dish name, resolved from reveal_product_id.
+      // Reveal dish name, derived from the chosen photo: if social_image_url
+      // matches a menu item's photo, that item is the dish being revealed.
+      // Falls back to reveal_product_id for older drops set before the picker.
       let revealDish = null;
-      if (rawDrop.reveal_product_id) {
-        const product = (state.products || []).find(
+      const revealPhoto = rawDrop.social_image_url ? String(rawDrop.social_image_url) : '';
+      if (revealPhoto) {
+        const byPhoto = (state.products || []).find(
+          p => p && p.image_url && String(p.image_url) === revealPhoto
+        );
+        revealDish = (byPhoto && byPhoto.name) || null;
+      }
+      if (!revealDish && rawDrop.reveal_product_id) {
+        const fallbackProduct = (state.products || []).find(
           p => String(p.id) === String(rawDrop.reveal_product_id)
         );
-        revealDish = (product && product.name) || null;
+        revealDish = (fallbackProduct && fallbackProduct.name) || null;
       }
 
       // New signal: cadence — event drops, recurring-series drops, or one-offs.
@@ -3048,40 +3057,45 @@
 
       // Reveal-dish options: only products with images (no image means
        // nothing usable for the menu card).
-      const revealProductOptions = (state.products || [])
-        .filter(p => p && p.image_url)
-        .map(p => {
-          const selected = String(p.id) === String(rawDrop.reveal_product_id || '') ? ' selected' : '';
-          return `<option value="${escapeHtml(p.id)}"${selected}>${escapeHtml(p.name || 'Untitled product')}</option>`;
-        })
-        .join('');
+      const card1ImageOptions = actBuildImageOptions();
+      const card1CurrentImage = resolveDropSocialImage(rawDrop, state.vendor);
+      const card1ImageSwatches = actBuildImageSwatches(card1ImageOptions, card1CurrentImage);
 
       const card1Body = `
           <p>${escapeHtml(card1Desc)}</p>
           <div class="act-actions">
-            <div class="act-reveal-fields">
-              <div>
-                <label class="act-field-label" for="act-revealProduct">Reveal dish</label>
-                <select id="act-revealProduct">
-                  <option value="">No dish selected</option>
-                  ${revealProductOptions}
-                </select>
-                <div class="act-field-helper">The dish that headlines your reveal post — we'll use its photo.</div>
-              </div>
-            </div>
-            ${card1CaptionArea}
-            <div class="menuCardArtworkFrame" id="act-menuCardFrame" style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
-              <div class="menuCardArtwork" id="act-menuCardArtwork">
-                <img class="menuCardArtwork__image" id="act-menuCardImage" alt="" crossorigin="anonymous" />
-                <div class="menuCardArtwork__scrim" aria-hidden="true"></div>
-                <div class="menuCardArtwork__lockup">
-                  <div class="menuCardArtwork__dropName" id="act-menuCardDropName"></div>
-                  <div class="menuCardArtwork__dropDate" id="act-menuCardDropDate"></div>
+            <div class="act-social-grid">
+              <div class="act-zone">
+                <div class="act-zone-label">Step 1 · The image</div>
+                <div class="menuCardArtworkFrame" id="act-menuCardFrame" style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
+                  <div class="menuCardArtwork" id="act-menuCardArtwork">
+                    <img class="menuCardArtwork__image" id="act-menuCardImage" alt="" crossorigin="anonymous" />
+                    <div class="menuCardArtwork__scrim" aria-hidden="true"></div>
+                    <div class="menuCardArtwork__lockup">
+                      <div class="menuCardArtwork__dropName" id="act-menuCardDropName"></div>
+                      <div class="menuCardArtwork__dropDate" id="act-menuCardDropDate"></div>
+                    </div>
+                    <div class="menuCardArtwork__skeleton" id="act-menuCardSkeleton">Loading…</div>
+                  </div>
                 </div>
-                <div class="menuCardArtwork__skeleton" id="act-menuCardSkeleton">Loading…</div>
+                <button class="act-copy-btn primary" id="act-downloadMenuCardBtn" type="button" data-act="download" disabled>Download menu card</button>
+              </div>
+              <div class="act-zone">
+                <div class="act-zone-label">Step 2 · The caption</div>
+                ${card1CaptionArea}
               </div>
             </div>
-            <button class="act-copy-btn primary" id="act-downloadMenuCardBtn" type="button" data-act="download" disabled>Download menu card</button>
+            <div style="margin-top:18px; padding-top:16px; border-top:1px solid #efe9df;">
+              <div class="act-zone-label" style="font-size:12px; margin-bottom:10px;">The photo behind it</div>
+              <div class="act-photo-controls">
+                <div class="act-photo-controls__swatches">${card1ImageSwatches}</div>
+                <div class="act-photo-controls__upload">
+                  <div style="font-size:12px; color:#9a8b73; margin-bottom:8px;">Or add your own</div>
+                  <div id="act-revealImageUploadContainer"></div>
+                </div>
+              </div>
+              <div style="font-size:12px; color:#9a8b73; line-height:1.5; margin-top:14px;">The photo that headlines your reveal post — and the one your other posts use too.</div>
+            </div>
           </div>
       `;
       cards.push(actTouchpointShell({
@@ -3723,7 +3737,7 @@
       `;
 
       actSetupMenuCard(summary, rawDrop);
-      actInitRevealFields(dropId, summary, rawDrop);
+      actMountSocialImageUpload(dropId, 'act-revealImageUploadContainer', '_revealImageUpload');
       actMountSocialImageUpload(dropId);
 
       // Populate orders-open artwork (Card 4)
