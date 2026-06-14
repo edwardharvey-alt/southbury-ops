@@ -467,6 +467,10 @@
     .act-zone{ display:flex; flex-direction:column; gap:10px; align-items:flex-start; padding-top:18px; border-top:1px solid #efe9df; }
     .act-zone:first-child{ padding-top:0; border-top:none; }
     .act-zone-label{ font-family:'Figtree', system-ui, sans-serif; font-size:11px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#9a8b73; margin-bottom:2px; }
+    .act-social-grid{ display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; }
+    .act-social-grid > .act-zone{ border-top:none; padding-top:0; }
+    .act-social-grid > .act-zone:first-child{ flex:0 0 280px; }
+    .act-social-grid > .act-zone:last-child{ flex:1 1 300px; min-width:280px; }
     .act-channel-pill{ font-family:'Figtree', system-ui, sans-serif; font-size:12px; font-weight:800; letter-spacing:-0.01em; color:#6b7280; background:none; border:none; border-radius:999px; padding:6px 14px; cursor:pointer; transition:background .2s ease, color .2s ease; }
     .act-channel-pill:hover{ color:#1f2937; }
     .act-channel-pill.is-active{ background:#fff; color:#6b4c1f; box-shadow:0 1px 3px rgba(15,23,42,0.08); }
@@ -3138,7 +3142,7 @@
             ${card4SocialToggles}
             <textarea data-act="message-textarea" data-touchpoint="vendor_open"
               data-channel="${card4Active}"
-              rows="8">${escapeHtml(card4Text)}</textarea>
+              rows="5">${escapeHtml(card4Text)}</textarea>
             ${card4Channels.generated[card4Active]
               ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
             <div class="act-chip-row">
@@ -3197,16 +3201,17 @@
         `;
       }
 
-      const card4Body = `
-          <p>Pick where you're posting — the card shows you exactly what to do for that channel.</p>
-          ${card4PillBar}
-          <div class="act-actions">
+      const card4SocialFlow = (card4ShowInstagram && card4Active === 'social');
+
+      const card4MessageZone = `
             <div class="act-zone">
-              <div class="act-zone-label">The message — for your customers</div>
+              <div class="act-zone-label">${card4SocialFlow ? 'Step 2 · The caption' : 'The message — for your customers'}</div>
               ${card4MessageArea}
-            </div>
-            ${(card4ShowInstagram && card4Active === 'social') ? `<div class="act-zone">
-              <div class="act-zone-label">An image — for social</div>
+            </div>`;
+
+      const card4ImageZone = `
+            <div class="act-zone">
+              <div class="act-zone-label">Step 1 · The image</div>
               <div class="menuCardArtworkFrame" id="act-ordersOpenFrame" style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
                 <div class="act-orders-open-artwork" id="act-ordersOpenArtwork">
                   <img class="act-orders-open-artwork__image" id="act-ordersOpenImage" alt="" crossorigin="anonymous" />
@@ -3220,11 +3225,15 @@
                 </div>
               </div>
               <button class="act-copy-btn primary" id="act-downloadOrdersOpenBtn" type="button" data-act="download-orders-open" disabled>Download image</button>
-            </div>` : ''}
+            </div>`;
+
+      const card4SocialHelper = `
+            <div style="font-size:12px; color:#9a8b73; line-height:1.5; margin-top:18px; padding-top:14px; border-top:1px solid #efe9df;">Then open Instagram or Facebook, start a post, add the image and paste the caption.</div>`;
+
+      const card4PosterZone = `
             <div class="act-zone">
               <div class="act-zone-label">Also — a poster for your counter</div>
               <div class="act-poster-hook" style="width:100%;">
-                <label class="act-field-label" for="act-posterHookInput">${card4PosterLabel}</label>
                 <input type="text" class="act-guidance-input" id="act-posterHookInput"
                   maxlength="90"
                   placeholder="e.g. Order ahead for Friday — collect hot at 6pm"
@@ -3249,7 +3258,16 @@
                 href="#"
                 data-act="open-poster"
                 target="_blank">Print poster</a>
-            </div>
+            </div>`;
+
+      const card4Body = `
+          <p>Pick where you're posting — the card shows you exactly what to do for that channel.</p>
+          ${card4PillBar}
+          <div class="act-actions">
+            ${card4SocialFlow
+              ? `<div class="act-social-grid">${card4ImageZone}${card4MessageZone}</div>${card4SocialHelper}`
+              : card4MessageZone}
+            ${card4PosterZone}
           </div>
       `;
       cards.push(actTouchpointShell({
