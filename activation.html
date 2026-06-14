@@ -2004,6 +2004,21 @@
       frame.style.height = `${540 * scale}px`;
     }
 
+    // Single source of truth for a drop's social backdrop image. Preference:
+    // explicit social pick → reveal product photo → vendor hero → '' (the caller
+    // draws the solid brand colour). Shared by every social artwork so the
+    // vendor's chosen photo cannot drift between cards.
+    function resolveDropSocialImage(rawDrop, vendor) {
+      if (rawDrop && rawDrop.social_image_url) return String(rawDrop.social_image_url);
+      if (rawDrop && rawDrop.reveal_product_id) {
+        const product = (state.products || []).find(
+          p => String(p.id) === String(rawDrop.reveal_product_id)
+        );
+        if (product && product.image_url) return String(product.image_url);
+      }
+      if (vendor && vendor.hero_image_url) return String(vendor.hero_image_url);
+      return '';
+    }
     function actPopulateOrdersOpenCard(summary, rawDrop, vendor) {
       const artworkEl = byId('act-ordersOpenArtwork');
       const downloadBtn = byId('act-downloadOrdersOpenBtn');
@@ -2013,18 +2028,8 @@
       artworkEl.style.setProperty('--vendor-brand-primary',
         (vendor && vendor.brand_primary_color) || '#8B6B3F');
 
-      // Image preference: explicit social pick → reveal product → vendor hero → solid colour.
-      let imageUrl = '';
-      if (rawDrop && rawDrop.social_image_url) imageUrl = String(rawDrop.social_image_url);
-      if (!imageUrl && rawDrop && rawDrop.reveal_product_id) {
-        const product = (state.products || []).find(
-          p => String(p.id) === String(rawDrop.reveal_product_id)
-        );
-        if (product && product.image_url) imageUrl = String(product.image_url);
-      }
-      if (!imageUrl && vendor && vendor.hero_image_url) {
-        imageUrl = String(vendor.hero_image_url);
-      }
+      // Image preference resolved centrally so every social card matches.
+      const imageUrl = resolveDropSocialImage(rawDrop, vendor);
 
       const img = byId('act-ordersOpenImage');
       const S = 540;
@@ -2210,17 +2215,8 @@
         dropNameEl.textContent = summary.drop_name || rawDrop.name || '';
       }
 
-      // Image fallback chain: reveal product → vendor hero → solid colour.
-      let imageUrl = '';
-      if (rawDrop && rawDrop.reveal_product_id) {
-        const product = (state.products || []).find(
-          p => String(p.id) === String(rawDrop.reveal_product_id)
-        );
-        if (product && product.image_url) imageUrl = String(product.image_url);
-      }
-      if (!imageUrl && vendor && vendor.hero_image_url) {
-        imageUrl = String(vendor.hero_image_url);
-      }
+      // Same central resolver — capacity now honours the vendor's social pick.
+      const imageUrl = resolveDropSocialImage(rawDrop, vendor);
 
       const img = byId('act-capacityImage');
       const S = 540;
