@@ -1380,6 +1380,7 @@
       expandedMessageCards: {},
       cardExpanded: {},  // cardNum (string) → explicit user toggle override; survives re-render
       _activationDropPhase: 'pre-open',  // current drop phase, drives auto-expand
+      _nextActionOpened: false,  // render-scoped: set once the next-action card has auto-opened
       sendingEmail: {},  // touchpoint → true while in-flight
       generateLoading: {},  // touchpoint → true while AI copy generates
       emailBodyGenerated: {},  // touchpoint → true once body auto-generated
@@ -2570,7 +2571,13 @@
       const key = String(cardNum);
       if (state.cardExpanded[key] !== undefined) return state.cardExpanded[key];
       if (done || locked) return false;
-      return actCardPhase(cardNum) === state._activationDropPhase;
+      if (actCardPhase(cardNum) !== state._activationDropPhase) return false;
+      // Only the first eligible current-phase card auto-opens — the single
+      // "next action". Later current-phase cards stay collapsed until reached
+      // (or the vendor expands them manually).
+      if (state._nextActionOpened) return false;
+      state._nextActionOpened = true;
+      return true;
     }
 
     // Wraps a touchpoint card in the collapse-to-expand disclosure shell: an
@@ -2844,6 +2851,8 @@
       // anything else (published/scheduled/open/upcoming) → PRE-OPEN phase.
       state._activationDropPhase =
         status === 'live' ? 'live' : (status === 'closed' ? 'closed' : 'pre-open');
+      // Reset each render — the first eligible current-phase card claims this.
+      state._nextActionOpened = false;
 
       const profile = getDropProfile(summary);
       const profileCards = profile.cards;
