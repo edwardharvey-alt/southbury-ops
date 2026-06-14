@@ -3543,7 +3543,12 @@
       buildTimeOptions(byId("deliveryStartTime"), formatTimeInput(d.delivery_start));
       buildTimeOptions(byId("deliveryEndTime"), formatTimeInput(d.delivery_end));
 
-      byId("openImmediateToggle").checked = !d.opens_at;
+      // "Open immediately" only defaults on when the drop already has a delivery
+      // date — a deliberate immediate choice on a real drop. A blank-timing
+      // duplicate (opens_at and delivery_start both null) defaults to scheduled,
+      // so picking the new date re-derives the 24h anticipation window the same
+      // way a fresh drop does, instead of silently opening immediately.
+      byId("openImmediateToggle").checked = !d.opens_at && !!d.delivery_start;
 
       byId("opensAtDate").value = formatDateInput(d.opens_at);
       buildTimeOptions(byId("opensAtTime"), formatTimeInput(d.opens_at));
