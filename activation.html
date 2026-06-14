@@ -13,6 +13,7 @@
   <script src="./assets/config.js"></script>
   <script src="./assets/hearth-vendor.js?v=1"></script>
   <script src="./assets/vendor-nav.js?v=2"></script>
+  <script src="./assets/hearth-photo-upload.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -2357,6 +2358,50 @@
       }
     }
 
+    // Mount the upload-your-own tile in the Card 4 social image zone. The
+    // uploaded photo's public URL becomes social_image_url — the same field
+    // the swatches write — so artwork + persistence reuse what's already
+    // wired. initialUrl is set only when the current choice is an uploaded
+    // image (i.e. not one of the menu-photo / brand swatches).
+    function actMountSocialImageUpload(dropId) {
+      const container = byId('act-socialImageUploadContainer');
+      if (!container || typeof window.HearthPhotoUpload !== 'function') return;
+      const slug = state.vendor && state.vendor.slug;
+      if (!slug) return;
+      if (state._socialImageUpload) {
+        try { state._socialImageUpload.destroy(); } catch (e) { /* ignore */ }
+        state._socialImageUpload = null;
+      }
+      const drop = state.rawById[dropId] || {};
+      const optionUrls = new Set();
+      (state.products || []).forEach(p => {
+        if (p && p.image_url) optionUrls.add(String(p.image_url));
+      });
+      if (state.vendor && state.vendor.hero_image_url) {
+        optionUrls.add(String(state.vendor.hero_image_url));
+      }
+      const current = drop.social_image_url ? String(drop.social_image_url) : '';
+      const initialUrl = (current && !optionUrls.has(current)) ? current : null;
+      state._socialImageUpload = new HearthPhotoUpload(container, {
+        aspectRatio: 1,
+        storagePath: () => `${slug}/social/${dropId}`,
+        initialUrl: initialUrl,
+        guidanceCopy: 'item',
+        onUpload: (publicUrl) => {
+          if (!state.rawById[dropId]) return;
+          state.rawById[dropId].social_image_url = publicUrl || null;
+          actSaveSocialImage(dropId, publicUrl || null);
+          renderDropView(dropId);
+        },
+        onRemove: () => {
+          if (!state.rawById[dropId]) return;
+          state.rawById[dropId].social_image_url = null;
+          actSaveSocialImage(dropId, null);
+          renderDropView(dropId);
+        }
+      });
+    }
+
     // Wire the reveal textarea + product select inside Card 1's action
     // area. Mirrors templates['menu_reveal'] inline so the Copy caption
     // button always copies the latest text without waiting for the save.
@@ -3283,6 +3328,10 @@
               </div>
               <button class="act-copy-btn primary" id="act-downloadOrdersOpenBtn" type="button" data-act="download-orders-open" disabled>Download image</button>
               ${card4ImagePicker}
+              <div style="margin-top:18px; padding-top:14px; border-top:1px solid #efe9df;">
+                <div class="act-zone-label" style="font-size:12px; margin-bottom:8px;">Or upload a photo of this drop</div>
+                <div id="act-socialImageUploadContainer"></div>
+              </div>
             </div>`;
 
       const card4SocialHelper = `
@@ -3617,6 +3666,7 @@
 
       actSetupMenuCard(summary, rawDrop);
       actInitRevealFields(dropId, summary, rawDrop);
+      actMountSocialImageUpload(dropId);
 
       // Populate orders-open artwork (Card 4)
       const ordersOpenFrame = byId('act-ordersOpenFrame');
