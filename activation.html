@@ -2777,12 +2777,16 @@
               rows="8">${escapeHtml(draft.body)}</textarea>
           </div>
           ${generated ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
-          ${generated ? `
-            <div class="act-guidance-row">
-              <input type="text" class="act-guidance-input"
-                data-touchpoint="${escapeHtml(tp)}"
-                placeholder="e.g. shorter, more personal, mention it's their first time at this venue...">
-            </div>` : ''}
+          <div class="act-chip-row">
+            <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="${escapeHtml(tp)}" data-instruction="Make it shorter and more concise">Shorter</button>
+            <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="${escapeHtml(tp)}" data-instruction="Make it warmer and more personal">Warmer</button>
+            <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="${escapeHtml(tp)}" data-instruction="Make it more personal — speak to the reader as an individual, with a specific touch">More personal</button>
+          </div>
+          <div class="act-guidance-row">
+            <input type="text" class="act-guidance-input"
+              data-touchpoint="${escapeHtml(tp)}"
+              placeholder="e.g. shorter, more personal, mention it's their first time at this venue...">
+          </div>
           <div class="act-confirm-row">
             <button class="act-copy-btn" type="button"
               data-act="generate-email-body"
@@ -2984,12 +2988,16 @@
               data-touchpoint="menu_reveal"
               rows="5">${escapeHtml(card1Caption)}</textarea>
             ${state.messageGenerated?.['menu_reveal'] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
-            ${state.messageGenerated?.['menu_reveal'] ? `
-              <div class="act-guidance-row">
-                <input type="text" class="act-guidance-input"
-                  data-touchpoint="menu_reveal"
-                  placeholder="e.g. shorter, more intriguing, mention it's their first drop at this venue...">
-              </div>` : ''}
+            <div class="act-chip-row">
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="menu_reveal" data-instruction="Make it shorter and more concise">Shorter</button>
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="menu_reveal" data-instruction="Make it warmer and more personal">Warmer</button>
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="menu_reveal" data-instruction="Make it more intriguing — build anticipation without revealing everything">More intriguing</button>
+            </div>
+            <div class="act-guidance-row">
+              <input type="text" class="act-guidance-input"
+                data-touchpoint="menu_reveal"
+                placeholder="e.g. shorter, more intriguing, mention it's their first drop at this venue...">
+            </div>
             <div class="act-message-edit-row">
               <button
                 data-act="generate-copy"
@@ -3598,12 +3606,16 @@
               data-touchpoint="post_drop"
               rows="5">${escapeHtml(card8Caption)}</textarea>
             ${state.messageGenerated?.['post_drop'] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
-            ${state.messageGenerated?.['post_drop'] ? `
-              <div class="act-guidance-row">
-                <input type="text" class="act-guidance-input"
-                  data-touchpoint="post_drop"
-                  placeholder="e.g. warmer, mention the sold-out moment, include the next drop date...">
-              </div>` : ''}
+            <div class="act-chip-row">
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="post_drop" data-instruction="Make it shorter and more concise">Shorter</button>
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="post_drop" data-instruction="Make it warmer and more personal">Warmer</button>
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="post_drop" data-instruction="Mention the next drop date to invite them back">Mention next drop</button>
+            </div>
+            <div class="act-guidance-row">
+              <input type="text" class="act-guidance-input"
+                data-touchpoint="post_drop"
+                placeholder="e.g. warmer, mention the sold-out moment, include the next drop date...">
+            </div>
             <div class="act-message-edit-row">
               <button
                 data-act="generate-copy"
@@ -4112,6 +4124,7 @@
         const guidanceEl = document.querySelector(`.act-guidance-input[data-touchpoint="${tp}"]`);
         if (guidanceEl) guidanceEl.value = adjustChip.dataset.instruction || '';
         const genBtn = document.querySelector(`[data-act="generate-copy"][data-touchpoint="${tp}"]`)
+          || document.querySelector(`[data-act="generate-email-body"][data-touchpoint="${tp}"]`)
           || (tp === 'poster_hook' ? document.querySelector('[data-act="generate-poster-hook"]') : null);
         if (genBtn) genBtn.click();
         return;
