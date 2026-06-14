@@ -2384,14 +2384,47 @@
     // public URL becomes social_image_url — the same field the swatches write —
     // so artwork + persistence reuse what's already wired. initialUrl is set
     // only when the current choice is an uploaded image (not a menu/brand swatch).
-    function actMountSocialImageUpload(dropId) {
-      const container = byId('act-socialImageUploadContainer');
+    // Shared option list for social image pickers: every menu-item photo, then
+    // the vendor's brand image.
+    function actBuildImageOptions() {
+      const options = [];
+      (state.products || []).forEach(p => {
+        if (p && p.image_url) {
+          options.push({ url: String(p.image_url), label: p.name || 'Menu item' });
+        }
+      });
+      if (state.vendor && state.vendor.hero_image_url) {
+        options.push({ url: String(state.vendor.hero_image_url), label: 'Brand image' });
+      }
+      return options;
+    }
+
+    // Shared swatch grid for social image pickers. Highlights the swatch that
+    // matches the currently-resolved image.
+    function actBuildImageSwatches(options, currentImage) {
+      if (!options.length) return '';
+      return `
+              <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                ${options.map(opt => {
+                  const selected = String(opt.url) === String(currentImage);
+                  return `<button type="button" data-act="pick-image" data-image-url="${escapeHtml(opt.url)}" title="${escapeHtml(opt.label)}" aria-label="Use ${escapeHtml(opt.label)}" style="width:52px; height:52px; border-radius:8px; padding:0; overflow:hidden; cursor:pointer; background:#f6f2ea; border:2px solid ${selected ? '#8B6B3F' : '#efe9df'};"><img src="${escapeHtml(opt.url)}" alt="" style="width:100%; height:100%; object-fit:cover; display:block;" /></button>`;
+                }).join('')}
+              </div>`;
+    }
+
+    // Mounts the upload tile. containerId / stateKey default to Card 4's, so its
+    // existing call is unchanged; another card passes its own pair so the two
+    // pickers don't collide.
+    function actMountSocialImageUpload(dropId, containerId, stateKey) {
+      containerId = containerId || 'act-socialImageUploadContainer';
+      stateKey = stateKey || '_socialImageUpload';
+      const container = byId(containerId);
       if (!container || typeof window.HearthPhotoUpload !== 'function') return;
       const slug = state.vendor && state.vendor.slug;
       if (!slug) return;
-      if (state._socialImageUpload) {
-        try { state._socialImageUpload.destroy(); } catch (e) { /* ignore */ }
-        state._socialImageUpload = null;
+      if (state[stateKey]) {
+        try { state[stateKey].destroy(); } catch (e) { /* ignore */ }
+        state[stateKey] = null;
       }
       const drop = state.rawById[dropId] || {};
       const optionUrls = new Set();
@@ -2403,7 +2436,7 @@
       }
       const current = drop.social_image_url ? String(drop.social_image_url) : '';
       const initialUrl = (current && !optionUrls.has(current)) ? current : null;
-      state._socialImageUpload = new HearthPhotoUpload(container, {
+      state[stateKey] = new HearthPhotoUpload(container, {
         aspectRatio: 1,
         storagePath: () => `${slug}/social/${dropId}`,
         initialUrl: initialUrl,
@@ -3309,35 +3342,9 @@
       // the image the card currently resolves to (explicit pick → reveal
       // product → brand hero) — mirrors actPopulateOrdersOpenCard.
       const card4Drop = state.rawById[dropId] || {};
-      const card4ImageOptions = [];
-      (state.products || []).forEach(p => {
-        if (p && p.image_url) {
-          card4ImageOptions.push({ url: String(p.image_url), label: p.name || 'Menu item' });
-        }
-      });
-      if (state.vendor && state.vendor.hero_image_url) {
-        card4ImageOptions.push({ url: String(state.vendor.hero_image_url), label: 'Brand image' });
-      }
-      let card4CurrentImage = '';
-      if (card4Drop.social_image_url) {
-        card4CurrentImage = String(card4Drop.social_image_url);
-      }
-      if (!card4CurrentImage && card4Drop.reveal_product_id) {
-        const rp = (state.products || []).find(
-          p => String(p.id) === String(card4Drop.reveal_product_id)
-        );
-        if (rp && rp.image_url) card4CurrentImage = String(rp.image_url);
-      }
-      if (!card4CurrentImage && state.vendor && state.vendor.hero_image_url) {
-        card4CurrentImage = String(state.vendor.hero_image_url);
-      }
-      const card4ImageSwatches = card4ImageOptions.length ? `
-              <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                ${card4ImageOptions.map(opt => {
-                  const selected = String(opt.url) === String(card4CurrentImage);
-                  return `<button type="button" data-act="pick-image" data-image-url="${escapeHtml(opt.url)}" title="${escapeHtml(opt.label)}" aria-label="Use ${escapeHtml(opt.label)}" style="width:52px; height:52px; border-radius:8px; padding:0; overflow:hidden; cursor:pointer; background:#f6f2ea; border:2px solid ${selected ? '#8B6B3F' : '#efe9df'};"><img src="${escapeHtml(opt.url)}" alt="" style="width:100%; height:100%; object-fit:cover; display:block;" /></button>`;
-                }).join('')}
-              </div>` : '';
+      const card4ImageOptions = actBuildImageOptions();
+      const card4CurrentImage = resolveDropSocialImage(card4Drop, state.vendor);
+      const card4ImageSwatches = actBuildImageSwatches(card4ImageOptions, card4CurrentImage);
 
       const card4MessageZone = `
             <div class="act-zone">
