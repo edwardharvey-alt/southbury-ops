@@ -476,18 +476,29 @@
     .act-photo-controls__swatches{ flex:0 1 auto; max-width:240px; }
     .act-photo-controls__upload{ flex:0 0 132px; }
     #act-socialImageUploadContainer,
-    #act-revealImageUploadContainer{ max-width:132px; }
+    #act-revealImageUploadContainer,
+    #act-capacityImageUploadContainer{ max-width:132px; }
     /* Quiet, compact styling for the upload helper in this context only. */
     #act-socialImageUploadContainer .hpu-add-btn,
-    #act-revealImageUploadContainer .hpu-add-btn{ padding:9px 14px; font-size:12px; white-space:nowrap; }
+    #act-revealImageUploadContainer .hpu-add-btn,
+    #act-capacityImageUploadContainer .hpu-add-btn{ padding:9px 14px; font-size:12px; white-space:nowrap; }
     #act-socialImageUploadContainer .hpu-btn,
-    #act-revealImageUploadContainer .hpu-btn{ padding:7px 12px; font-size:12px; }
+    #act-revealImageUploadContainer .hpu-btn,
+    #act-capacityImageUploadContainer .hpu-btn{ padding:7px 12px; font-size:12px; }
     #act-socialImageUploadContainer .hpu-guidance,
-    #act-revealImageUploadContainer .hpu-guidance{ margin-top:8px; background:none; border:none; border-radius:0; padding:0; }
+    #act-revealImageUploadContainer .hpu-guidance,
+    #act-capacityImageUploadContainer .hpu-guidance{ margin-top:8px; background:none; border:none; border-radius:0; padding:0; }
     #act-socialImageUploadContainer .hpu-guidance > summary,
-    #act-revealImageUploadContainer .hpu-guidance > summary{ padding:0; font-size:12px; font-weight:600; color:#9a8b73; }
+    #act-revealImageUploadContainer .hpu-guidance > summary,
+    #act-capacityImageUploadContainer .hpu-guidance > summary{ padding:0; font-size:12px; font-weight:600; color:#9a8b73; }
     #act-socialImageUploadContainer .hpu-guidance[open] > summary,
-    #act-revealImageUploadContainer .hpu-guidance[open] > summary{ border-bottom:none; }
+    #act-revealImageUploadContainer .hpu-guidance[open] > summary,
+    #act-capacityImageUploadContainer .hpu-guidance[open] > summary{ border-bottom:none; }
+    /* Card 6 capacity-signal wording options (pick one; number system-filled). */
+    .act-capacity-wordings{ display:flex; flex-direction:column; gap:8px; align-self:stretch; width:100%; }
+    .act-capacity-wording{ text-align:left; font-family:'Figtree', system-ui, sans-serif; font-size:14px; line-height:1.5; color:#1f2937; background:#faf8f4; border:1.5px solid #efe9df; border-radius:10px; padding:12px 14px; cursor:pointer; transition:border-color .15s ease, background .15s ease; }
+    .act-capacity-wording:hover{ border-color:#cbb89d; }
+    .act-capacity-wording.is-selected{ border-color:#8B6B3F; background:#fff; }
     .act-channel-pill{ font-family:'Figtree', system-ui, sans-serif; font-size:12px; font-weight:800; letter-spacing:-0.01em; color:#6b7280; background:none; border:none; border-radius:999px; padding:6px 14px; cursor:pointer; transition:background .2s ease, color .2s ease; }
     .act-channel-pill:hover{ color:#1f2937; }
     .act-channel-pill.is-active{ background:#fff; color:#6b4c1f; box-shadow:0 1px 3px rgba(15,23,42,0.08); }
@@ -2207,7 +2218,7 @@
         }
         if (slotsEl) {
           slotsEl.style.display = '';
-          slotsEl.textContent = remaining === 1 ? 'slot left' : 'slots left';
+          slotsEl.textContent = remaining === 1 ? 'order left' : 'orders left';
         }
       }
 
@@ -2969,11 +2980,26 @@
       templates['host_link'] =
         `Orders are live — ${capPhrase} slots available. Order here: ${orderingLink}`;
 
-      // Card 6 — capacity signal
+      // Card 6 — capacity signal: two honest wordings, real order count injected,
+      // vendor picks the tone. The number is system-filled and never editable —
+      // only the wording is chosen.
       const soldOut = (remaining === 0) || (capTotalNum != null && capTotalNum > 0 && used >= capTotalNum);
-      templates['capacity_signal'] = soldOut
-        ? `We're full for tonight. Next one coming soon.`
-        : `Only ${remaining == null ? capPhrase : remaining} slots left for ${dropName} today. Order here: ${orderingLink}`;
+      const capRemaining = remaining == null ? capPhrase : remaining;
+      const capOrdersWord = remaining === 1 ? 'order' : 'orders';
+      const capacityVariants = soldOut
+        ? [
+            `${dropName} is full — thank you. The next one's coming soon.`,
+            `Fully booked. Thanks to everyone who ordered — see you at the next drop.`
+          ]
+        : [
+            `${dropName} is filling up — ${capRemaining} ${capOrdersWord} left. Order here: ${orderingLink}`,
+            `${capRemaining} ${capOrdersWord} left for ${dropName} today. Order here: ${orderingLink}`
+          ];
+      if (typeof state.capacityVariant !== 'number' || state.capacityVariant < 0 || state.capacityVariant > 1) {
+        state.capacityVariant = 0;
+      }
+      state.capacityVariants = capacityVariants;
+      templates['capacity_signal'] = capacityVariants[state.capacityVariant];
 
       // Card 8 — post-drop caption
       templates['post_drop'] =
@@ -3547,33 +3573,54 @@
         (capTotalNum != null && capTotalNum > 0 && orderCount >= 0.5 * capTotalNum));
 
       const card6Entry = getLogEntry('capacity_signal');
-      const card6CopyArea = card6Entry
-        ? `<div class="act-done-state">✓ Sent · ${formatLogTime(card6Entry.timestamp)}</div>`
-        : copyBtn('Copy capacity post', 'capacity_signal', 'post_copied', false);
 
-      const card6ArtworkHtml = card6Locked ? '' : `
-        <div class="menuCardArtworkFrame" id="act-capacityFrame"
-          style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
-          <div class="act-capacity-artwork" id="act-capacityArtwork">
-            <img class="act-capacity-artwork__image" id="act-capacityImage"
-              alt="" crossorigin="anonymous" />
-            <div class="act-capacity-artwork__tint" id="act-capacityTint"
-              aria-hidden="true"></div>
-            <div class="act-capacity-artwork__centre">
-              <div class="act-capacity-artwork__number" id="act-capacityNumber"></div>
-              <div class="act-capacity-artwork__slots" id="act-capacitySlots"></div>
-              <div class="act-capacity-artwork__soldout" id="act-capacitySoldout"
-                style="display:none;">Sold out</div>
-              <div class="act-capacity-artwork__dropname"
-                id="act-capacityDropName"></div>
+      // Two honest wordings (order count system-filled) shown as pick-one options.
+      const card6WordingOptions = (state.capacityVariants || []).map((txt, i) => `
+                <button type="button" class="act-capacity-wording${i === state.capacityVariant ? ' is-selected' : ''}" data-act="pick-capacity-wording" data-variant="${i}">${escapeHtml(txt)}</button>`).join('');
+
+      const card6CaptionArea = card6Entry
+        ? `<div class="act-done-state">✓ Sent · ${formatLogTime(card6Entry.timestamp)}</div>`
+        : `<div class="act-capacity-wordings">${card6WordingOptions}</div>
+                ${copyBtn('Copy capacity post', 'capacity_signal', 'post_copied', false)}`;
+
+      const card6ImageOptions = actBuildImageOptions();
+      const card6CurrentImage = resolveDropSocialImage(rawDrop, state.vendor);
+      const card6ImageSwatches = actBuildImageSwatches(card6ImageOptions, card6CurrentImage);
+
+      const card6Unlocked = `
+            <div class="act-social-grid">
+              <div class="act-zone">
+                <div class="act-zone-label">Step 1 · The image</div>
+                <div class="menuCardArtworkFrame" id="act-capacityFrame" style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
+                  <div class="act-capacity-artwork" id="act-capacityArtwork">
+                    <img class="act-capacity-artwork__image" id="act-capacityImage" alt="" crossorigin="anonymous" />
+                    <div class="act-capacity-artwork__tint" id="act-capacityTint" aria-hidden="true"></div>
+                    <div class="act-capacity-artwork__centre">
+                      <div class="act-capacity-artwork__number" id="act-capacityNumber"></div>
+                      <div class="act-capacity-artwork__slots" id="act-capacitySlots"></div>
+                      <div class="act-capacity-artwork__soldout" id="act-capacitySoldout" style="display:none;">Sold out</div>
+                      <div class="act-capacity-artwork__dropname" id="act-capacityDropName"></div>
+                    </div>
+                    <div class="act-capacity-artwork__skeleton" id="act-capacitySkeleton">Loading…</div>
+                  </div>
+                </div>
+                <button class="act-copy-btn primary" id="act-downloadCapacityBtn" type="button" data-act="download-capacity" disabled>Download image</button>
+              </div>
+              <div class="act-zone">
+                <div class="act-zone-label">Step 2 · The caption</div>
+                ${card6CaptionArea}
+              </div>
             </div>
-            <div class="act-capacity-artwork__skeleton"
-              id="act-capacitySkeleton">Loading…</div>
-          </div>
-        </div>
-        <button class="act-copy-btn primary" id="act-downloadCapacityBtn"
-          type="button" data-act="download-capacity" disabled>Download image</button>
-      `;
+            <div style="margin-top:18px; padding-top:16px; border-top:1px solid #efe9df;">
+              <div class="act-zone-label" style="font-size:12px; margin-bottom:10px;">The photo behind it</div>
+              <div class="act-photo-controls">
+                <div class="act-photo-controls__swatches">${card6ImageSwatches}</div>
+                <div class="act-photo-controls__upload">
+                  <div style="font-size:12px; color:#9a8b73; margin-bottom:8px;">Or add your own</div>
+                  <div id="act-capacityImageUploadContainer"></div>
+                </div>
+              </div>
+            </div>`;
 
       const card6Body = `
           <p>If you're approaching capacity, post an Instagram Story. Real scarcity
@@ -3582,7 +3629,7 @@
           <div class="act-actions">
             ${card6Locked
               ? `<div class="act-locked-note">This prompt appears when your drop is live or approaching capacity.</div>`
-              : `${card6ArtworkHtml}${card6CopyArea}`
+              : card6Unlocked
             }
           </div>
       `;
@@ -3767,6 +3814,7 @@
       const capacityFrame = byId('act-capacityFrame');
       if (capacityFrame) {
         actPopulateCapacityCard(summary, rawDrop, state.vendor);
+        actMountSocialImageUpload(dropId, 'act-capacityImageUploadContainer', '_capacityImageUpload');
         actUpdateCapacityScale();
         if (typeof ResizeObserver === 'function') {
           const capObserver = new ResizeObserver(() => actUpdateCapacityScale());
@@ -3962,6 +4010,16 @@
       if (expandMsg) {
         e.preventDefault();
         state.expandedMessageCards[expandMsg.dataset.touchpoint] = true;
+        renderDropView(state.selectedDropId);
+        return;
+      }
+
+      // Pick a capacity-signal wording (Card 6) — swaps the selected variant and
+      // re-renders so currentTemplates picks up the new text for copy.
+      const pickWording = e.target.closest('[data-act="pick-capacity-wording"]');
+      if (pickWording) {
+        e.preventDefault();
+        state.capacityVariant = Number(pickWording.dataset.variant) || 0;
         renderDropView(state.selectedDropId);
         return;
       }
