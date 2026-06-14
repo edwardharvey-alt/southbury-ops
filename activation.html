@@ -3138,7 +3138,7 @@
             ${card4SocialToggles}
             <textarea data-act="message-textarea" data-touchpoint="vendor_open"
               data-channel="${card4Active}"
-              rows="8">${escapeHtml(card4Text)}</textarea>
+              rows="5">${escapeHtml(card4Text)}</textarea>
             ${card4Channels.generated[card4Active]
               ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
             <div class="act-chip-row">
@@ -3197,16 +3197,17 @@
         `;
       }
 
-      const card4Body = `
-          <p>Pick where you're posting — the card shows you exactly what to do for that channel.</p>
-          ${card4PillBar}
-          <div class="act-actions">
+      const card4SocialFlow = (card4ShowInstagram && card4Active === 'social');
+
+      const card4MessageZone = `
             <div class="act-zone">
-              <div class="act-zone-label">The message — for your customers</div>
+              <div class="act-zone-label">${card4SocialFlow ? 'Step 2 · The caption' : 'The message — for your customers'}</div>
               ${card4MessageArea}
-            </div>
-            ${(card4ShowInstagram && card4Active === 'social') ? `<div class="act-zone">
-              <div class="act-zone-label">An image — for social</div>
+            </div>`;
+
+      const card4ImageZone = `
+            <div class="act-zone">
+              <div class="act-zone-label">Step 1 · The image</div>
               <div class="menuCardArtworkFrame" id="act-ordersOpenFrame" style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
                 <div class="act-orders-open-artwork" id="act-ordersOpenArtwork">
                   <img class="act-orders-open-artwork__image" id="act-ordersOpenImage" alt="" crossorigin="anonymous" />
@@ -3220,11 +3221,15 @@
                 </div>
               </div>
               <button class="act-copy-btn primary" id="act-downloadOrdersOpenBtn" type="button" data-act="download-orders-open" disabled>Download image</button>
-            </div>` : ''}
+            </div>`;
+
+      const card4SocialHelper = `
+            <div style="font-size:12px; color:#9a8b73; line-height:1.5; margin-top:2px;">Then open Instagram or Facebook, start a post, add the image and paste the caption.</div>`;
+
+      const card4PosterZone = `
             <div class="act-zone">
               <div class="act-zone-label">Also — a poster for your counter</div>
               <div class="act-poster-hook" style="width:100%;">
-                <label class="act-field-label" for="act-posterHookInput">${card4PosterLabel}</label>
                 <input type="text" class="act-guidance-input" id="act-posterHookInput"
                   maxlength="90"
                   placeholder="e.g. Order ahead for Friday — collect hot at 6pm"
@@ -3249,7 +3254,16 @@
                 href="#"
                 data-act="open-poster"
                 target="_blank">Print poster</a>
-            </div>
+            </div>`;
+
+      const card4Body = `
+          <p>Pick where you're posting — the card shows you exactly what to do for that channel.</p>
+          ${card4PillBar}
+          <div class="act-actions">
+            ${card4SocialFlow
+              ? `${card4ImageZone}${card4MessageZone}${card4SocialHelper}`
+              : card4MessageZone}
+            ${card4PosterZone}
           </div>
       `;
       cards.push(actTouchpointShell({
