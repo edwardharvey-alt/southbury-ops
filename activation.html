@@ -93,6 +93,37 @@
       gap:14px;
     }
 
+    /* Redesigned overview drop cards (actod = activation overview drop). */
+    .actod-card{ background:#fff; border:1px solid #efe7da; border-radius:14px; padding:20px 22px; }
+    .actod-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+    .actod-title{ font-family:'Cormorant Garamond', Georgia, serif; font-size:23px; font-weight:600; line-height:1.15; color:#1F2937; margin:0; }
+    .actod-meta{ font-size:13px; color:#9a8b73; margin-top:3px; line-height:1.5; }
+    .actod-status{ display:inline-flex; align-items:center; gap:6px; font-size:12px; white-space:nowrap; }
+    .actod-status--live{ color:#5f7d5f; }
+    .actod-status--muted{ color:#b6a98f; }
+    .actod-dot{ width:7px; height:7px; border-radius:50%; background:#7d9a7d; display:inline-block; }
+    .actod-chip{ font-size:12px; font-weight:600; border-radius:99px; padding:4px 11px; white-space:nowrap; }
+    .actod-chip--filling{ color:#8a5a1f; background:#f6ecd9; }
+    .actod-chip--full{ color:#7a3b1d; background:#f3e0d6; }
+    .actod-metric{ margin-top:18px; }
+    .actod-metric-head{ display:flex; justify-content:space-between; align-items:baseline; }
+    .actod-metric-label{ font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#b6a98f; font-weight:600; }
+    .actod-metric-count{ font-size:14px; color:#6b7280; }
+    .actod-metric-count strong{ font-weight:600; color:#1F2937; }
+    .actod-track{ height:6px; background:#f0e9dd; border-radius:99px; margin-top:8px; overflow:hidden; }
+    .actod-fill{ height:100%; background:#8B6B3F; border-radius:99px; }
+    .actod-foot{ display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; margin-top:18px; }
+    .actod-next{ font-size:13px; color:#6b7280; }
+    .actod-next-key{ color:#8B6B3F; font-weight:600; }
+    .actod-next--done{ color:#5f7d5f; }
+    .actod-sep{ color:#c9bca3; }
+    .actod-steps{ color:#9a8b73; }
+    .actod-actions{ display:flex; align-items:center; gap:18px; }
+    .actod-link{ font-size:13px; color:#9a8b73; text-decoration:none; }
+    .actod-link:hover{ color:#1F2937; }
+    .actod-cta{ font-family:'Figtree', system-ui, sans-serif; font-size:13px; font-weight:600; color:#fff; background:#8B6B3F; border:none; border-radius:9px; padding:9px 16px; text-decoration:none; white-space:nowrap; }
+    .actod-cta:hover{ background:#75592f; }
+
     .home-work{
       display:grid;
       gap:10px;
@@ -1525,48 +1556,86 @@
       return `${placed} of ${Number(total)} orders`;
     }
 
+    // Overview status: live drops near/at capacity get a meaningful chip;
+    // otherwise a quiet live dot, or a muted scheduled/closed label.
+    function overviewStatus(s){
+      const st = statusOf(s);
+      const placed = Number(s.order_count || 0);
+      const total = s.capacity_units_total != null ? Number(s.capacity_units_total) : null;
+      if (st === 'live' && total && total > 0){
+        if (placed >= total) return { kind:'full', label:'Full' };
+        if (placed >= 0.8 * total) return { kind:'filling', label:'Filling up' };
+      }
+      if (st === 'live') return { kind:'live', label:'Live' };
+      if (st === 'closed') return { kind:'closed', label:'Closed' };
+      return { kind:'scheduled', label:'Scheduled' };
+    }
+
+    function statusChip(s){
+      const st = overviewStatus(s);
+      if (st.kind === 'live'){
+        return `<span class="actod-status actod-status--live"><span class="actod-dot"></span>Live</span>`;
+      }
+      if (st.kind === 'filling' || st.kind === 'full'){
+        return `<span class="actod-chip actod-chip--${st.kind}">${escapeHtml(st.label)}</span>`;
+      }
+      return `<span class="actod-status actod-status--muted">${escapeHtml(st.label)}</span>`;
+    }
+
     function cardHtml(s){
-      const ctx = contextLine(s);
+      const host = s.host_name ? String(s.host_name) : '';
+      const fm = String(s.fulfilment_mode || '').toLowerCase();
+      const ctxName = host || (fm === 'delivery' ? 'Neighbourhood delivery' : fm === 'collection' ? 'Collection' : '');
       const isLive = statusOf(s) === 'live';
-      const sbLink = isLive
-        ? `<a class="home-button-secondary" href="${HearthNav.withVendor('./service-board.html')}">Open Service Board</a>`
-        : '';
+
+      const placed = Number(s.order_count || 0);
+      const total = s.capacity_units_total != null ? Number(s.capacity_units_total) : null;
+      const ordersPct = (total && total > 0) ? Math.min(100, Math.round((placed / total) * 100)) : 0;
+      const ordersMetric = (total && total > 0)
+        ? `<div class="actod-metric">
+            <div class="actod-metric-head">
+              <span class="actod-metric-label">Orders</span>
+              <span class="actod-metric-count"><strong>${placed}</strong> of ${total}</span>
+            </div>
+            <div class="actod-track"><div class="actod-fill" style="width:${ordersPct}%"></div></div>
+          </div>`
+        : `<div class="actod-metric">
+            <div class="actod-metric-head">
+              <span class="actod-metric-label">Orders</span>
+              <span class="actod-metric-count"><strong>${placed}</strong> placed</span>
+            </div>
+          </div>`;
 
       const progress = getDropProgress(s);
-      const progressPct = progress.total > 0
-        ? Math.round((progress.completed / progress.total) * 100)
-        : 0;
-      const progressLine = progress.total > 0
-        ? `<div class="act-progress-row">
-             <div class="act-progress-bar">
-               <div class="act-progress-fill" style="width:${progressPct}%"></div>
-             </div>
-             <span class="act-progress-label">${progress.completed} of ${progress.total}</span>
-           </div>`
+      const stepsSuffix = progress.total > 0
+        ? ` <span class="actod-sep">·</span> <span class="actod-steps">${progress.completed} of ${progress.total} done</span>`
         : '';
-      const nextLine = progress.nextTitle && progress.completed < progress.total
-        ? `<div class="act-next-action">Next: ${escapeHtml(progress.nextTitle)}</div>`
-        : progress.completed === progress.total && progress.total > 0
-          ? `<div class="act-next-action act-next-complete">All steps complete</div>`
+      const nextLine = (progress.nextTitle && progress.completed < progress.total)
+        ? `<div class="actod-next"><span class="actod-next-key">Next</span> — ${escapeHtml(progress.nextTitle)}${stepsSuffix}</div>`
+        : (progress.total > 0 && progress.completed === progress.total)
+          ? `<div class="actod-next actod-next--done">All steps complete</div>`
           : '';
 
+      const sbLink = isLive
+        ? `<a class="actod-link" href="${HearthNav.withVendor('./service-board.html')}">Service board</a>`
+        : '';
+
       return `
-        <article class="home-work">
-          <div class="home-workTop">
+        <article class="actod-card">
+          <div class="actod-top">
             <div>
-              <h3>${escapeHtml(s.drop_name || 'Untitled drop')}</h3>
-              ${ctx ? `<p>${ctx}</p>` : ''}
+              <h3 class="actod-title">${escapeHtml(s.drop_name || 'Untitled drop')}</h3>
+              <div class="actod-meta">${ctxName ? escapeHtml(ctxName) + '<br>' : ''}${escapeHtml(fmtDateTime(s.delivery_start, s.delivery_end))}</div>
             </div>
-            ${statusPill(s.status)}
+            ${statusChip(s)}
           </div>
-          <div class="home-workMeta">
-            ${escapeHtml(fmtDateTime(s.delivery_start, s.delivery_end))}<br>
-            ${escapeHtml(capacityLine(s))}
-          </div>
-          ${progressLine}${nextLine}
-          <div class="home-workActions">
-            <a class="home-button" href="#" data-drop-id="${escapeHtml(s.drop_id)}">View activation</a>
-            ${sbLink}
+          ${ordersMetric}
+          <div class="actod-foot">
+            <div class="actod-next-wrap">${nextLine}</div>
+            <div class="actod-actions">
+              ${sbLink}
+              <a class="actod-cta" href="#" data-drop-id="${escapeHtml(s.drop_id)}">Open activation →</a>
+            </div>
           </div>
         </article>
       `;
