@@ -3135,7 +3135,6 @@
       } else if (card4Expanded) {
         card4MessageArea = `
           <div class="act-message-edit">
-            ${card4PillBar}
             ${card4SocialToggles}
             <textarea data-act="message-textarea" data-touchpoint="vendor_open"
               data-channel="${card4Active}"
@@ -3163,7 +3162,7 @@
               <button class="act-copy-btn" type="button"
                 data-act="collapse-message"
                 data-touchpoint="vendor_open">Done editing</button>
-              <button class="act-copy-btn" type="button"
+              <button class="act-copy-btn primary" type="button"
                 data-act="copy-message" data-touchpoint="vendor_open"
                 data-action="message_copied">Copy</button>
             </div>
@@ -3173,7 +3172,6 @@
         `;
       } else {
         card4MessageArea = `
-          ${card4PillBar}
           <div class="act-message-preview">${escapeHtml(card4Text)}</div>
           ${card4Channels.generated[card4Active]
             ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
@@ -3192,7 +3190,7 @@
             <button class="act-copy-btn" type="button"
               data-act="expand-message"
               data-touchpoint="vendor_open">Edit</button>
-            <button class="act-copy-btn" type="button"
+            <button class="act-copy-btn primary" type="button"
               data-act="copy-message" data-touchpoint="vendor_open"
               data-action="message_copied">Copy</button>
           </div>
@@ -3200,14 +3198,31 @@
       }
 
       const card4Body = `
-          <p>Tell your customers ordering's open — through whatever they actually check. The poster and image are there if you want them.</p>
+          <p>Pick where you're posting — the card shows you exactly what to do for that channel.</p>
+          ${card4PillBar}
           <div class="act-actions">
             <div class="act-zone">
               <div class="act-zone-label">The message — for your customers</div>
               ${card4MessageArea}
             </div>
+            ${(card4ShowInstagram && card4Active === 'social') ? `<div class="act-zone">
+              <div class="act-zone-label">An image — for social</div>
+              <div class="menuCardArtworkFrame" id="act-ordersOpenFrame" style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
+                <div class="act-orders-open-artwork" id="act-ordersOpenArtwork">
+                  <img class="act-orders-open-artwork__image" id="act-ordersOpenImage" alt="" crossorigin="anonymous" />
+                  <div class="act-orders-open-artwork__tint" aria-hidden="true"></div>
+                  <div class="act-orders-open-artwork__centre">
+                    <div class="act-orders-open-artwork__headline">Orders open</div>
+                    <div class="act-orders-open-artwork__dropname" id="act-ordersOpenDropName"></div>
+                  </div>
+                  <div class="act-orders-open-artwork__closing" id="act-ordersOpenClosing"></div>
+                  <div class="act-orders-open-artwork__skeleton" id="act-ordersOpenSkeleton">Loading…</div>
+                </div>
+              </div>
+              <button class="act-copy-btn primary" id="act-downloadOrdersOpenBtn" type="button" data-act="download-orders-open" disabled>Download image</button>
+            </div>` : ''}
             <div class="act-zone">
-              <div class="act-zone-label">A poster — for your counter</div>
+              <div class="act-zone-label">Also — a poster for your counter</div>
               <div class="act-poster-hook" style="width:100%;">
                 <label class="act-field-label" for="act-posterHookInput">${card4PosterLabel}</label>
                 <input type="text" class="act-guidance-input" id="act-posterHookInput"
@@ -3235,22 +3250,6 @@
                 data-act="open-poster"
                 target="_blank">Print poster</a>
             </div>
-            ${card4ShowInstagram ? `<div class="act-zone">
-              <div class="act-zone-label">An image — for social</div>
-              <div class="menuCardArtworkFrame" id="act-ordersOpenFrame" style="width:100%; max-width:280px; position:relative; overflow:hidden; align-self:flex-start;">
-                <div class="act-orders-open-artwork" id="act-ordersOpenArtwork">
-                  <img class="act-orders-open-artwork__image" id="act-ordersOpenImage" alt="" crossorigin="anonymous" />
-                  <div class="act-orders-open-artwork__tint" aria-hidden="true"></div>
-                  <div class="act-orders-open-artwork__centre">
-                    <div class="act-orders-open-artwork__headline">Orders open</div>
-                    <div class="act-orders-open-artwork__dropname" id="act-ordersOpenDropName"></div>
-                  </div>
-                  <div class="act-orders-open-artwork__closing" id="act-ordersOpenClosing"></div>
-                  <div class="act-orders-open-artwork__skeleton" id="act-ordersOpenSkeleton">Loading…</div>
-                </div>
-              </div>
-              <button class="act-copy-btn primary" id="act-downloadOrdersOpenBtn" type="button" data-act="download-orders-open" disabled>Download image</button>
-            </div>` : ''}
           </div>
       `;
       cards.push(actTouchpointShell({
