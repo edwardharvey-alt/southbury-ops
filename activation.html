@@ -1296,6 +1296,21 @@
       display: block;
       width: 100%;
     }
+    .act-poster-hook {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: flex-start;
+      width: 600px;
+      max-width: 100%;
+    }
+    .act-poster-generate {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-start;
+      width: 100%;
+    }
     .act-guidance-input {
       display: block;
       width: 100%;
@@ -3353,31 +3368,37 @@
       const card4PosterZone = `
             <div class="act-zone">
               <div class="act-zone-label">Also — a poster for your counter</div>
-              <div class="act-poster-hook" style="width:100%;">
+              <div class="act-poster-hook">
                 <input type="text" class="act-guidance-input" id="act-posterHookInput"
                   maxlength="90"
                   placeholder="e.g. Order ahead for Friday — collect hot at 6pm"
                   value="${escapeHtml(state.rawById[dropId]?.reveal_line || '')}" />
                 ${state.posterHookGenerated?.[dropId] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
-                ${state.posterHookGenerated?.[dropId] ? `
-                  <div class="act-guidance-row">
-                    <input type="text" class="act-guidance-input"
-                      data-touchpoint="poster_hook"
-                      placeholder="e.g. shorter, mention collection time, more playful...">
-                  </div>` : ''}
-                <button
-                  data-act="generate-poster-hook"
-                  class="act-copy-btn">
-                  ${state.posterHookGenerated?.[dropId] ? '↺ Regenerate →' : '✦ Generate →'}
-                </button>
-                <div class="act-copy-error" data-error-key="poster_hook"
-                  style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
+                <div class="act-chip-row">
+                  <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="poster_hook" data-instruction="Make it shorter and more concise">Shorter</button>
+                  <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="poster_hook" data-instruction="Make it warmer and more personal">Warmer</button>
+                  <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="poster_hook" data-instruction="Make it punchier and more eye-catching for a printed poster">Punchier</button>
+                </div>
+                <div class="act-guidance-row">
+                  <input type="text" class="act-guidance-input"
+                    data-touchpoint="poster_hook"
+                    placeholder="e.g. shorter, mention collection time, more playful...">
+                </div>
+                <div class="act-poster-generate">
+                  <button
+                    data-act="generate-poster-hook"
+                    class="act-copy-btn">
+                    ${state.posterHookGenerated?.[dropId] ? '↺ Regenerate →' : '✦ Generate →'}
+                  </button>
+                  <div class="act-copy-error" data-error-key="poster_hook"
+                    style="font-size:12px;color:#b91c1c;"></div>
+                </div>
+                <a class="act-copy-btn"
+                  id="act-posterBtn"
+                  href="#"
+                  data-act="open-poster"
+                  target="_blank">Print poster</a>
               </div>
-              <a class="act-copy-btn"
-                id="act-posterBtn"
-                href="#"
-                data-act="open-poster"
-                target="_blank">Print poster</a>
             </div>`;
 
       const card4Body = `
@@ -4085,7 +4106,8 @@
         const tp = adjustChip.dataset.touchpoint;
         const guidanceEl = document.querySelector(`.act-guidance-input[data-touchpoint="${tp}"]`);
         if (guidanceEl) guidanceEl.value = adjustChip.dataset.instruction || '';
-        const genBtn = document.querySelector(`[data-act="generate-copy"][data-touchpoint="${tp}"]`);
+        const genBtn = document.querySelector(`[data-act="generate-copy"][data-touchpoint="${tp}"]`)
+          || (tp === 'poster_hook' ? document.querySelector('[data-act="generate-poster-hook"]') : null);
         if (genBtn) genBtn.click();
         return;
       }
