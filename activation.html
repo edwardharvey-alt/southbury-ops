@@ -1986,9 +1986,10 @@
       artworkEl.style.setProperty('--vendor-brand-primary',
         (vendor && vendor.brand_primary_color) || '#8B6B3F');
 
-      // Image fallback chain: reveal product → vendor hero → solid colour.
+      // Image preference: explicit social pick → reveal product → vendor hero → solid colour.
       let imageUrl = '';
-      if (rawDrop && rawDrop.reveal_product_id) {
+      if (rawDrop && rawDrop.social_image_url) imageUrl = String(rawDrop.social_image_url);
+      if (!imageUrl && rawDrop && rawDrop.reveal_product_id) {
         const product = (state.products || []).find(
           p => String(p.id) === String(rawDrop.reveal_product_id)
         );
@@ -2334,6 +2335,25 @@
         }
       } catch (err) {
         console.error('Reveal fields save failed', err);
+      }
+    }
+
+    // Persist the vendor's chosen orders-open image. Same EF/shape as
+    // actSaveRevealFields; silent on error.
+    async function actSaveSocialImage(dropId, url) {
+      if (!state.rawById[dropId]) return;
+      try {
+        const { data, error } = await sb.functions.invoke('update-drop', {
+          body: {
+            vendor_id: state.vendor.id,
+            drop_id: dropId,
+            fields: { social_image_url: url }
+          }
+        });
+        if (error) throw error;
+        if (data && data.error) throw new Error(data.error);
+      } catch (err) {
+        console.error('Social image save failed', err);
       }
     }
 
@@ -3203,6 +3223,43 @@
 
       const card4SocialFlow = (card4ShowInstagram && card4Active === 'social');
 
+      // Step-1 image options: vendor menu photos + brand image. Selected =
+      // the image the card currently resolves to (explicit pick → reveal
+      // product → brand hero) — mirrors actPopulateOrdersOpenCard.
+      const card4Drop = state.rawById[dropId] || {};
+      const card4ImageOptions = [];
+      (state.products || []).forEach(p => {
+        if (p && p.image_url) {
+          card4ImageOptions.push({ url: String(p.image_url), label: p.name || 'Menu item' });
+        }
+      });
+      if (state.vendor && state.vendor.hero_image_url) {
+        card4ImageOptions.push({ url: String(state.vendor.hero_image_url), label: 'Brand image' });
+      }
+      let card4CurrentImage = '';
+      if (card4Drop.social_image_url) {
+        card4CurrentImage = String(card4Drop.social_image_url);
+      }
+      if (!card4CurrentImage && card4Drop.reveal_product_id) {
+        const rp = (state.products || []).find(
+          p => String(p.id) === String(card4Drop.reveal_product_id)
+        );
+        if (rp && rp.image_url) card4CurrentImage = String(rp.image_url);
+      }
+      if (!card4CurrentImage && state.vendor && state.vendor.hero_image_url) {
+        card4CurrentImage = String(state.vendor.hero_image_url);
+      }
+      const card4ImagePicker = card4ImageOptions.length ? `
+            <div style="margin-top:14px;">
+              <div class="act-zone-label" style="font-size:12px; margin-bottom:8px;">The photo behind it</div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                ${card4ImageOptions.map(opt => {
+                  const selected = String(opt.url) === String(card4CurrentImage);
+                  return `<button type="button" data-act="pick-image" data-image-url="${escapeHtml(opt.url)}" title="${escapeHtml(opt.label)}" aria-label="Use ${escapeHtml(opt.label)}" style="width:52px; height:52px; border-radius:8px; padding:0; overflow:hidden; cursor:pointer; background:#f6f2ea; border:2px solid ${selected ? '#8B6B3F' : '#efe9df'};"><img src="${escapeHtml(opt.url)}" alt="" style="width:100%; height:100%; object-fit:cover; display:block;" /></button>`;
+                }).join('')}
+              </div>
+            </div>` : '';
+
       const card4MessageZone = `
             <div class="act-zone">
               <div class="act-zone-label">${card4SocialFlow ? 'Step 2 · The caption' : 'The message — for your customers'}</div>
@@ -3225,6 +3282,7 @@
                 </div>
               </div>
               <button class="act-copy-btn primary" id="act-downloadOrdersOpenBtn" type="button" data-act="download-orders-open" disabled>Download image</button>
+              ${card4ImagePicker}
             </div>`;
 
       const card4SocialHelper = `
@@ -3741,6 +3799,19 @@
       if (dlOrdersOpen) {
         e.preventDefault();
         actDownloadOrdersOpenCard();
+        return;
+      }
+
+      const pickImage = e.target.closest('[data-act="pick-image"]');
+      if (pickImage) {
+        e.preventDefault();
+        const url = pickImage.getAttribute('data-image-url') || '';
+        const dropId = state.selectedDropId;
+        if (dropId && state.rawById[dropId]) {
+          state.rawById[dropId].social_image_url = url || null;
+          renderDropView(dropId);              // re-render: ring + artwork (flushes captions first)
+          actSaveSocialImage(dropId, url || null);
+        }
         return;
       }
 
