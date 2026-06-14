@@ -30,6 +30,7 @@ const ALLOWED_FIELDS = new Set([
   "drop_intro",
   "reveal_line",
   "reveal_product_id",
+  "social_image_url",
   "fulfilment_mode",
   "collection_point_description",
   "delivery_area_description",
