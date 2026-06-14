@@ -1296,6 +1296,21 @@
       display: block;
       width: 100%;
     }
+    .act-poster-hook {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: flex-start;
+      width: 100%;
+      max-width: 560px;
+    }
+    .act-poster-generate {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-start;
+      width: 100%;
+    }
     .act-guidance-input {
       display: block;
       width: 100%;
@@ -3353,7 +3368,7 @@
       const card4PosterZone = `
             <div class="act-zone">
               <div class="act-zone-label">Also — a poster for your counter</div>
-              <div class="act-poster-hook" style="width:100%;">
+              <div class="act-poster-hook">
                 <input type="text" class="act-guidance-input" id="act-posterHookInput"
                   maxlength="90"
                   placeholder="e.g. Order ahead for Friday — collect hot at 6pm"
@@ -3365,19 +3380,21 @@
                       data-touchpoint="poster_hook"
                       placeholder="e.g. shorter, mention collection time, more playful...">
                   </div>` : ''}
-                <button
-                  data-act="generate-poster-hook"
-                  class="act-copy-btn">
-                  ${state.posterHookGenerated?.[dropId] ? '↺ Regenerate →' : '✦ Generate →'}
-                </button>
-                <div class="act-copy-error" data-error-key="poster_hook"
-                  style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
+                <div class="act-poster-generate">
+                  <button
+                    data-act="generate-poster-hook"
+                    class="act-copy-btn">
+                    ${state.posterHookGenerated?.[dropId] ? '↺ Regenerate →' : '✦ Generate →'}
+                  </button>
+                  <div class="act-copy-error" data-error-key="poster_hook"
+                    style="font-size:12px;color:#b91c1c;"></div>
+                </div>
+                <a class="act-copy-btn"
+                  id="act-posterBtn"
+                  href="#"
+                  data-act="open-poster"
+                  target="_blank">Print poster</a>
               </div>
-              <a class="act-copy-btn"
-                id="act-posterBtn"
-                href="#"
-                data-act="open-poster"
-                target="_blank">Print poster</a>
             </div>`;
 
       const card4Body = `
