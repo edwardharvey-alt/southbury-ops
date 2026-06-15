@@ -4895,6 +4895,56 @@ pattern (4× `.from('vendors').update(...)`, which would silently fail
 under the auth-attach bug if ever served). Delete it to remove the
 foot-gun; no production impact.
 
+### Build Coherence Audit — Pass D (activation & communications surfaces)
+
+Tickets surfaced by Build Coherence Audit Pass D
+(`audit/Hearth_Build_Coherence_Audit.md`, Pass D — activation &
+communications surfaces). Pass D verdict: the activation/comms
+architecture is coherent with strategy. D1 (reachability), D2
+(closed-drop = host-handoff + monitor, not a doing surface), and D3
+(host is an activator in their own voice, not a platform distribution
+channel) all checked clean. D4's known-suspect — that
+activation-poster.html reads a stale `reveal_line` — was itself STALE:
+`reveal_line` was RELOCATED from Drop Studio to Activation's Card 4
+poster-hook field (not removed), is written there, and is correctly read
+and rendered as the hero by activation-poster.html. D5 (Hearth presence
+subtle) checked clean with one cosmetic polish. The two residuals below
+are a documentation/semantic drift and a cosmetic fallback.
+
+T-D4-reveal-line-semantics — reveal_line's documented purpose has drifted from its actual use
+
+**Status:** Open. Post-launch (low priority). Source: Pass D / D4.
+`reveal_line` is now the Activation poster-hook field — written by Card
+4's poster-hook input (`#act-posterHookInput`) in activation.html, and
+read and rendered as the hero line by activation-poster.html. CLAUDE.md's
+T5-25 LOCKED DESIGN note previously described `reveal_line` as the
+deferred caption-generator seed that is NOT rendered — that is now
+inaccurate (corrected in this same PR). No functional bug — the poster
+reads exactly what Activation writes — but the column's documented
+meaning has drifted from its actual use and will mislead whoever builds
+T5-25 Part 1 (the caption generator).
+
+**Fix shape (not built):** before T5-25 Part 1 is built, give the
+caption seed its OWN column so it doesn't collide with the poster hook.
+Until then, treat `reveal_line` as the poster-hook line only.
+
+T-D5-vendor-name-fallback — Customer-facing vendor-name slots fall back to literal "Hearth"
+
+**Status:** Open. Post-launch (low priority). Source: Pass D / D5.
+Customer-facing vendor-name slots fall back to the literal "Hearth" when
+a vendor has neither `display_name` nor `name`:
+- `activation-poster.html` (`.poster-vendor-name`, ~:416)
+- `send-order-confirmation/index.ts` email subject (~:454) and From
+  header (~:460)
+If ever triggered, this frames "Hearth" over the (missing) vendor
+identity — the one place D5's "never frame over the vendor" could break.
+Blast radius is ~nil (onboarded vendors have a name; this is cosmetic if
+vendor name is mandatory at onboarding — worth confirming that
+invariant).
+
+**Fix shape (not built):** use a neutral fallback (the vendor slug or
+similar), not "Hearth", in customer-facing vendor-name slots.
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live
