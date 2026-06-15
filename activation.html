@@ -124,48 +124,6 @@
     .actod-cta{ font-family:'Figtree', system-ui, sans-serif; font-size:13px; font-weight:600; color:#fff; background:#8B6B3F; border:none; border-radius:9px; padding:9px 16px; text-decoration:none; white-space:nowrap; }
     .actod-cta:hover{ background:#75592f; }
 
-    .home-work{
-      display:grid;
-      gap:10px;
-      padding:18px;
-      border:1px solid var(--home-border);
-      border-radius:18px;
-      background:linear-gradient(180deg,#fff,#fcfbf8);
-    }
-
-    .home-workTop{
-      display:flex;
-      justify-content:space-between;
-      gap:12px;
-      align-items:flex-start;
-    }
-
-    .home-work h3{
-      margin:0;
-      font-size:18px;
-      letter-spacing:-.02em;
-    }
-
-    .home-work p{
-      margin:0;
-      color:var(--home-muted);
-      line-height:1.55;
-      font-size:14px;
-    }
-
-    .home-workMeta{
-      color:var(--home-text);
-      font-size:13px;
-      line-height:1.5;
-    }
-
-    .home-workActions{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      margin-top:2px;
-    }
-
     .home-pill{
       display:inline-flex;
       align-items:center;
@@ -1269,47 +1227,6 @@
       margin-top: 10px;
     }
 
-    .act-progress-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .act-progress-bar {
-      flex: 1;
-      height: 4px;
-      background: var(--home-border);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .act-progress-fill {
-      height: 100%;
-      background: #8B6B3F;
-      border-radius: 2px;
-      transition: width 0.3s ease;
-    }
-
-    .act-progress-label {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--home-muted);
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    .act-next-action {
-      font-size: 12px;
-      color: var(--home-muted);
-      margin-top: 5px;
-    }
-
-    .act-next-action.act-next-complete {
-      color: #4B7A52;
-      font-weight: 600;
-    }
-
     .act-ai-draft {
       font-size: 11px;
       color: var(--h-slate, #6B7280);
@@ -1531,13 +1448,6 @@
       });
     }
 
-    function statusPill(status){
-      const st = String(status || '').toLowerCase();
-      if (st === 'live') return '<span class="home-pill good">Live now</span>';
-      if (st === 'closed') return '<span class="home-pill neutral">Closed</span>';
-      return '<span class="home-pill neutral">Scheduled</span>';
-    }
-
     function contextLine(s){
       if (s.host_name) return 'at ' + escapeHtml(s.host_name);
       const fm = String(s.fulfilment_mode || '').toLowerCase();
@@ -1545,15 +1455,6 @@
       if (fm === 'collection') return 'Collection';
       if (fm) return escapeHtml(titleCase(fm));
       return '';
-    }
-
-    function capacityLine(s){
-      const placed = Number(s.order_count || 0);
-      const total = s.capacity_units_total;
-      if (total == null || Number(total) === 0) {
-        return `${placed} orders placed`;
-      }
-      return `${placed} of ${Number(total)} orders`;
     }
 
     // Overview status: live drops near/at capacity get a meaningful chip;
@@ -2539,21 +2440,6 @@
     // Wire the reveal textarea + product select inside Card 1's action
     // area. Mirrors templates['menu_reveal'] inline so the Copy caption
     // button always copies the latest text without waiting for the save.
-    function actInitRevealFields(dropId, summary, rawDrop) {
-      const productEl = byId('act-revealProduct');
-      if (!productEl) return;
-
-      productEl.addEventListener('change', () => {
-        const newProductId = productEl.value || null;
-        if (state.rawById[dropId]) {
-          state.rawById[dropId].reveal_product_id = newProductId;
-        }
-        // Update artwork live (don't wait for save).
-        actPopulateMenuCard(summary, state.rawById[dropId] || rawDrop, state.vendor, state.products);
-        actSaveRevealFields(dropId);
-      });
-    }
-
     // ---- Shared AI-copy request context ------------------------------
 
     // Clock formatter shared by actBuildDropContext and the post-response
@@ -2753,99 +2639,6 @@
     // Message card: the prepared message stays visible inline, with one
     // copy button per channel. Done-state is handled here (message stays
     // visible, channel buttons replaced) so tpCard's touchpointKey is null.
-    function messageCard(opts) {
-      const entry = getLogEntry(opts.touchpointKey);
-      const tp = opts.touchpointKey;
-
-      // Initialise message draft from generated template if not yet set
-      if (!state.messageDrafts[tp]) {
-        state.messageDrafts[tp] = opts.messageText || '';
-      }
-      const currentText = state.messageDrafts[tp];
-      const isExpanded = !!state.expandedMessageCards[tp];
-
-      let actionHtml;
-
-      if (entry) {
-        // Done state — message still visible read-only, buttons replaced
-        actionHtml = `
-          <div class="act-message-preview">${escapeHtml(currentText)}</div>
-          <div class="act-done-state">✓ Sent · ${formatLogTime(entry.timestamp)}</div>
-        `;
-      } else if (isExpanded) {
-        // Edit state — editable textarea, done editing + copy buttons
-        const channelBtns = (opts.channels || []).map(ch =>
-          `<button class="act-copy-btn" type="button"
-            data-act="copy-message"
-            data-touchpoint="${escapeHtml(tp)}"
-            data-action="message_copied">Copy for ${escapeHtml(ch)}</button>`
-        ).join('');
-        actionHtml = `
-          <div class="act-message-edit">
-            <textarea
-              data-act="message-textarea"
-              data-touchpoint="${escapeHtml(tp)}"
-              rows="5">${escapeHtml(currentText)}</textarea>
-            ${state.messageGenerated?.[tp] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
-            ${state.messageGenerated?.[tp] ? `
-              <div class="act-guidance-row">
-                <input type="text" class="act-guidance-input"
-                  data-touchpoint="${escapeHtml(tp)}"
-                  placeholder="${escapeHtml(opts.guidancePlaceholder || 'e.g. shorter, more casual, mention the match is on that evening...')}">
-              </div>` : ''}
-            <div class="act-message-edit-row">
-              <button
-                data-act="generate-copy"
-                data-touchpoint="${escapeHtml(tp)}"
-                class="act-copy-btn">
-                ${state.messageGenerated?.[tp] ? '↺ Regenerate →' : '✦ Generate →'}
-              </button>
-              <button class="act-copy-btn" type="button"
-                data-act="collapse-message"
-                data-touchpoint="${escapeHtml(tp)}">Done editing</button>
-              ${channelBtns}
-            </div>
-            <div class="act-copy-error" data-error-key="${escapeHtml(tp)}"
-              style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
-          </div>
-        `;
-      } else {
-        // Collapsed preview — show message, edit button, copy buttons
-        const channelBtns = (opts.channels || []).map(ch =>
-          `<button class="act-copy-btn" type="button"
-            data-act="copy-message"
-            data-touchpoint="${escapeHtml(tp)}"
-            data-action="message_copied">Copy for ${escapeHtml(ch)}</button>`
-        ).join('');
-        actionHtml = `
-          <div class="act-message-preview">${escapeHtml(currentText)}</div>
-          <div class="act-channel-row">
-            <button
-              data-act="generate-copy"
-              data-touchpoint="${escapeHtml(tp)}"
-              class="act-copy-btn">
-              ${state.messageGenerated?.[tp] ? '↺ Regenerate →' : '✦ Generate →'}
-            </button>
-            <button class="act-copy-btn" type="button"
-              data-act="expand-message"
-              data-touchpoint="${escapeHtml(tp)}">Edit</button>
-            ${channelBtns}
-          </div>
-        `;
-      }
-
-      return tpCard({
-        typeClass: opts.typeClass,
-        cardNum: opts.cardNum,
-        label: opts.label,
-        title: opts.title,
-        desc: opts.desc,
-        actionHtml,
-        touchpointKey: null,  // done state handled inline above
-        open: actCardOpen(opts.cardNum, !!entry, false)
-      });
-    }
-
     // Email card: always-editable subject/body with a Generate/Regenerate +
     // Confirm send flow. No mock, no expand/collapse — the fields are shown
     // directly. Edits persist in state.emailDrafts (via the live input
@@ -3206,9 +2999,7 @@
       }
 
       // Card 2 — host handoff (is-host) — only in profiles that include it.
-      // Rendered directly (not via messageCard) so the send / copy-link
-      // handoff UI is bespoke. messageCard() is shared with Card 5 and the
-      // caption cards and must NOT change (A2 — Card 2 host handoff). The
+      // Rendered directly so the send / copy-link handoff UI is bespoke. The
       // card hands the host to their own share page (host-view.html), where
       // they customise and post in their own voice — so there is no textarea,
       // no AI draft/Regenerate, and no per-channel copy here.
@@ -3320,7 +3111,7 @@
       }
 
       // Card 4 — ordering open (is-vendor) with visual asset. Rendered
-      // directly (not via messageCard) so the artwork + download button
+      // directly so the artwork + download button
       // always show. On single-channel (WhatsApp-only) drops the message +
       // channel buttons flip to a done state once the channel has been
       // copied; multi-channel drops never hard-lock — both channels stay
@@ -3557,7 +3348,7 @@
       // host's hands is what reaches their group, so this card is a quiet nudge
       // to the host, not a vendor-broadcast message. DONE is reached either by
       // a host-origin share signal (the host is the legitimate finisher) or by
-      // a vendor nudge/copy. messageCard() is no longer called here.
+      // a vendor nudge/copy.
       if (inProfile(5)) {
         const card5Host = eHost || 'your host';
         const hostShared = getHostShareSignal('host_link');
