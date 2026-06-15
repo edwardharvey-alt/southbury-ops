@@ -1414,6 +1414,16 @@ on top of the coding rules above.
     Always gate host-related signals on `drop_type !== 'neighbourhood'`.
     (Learned from the Review pane promotion plan build, 2026-05-30.)
 
+67. **`create-drop` null-strips its payload (drops null/undefined fields)
+    so the DB defaults apply** (a whitelisted null would override the DB
+    default — this null-strip is intentional, see `create-drop/index.ts`).
+    Consequence: passing `delivery_start: null` (or other timing fields)
+    does not create a blank-timing draft — the DB backfills its default,
+    and delivery_start's DB default is now(), which leaves `opens_at`
+    null = open-immediately. To control a new or duplicated drop's timing, set
+    explicit values (as `createNewDrop` and now `duplicateDrop` do), never
+    null. Surfaced via T-A1-dup-gap (#369).
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -1843,7 +1853,7 @@ index.
 - T3-12b — Order page: neighbourhood delivery area enforcement (radius mode) — open. T3-12a (postcode prefix mode) closed 2026-05-03: schema discriminator added (`delivery_area_type`, `allowed_postcode_prefixes`); Drop Studio UI for prefix entry; client-side onBlur validation; server-side enforcement in `create-order`; widened `update-drop` ALLOWED_FIELDS with paired-field invariants. Radius mode reserved for T3-12b.
 - T3-13-polish-2 — Product/bundle editor chips ("£X", "Y slot per item / Doesn't count", "Z sold") don't refresh after save until hard refresh — open. PR #253 attempted a fix by adding `applySavedRowToState` to patch `state.products` / `state.bundles` with the Edge Function response after `refreshAll()`, but the chips remained stale in production. Leading hypothesis: the chip render function reads from an enriched / derived source (a separately-fetched array, or a `v_products_enriched` / `v_bundles_enriched` result the helper doesn't touch) while `applySavedRowToState` only mutates the raw `state.products` / `state.bundles` arrays. Two follow-up sessions stalled in extended thinking — start the next session by `grep`-ing for `productsEnriched`, `bundlesEnriched`, `menuItems`, and the enriched view names in `drop-menu.html`, and trace the chip render function back to its actual data source before editing.
 - T3-13-polish-3 — Drop Studio Capacity section feels oversized — open. Pills are large, category list is one-per-row. Possibly compact pills + multi-column chip layout for categories. Needs design conversation.
-- T-A1-dup-gap — Duplicating a drop discards the announce→open gap: `duplicateDrop` (drop-manager.html ~4786) nulls `opens_at`/`closes_at`, so a duplicated drop opens immediately and loses the source's announce→open anticipation window — fighting the comms model that treats that gap as part of the product. Carry the source's open pattern across, or re-default to `createNewDrop`'s 24h-lead. Audit-first. Pre-launch. Source: Build Coherence Audit Pass A / A1. — open
+- T-A1-dup-gap — ~~Duplicating a drop discards the announce→open gap: `duplicateDrop` (drop-manager.html ~4786) nulls `opens_at`/`closes_at`, so a duplicated drop opens immediately and loses the source's announce→open anticipation window — fighting the comms model that treats that gap as part of the product. Carry the source's open pattern across, or re-default to `createNewDrop`'s 24h-lead. Audit-first. Pre-launch. Source: Build Coherence Audit Pass A / A1.~~ ✓ COMPLETE 2026-06-15 (#369). Root cause was not the toggle — create-drop strips null payload fields so DB defaults apply, and `delivery_start`'s DB default is `now()`, so nulling timing surfaced the duplicate as open-immediately on today's date. Fixed by giving `duplicateDrop` explicit `createNewDrop`-style placeholder timing (week out, scheduled 24h open) instead of nulls.
 - T-A2-orphan-hosted — ~~Remove the dead `'hosted'` value from `update-drop` `VALID_DROP_TYPES` (no surface writes it; DB CHECK is `{neighbourhood, community, event}`) and disallow null `drop_type` on the update path. Tiny, zero-risk hygiene; no live rows carry `'hosted'`. Pre-launch. Source: Pass A / A2.~~ ✓ COMPLETE 2026-06-13 (#354)
 - T-A6-lifecycle — Drop status lifecycle (live→closed→completed) via scheduled job — DESIGN SPEC PENDING (do not build until agreed in chat). Full stored-status lifecycle; published drops currently stay `'live'` forever so vendor/activation closed states never resolve (customer ordering unaffected — time-gated in order.html). Sequenced LAST in the pre-launch batch. Source: Pass A / A6. — open
 
@@ -1936,7 +1946,7 @@ Reveal hook field — `#dropRevealLine` is now a `<textarea>` (4 rows, `maxlengt
 - T5-C4 — Drop activation guide — vendor-facing communication playbook (Part 1: Drop Studio; Part 2: guide page) — open
 - T5-C5 — Cadence visibility and consistency mechanics (Part 1: dashboard/scorecard; Part 2: gap alerts via T5-11) — open
 - T5-C6 — AI-powered vendor activation plan — post-onboarding personalised first-8-drops strategy — open
-- T-drop-anticipation-window-default — Drop Studio: default opens_at to delivery_start so publish=announce and the publish→opens gap is the anticipation window. Pre-launch.
+- T-drop-anticipation-window-default — ~~Drop Studio: default opens_at to delivery_start so publish=announce and the publish→opens gap is the anticipation window. Pre-launch.~~ ✓ COMPLETE 2026-06-15. New-drop default (`opens_at = delivery − 24h`) was already live in `createNewDrop`; #369 closed the only remaining gap (the duplicate path). Both creation paths now produce the announce→open window.
 - T-comms-automation — Behaviour-triggered comms automation + plain-language insight prompts (competitor-derived, Owner.com) — open
 - T-aggregator-savings-calculator — Vendor-facing aggregator cost comparison (competitor-derived, Slerp) — open
 - T-notify-next-time — Sold-out waitlist / demand capture (competitor-derived, Hotplate) — open
@@ -1976,7 +1986,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B41 — ~~drop-manager.html enrichHostPreview appends rather than replaces (cosmetic)~~ ✓ COMPLETE
 - T5-B44 — Publish-validation bug: drops can be published with `orders_close` already in the past, and `orders_close` is not re-derived when the drop date changes — so a drop saved with a future date but a stale `orders_close` is immediately classified as already-closed and disappears from the "Live" filter. No data loss; independent of T5-A3. Pass A / A4 addendum: re-test the original repro first (the UI re-derivation half via `deriveTimingFromDelivery` appears already fixed in current source); add a publish-time guard `closes_at > now()` in `evaluateLiveReadiness` (transition-drop-status) + client mirror `getLiveReadiness` (drop-manager.html). — open
 - T-A3-host-type-source — Consolidate the 13-value `host_type` set to one shared source across the three pickers + the DB constraint (no bug today; drift-prevention). Post-launch. Source: Pass A / A3. — open
-- T-A1-window-gap — Multi-window event siblings hardcode `opens_at = now`; give event windows an optional anticipation gap (low priority — immediate-open is defensible for events). Post-launch. Source: Pass A / A1. — open
+- T-A1-window-gap — Multi-window event siblings hardcode `opens_at = now`; give event windows an optional anticipation gap (low priority — immediate-open is defensible for events). Post-launch. Source: Pass A / A1. — open. Audited 2026-06-15: `createEventWindow`'s `: null` timing fallback is unreachable — its sole caller (`handleCreateEventWindows`) always passes a full `timingOverride` — so the only live behaviour is the intentional `opens_at = now`. Confirms the low-priority/defensible framing; no fix needed pre-launch.
 - T-A4-merged-timing-validation — `update-drop` validates timing only within a single payload; validate the merged stored result (latent; matters for future partial-update/API callers). Post-launch. Source: Pass A / A4. — open
 - T-dup-updated-at-trigger — `drops` has two identical `updated_at` triggers (`set_updated_at_drops` and `trg_drops_updated_at`); drop one. Post-launch. Source: Pass A / A6. — open
 - T-schema-regen — Regenerate `SCHEMA.md` from the live DB; it is stale (omits `audience_scope`; lists a 7-value `host_type` set conflicting with the live 13-value constraint). Post-launch. Source: Pass A spillover. — open
