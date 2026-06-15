@@ -4753,6 +4753,76 @@ is a cosmetic vendor-board state — surfacing a published-but-not-yet-open
 drop as `'scheduled'` rather than `'live'`. The CHECK constraint already
 permits `'scheduled'`; nothing writes it. Low priority.
 
+### Build Coherence Audit — Pass B (capacity & honest scarcity)
+
+Tickets surfaced by Build Coherence Audit Pass B
+(`audit/Hearth_Build_Coherence_Audit.md`, Pass B — capacity & honest
+scarcity). Pre-launch item first; post-launch capture stubs follow.
+Pass B verdict: B1/B2/B3/B4 clean; the only real finding is B5
+(delivery rendered as a line item). The capacity model, server-side
+close-on-full enforcement, per-driver counting, and real-data
+provenance of the displayed counts were all confirmed clean — see the
+CLAUDE.md operational learnings added in the same commit.
+
+#### Pre-launch
+
+T-B5-delivery-not-a-line-item — Delivery shown as a "Free" basket line, not structurally absent
+
+**Status:** Open. Pre-launch. Source: Pass B / B5 (CONTRADICTION).
+
+**Problem:** `order.html` renders a "Delivery — Free" basket line (the
+`basketDelivery` span, ~1779-1782; render path ~3223) via
+`getDeliveryChargePence()`, which always returns 0. Per the brand,
+no-delivery-fee is structural — "Delivery: Free" frames it as a waived
+fee, which the playbook bans.
+
+**Fix shape (not built):** remove the "Delivery" basket line and its
+"Free" render so delivery is structurally absent. Leave the
+`delivery_pence` scaffolding dormant (retired in the separate
+post-launch ticket T-B5-retire-delivery-scaffolding). Audit-first:
+confirm the markup and render against live source before editing.
+
+#### Post-launch (capture stubs)
+
+T-B5-retire-delivery-scaffolding — Retire dormant fee-shaped delivery plumbing
+
+**Status:** Open. Post-launch. Source: Pass B / B5. Retire the dormant
+fee-shaped plumbing — `getDeliveryChargePence()`, `totals.delivery_pence`
+in the order payload + `create-order` schema validation, and any
+`orders.delivery_pence` column — so no latent delivery-fee infra
+remains. Follows T-B5-delivery-not-a-line-item (which removes only the
+UI line).
+
+T-B1-landing-mockup — Marketing landing page shows fabricated static scarcity
+
+**Status:** Open. Post-launch (low priority). Source: Pass B / B1.
+`index.html` marketing landing page shows fabricated static scarcity
+("26 of 36 slots filled", "10 remaining") in a demo drop card. Soften
+to non-numeric, or label clearly as illustrative, to honour
+honest-scarcity on the public page. Not backed by real capacity state
+(it is hand-coded demo markup), but it is an illustration, not a live
+ordering surface — hence low priority.
+
+T-B1-deadcode-capacityleft — Remove dead formatCapacityLeft helper
+
+**Status:** Open. Post-launch. Source: Pass B / B1. Remove the dead
+`formatCapacityLeft` helper in `order.html` (~2110, defined, never
+called). Trivial.
+
+T-B3-orders-pizzas-rename — Rename legacy capacity column orders.pizzas
+
+**Status:** Open. Post-launch. Source: Pass B / B3. Rename the legacy
+capacity column `orders.pizzas` (and `capacity_pizzas`) to a generic
+units name. Touches `create-order`, `v_drop_capacity_usage`, and the
+order insert — a DB column rename, bigger than it looks. The logic is
+correct today; this is clarity only (overlaps T5-B31 legacy-capacity
+cleanup).
+
+**Pass E spillover (note for the Pass E voice review — not a standalone
+ticket):** `activation.html` early-access email body ends "Don't hang
+about." — mild hype, borderline for the warm-restraint voice. Record
+against Pass E when that pass runs.
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live

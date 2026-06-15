@@ -1481,6 +1481,33 @@ on top of the coding rules above.
     re-derivation (already noted in T5-B44's Pass A / A4 addendum).
     (T-A6-lifecycle, 2026-06-15.)
 
+74. **Capacity display and enforcement are in parity.**
+    `v_drop_capacity_usage` (which feeds `v_drop_summary` → `v_drop_public`,
+    the display path) and the `create-order` EF both compute consumed
+    capacity as `SUM(orders.pizzas)` over orders WHERE
+    `status <> 'cancelled'` — so `pending_payment` IS counted in both
+    (capacity is reserved during the Stripe Checkout window). There is no
+    display-vs-enforcement divergence: the chip a customer sees and the
+    server-side close-on-full check are computed the same way. (Pass B /
+    B4, verified 2026-06-15.)
+
+75. **Capacity enforcement is driver-aware.** `create-order` Step 7.5
+    counts weighted category units when `capacity_driver = 'by_category'`
+    (an item contributes only if its `category_id ∈ capacity_categories`,
+    and then `capacity_weight × qty`) and a flat 1 per order when
+    `capacity_driver = 'by_order'`. Client-supplied capacity totals in the
+    payload are ignored — the server recomputes from row data and is
+    authoritative. (Pass B / B3.)
+
+76. **Pass B verdict: B1/B2/B3/B4 clean; only B5 is a real finding.**
+    Honest scarcity (B1), server-side close-on-full that can't be bypassed
+    (B2), category-level capacity counting (B3), and real-data provenance
+    of displayed counts via definer views rather than silent-zero anon
+    counts (B4) all confirmed clean. The single real finding is B5 —
+    delivery rendered as a "Free" basket line item rather than being
+    structurally absent (T-B5-delivery-not-a-line-item). (Pass B,
+    2026-06-15.)
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -2049,6 +2076,11 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T-schema-regen — Regenerate `SCHEMA.md` from the live DB; it is stale (omits `audience_scope`; lists a 7-value `host_type` set conflicting with the live 13-value constraint). The regen should also capture `advance_drop_lifecycle()`, the `'advance-drop-lifecycle'` `pg_cron` job, and the `closed`/`completed` status usage (all added by T-A6-lifecycle). Post-launch. Source: Pass A spillover. — open
 - T-A6-lifecycle-timestamps — the lifecycle engine sets `status` only; `closed`/`completed` drops carry no lifecycle timestamp. If wanted: have the engine stamp `closed_at`/`completed_at`, AND have `transition-drop-status`'s cancel path preserve an existing `closed_at` rather than overwriting it with `now()` (it currently re-stamps unconditionally — see PR #372). Bundle the two. Post-launch. Source: T-A6-lifecycle. — open
 - T-A6-lifecycle-scheduled-state — deferred `draft→scheduled→live` front half of the drop lifecycle (cosmetic vendor-board state; the CHECK constraint already permits `'scheduled'`). Post-launch. Source: T-A6-lifecycle. — open
+- T-B5-delivery-not-a-line-item — `order.html` renders a "Delivery — Free" basket line (`basketDelivery` span ~1779-1782; render ~3223) via `getDeliveryChargePence()` (always 0); no-delivery-fee is structural, so remove the line entirely (delivery structurally absent), leaving the `delivery_pence` scaffolding dormant. Pre-launch. Source: Pass B / B5 (CONTRADICTION). — open
+- T-B5-retire-delivery-scaffolding — retire the dormant fee-shaped plumbing (`getDeliveryChargePence`, `totals.delivery_pence` in the order payload + `create-order` schema validation, any `orders.delivery_pence` column). Post-launch. Source: Pass B / B5. — open
+- T-B1-landing-mockup — `index.html` marketing landing shows fabricated static scarcity ("26 of 36 slots filled", "10 remaining") in a demo drop card; soften to non-numeric or label as illustrative. Low priority, post-launch. Source: Pass B / B1. — open
+- T-B1-deadcode-capacityleft — remove the dead `formatCapacityLeft` helper in `order.html` (~2110, defined, never called). Trivial, post-launch. Source: Pass B / B1. — open
+- T-B3-orders-pizzas-rename — rename the legacy capacity column `orders.pizzas` (and `capacity_pizzas`) to a generic units name; touches `create-order`, `v_drop_capacity_usage`, and the order insert (logic is correct — clarity only; overlaps T5-B31). Post-launch. Source: Pass B / B3. — open
 
 ### Tier 6 — Production readiness
 - T6-2 — Local development environment — open
