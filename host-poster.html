@@ -327,7 +327,8 @@
       try {
         sb = window.supabase.createClient(
           window.HEARTH_CONFIG.SUPABASE_URL,
-          window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+          window.HEARTH_CONFIG.SUPABASE_ANON_KEY,
+          { auth: { persistSession: false, autoRefreshToken: false } }
         );
       } catch (initErr) {
         showState("Couldn't connect to the platform. Please try refreshing the page.");
