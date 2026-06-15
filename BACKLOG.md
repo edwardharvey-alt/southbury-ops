@@ -2826,7 +2826,7 @@ Status: Open. Post-launch. Larger build than copy-paste (template + send infra +
 
 **T-drop-anticipation-window-default: Drop Studio — default ordering-open time to create an anticipation window**
 
-**Status:** Open. Tier 5 (comms-architecture-derived). Pre-launch relevant — shapes the first drop a vendor creates.
+**Status:** ✓ COMPLETE 2026-06-15 (#369). The "currently defaults `opens_at` to immediate" problem statement below was already false for new drops — `createNewDrop` set the 24h lead (`opens_at = delivery − 24h`). The real remaining gap was duplicate-only, closed by #369 with explicit placeholder timing on `duplicateDrop`. Both creation paths now produce the announce→open window. Original problem/fix-shape prose retained below for history.
 
 **The problem**
 
@@ -4536,7 +4536,14 @@ Tier 5-B list above rather than duplicated here.
 
 T-A1-dup-gap — Duplicating a drop discards the announce→open gap
 
-**Status:** Open. Pre-launch. Source: Pass A / A1.
+**Status:** ✓ COMPLETE 2026-06-15 (#369). Source: Pass A / A1.
+
+**Resolution:** the real root cause was not the toggle but `create-drop`
+stripping null payload fields so DB defaults apply — `delivery_start`'s DB
+default is `now()`, so nulling timing surfaced the duplicate dated today
+with `opens_at` null = open-immediately. Fixed by having `duplicateDrop`
+mirror `createNewDrop`'s explicit placeholder timing (week out, scheduled
+24h open) instead of nulling the timing fields.
 
 **Problem:** `duplicateDrop` (`drop-manager.html` ~4786) sets
 `opens_at` / `closes_at` to null, so a duplicated drop loads as "open
@@ -4577,6 +4584,18 @@ which no surface writes and the DB `drop_type` CHECK constraint
 **Fix shape (not built):** remove `'hosted'` from `VALID_DROP_TYPES`
 and disallow null `drop_type` on the update path. No live rows carry
 `'hosted'` (verified: 127 drops, only the three real values).
+
+T-activation-deadcode-sweep — Remove code the card/overview redesigns left behind
+
+**Status:** ✓ COMPLETE 2026-06-15 (#370). Removed four dead functions
+from `activation.html` (`statusPill`, `capacityLine` — superseded by
+`overviewStatus` / `statusChip` / `.actod-fill` in #368;
+`actInitRevealFields` — reveal select replaced by the picker in #366;
+`messageCard` — caption cards went bespoke/composer in #361–367) plus
+their dead CSS (`.home-work*`, `.act-progress-*`, `.act-next-action*`)
+and three stale `messageCard` comment references. `contextLine` kept —
+still live at the drop-detail view. ~212 lines removed, no behavioural
+change.
 
 T-A6-lifecycle — Drop status lifecycle: live→closed→completed via scheduled job
 
@@ -4620,6 +4639,15 @@ T-A3-host-type-source — Single source of truth for the host_type set
 + the DB constraint. No bug today (constraint matches pickers) —
 drift-prevention only.
 
+T-activation-css-orphan-sweep — Sweep CSS orphaned by #370
+
+**Status:** Open. Post-launch (low priority). After #370 removed
+`statusPill` / `messageCard`, some CSS they used is now unreferenced in
+markup — `.home-pill` (and variants) and the `.act-message-*` family.
+Each needs an individual ref-check before removal because sibling
+classes (e.g. `.act-ai-draft`, `.act-copy-btn`) are still shared by live
+code. Cosmetic only; no functional impact.
+
 T-schema-regen — Regenerate SCHEMA.md from the live DB
 
 **Status:** Open. Post-launch. Source: Pass A spillover. `SCHEMA.md` is
@@ -4632,7 +4660,9 @@ T-A1-window-gap — Optional anticipation gap for multi-window event siblings
 **Status:** Open. Post-launch (low priority). Source: Pass A / A1.
 Multi-window event siblings hardcode `opens_at = now`; give event
 windows an optional anticipation gap. Immediate-open is defensible for
-events, so this is low priority.
+events, so this is low priority. Audited 2026-06-15 — the
+`createEventWindow` `: null` fallback is unreachable (sole caller always
+passes a full `timingOverride`); only the intentional now-open remains.
 
 T-A4-merged-timing-validation — Validate the merged stored timing on update-drop
 
