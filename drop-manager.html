@@ -3543,12 +3543,7 @@
       buildTimeOptions(byId("deliveryStartTime"), formatTimeInput(d.delivery_start));
       buildTimeOptions(byId("deliveryEndTime"), formatTimeInput(d.delivery_end));
 
-      // "Open immediately" only defaults on when the drop already has a delivery
-      // date — a deliberate immediate choice on a real drop. A blank-timing
-      // duplicate (opens_at and delivery_start both null) defaults to scheduled,
-      // so picking the new date re-derives the 24h anticipation window the same
-      // way a fresh drop does, instead of silently opening immediately.
-      byId("openImmediateToggle").checked = !d.opens_at && !!d.delivery_start;
+      byId("openImmediateToggle").checked = !d.opens_at;
 
       byId("opensAtDate").value = formatDateInput(d.opens_at);
       buildTimeOptions(byId("opensAtTime"), formatTimeInput(d.opens_at));
@@ -4781,6 +4776,19 @@
 
       const duplicateSlugBase = `${slugify(sourceDrop.slug || sourceDrop.name || "drop")}-copy`;
       const { vendor_id: _ignoredVendorId, ...sourceFields } = getDropPayload(sourceDrop);
+      // Placeholder timing mirrors createNewDrop: a fresh draft a week out with a
+      // scheduled 24h open lead — NOT immediate. Nulling these let create-drop's
+      // null-strip fall through to the DB default (delivery_start = now()), which
+      // surfaced the duplicate as "open immediately" on today's date. Setting them
+      // explicitly keeps the anticipation window and matches a brand-new drop; the
+      // vendor still re-picks the real date (the duplicate banner prompts for it).
+      const dupNow = new Date();
+      const dupDeliveryStart = new Date(dupNow.getTime() + 7 * 24 * 60 * 60 * 1000);
+      dupDeliveryStart.setHours(19, 0, 0, 0);
+      const dupDeliveryEnd = new Date(dupDeliveryStart);
+      dupDeliveryEnd.setHours(20, 0, 0, 0);
+      const dupOpensAt = new Date(dupDeliveryStart.getTime() - 24 * 60 * 60 * 1000);
+      const dupClosesAt = new Date(dupDeliveryStart.getTime() - 2 * 60 * 60 * 1000);
       const duplicatePayload = {
         ...sourceFields,
         slug: buildUniqueSlug(duplicateSlugBase),
@@ -4788,10 +4796,10 @@
         status: "draft",
         series_id: null,
         series_position: null,
-        opens_at: null,
-        closes_at: null,
-        delivery_start: null,
-        delivery_end: null
+        opens_at: dupOpensAt.toISOString(),
+        closes_at: dupClosesAt.toISOString(),
+        delivery_start: dupDeliveryStart.toISOString(),
+        delivery_end: dupDeliveryEnd.toISOString()
       };
 
       const { data: insertedDrop, error: insertDropError } = await supabase.functions.invoke("create-drop", {
