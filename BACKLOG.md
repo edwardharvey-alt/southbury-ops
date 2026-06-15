@@ -4753,6 +4753,13 @@ is a cosmetic vendor-board state — surfacing a published-but-not-yet-open
 drop as `'scheduled'` rather than `'live'`. The CHECK constraint already
 permits `'scheduled'`; nothing writes it. Low priority.
 
+**Pass C note (2026-06-15):** when the front-half lifecycle lands,
+review `send-post-drop-thankyou`'s next-drop lookup, which keys on
+`status IN ('live','scheduled')`. `'scheduled'` is currently unwritten,
+so this is harmless today — published future drops are `'live'` and so
+are still caught — but once `'scheduled'` becomes a real stored state
+the query should be re-confirmed to cover it as intended.
+
 ### Build Coherence Audit — Pass B (capacity & honest scarcity)
 
 Tickets surfaced by Build Coherence Audit Pass B
@@ -4822,6 +4829,71 @@ cleanup).
 ticket):** `activation.html` early-access email body ends "Don't hang
 about." — mild hype, borderline for the warm-restraint voice. Record
 against Pass E when that pass runs.
+
+### Build Coherence Audit — Pass C (auth & data scoping)
+
+Tickets surfaced by Build Coherence Audit Pass C
+(`audit/Hearth_Build_Coherence_Audit.md`, Pass C — auth & data scoping).
+Pass C verdict: the auth architecture is sound. C1 (mutations via EF),
+C2 (EF auth pattern), C3 (no `orders.vendor_id`), C5 (activation actor
+filtering) and C6 (admin data-driven) all checked clean; C4 produced one
+real finding (host-poster session isolation, now fixed in #376); C7
+clean on spot-check with an `information_schema` validation deferred to
+the anon-revoke capstone. The items below are the residual cleanups and
+one redundant-derivation ticket.
+
+T-C4-host-poster-session-isolation — Host-poster client must not inherit a vendor session
+
+**Status:** ✓ COMPLETE 2026-06-15 (#376). Source: Pass C / C4.
+`host-poster.html` is a host-facing page (token-authed via
+`host-view-summary`, no login) whose `createClient` call was bare,
+missing the `{ auth: { persistSession: false, autoRefreshToken: false } }`
+options `host-view.html` uses — so on the shared origin it could inherit
+a logged-in vendor's persisted session, contradicting the adjacent
+comment that claimed parity with host-view. Fixed by adding the same
+options object. Blast radius was low (the page's only call,
+`host-view-summary`, is token-authed and ignores any JWT) — a
+defence-in-depth / code-matches-its-own-comment fix.
+
+T-A6-vsummary-status-single-source — v_drop_summary re-derives 'closed' in-view
+
+**Status:** Open. Lifecycle / Pass A6 domain. Source: Pass C / C3
+spillover. `v_drop_summary` re-derives `'closed'` in-view via a CASE
+(`status = 'live' AND closes_at < now()` → `'closed'`). This predates the
+`pg_cron` lifecycle engine and is now redundant: the in-view derivation
+can diverge from the stored status because it only knows `'closed'` (not
+`'completed'`) and ignores `delivery_end`, and it leads the engine by up
+to 15 minutes (the cron interval).
+
+**Fix shape (not built):** collapse the view to project `d.status`
+directly. Audit-first — grep every surface that reads `v_drop_summary`
+status to confirm none relies on the instant `live → closed` flip before
+the engine catches up. Ordering closure for customers is enforced
+server-side at checkout (time-gated in `order.html` / capacity check in
+`create-order`), NOT off this view label, so the label can safely follow
+the stored status. Small view migration (Ed runs). Not pre-launch-blocking.
+
+T-C-inline-createClient-host-pages — Inline createClient on three host/vendor pages
+
+**Status:** Open. Post-launch (low priority). Source: Pass C / C1
+spillover. `host-profile.html`, `hosts.html`, and `host-terms.html`
+instantiate `supabase.createClient()` inline rather than via the
+`window._getHearthClient()` singleton (operational learning #14). No
+mutation risk — `host-profile.html` / `hosts.html` writes go through
+`functions.invoke` (which attaches the JWT via a separate code path,
+learning #16) — so this is pattern-consistency cleanup, part of the
+broader inline-createClient → singleton migration (root cause tracked as
+T5-B17). `host-terms.html` additionally creates an **unused dead client**
+(instantiated in an IIFE, never queried) that can simply be dropped.
+
+T-C-rm-onboarding-backup — Delete deprecated onboarding_backup.html
+
+**Status:** Open. Housekeeping. Source: Pass C / C1. `onboarding_backup.html`
+is untracked + gitignored, so it cannot deploy — but it is the sole
+remaining copy of the deprecated direct-PostgREST-write onboarding
+pattern (4× `.from('vendors').update(...)`, which would silently fail
+under the auth-attach bug if ever served). Delete it to remove the
+foot-gun; no production impact.
 
 ### Tier 6 — Production readiness
 
