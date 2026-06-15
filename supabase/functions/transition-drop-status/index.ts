@@ -17,7 +17,10 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 //   *     -> archived:   archived_at  = now()
 
 const VALID_TARGET_STATUSES = new Set(["live", "cancelled", "archived"]);
-const ARCHIVE_SOURCE_STATUSES = new Set(["draft", "cancelled", "closed"]);
+// A closed-but-not-yet-delivered drop can still be cancelled; a 'completed'
+// drop cannot (it has been delivered). 'live' and 'closed' only.
+const CANCEL_SOURCE_STATUSES = new Set(["live", "closed"]);
+const ARCHIVE_SOURCE_STATUSES = new Set(["draft", "cancelled", "closed", "completed"]);
 const VALID_FUNDRAISING_MODELS = new Set(["percentage", "per_order"]);
 const VALID_HOST_SHARE_MODELS = new Set(["percentage", "per_order", "fixed"]);
 
@@ -274,7 +277,7 @@ Deno.serve(async (req) => {
       }
       update.published_at = new Date().toISOString();
     } else if (target_status === "cancelled") {
-      if (sourceStatus !== "live") {
+      if (!CANCEL_SOURCE_STATUSES.has(sourceStatus)) {
         return jsonResponse({ error: `Cannot cancel from status '${sourceStatus}'` }, 400);
       }
       // No cancelled_at column — closed_at is the lifecycle timestamp.
