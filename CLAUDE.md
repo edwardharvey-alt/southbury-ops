@@ -1424,6 +1424,63 @@ on top of the coding rules above.
     explicit values (as `createNewDrop` and now `duplicateDrop` do), never
     null. Surfaced via T-A1-dup-gap (#369).
 
+68. **Drop status lifecycle is real and automatic now.** `pg_cron` is
+    enabled; the job `'advance-drop-lifecycle'` runs
+    `advance_drop_lifecycle()` every 15 minutes. Two transitions, both
+    idempotent and only ever touching `live`/`closed` rows:
+    `status → 'completed'` where `status IN ('live','closed')` AND
+    `delivery_end < now()`; `status → 'closed'` where `status = 'live'`
+    AND `closes_at < now()` AND (`delivery_end IS NULL` OR
+    `delivery_end >= now()`). The function never touches `draft`,
+    `scheduled`, `cancelled`, or `archived` rows. (T-A6-lifecycle,
+    2026-06-15.)
+
+69. **Drop status values in use: `draft`, `live`, `closed`, `completed`,
+    `cancelled`, `archived`.** `'scheduled'` is permitted by the CHECK
+    constraint but nothing writes it yet — the `draft→scheduled→live`
+    front half was deferred (see T-A6-lifecycle-scheduled-state).
+    `'published'` and `'open'` were never constraint-valid and remain
+    dead aliases — do not write them. (T-A6-lifecycle, 2026-06-15.)
+
+70. **Anon visibility of finished drops requires BOTH the view AND the
+    RLS policy to scope to the same status set.** `order.html` reads the
+    `drops` table directly (anon) as well as via `v_drop_public`, so
+    `v_drop_public` AND the `"Drops: anon select public statuses"` RLS
+    policy must each scope to `('live','closed','completed')`. Omitting
+    `closed`/`completed` from either one breaks finished drops' order
+    pages for anon callers. Both now scope to the full set (migration
+    `20260612055452_drop_lifecycle_access.sql`). (T-A6-lifecycle,
+    2026-06-15.)
+
+71. **Customer ordering window stays time-gated in `order.html`,
+    independent of stored status.** `getOrderWindowState` derives the
+    open/closed checkout state from `opens_at` / `closes_at`, not from
+    the drop's stored `status`. The lifecycle engine's stored status
+    drives vendor surfaces and public visibility only — never checkout.
+    A drop's order page opens and closes on its timing fields regardless
+    of whether the cron job has flipped its status yet. (T-A6-lifecycle,
+    2026-06-15.)
+
+72. **`transition-drop-status` source-status sets.**
+    `CANCEL_SOURCE_STATUSES = {live, closed}` — a `completed` drop is NOT
+    cancellable; `ARCHIVE_SOURCE_STATUSES` includes `closed` and
+    `completed`. Extended in PR #372 so the new lifecycle-produced
+    `closed`/`completed` states have sensible operator exits.
+    (T-A6-lifecycle, 2026-06-15.)
+
+73. **Pass A seed corrections (record where the original audit seed was
+    wrong).** Two seeds from Build Coherence Audit Pass A proved wrong
+    against live source and should not be built against: (a) the A1 seed
+    "the Timing pane defaults `opens_at` to immediate" was WRONG —
+    `createNewDrop` defaults `opens_at` to `delivery_start − 24h`, and
+    immediate open is an explicit toggle only (also captured in learning
+    #67 and the T-A1-dup-gap / T-drop-anticipation-window-default
+    closures); (b) T5-B44's UI re-derivation half
+    (`deriveTimingFromDelivery`) does NOT reproduce against current
+    source — the remaining T5-B44 work is the publish-time guard, not the
+    re-derivation (already noted in T5-B44's Pass A / A4 addendum).
+    (T-A6-lifecycle, 2026-06-15.)
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -1855,7 +1912,7 @@ index.
 - T3-13-polish-3 — Drop Studio Capacity section feels oversized — open. Pills are large, category list is one-per-row. Possibly compact pills + multi-column chip layout for categories. Needs design conversation.
 - T-A1-dup-gap — ~~Duplicating a drop discards the announce→open gap: `duplicateDrop` (drop-manager.html ~4786) nulls `opens_at`/`closes_at`, so a duplicated drop opens immediately and loses the source's announce→open anticipation window — fighting the comms model that treats that gap as part of the product. Carry the source's open pattern across, or re-default to `createNewDrop`'s 24h-lead. Audit-first. Pre-launch. Source: Build Coherence Audit Pass A / A1.~~ ✓ COMPLETE 2026-06-15 (#369). Root cause was not the toggle — create-drop strips null payload fields so DB defaults apply, and `delivery_start`'s DB default is `now()`, so nulling timing surfaced the duplicate as open-immediately on today's date. Fixed by giving `duplicateDrop` explicit `createNewDrop`-style placeholder timing (week out, scheduled 24h open) instead of nulls.
 - T-A2-orphan-hosted — ~~Remove the dead `'hosted'` value from `update-drop` `VALID_DROP_TYPES` (no surface writes it; DB CHECK is `{neighbourhood, community, event}`) and disallow null `drop_type` on the update path. Tiny, zero-risk hygiene; no live rows carry `'hosted'`. Pre-launch. Source: Pass A / A2.~~ ✓ COMPLETE 2026-06-13 (#354)
-- T-A6-lifecycle — Drop status lifecycle (live→closed→completed) via scheduled job — DESIGN SPEC PENDING (do not build until agreed in chat). Full stored-status lifecycle; published drops currently stay `'live'` forever so vendor/activation closed states never resolve (customer ordering unaffected — time-gated in order.html). Sequenced LAST in the pre-launch batch. Source: Pass A / A6. — open
+- T-A6-lifecycle — Drop status lifecycle (live→closed→completed) via scheduled job — ✓ COMPLETE 2026-06-15. Built as a `pg_cron` job (back half only; the `draft→scheduled→live` front half was deferred by decision — see T-A6-lifecycle-scheduled-state post-launch). Migrations `20260612055452_drop_lifecycle_access.sql` (anon access widen to `live`/`closed`/`completed`) + `20260612061555_drop_lifecycle_engine.sql` (`pg_cron` enable + `advance_drop_lifecycle()` on a 15-min job); `transition-drop-status` extended (PR #372, deployed) so cancel is allowed from `closed` and archive from `completed`. Source: Pass A / A6.
 
 T3-13 (capacity driver multi-mode) closed 2026-05-13: Drop Studio capacity mode UI (PR #251), Menu Library capacity UI (PR #252), pending_payment fix (PR #250) merged; eight Edge Functions redeployed (`create-order`, `create-drop`, `update-drop`, `create-product`, `update-product`, `create-bundle`, `update-bundle`, `duplicate-bundle`); schema migrations and view rewrites applied earlier; verified end-to-end on Test 11 for both `by_order` and `by_category` modes with capacity math correct in both.
 
@@ -1989,7 +2046,9 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T-A1-window-gap — Multi-window event siblings hardcode `opens_at = now`; give event windows an optional anticipation gap (low priority — immediate-open is defensible for events). Post-launch. Source: Pass A / A1. — open. Audited 2026-06-15: `createEventWindow`'s `: null` timing fallback is unreachable — its sole caller (`handleCreateEventWindows`) always passes a full `timingOverride` — so the only live behaviour is the intentional `opens_at = now`. Confirms the low-priority/defensible framing; no fix needed pre-launch.
 - T-A4-merged-timing-validation — `update-drop` validates timing only within a single payload; validate the merged stored result (latent; matters for future partial-update/API callers). Post-launch. Source: Pass A / A4. — open
 - T-dup-updated-at-trigger — `drops` has two identical `updated_at` triggers (`set_updated_at_drops` and `trg_drops_updated_at`); drop one. Post-launch. Source: Pass A / A6. — open
-- T-schema-regen — Regenerate `SCHEMA.md` from the live DB; it is stale (omits `audience_scope`; lists a 7-value `host_type` set conflicting with the live 13-value constraint). Post-launch. Source: Pass A spillover. — open
+- T-schema-regen — Regenerate `SCHEMA.md` from the live DB; it is stale (omits `audience_scope`; lists a 7-value `host_type` set conflicting with the live 13-value constraint). The regen should also capture `advance_drop_lifecycle()`, the `'advance-drop-lifecycle'` `pg_cron` job, and the `closed`/`completed` status usage (all added by T-A6-lifecycle). Post-launch. Source: Pass A spillover. — open
+- T-A6-lifecycle-timestamps — the lifecycle engine sets `status` only; `closed`/`completed` drops carry no lifecycle timestamp. If wanted: have the engine stamp `closed_at`/`completed_at`, AND have `transition-drop-status`'s cancel path preserve an existing `closed_at` rather than overwriting it with `now()` (it currently re-stamps unconditionally — see PR #372). Bundle the two. Post-launch. Source: T-A6-lifecycle. — open
+- T-A6-lifecycle-scheduled-state — deferred `draft→scheduled→live` front half of the drop lifecycle (cosmetic vendor-board state; the CHECK constraint already permits `'scheduled'`). Post-launch. Source: T-A6-lifecycle. — open
 
 ### Tier 6 — Production readiness
 - T6-2 — Local development environment — open

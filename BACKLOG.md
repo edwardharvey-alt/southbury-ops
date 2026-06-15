@@ -4599,9 +4599,60 @@ change.
 
 T-A6-lifecycle — Drop status lifecycle: live→closed→completed via scheduled job
 
-**Status:** Open — DESIGN SPEC PENDING (do not build until the spec is
-agreed in chat). Pre-launch, sequenced LAST in the pre-launch batch.
-Source: Pass A / A6.
+**Status:** ✓ COMPLETE 2026-06-15. Pre-launch, sequenced LAST in the
+pre-launch batch. Source: Pass A / A6.
+
+**Resolution:** shipped the back half of the stored-status lifecycle as
+a `pg_cron` job (the `draft→scheduled→live` front half was deferred by
+decision — captured as T-A6-lifecycle-scheduled-state below). `pg_cron`
+was enabled; the job `'advance-drop-lifecycle'` runs
+`advance_drop_lifecycle()` every 15 minutes. The function is idempotent
+and only ever touches `live`/`closed` rows:
+
+- `status → 'completed'` where `status IN ('live','closed')` AND
+  `delivery_end < now()`
+- `status → 'closed'` where `status = 'live'` AND `closes_at < now()`
+  AND (`delivery_end IS NULL` OR `delivery_end >= now()`)
+
+It never touches `draft`, `scheduled`, `cancelled`, or `archived` rows,
+so the same logic also serves as the idempotent backfill of existing
+`live` rows whose windows have passed (design decision (c)).
+
+**Shipped artefacts:**
+
+- Migration `20260612055452_drop_lifecycle_access.sql` — widens anon
+  visibility so finished drops stay reachable. BOTH `v_drop_public` AND
+  the `"Drops: anon select public statuses"` RLS policy now scope to
+  `('live','closed','completed')`. `order.html` reads the `drops` table
+  directly (anon) as well as via the view, so both surfaces had to move
+  in lockstep or finished drops' order pages would break for anon (see
+  operational learning #70). Resolves design decision (d).
+- Migration `20260612061555_drop_lifecycle_engine.sql` — enables
+  `pg_cron`, defines `advance_drop_lifecycle()`, and schedules the
+  15-minute `'advance-drop-lifecycle'` job. Resolves design decisions
+  (a) `pg_cron` over a scheduled EF, (b) the two transition triggers,
+  and (c) idempotent backfill.
+- EF `transition-drop-status` (PR #372, deployed) — extended so the new
+  lifecycle-produced states have sensible operator exits: cancel is now
+  allowed from `closed` (`CANCEL_SOURCE_STATUSES = {live, closed}`;
+  `completed` is not cancellable) and archive from `completed`
+  (`ARCHIVE_SOURCE_STATUSES` includes `closed` + `completed`).
+
+**Notes carried forward:** customer ordering stays time-gated in
+`order.html` (`getOrderWindowState` reads `opens_at`/`closes_at`,
+independent of stored status — operational learning #71); stored status
+drives vendor surfaces and public visibility only. Status values now in
+use: `draft`, `live`, `closed`, `completed`, `cancelled`, `archived`;
+`'scheduled'` is constraint-permitted but unwritten (front half
+deferred); `'published'`/`'open'` were never constraint-valid (learning
+#69). Operational learnings #68–#72 capture the engine, status set, anon
+visibility rule, checkout-gating independence, and transition source
+sets. Follow-ons logged below: T-A6-lifecycle-timestamps and
+T-A6-lifecycle-scheduled-state.
+
+---
+
+**Original design spec (retained for the record):**
 
 **Decision:** build the full stored-status lifecycle (not the
 derived-status alternative). The status CHECK constraint already
@@ -4653,7 +4704,10 @@ T-schema-regen — Regenerate SCHEMA.md from the live DB
 **Status:** Open. Post-launch. Source: Pass A spillover. `SCHEMA.md` is
 stale — it omits `audience_scope` and lists a 7-value `host_type` set
 that conflicts with the live 13-value constraint. Regenerate from the
-live DB (the regeneration query is at the top of `SCHEMA.md`).
+live DB (the regeneration query is at the top of `SCHEMA.md`). The regen
+should also capture the T-A6-lifecycle additions: the
+`advance_drop_lifecycle()` function, the `'advance-drop-lifecycle'`
+`pg_cron` job, and the `closed`/`completed` status usage on `drops`.
 
 T-A1-window-gap — Optional anticipation gap for multi-window event siblings
 
@@ -4677,6 +4731,27 @@ T-dup-updated-at-trigger — Drop one of two identical updated_at triggers on dr
 **Status:** Open. Post-launch. Source: Pass A / A6 (trigger dump).
 `drops` has two identical `updated_at` triggers
 (`set_updated_at_drops` and `trg_drops_updated_at`); drop one.
+
+T-A6-lifecycle-timestamps — Lifecycle drops carry no closed_at/completed_at
+
+**Status:** Open. Post-launch. Source: T-A6-lifecycle. The lifecycle
+engine (`advance_drop_lifecycle()`) sets `status` only; `closed` /
+`completed` drops carry no lifecycle timestamp recording when they
+transitioned. If wanted, this is a two-part fix to bundle: (1) have the
+engine stamp `closed_at` / `completed_at` alongside the status flip; and
+(2) have `transition-drop-status`'s cancel path preserve an existing
+`closed_at` rather than overwriting it with `now()` — it currently
+re-stamps unconditionally (see PR #372). No bug today; this is reporting
+fidelity for "when did this drop actually close/complete".
+
+T-A6-lifecycle-scheduled-state — Deferred draft→scheduled→live front half
+
+**Status:** Open. Post-launch. Source: T-A6-lifecycle. The
+`draft→scheduled→live` front half of the drop lifecycle was deferred
+when T-A6-lifecycle shipped the back half (`live→closed→completed`). It
+is a cosmetic vendor-board state — surfacing a published-but-not-yet-open
+drop as `'scheduled'` rather than `'live'`. The CHECK constraint already
+permits `'scheduled'`; nothing writes it. Low priority.
 
 ### Tier 6 — Production readiness
 
