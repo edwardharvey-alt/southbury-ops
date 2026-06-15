@@ -1558,6 +1558,31 @@ on top of the coding rules above.
     Customer ordering closure does NOT depend on this label — it is
     enforced server-side at checkout. (Pass C / C3 spillover, 2026-06-15.)
 
+82. **Pass D verdict: the activation/comms architecture is coherent with
+    strategy.** Reachability holds — the vendor's host cards (Card 2
+    `host_heads_up`, Card 5 `host_link`) reach the HOST (email the share
+    page / copy the link / nudge), and the host is the one who reaches
+    their community; no vendor CTA posts into a host-owned audience.
+    Closed drops drop all public Instagram cards (1/6/8) and keep only the
+    host-handoff (Card 5) plus the vendor's OWN email list (Cards 3/9), so
+    the vendor's closed-drop screen is handoff + monitor, not a doing
+    surface. Host→community messages are copy-paste templates sent BY the
+    host (`host-view.html` STEP1/STEP2 templates, in the host's own
+    voice); the ONLY platform auto-send is platform→host
+    (`send-host-activation-email`, single recipient = the host's own
+    `contact_email`), never into the host's community. (Pass D, 2026-06-15.)
+
+83. **`reveal_line` was RELOCATED from Drop Studio to Activation's Card 4
+    poster-hook field — not removed.** It is written by
+    `#act-posterHookInput` in activation.html and is the live source for
+    activation-poster.html's hero line (also auto-generated once when
+    blank). The old "activation-poster reads stale `reveal_line`"
+    suspicion is itself stale. But the column's documented T5-25 purpose
+    (deferred caption-generator seed) now diverges from this actual use:
+    when the caption generator is built it must use its own column, not
+    reveal_line. Tracked as T-D4-reveal-line-semantics. (Pass D / D4,
+    2026-06-15.)
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -2032,8 +2057,14 @@ HARD RULE — card image geometry (regression guard):
 SCHEMA/EF (live in prod): drops.reveal_line (text),
 drops.reveal_product_id (uuid -> products.id). create-drop and
 update-drop EFs carry both in ALLOWED_FIELDS and are deployed.
-reveal_line is retained to feed the future caption generator
-(T5-25 Part 1, deferred) and is NOT rendered on the card.
+reveal_line is now the Activation poster-hook field — written by
+Card 4's poster-hook input (`#act-posterHookInput`) in activation.html
+and rendered as the hero line on activation-poster.html. It was
+RELOCATED here from Drop Studio, not removed. (It remains NOT rendered
+on this Monday Instagram menu card — that HARD RULE is unchanged.) When
+T5-25 Part 1 (the caption generator) is built, the caption seed MUST get
+its own column rather than reusing reveal_line, whose documented purpose
+has drifted from its actual use — tracked as T-D4-reveal-line-semantics.
 
 Drop Studio Review-page restructure SHIPPED 2026-05-17 (PR #268, squash commit 4200d6a). Final layout: `#pane-review` → `.reviewGrid` (Drop Summary | Readiness) → `.reviewActionsRow` (merged "Publish & share" card | `mondayRevealSection`). The merged left card stacks Publish & Drop link content separated by a `.reviewCardDivider`. The reveal section internal structure is `.mondayRevealHeader` (full-width above), then `.revealBody` (`display: grid; grid-template-columns: 220px 1fr; align-items: start`) containing `.revealFields` on the left (the editorial-line textarea + reveal-dish select) and `.revealAsset` on the right (the entire `.menuCardWrap` — artwork frame + nested `.menuCardActions`). Review-pane cards are natural content height: `#pane-review .reviewGrid` and `.reviewActionsRow` both use `align-items: start`, so uneven card bottoms are INTENTIONAL (dense-not-voided) — do not "fix" them in future work.
 
@@ -2135,6 +2166,8 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T-A6-vsummary-status-single-source — `v_drop_summary` re-derives `'closed'` in-view via a CASE on `closes_at`; now redundant with the stored `pg_cron` lifecycle engine and able to diverge (only knows `'closed'` not `'completed'`, ignores `delivery_end`, leads the engine by up to 15 min). Collapse to project `d.status` directly after grep-confirming no surface relies on the instant live→closed flip (ordering closure is server-side, not off this label). Audit-first; small view migration; not pre-launch-blocking. Post-launch. Source: Pass C / C3 spillover. — open
 - T-C-inline-createClient-host-pages — `host-profile.html`, `hosts.html`, `host-terms.html` instantiate `supabase.createClient()` inline rather than via the `_getHearthClient()` singleton; no mutation risk (writes go through `functions.invoke`); `host-terms.html` also creates an unused dead client to drop. Pattern-consistency cleanup (root cause T5-B17). Post-launch, low priority. Source: Pass C / C1 spillover. — open
 - T-C-rm-onboarding-backup — delete `onboarding_backup.html` (untracked + gitignored, can't deploy) — the sole remaining copy of the deprecated direct-PostgREST-write onboarding pattern. Housekeeping. Source: Pass C / C1. — open
+- T-D4-reveal-line-semantics — `reveal_line` is now the Activation poster-hook field (written by Card 4's `#act-posterHookInput` in activation.html, rendered as the hero by activation-poster.html); the T5-25 docs that described it as the deferred caption-generator seed are corrected in this PR. No functional bug (poster reads what Activation writes), but before T5-25 Part 1 (caption generator) is built the caption seed must get its OWN column rather than reusing reveal_line. Post-launch, low priority. Source: Pass D / D4. — open
+- T-D5-vendor-name-fallback — customer-facing vendor-name slots fall back to the literal "Hearth" when a vendor has neither `display_name` nor `name`: activation-poster.html (`.poster-vendor-name`, ~:416) and send-order-confirmation/index.ts email subject (~:454) + From header (~:460). If triggered, frames "Hearth" over the (missing) vendor — the one place D5's "never frame over the vendor" could break. Blast radius ~nil (cosmetic if vendor name is mandatory at onboarding — worth confirming). Fix: neutral fallback (vendor slug or similar), not "Hearth". Post-launch, low priority. Source: Pass D / D5. — open
 
 ### Tier 6 — Production readiness
 - T6-2 — Local development environment — open
