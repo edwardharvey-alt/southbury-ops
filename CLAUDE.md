@@ -1508,6 +1508,56 @@ on top of the coding rules above.
     structurally absent (T-B5-delivery-not-a-line-item). (Pass B,
     2026-06-15.)
 
+77. **Pass C verdict: auth architecture is sound.** All authenticated
+    mutations on served pages route through Edge Functions — there are no
+    direct PostgREST writes on any tracked/served page; the only
+    direct-write file, `onboarding_backup.html`, is gitignored + untracked
+    and cannot deploy. All 57 EFs are `verify_jwt = false` at the gateway
+    with in-function `auth.getUser()`; the 6 without `getUser()` use
+    correct alternative auth — `create-order` (public customer placement),
+    `cancel-order` / `fetch-order` (matched-pair order_id + session_id),
+    `host-view-summary` (per-drop host token), `send-order-confirmation`
+    (internal shared secret), `stripe-webhook` (Stripe signature).
+    `orders` has no `vendor_id` — every `orders` read scopes via
+    `drop_id IN (vendor's drops)`; and the `send-*` EFs bind a
+    client-supplied `vendor_id` to `auth_user_id = user.id` (403 otherwise).
+    (Pass C, 2026-06-15.)
+
+78. **Admin gating is data-driven and multi-admin is live.** Access is
+    gated by the `admin-verify` EF, which checks the `admins` table on
+    `auth_user_id` + `is_active` — there is no hardcoded `ADMIN_UID`
+    (retired under T5-B26). Ed and Robin both have active `admins` rows,
+    so multi-admin is in production, not just supported. (Pass C / C6,
+    2026-06-15.)
+
+79. **Host-facing surfaces isolate their Supabase client.**
+    `host-poster.html` now creates its client with
+    `{ auth: { persistSession: false, autoRefreshToken: false } }` like
+    `host-view.html` (#376), so a host-facing page can never inherit a
+    logged-in vendor's persisted session on the shared origin. Any future
+    host-facing (no-login, token-authed) surface must do the same.
+    (Pass C / C4, 2026-06-15.)
+
+80. **The activation host-origin progress exception is `host_link` +
+    `shared`, NOT `thursday_host_link`.** The single host-origin event
+    that counts toward vendor activation progress is the one with
+    touchpoint `host_link` and action `shared` (the Card 5 host link-share
+    — the #332 fix); every other `actor === 'host'` event is excluded from
+    vendor card/progress state. Correct any doc that references a
+    day-of-week form (`thursday_host_link`) for THIS specific exception —
+    that string is not what the filter keys on. (Pass C / C5, 2026-06-15.)
+
+81. **`v_drop_summary` re-derives `'closed'` in-view and can now diverge
+    from stored status.** A CASE in the view flips a `'live'` drop to
+    `'closed'` when `closes_at < now()`. This predates the `pg_cron`
+    lifecycle engine and is now redundant: the in-view label only knows
+    `'closed'` (not `'completed'`), ignores `delivery_end`, and leads the
+    engine by up to 15 minutes — so a view reader and a stored-status
+    reader can disagree. Tracked as T-A6-vsummary-status-single-source
+    (collapse the view to project `d.status` directly, audit-first).
+    Customer ordering closure does NOT depend on this label — it is
+    enforced server-side at checkout. (Pass C / C3 spillover, 2026-06-15.)
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -2081,6 +2131,10 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T-B1-landing-mockup — `index.html` marketing landing shows fabricated static scarcity ("26 of 36 slots filled", "10 remaining") in a demo drop card; soften to non-numeric or label as illustrative. Low priority, post-launch. Source: Pass B / B1. — open
 - T-B1-deadcode-capacityleft — remove the dead `formatCapacityLeft` helper in `order.html` (~2110, defined, never called). Trivial, post-launch. Source: Pass B / B1. — open
 - T-B3-orders-pizzas-rename — rename the legacy capacity column `orders.pizzas` (and `capacity_pizzas`) to a generic units name; touches `create-order`, `v_drop_capacity_usage`, and the order insert (logic is correct — clarity only; overlaps T5-B31). Post-launch. Source: Pass B / B3. — open
+- T-C4-host-poster-session-isolation — `host-poster.html` createClient now passes `{ auth: { persistSession: false, autoRefreshToken: false } }` like `host-view.html`, so host-facing surfaces can't inherit a vendor session. ✓ COMPLETE 2026-06-15 (#376). Source: Pass C / C4.
+- T-A6-vsummary-status-single-source — `v_drop_summary` re-derives `'closed'` in-view via a CASE on `closes_at`; now redundant with the stored `pg_cron` lifecycle engine and able to diverge (only knows `'closed'` not `'completed'`, ignores `delivery_end`, leads the engine by up to 15 min). Collapse to project `d.status` directly after grep-confirming no surface relies on the instant live→closed flip (ordering closure is server-side, not off this label). Audit-first; small view migration; not pre-launch-blocking. Post-launch. Source: Pass C / C3 spillover. — open
+- T-C-inline-createClient-host-pages — `host-profile.html`, `hosts.html`, `host-terms.html` instantiate `supabase.createClient()` inline rather than via the `_getHearthClient()` singleton; no mutation risk (writes go through `functions.invoke`); `host-terms.html` also creates an unused dead client to drop. Pattern-consistency cleanup (root cause T5-B17). Post-launch, low priority. Source: Pass C / C1 spillover. — open
+- T-C-rm-onboarding-backup — delete `onboarding_backup.html` (untracked + gitignored, can't deploy) — the sole remaining copy of the deprecated direct-PostgREST-write onboarding pattern. Housekeeping. Source: Pass C / C1. — open
 
 ### Tier 6 — Production readiness
 - T6-2 — Local development environment — open
