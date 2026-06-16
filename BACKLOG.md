@@ -2510,6 +2510,26 @@ T5-C5 (cadence mechanics — the two tickets form one coherent arc from
 T4-23 (first-drop guidance card — T5-C6 supersedes T4-23's first-drop
 guidance with a fully personalised plan).
 
+**Note — deferred scope and manual precursor (2026-06-16):**
+
+Two extensions are explicitly out of scope for T5-C6 as specced, recorded here
+so they aren't lost:
+
+(1) Online-presence ingestion. T5-C6 reads social-handle presence as a boolean
+only — it does not look at what's on a vendor's Instagram, website, or local
+listings. Ingesting that content as a real input (to surface vendor-specific
+ideas a person would spot) is a later, larger piece — likely Sonnet-with-vision
+plus a research step, adjacent to T9-2-positioning. Not in V1.
+
+(2) Welcome-email surface. T5-C6 surfaces in-app (onboarding completion + Home
+card). Delivering the plan — or a slice of it — as a vendor welcome email is a
+separate surface owned jointly with the comms engine (T5-11), not built here.
+
+Manual precursor: T-support-activation-ideas is the off-system version Rob/Ed
+run for the first vendors — it does the online-presence research a person can do
+today and T5-C6 can't, and its runs are the pattern library T5-C6's generation
+should later draw on.
+
 Vendor-facing copy authored in Hearth_Repetition_Layer_Voice_Spec.md (canonical repetition-layer voice spec).
 
 T5-12: Vendor customer data import — advanced
@@ -5583,6 +5603,60 @@ truth for what to build next and what to document. Lightweight —
 text-only, no tooling. Source of upcoming tickets and onboarding
 documentation. Feeds T7-17 priority and many post-launch Tier 4/5
 tickets.
+
+T-support-activation-ideas: Curated vendor activation ideas — manual onboarding runbook
+
+Tier: Support & operations. Not a build ticket — the deliverable is a runbook
+plus the curated ideas it produces.
+
+A repeatable process Rob or Ed runs when a new vendor onboards: research what's
+known about the vendor — their food, their existing audience, their online
+presence (Instagram, website, local reputation) — and hand-build a small,
+curated set of activation ideas to give them a head start. The ideas are
+specific to that vendor: which hosts to approach first, how to use the audience
+they already have, what first-drop format suits their archetype, and any angle
+their online presence suggests. Delivered off-system at first (a short email or
+a conversation), this is the human version of what T5-C6 will later automate.
+
+Why manual, why now. T5-C6 (AI-powered activation plan) is the productionised
+version, but it's a build, it depends on T4-28, and — by design — it reads only
+structured onboarding fields plus social-handle presence as a boolean. It cannot
+look at what's actually on a vendor's Instagram or website. The first real
+vendors (Healthy Habits Cafe, Nathalie) onboard now and benefit most from exactly
+the judgement a person brings to that research. The runbook covers the gap the
+automated plan can't, and the gap before it ships.
+
+Structure. Use T5-C6's five-section skeleton as the template (where to start ·
+capacity · who to approach first · the first 8 drops · what the platform handles
+automatically), plus a sixth, manual-only section: ideas drawn from the vendor's
+online presence and local context. Reusing the skeleton means the manual work
+also pressure-tests T5-C6's structure before anyone builds it.
+
+Guardrails. Ideas stay inside the Hearth model: activation is letting people who
+already value the vendor's food know a drop is happening, not chasing strangers
+or competing for attention. No aggregator-style reach tactics, no manufactured
+urgency. Voice follows the repetition-layer spec and the banned-word list.
+Honest and restrained — a head start, not a sales pitch.
+
+Deliverable. (1) A runbook in the repo at docs/support/activation-ideas-runbook.md
+(or equivalent): the research steps, the section template, worked guardrails, and
+one fully worked example. (2) The curated ideas per vendor captured somewhere
+lightweight (the runbook specifies where — a per-vendor doc, or alongside the
+issue log).
+
+Feedback loop. Note which ideas a vendor actually acts on and how they land.
+This feeds two things: the eventual T5-C6 pattern library (the manual runs are
+its training material), and the vendor issue log (T-support-issue-log).
+
+Surfaces later. The eventual productionised channels — a vendor welcome email
+and in-platform prompts — are owned by T5-C6 plus a comms surface, not by this
+ticket. This is the off-system human process that comes first and informs them.
+
+Dependencies: none hard. Best run for every new vendor from first onboarding.
+Cross-reference: T5-C6 (automated activation plan — this is its manual precursor
+and research input), T-support-dryrun-checklist (sibling onboarding runbook),
+T-support-issue-log (feedback capture), Hearth_Repetition_Layer_Voice_Spec.md (voice).
+Status: Open. Pre-launch — run during the Healthy Habits / Nathalie onboarding.
 
 ### Tier 8 — Platform audit and design system consolidation
 

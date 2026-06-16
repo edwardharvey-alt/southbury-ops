@@ -2255,6 +2255,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 ### Support & operations
 - T-support-dryrun-checklist — Pre-drop dry-run checklist (document, not code) — open
 - T-support-issue-log — Internal vendor issue log — open
+- T-support-activation-ideas — manual onboarding runbook: curated per-vendor activation ideas (precursor to T5-C6) — open
 
 ### Tier 8 — Platform audit and design system consolidation
 - T8-1 — Brand and visual consistency audit — open
