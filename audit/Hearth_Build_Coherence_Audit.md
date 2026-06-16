@@ -5,8 +5,9 @@ itself. This is the pre-launch de-risking pass. It is read-only analysis — it 
 findings, never edits. Confirmed findings become BACKLOG.md tickets and are fixed one at a
 time through the normal pipeline.
 
-**Status:** v1 — for Ed's review before any pass is run. Once the invariants are agreed,
-the per-pass Claude Code prompts are written against this file.
+**Status:** COMPLETE 2026-06-16 — all five passes (A–E) run, triaged, and fixed or logged.
+The per-pass findings and resulting tickets live in BACKLOG.md (the "Build Coherence Audit —
+Pass A/B/C/D/E" sections) and the CLAUDE.md operational learnings.
 
 ---
 

@@ -1583,6 +1583,37 @@ on top of the coding rules above.
     reveal_line. Tracked as T-D4-reveal-line-semantics. (Pass D / D4,
     2026-06-15.)
 
+84. **Pass E verdict: voice/brand is on-message.** The banned-word
+    (promotion, deal), fake-urgency ("Don't hang about."), US-spelling
+    ("Customize") and stale T8-3-label (Menu Library / Brand Hearth)
+    fixes shipped in #379, and the Activation accent was migrated to
+    Hearthfire in #380. Residual open items are small/post-launch: the
+    `reviewPromotionPlan` internal rename, the T8-3-sub1 label remainder
+    (legal copy, legacy dev tool, icon glyphs), and the Activation
+    rgba-tint convergence. (Pass E, 2026-06-16.)
+
+85. **E4 DECISION — Hearthfire `#c4511a` (token `var(--h-fire)`) is the
+    canonical Hearth accent platform-wide.** `#8B6B3F` is RETIRED as a
+    Hearth primary and RETAINED ONLY as the `--vendor-brand-primary`
+    fallback (the neutral default when a vendor has set no colour). It
+    must NEVER be swapped to Hearthfire in that fallback role — doing so
+    would render a colourless vendor's customer-facing surface/poster in
+    Hearth's own accent (brand-bleed — the D5 concern). The external brand
+    playbook still names `#8B6B3F` as primary and needs updating to record
+    Hearthfire as canonical. Finishing the Activation rgba-tint
+    convergence is tracked as T-E4-activation-rgba-tints. (Pass E / E4,
+    2026-06-16.)
+
+86. **Build Coherence Audit COMPLETE — all five passes (A–E) run,
+    triaged, and fixed or logged.** Net: one real structural gap found —
+    the unfinished drop-status lifecycle, built in Pass A
+    (T-A6-lifecycle, the `pg_cron` engine). The auth foundation (Pass C)
+    and the activation/comms architecture (Pass D) are both sound. Every
+    other finding was a small copy/brand item, now shipped or backlogged.
+    Pass seeds repeatedly proved stale against live source (A1 timing,
+    D4 reveal_line) — always verify the seed before building. (Build
+    Coherence Audit, complete 2026-06-16.)
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -2168,6 +2199,14 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T-C-rm-onboarding-backup — delete `onboarding_backup.html` (untracked + gitignored, can't deploy) — the sole remaining copy of the deprecated direct-PostgREST-write onboarding pattern. Housekeeping. Source: Pass C / C1. — open
 - T-D4-reveal-line-semantics — `reveal_line` is now the Activation poster-hook field (written by Card 4's `#act-posterHookInput` in activation.html, rendered as the hero by activation-poster.html); the T5-25 docs that described it as the deferred caption-generator seed are corrected in this PR. No functional bug (poster reads what Activation writes), but before T5-25 Part 1 (caption generator) is built the caption seed must get its OWN column rather than reusing reveal_line. Post-launch, low priority. Source: Pass D / D4. — open
 - T-D5-vendor-name-fallback — customer-facing vendor-name slots fall back to the literal "Hearth" when a vendor has neither `display_name` nor `name`: activation-poster.html (`.poster-vendor-name`, ~:416) and send-order-confirmation/index.ts email subject (~:454) + From header (~:460). If triggered, frames "Hearth" over the (missing) vendor — the one place D5's "never frame over the vendor" could break. Blast radius ~nil (cosmetic if vendor name is mandatory at onboarding — worth confirming). Fix: neutral fallback (vendor slug or similar), not "Hearth". Post-launch, low priority. Source: Pass D / D5. — open
+- T-E2-early-access-urgency — ✓ DONE 2026-06-16 (#379). "Don't hang about." removed from both the static + AI-composed early-access email in activation.html; honest capacity clause + signature kept. Source: Pass E / E2.
+- T-E5-customize-spelling — ✓ DONE 2026-06-16 (#379). "Customize"→"Customise" ×4 on order.html (modal title, button, two aria-labels). Source: Pass E / E5.
+- T-E1-scorecard-promotion-copy — ✓ DONE 2026-06-16 (#379). Both scorecard insight lines reworded off "promotion" → "a more focused message to your own customers". Source: Pass E / E1.
+- T-E1-bundle-placeholder — ✓ DONE 2026-06-16 (#379). drop-menu.html bundle-name placeholder "Meal deal"→"Family feast" (×2). Source: Pass E / E1.
+- T-E1-promotion-plan-rename — PARTIAL. Rendered heading fixed ("Promotion plan"→"Help fill this drop", #379); still OPEN: internal rename of the `reviewPromotionPlan` element id + the drop-manager.html ~:4192 "Promotion plan" code comment. Post-launch, code only. Source: Pass E / E1. — open
+- T-E3-stale-nav-labels — PARTIAL. Dry-run-visible labels fixed (#379: home.html card titles, three drop-manager.html "Menu Library"→"Offer", brand-hearth.html error). Still OPEN, folded into T8-3-sub1: vendor-terms.html legal copy, order-entry.html legacy dev tool, home.html card icon glyphs 'ML'/'BH'. Source: Pass E / E3. — open
+- T-E4-activation-accent — ✓ DONE 2026-06-16 (#380). Hearthfire (`var(--h-fire)`/`#c4511a`) is the canonical Hearth accent; `#8B6B3F` retired as a Hearth primary but RETAINED as the `--vendor-brand-primary` fallback (must NOT migrate there — brand-bleed). Activation operator-chrome refs migrated; vendor-colour slots held. Source: Pass E / E4.
+- T-E4-activation-rgba-tints — finish the Activation Hearthfire convergence: `.act-channel-badge` (~:390) and `.act-social-toggle.is-on` (~:509) couple `#8B6B3F` with `rgba(139,107,63,…)` tints; `.actod-cta:hover` (~:125) uses `#75592f`. Held during #380 to avoid guessing tints. Also: the external brand playbook still names `#8B6B3F` primary and needs updating to Hearthfire. Post-launch, low priority. Source: #380. — open
 
 ### Tier 6 — Production readiness
 - T6-2 — Local development environment — open
