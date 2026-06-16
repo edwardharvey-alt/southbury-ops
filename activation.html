@@ -111,17 +111,17 @@
     .actod-metric-count{ font-size:14px; color:#6b7280; }
     .actod-metric-count strong{ font-weight:600; color:#1F2937; }
     .actod-track{ height:6px; background:#f0e9dd; border-radius:99px; margin-top:8px; overflow:hidden; }
-    .actod-fill{ height:100%; background:#8B6B3F; border-radius:99px; }
+    .actod-fill{ height:100%; background:var(--h-fire); border-radius:99px; }
     .actod-foot{ display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; margin-top:18px; }
     .actod-next{ font-size:13px; color:#6b7280; }
-    .actod-next-key{ color:#8B6B3F; font-weight:600; }
+    .actod-next-key{ color:var(--h-fire); font-weight:600; }
     .actod-next--done{ color:#5f7d5f; }
     .actod-sep{ color:#c9bca3; }
     .actod-steps{ color:#9a8b73; }
     .actod-actions{ display:flex; align-items:center; gap:18px; }
     .actod-link{ font-size:13px; color:#9a8b73; text-decoration:none; }
     .actod-link:hover{ color:#1F2937; }
-    .actod-cta{ font-family:'Figtree', system-ui, sans-serif; font-size:13px; font-weight:600; color:#fff; background:#8B6B3F; border:none; border-radius:9px; padding:9px 16px; text-decoration:none; white-space:nowrap; }
+    .actod-cta{ font-family:'Figtree', system-ui, sans-serif; font-size:13px; font-weight:600; color:#fff; background:var(--h-fire); border:none; border-radius:9px; padding:9px 16px; text-decoration:none; white-space:nowrap; }
     .actod-cta:hover{ background:#75592f; }
 
     .home-pill{
@@ -487,7 +487,7 @@
     .act-capacity-wordings{ display:flex; flex-direction:column; gap:8px; align-self:stretch; width:100%; }
     .act-capacity-wording{ text-align:left; font-family:'Figtree', system-ui, sans-serif; font-size:14px; line-height:1.5; color:#1f2937; background:#faf8f4; border:1.5px solid #efe9df; border-radius:10px; padding:12px 14px; cursor:pointer; transition:border-color .15s ease, background .15s ease; }
     .act-capacity-wording:hover{ border-color:#cbb89d; }
-    .act-capacity-wording.is-selected{ border-color:#8B6B3F; background:#fff; }
+    .act-capacity-wording.is-selected{ border-color:var(--h-fire); background:#fff; }
     .act-channel-pill{ font-family:'Figtree', system-ui, sans-serif; font-size:12px; font-weight:800; letter-spacing:-0.01em; color:#6b7280; background:none; border:none; border-radius:999px; padding:6px 14px; cursor:pointer; transition:background .2s ease, color .2s ease; }
     .act-channel-pill:hover{ color:#1f2937; }
     .act-channel-pill.is-active{ background:#fff; color:#6b4c1f; box-shadow:0 1px 3px rgba(15,23,42,0.08); }
@@ -602,7 +602,7 @@
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.12em;
-      color: #8b6b3f;
+      color: var(--h-fire);
       margin: 0;
     }
 
@@ -2388,7 +2388,7 @@
               <div style="display:flex; flex-wrap:wrap; gap:8px;">
                 ${options.map(opt => {
                   const selected = String(opt.url) === String(currentImage);
-                  return `<button type="button" data-act="pick-image" data-image-url="${escapeHtml(opt.url)}" title="${escapeHtml(opt.label)}" aria-label="Use ${escapeHtml(opt.label)}" style="width:52px; height:52px; border-radius:8px; padding:0; overflow:hidden; cursor:pointer; background:#f6f2ea; border:2px solid ${selected ? '#8B6B3F' : '#efe9df'};"><img src="${escapeHtml(opt.url)}" alt="" style="width:100%; height:100%; object-fit:cover; display:block;" /></button>`;
+                  return `<button type="button" data-act="pick-image" data-image-url="${escapeHtml(opt.url)}" title="${escapeHtml(opt.label)}" aria-label="Use ${escapeHtml(opt.label)}" style="width:52px; height:52px; border-radius:8px; padding:0; overflow:hidden; cursor:pointer; background:#f6f2ea; border:2px solid ${selected ? '#c4511a' : '#efe9df'};"><img src="${escapeHtml(opt.url)}" alt="" style="width:100%; height:100%; object-fit:cover; display:block;" /></button>`;
                 }).join('')}
               </div>`;
     }
