@@ -2873,7 +2873,7 @@
       // Email content for Cards 3 and 9
       const dropDayName = actWeekday(summary.delivery_start, 0) || 'drop day';
       const emailSubject3 = `${dropDayName} — orders open early for you`;
-      const emailBody3 = `Hi,\n\nOrders for ${dropName} are open early for you — you get first access before the public link goes live.\n\nOrder here: ${orderingLink}\n\nCapacity is limited to ${capPhrase} orders${closesTime ? ` and closes at ${closesTime}` : ''}. Don't hang about.\n\n${vendorName}`;
+      const emailBody3 = `Hi,\n\nOrders for ${dropName} are open early for you — you get first access before the public link goes live.\n\nOrder here: ${orderingLink}\n\nCapacity is limited to ${capPhrase} orders${closesTime ? ` and closes at ${closesTime}` : ''}.\n\n${vendorName}`;
 
       const emailSubject9 = `Thanks for your order — ${dropName}`;
       const emailBody9 = `Hi,\n\nThank you for ordering from ${dropName}${hostName ? ` at ${hostName}` : ''}. We hope you enjoyed it.\n\nOur next drop is coming soon — we'll be in touch.\n\n${vendorName}`;
@@ -4027,7 +4027,7 @@
 
             let fullBody;
             if (emailTpMap[tp] === 'early_access_email') {
-              fullBody = `Hi,\n\n${data.copy}\n\nOrder here: ${orderingUrl}\n\nCapacity is limited to ${capStr} and closes at ${closesStr}. Don't hang about.\n\n${vendorName}`;
+              fullBody = `Hi,\n\n${data.copy}\n\nOrder here: ${orderingUrl}\n\nCapacity is limited to ${capStr} and closes at ${closesStr}.\n\n${vendorName}`;
             } else {
               fullBody = `Hi,\n\n${data.copy}\n\n${vendorName}`;
             }

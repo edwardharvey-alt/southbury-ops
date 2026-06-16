@@ -1578,7 +1578,7 @@
                     <div class="menuOrderingNote">
                       <div>
                         <div style="font-weight:800; margin-bottom:4px;">Per-drop ordering</div>
-                        <p class="helperText">Drag rows within a category to change the order shown on the ordering page for this drop only. Menu Library remains the master default.</p>
+                        <p class="helperText">Drag rows within a category to change the order shown on the ordering page for this drop only. Offer remains the master default.</p>
                       </div>
                       <span class="menuOrderingBadge">Drag within category</span>
                     </div>
@@ -2270,7 +2270,7 @@
       if (!list) return;
       const selectedSet = new Set((selectedIds || []).map(String));
       if (!state.categories.length) {
-        list.innerHTML = '<p class="helperText">No categories yet. Add categories in Menu Library.</p>';
+        list.innerHTML = '<p class="helperText">No categories yet. Add categories in Offer.</p>';
         return;
       }
       list.innerHTML = state.categories.map(cat => `
@@ -3623,7 +3623,7 @@
       }
 
       if (!state.menuAssignments.length) {
-        summary.textContent = "No catalogue items found yet. Build products and bundles in Menu Library first.";
+        summary.textContent = "No catalogue items found yet. Build products and bundles in Offer first.";
         container.innerHTML = `<div class="emptyState">No menu items found.</div>`;
         return;
       }
@@ -4224,7 +4224,7 @@
       });
 
       byId("reviewPromotionPlan").innerHTML = `
-        <h4 class="stageSectionTitle">Promotion plan</h4>
+        <h4 class="stageSectionTitle">Help fill this drop</h4>
         <p class="stageSectionSub">Everything Hearth prepares to help you fill this drop.</p>
         <div class="readinessList">
           ${promoSignals.map((s) => `
