@@ -4945,6 +4945,97 @@ invariant).
 **Fix shape (not built):** use a neutral fallback (the vendor slug or
 similar), not "Hearth", in customer-facing vendor-name slots.
 
+### Build Coherence Audit — Pass E (voice, vocabulary & brand)
+
+Tickets surfaced by Build Coherence Audit Pass E
+(`audit/Hearth_Build_Coherence_Audit.md`, Pass E — voice, vocabulary &
+brand). Pass E verdict: voice/brand is largely on-message. The pass
+found a cluster of small rendered-copy fixes (banned words, one
+fake-urgency line, a US spelling, stale T8-3 nav labels) plus the E4
+accent-token decision — all now shipped (#379, #380) or logged below.
+
+T-E2-early-access-urgency — Manufactured-urgency line in the early-access email
+
+**Status:** ✓ DONE 2026-06-16 (#379). Source: Pass E / E2. Removed
+"Don't hang about." from BOTH the static early-access email template and
+the AI-composed variant in `activation.html`; the honest "Capacity is
+limited … closes at {time}" clause and the `{vendorName}` signature were
+retained. Also contradicted the platform's own generate-activation-copy
+voice guardrail, now consistent.
+
+T-E5-customize-spelling — US "Customize" on the customer order page
+
+**Status:** ✓ DONE 2026-06-16 (#379). Source: Pass E / E5.
+"Customize"→"Customise" ×4 on `order.html` (bundle modal title, the
+menu "Customise" button, and two aria-labels). UK spelling; matches the
+"customise" used elsewhere in the codebase.
+
+T-E1-scorecard-promotion-copy — Banned word "promotion" in scorecard insight copy
+
+**Status:** ✓ DONE 2026-06-16 (#379). Source: Pass E / E1. Both
+`scorecard.html` insight lines reworded off "promotion" → "a more
+focused message to your own customers" (articles adjusted to stay
+grammatical).
+
+T-E1-bundle-placeholder — Banned word "deal" / discount framing in a placeholder
+
+**Status:** ✓ DONE 2026-06-16 (#379). Source: Pass E / E1.
+`drop-menu.html` bundle-name input placeholder "Meal deal"→"Family
+feast" (×2, `#bundleName` and `#newBundleName`).
+
+T-E1-promotion-plan-rename — "Promotion plan" banned word
+
+**Status:** PARTIAL. Source: Pass E / E1. The rendered Drop Studio
+Review heading is fixed ("Promotion plan"→"Help fill this drop", #379).
+Still OPEN — the INTERNAL feature name: the `reviewPromotionPlan` element
+id and the `drop-manager.html` ~:4192 "Promotion plan" code comment, to
+rename for consistency. Post-launch, code only (no rendered-copy impact).
+
+T-E3-stale-nav-labels — Stale "Menu Library" / "Brand Hearth" after the T8-3 rename
+
+**Status:** PARTIAL. Source: Pass E / E3. The dry-run-visible labels are
+fixed (#379: `home.html` card titles "Menu Library"→"Offer" and "Brand
+Hearth"→"Brand"; three `drop-manager.html` "Menu Library"→"Offer"
+strings; `brand-hearth.html` error reworded). Still OPEN and folded into
+**T8-3-sub1**: `vendor-terms.html` legal copy, `order-entry.html` legacy
+dev tool, and the `home.html` card icon glyphs 'ML'/'BH'.
+
+T-E4-activation-accent — Activation accent migrated to canonical Hearthfire
+
+**Status:** ✓ DONE 2026-06-16 (#380). Source: Pass E / E4.
+
+**Decision:** Hearthfire (`#c4511a` / token `var(--h-fire)`) is the
+canonical Hearth accent. `#8B6B3F` retires as a Hearth primary but is
+RETAINED as the `--vendor-brand-primary` fallback (the neutral default
+when a vendor has set no colour) and must NOT be migrated there —
+swapping it would render a colourless vendor's customer-facing
+surface/poster in Hearth's own accent (brand-bleed — the D5 concern).
+
+**Shipped:** Activation operator-chrome refs migrated to the token on
+`activation.html` (`.actod-fill`, `.actod-next-key`, `.actod-cta`,
+`.act-capacity-wording.is-selected`, `.act-stat-eyebrow`) and to literal
+`#c4511a` where a token can't resolve (the image-picker JS inline-style
+border; `activation-poster.html` `.btn-primary`, since the poster
+doesn't import hearth.css). All vendor-colour slots and the printed
+`.poster-date` artwork were held.
+
+T-E4-activation-rgba-tints — Finish the Activation Hearthfire convergence
+
+**Status:** Open. Post-launch (low priority). Source: #380. On the
+Activation surface, `.act-channel-badge` (~:390) and
+`.act-social-toggle.is-on` (~:509) couple `#8B6B3F` with
+`rgba(139,107,63,…)` tints, and `.actod-cta:hover` (~:125) uses the
+`#75592f` derived dark shade. These were held during the Hearthfire
+migration (#380) to avoid guessing tint/shade values, so the surface is
+partially converted. Migrate them to Hearthfire-derived equivalents so
+Activation fully converges on one accent.
+
+**Platform convergence note:** the canonical primary is now Hearthfire;
+the remaining `#8B6B3F` across the codebase is scoped to the
+vendor-fallback role. The brand playbook doc (outside the repo) still
+names `#8B6B3F` as primary and must be updated by Ed to record Hearthfire
+as canonical — flagged here so it isn't lost.
+
 ### Tier 6 — Production readiness
 
 These items must all land before any real vendor starts capturing live
