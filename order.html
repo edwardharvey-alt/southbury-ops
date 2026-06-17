@@ -1723,7 +1723,7 @@
         <div class="sectionCardHead">
           <div>
             <h3 class="sectionTitle">Menu</h3>
-            <p class="sectionSub">Today’s available items</p>
+            <p class="sectionSub">On the menu</p>
           </div>
         </div>
 
@@ -2819,28 +2819,34 @@
           ? "We'll only use these to let you know about this drop, by email or message. Nothing else."
           : `We'll only use these to let you know about ${escapeHtml(vendorName)}'s drops, by email or message. Nothing else.`;
 
+        // Progressive disclosure — collapsed by default (prompt line + button
+        // only) so the menu below stays visible. The first click of the button
+        // reveals the fields + microcopy; subsequent clicks submit. See
+        // wireRegisterInterestForm.
         el.classList.remove("hidden");
         el.innerHTML = `
           <div class="sectionCard">
             <p class="sectionSub" id="riLine">${line}</p>
-            <div class="field">
-              <label for="riName">Name</label>
-              <input id="riName" type="text" autocomplete="name" />
-            </div>
-            <div class="field">
-              <label for="riEmail">Email</label>
-              <input id="riEmail" type="email" autocomplete="email" inputmode="email" />
-            </div>
-            <div class="field">
-              <label for="riMobile">Mobile</label>
-              <input id="riMobile" type="tel" autocomplete="tel" inputmode="tel" />
-            </div>
-            <div class="field">
-              <label for="riPostcode">Postcode (optional)</label>
-              <input id="riPostcode" type="text" autocomplete="postal-code" />
+            <div class="hidden" id="riFields">
+              <div class="field">
+                <label for="riName">Name</label>
+                <input id="riName" type="text" autocomplete="name" />
+              </div>
+              <div class="field">
+                <label for="riEmail">Email</label>
+                <input id="riEmail" type="email" autocomplete="email" inputmode="email" />
+              </div>
+              <div class="field">
+                <label for="riMobile">Mobile</label>
+                <input id="riMobile" type="tel" autocomplete="tel" inputmode="tel" />
+              </div>
+              <div class="field">
+                <label for="riPostcode">Postcode (optional)</label>
+                <input id="riPostcode" type="text" autocomplete="postal-code" />
+              </div>
             </div>
             <button class="payButton" id="riSubmit" type="button">${buttonLabel}</button>
-            <p class="payHelper">${microcopy}</p>
+            <p class="payHelper hidden" id="riMicro">${microcopy}</p>
             <div class="statusNotice hidden" id="riNotice"></div>
           </div>
         `;
@@ -2852,6 +2858,11 @@
         const submitBtn = byId("riSubmit");
         if (!submitBtn) return;
 
+        // Collapsed until the first click reveals the fields. The state._riKind
+        // guard in renderRegisterInterest keeps an expanded form from being
+        // collapsed again on re-render.
+        let expanded = false;
+
         const riNotice = (message, type = "") => {
           const n = byId("riNotice");
           if (!n) return;
@@ -2861,6 +2872,16 @@
         };
 
         submitBtn.addEventListener("click", async () => {
+          // First click expands the form (reveal fields + microcopy, focus
+          // Name) rather than submitting.
+          if (!expanded) {
+            expanded = true;
+            byId("riFields")?.classList.remove("hidden");
+            byId("riMicro")?.classList.remove("hidden");
+            byId("riName")?.focus();
+            return;
+          }
+
           const name = (byId("riName")?.value || "").trim();
           const email = (byId("riEmail")?.value || "").trim();
           const mobile = (byId("riMobile")?.value || "").trim();
@@ -4356,7 +4377,7 @@ async function handoffToPayment() {
             <div class="sectionCardHead">
               <div>
                 <h3 class="sectionTitle">Menu</h3>
-                <p class="sectionSub">Today’s available items</p>
+                <p class="sectionSub">On the menu</p>
               </div>
             </div>
             <div class="menuLeadNote" id="menuLeadNote"></div>
