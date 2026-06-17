@@ -1729,6 +1729,12 @@
 
         <div class="menuLeadNote" id="menuLeadNote"></div>
 
+        <!-- T5-8 / T-notify-next-time — demand capture. Rendered by
+             renderRegisterInterest() only in the pre-open state (kind=interest)
+             and the sold-out/closed states (kind=waitlist); hidden whenever the
+             drop is orderable (including capacity-low). -->
+        <div id="registerInterestBlock" class="hidden"></div>
+
         <div id="menuSections">
           <div class="emptyState">Loading menu…</div>
         </div>
@@ -2765,6 +2771,147 @@
         }
 
         byId("menuLeadNote").textContent = "";
+
+        renderRegisterInterest();
+      }
+
+      // T5-8 / T-notify-next-time — demand-capture block. Shown only when the
+      // customer cannot order: pre-open (kind='interest', "Notify me") or
+      // sold-out/closed (kind='waitlist', "Keep me posted"). The sold-out
+      // trigger mirrors renderHero's "fully booked" notice exactly
+      // (state==='open' && remaining<=0), so the block never appears in the
+      // orderable or capacity-low states. Submits to the anonymous
+      // register-interest Edge Function.
+      function getRegisterInterestKind() {
+        const orderState = getOrderWindowState();
+        if (orderState.state === "preopen") return "interest";
+        if (orderState.state === "closed") return "waitlist";
+        const remaining = Math.max(0, getCapacityRemainingAfterBasket());
+        if (remaining <= 0) return "waitlist"; // open & full — mirrors the "fully booked" notice
+        return null; // orderable (incl. capacity-low) — no capture block
+      }
+
+      function renderRegisterInterest() {
+        const el = byId("registerInterestBlock");
+        if (!el) return;
+
+        const kind = getRegisterInterestKind();
+        if (!kind) {
+          el.classList.add("hidden");
+          el.innerHTML = "";
+          state._riKind = null;
+          return;
+        }
+
+        // Already rendered for this state — leave it untouched so an
+        // in-progress form (or a confirmation) isn't clobbered on re-render.
+        if (state._riKind === kind) return;
+        state._riKind = kind;
+
+        const vendorName = (state.vendor && (state.vendor.display_name || state.vendor.name)) || "this vendor";
+        const opensAt = getOrderWindowState().opensAt;
+
+        const line = kind === "interest"
+          ? `Ordering opens ${opensAt ? formatShortDateTime(opensAt) : "soon"}. Leave your details and ${escapeHtml(vendorName)} will let you know the moment it does.`
+          : `This drop's full. Leave your details and ${escapeHtml(vendorName)} will tell you when they next run one.`;
+        const buttonLabel = kind === "interest" ? "Notify me" : "Keep me posted";
+        const microcopy = kind === "interest"
+          ? "We'll only use these to let you know about this drop, by email or message. Nothing else."
+          : `We'll only use these to let you know about ${escapeHtml(vendorName)}'s drops, by email or message. Nothing else.`;
+
+        el.classList.remove("hidden");
+        el.innerHTML = `
+          <div class="sectionCard">
+            <p class="sectionSub" id="riLine">${line}</p>
+            <div class="field">
+              <label for="riName">Name</label>
+              <input id="riName" type="text" autocomplete="name" />
+            </div>
+            <div class="field">
+              <label for="riEmail">Email</label>
+              <input id="riEmail" type="email" autocomplete="email" inputmode="email" />
+            </div>
+            <div class="field">
+              <label for="riMobile">Mobile</label>
+              <input id="riMobile" type="tel" autocomplete="tel" inputmode="tel" />
+            </div>
+            <div class="field">
+              <label for="riPostcode">Postcode (optional)</label>
+              <input id="riPostcode" type="text" autocomplete="postal-code" />
+            </div>
+            <button class="payButton" id="riSubmit" type="button">${buttonLabel}</button>
+            <p class="payHelper">${microcopy}</p>
+            <div class="statusNotice hidden" id="riNotice"></div>
+          </div>
+        `;
+
+        wireRegisterInterestForm(kind);
+      }
+
+      function wireRegisterInterestForm(kind) {
+        const submitBtn = byId("riSubmit");
+        if (!submitBtn) return;
+
+        const riNotice = (message, type = "") => {
+          const n = byId("riNotice");
+          if (!n) return;
+          if (!message) { n.className = "statusNotice hidden"; n.textContent = ""; return; }
+          n.className = `statusNotice ${type || ""}`;
+          n.textContent = message;
+        };
+
+        submitBtn.addEventListener("click", async () => {
+          const name = (byId("riName")?.value || "").trim();
+          const email = (byId("riEmail")?.value || "").trim();
+          const mobile = (byId("riMobile")?.value || "").trim();
+          const postcode = (byId("riPostcode")?.value || "").trim();
+
+          // Client-side validation — name/email/mobile required, basic email shape.
+          const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+          if (!name || !mobile || !emailOk) {
+            riNotice("Please add your name, a valid email and a mobile number.", "error");
+            return;
+          }
+
+          riNotice("");
+          submitBtn.disabled = true;
+          const originalLabel = submitBtn.textContent;
+          submitBtn.textContent = "Sending…";
+
+          let data, error;
+          try {
+            ({ data, error } = await supabase.functions.invoke("register-interest", {
+              body: {
+                drop_id: state.drop?.id || null,
+                kind,
+                name,
+                email,
+                phone: mobile,
+                postcode: postcode || null,
+              },
+            }));
+          } catch (e) {
+            error = e;
+          }
+
+          // Transport error vs function error — the same two-check used by the
+          // Pay flow on this page.
+          if (error || (data && data.error)) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalLabel;
+            riNotice("Sorry — that didn't go through. Please try again.", "error");
+            return;
+          }
+
+          const vendorName = (state.vendor && (state.vendor.display_name || state.vendor.name)) || "this vendor";
+          const el = byId("registerInterestBlock");
+          const message = data && data.already_registered
+            ? "You're already on the list."
+            : `You're on the list. ${escapeHtml(vendorName)} will be in touch.`;
+          // Replace the form with a calm confirmation. The state._riKind guard in
+          // renderRegisterInterest keeps this from being re-rendered away.
+          el.innerHTML = `<div class="sectionCard"><p class="sectionSub">${message}</p></div>`;
+        });
       }
 
       function renderMenu() {
