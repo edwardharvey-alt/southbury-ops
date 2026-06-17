@@ -1729,6 +1729,15 @@
         <p class="dropStoryBody" id="dropStoryBody"></p>
       </div>
 
+      <!-- T5-8 / T-notify-next-time — demand capture. Standalone card between
+           the hero and the menu card. Rendered by renderRegisterInterest()
+           only in the pre-open state (kind=interest) and the sold-out/closed
+           states (kind=waitlist); hidden whenever the drop is orderable
+           (including capacity-low). Kept OUTSIDE the menu card so the wholesale
+           menuCard.innerHTML rebuilds (window-selection / "Choose your sitting")
+           never orphan it. -->
+      <div id="registerInterestBlock" class="hidden"></div>
+
       <div class="card sectionCard">
         <div class="sectionCardHead">
           <div>
@@ -1738,12 +1747,6 @@
         </div>
 
         <div class="menuLeadNote" id="menuLeadNote"></div>
-
-        <!-- T5-8 / T-notify-next-time — demand capture. Rendered by
-             renderRegisterInterest() only in the pre-open state (kind=interest)
-             and the sold-out/closed states (kind=waitlist); hidden whenever the
-             drop is orderable (including capacity-low). -->
-        <div id="registerInterestBlock" class="hidden"></div>
 
         <div id="menuSections">
           <div class="emptyState">Loading menu…</div>
