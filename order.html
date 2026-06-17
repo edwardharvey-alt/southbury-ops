@@ -1712,7 +1712,7 @@
             </div>
 
             <div class="heroDropBlock">
-              <div class="heroDropEyebrow" id="heroDropEyebrow">Available now</div>
+              <div class="heroDropEyebrow hidden" id="heroDropEyebrow"></div>
               <h2 class="heroDropTitle" id="heroDropTitle">Loading…</h2>
               <p class="heroDropSub" id="heroDropSub">Please wait</p>
               <p class="heroHostLine hidden" id="heroHostLine"></p>
@@ -2706,7 +2706,6 @@
         const timingLabel = formatDateTimeRange(state.drop?.delivery_start, state.drop?.delivery_end);
         const fulfilmentLabel = getFulfilmentLabel(state.drop?.fulfilment_mode);
 
-        byId("heroDropEyebrow").textContent = "Available now";
         byId("heroDropTitle").textContent = dropTitle;
         byId("heroDropSub").textContent = [fulfilmentLabel, timingLabel].filter(Boolean).join(" • ");
 
@@ -2794,6 +2793,26 @@
           showNotice("This service is fully booked.", "warn");
         } else {
           showNotice("");
+        }
+
+        // Hero eyebrow mirrors the order-window state (same source as the
+        // status chip below it): "Available now" only when genuinely orderable
+        // (open with capacity, including the capacity-low "Last few places"
+        // case), "Opening soon" pre-open, and omitted entirely in the
+        // closed / completed / sold-out end states — the chip already
+        // communicates those. Hidden via .hidden (display:none) so no empty
+        // gap is reserved above the title. Sold-out uses the same
+        // remaining <= 0 signal as the "fully booked" notice above.
+        const eyebrow = byId("heroDropEyebrow");
+        if (orderState.state === "preopen") {
+          eyebrow.textContent = "Opening soon";
+          eyebrow.classList.remove("hidden");
+        } else if (orderState.state === "open" && remaining > 0) {
+          eyebrow.textContent = "Available now";
+          eyebrow.classList.remove("hidden");
+        } else {
+          eyebrow.textContent = "";
+          eyebrow.classList.add("hidden");
         }
 
         byId("menuLeadNote").textContent = "";
