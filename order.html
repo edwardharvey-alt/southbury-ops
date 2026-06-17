@@ -1321,6 +1321,16 @@
     }
     @keyframes spin{ to{ transform:rotate(360deg); } }
 
+    /* Register-interest action — reuses .payButton's vendor fill + disabled
+       state, but sizing/alignment only is overridden so it reads as a modest,
+       content-width button rather than the full-width Pay bar. */
+    .riCompact{
+      width:auto;
+      justify-self:start;
+      min-height:40px;
+      padding:0 18px;
+    }
+
     .payHelper{
       margin-top:8px;
       text-align:center;
@@ -2845,7 +2855,7 @@
                 <input id="riPostcode" type="text" autocomplete="postal-code" />
               </div>
             </div>
-            <button class="payButton" id="riSubmit" type="button">${buttonLabel}</button>
+            <button class="payButton riCompact" id="riSubmit" type="button">${buttonLabel}</button>
             <p class="payHelper hidden" id="riMicro">${microcopy}</p>
             <div class="statusNotice hidden" id="riNotice"></div>
           </div>
