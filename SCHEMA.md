@@ -340,8 +340,14 @@ relationships across many vendors.
 - `consent_status` (default 'pending') — values: 'pending',
   'granted', 'imported', 'revoked'.
 - `source` (NOT NULL) — values include 'order', 'import',
-  'interest' (T5-8), 'community_invite' (T5-18, future).
-- `lawful_basis` — populated for imported records (T4-14).
+  'interest' and 'waitlist' (T5-8 / T-notify-next-time),
+  'community_invite' (T5-18, future).
+- `source_drop_id` (uuid, FK to `drops`) — the drop a relationship
+  originated from. Set by `register-interest` for 'interest' /
+  'waitlist' demand capture (T5-8); part of that flow's dedupe key
+  (customer_id + owner_id + source + source_drop_id).
+- `lawful_basis` — populated for imported records (T4-14) and for
+  demand capture ('explicit_consent', set by `register-interest`).
 
 The standard vendor-customer query:
 ```javascript

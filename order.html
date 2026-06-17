@@ -1321,6 +1321,29 @@
     }
     @keyframes spin{ to{ transform:rotate(360deg); } }
 
+    /* Register-interest action — reuses .payButton's vendor fill + disabled
+       state, but sizing/alignment only is overridden so it reads as a modest,
+       content-width button rather than the full-width Pay bar. */
+    .riCompact{
+      width:auto;
+      justify-self:center;
+      min-height:40px;
+      padding:0 18px;
+    }
+
+    /* Register-interest content column — keeps the prompt, fields, button and
+       microcopy in a tidy centred ~480px column within the single card, so the
+       compact button isn't lost across the full card width. Fields keep their
+       .field styling (labels left, inputs fill the column). */
+    .riInner{
+      width:100%;
+      max-width:480px;
+      margin:0 auto;
+      display:grid;
+      gap:14px;
+    }
+    .riInner #riLine{ text-align:center; }
+
     .payHelper{
       margin-top:8px;
       text-align:center;
@@ -1719,11 +1742,20 @@
         <p class="dropStoryBody" id="dropStoryBody"></p>
       </div>
 
+      <!-- T5-8 / T-notify-next-time — demand capture. Standalone card between
+           the hero and the menu card. Rendered by renderRegisterInterest()
+           only in the pre-open state (kind=interest) and the sold-out/closed
+           states (kind=waitlist); hidden whenever the drop is orderable
+           (including capacity-low). Kept OUTSIDE the menu card so the wholesale
+           menuCard.innerHTML rebuilds (window-selection / "Choose your sitting")
+           never orphan it. -->
+      <div id="registerInterestBlock" class="card sectionCard hidden"></div>
+
       <div class="card sectionCard">
         <div class="sectionCardHead">
           <div>
             <h3 class="sectionTitle">Menu</h3>
-            <p class="sectionSub">Today’s available items</p>
+            <p class="sectionSub">On the menu</p>
           </div>
         </div>
 
@@ -2765,6 +2797,168 @@
         }
 
         byId("menuLeadNote").textContent = "";
+
+        renderRegisterInterest();
+      }
+
+      // T5-8 / T-notify-next-time — demand-capture block. Shown only when the
+      // customer cannot order: pre-open (kind='interest', "Notify me") or
+      // sold-out/closed (kind='waitlist', "Keep me posted"). The sold-out
+      // trigger mirrors renderHero's "fully booked" notice exactly
+      // (state==='open' && remaining<=0), so the block never appears in the
+      // orderable or capacity-low states. Submits to the anonymous
+      // register-interest Edge Function.
+      function getRegisterInterestKind() {
+        const orderState = getOrderWindowState();
+        if (orderState.state === "preopen") return "interest";
+        if (orderState.state === "closed") return "waitlist";
+        const remaining = Math.max(0, getCapacityRemainingAfterBasket());
+        if (remaining <= 0) return "waitlist"; // open & full — mirrors the "fully booked" notice
+        return null; // orderable (incl. capacity-low) — no capture block
+      }
+
+      function renderRegisterInterest() {
+        const el = byId("registerInterestBlock");
+        if (!el) return;
+
+        const kind = getRegisterInterestKind();
+        if (!kind) {
+          el.classList.add("hidden");
+          el.innerHTML = "";
+          state._riKind = null;
+          return;
+        }
+
+        // Already rendered for this state — leave it untouched so an
+        // in-progress form (or a confirmation) isn't clobbered on re-render.
+        if (state._riKind === kind) return;
+        state._riKind = kind;
+
+        const vendorName = (state.vendor && (state.vendor.display_name || state.vendor.name)) || "this vendor";
+        const opensAt = getOrderWindowState().opensAt;
+
+        const line = kind === "interest"
+          ? `Ordering opens ${opensAt ? formatShortDateTime(opensAt) : "soon"}. Leave your details and ${escapeHtml(vendorName)} will let you know the moment it does.`
+          : `This drop's full. Leave your details and ${escapeHtml(vendorName)} will tell you when they next run one.`;
+        const buttonLabel = kind === "interest" ? "Notify me" : "Keep me posted";
+        const microcopy = kind === "interest"
+          ? "We'll only use these to let you know about this drop, by email or message. Nothing else."
+          : `We'll only use these to let you know about ${escapeHtml(vendorName)}'s drops, by email or message. Nothing else.`;
+
+        // Progressive disclosure — collapsed by default (prompt line + button
+        // only) so the menu below stays visible. The first click of the button
+        // reveals the fields + microcopy; subsequent clicks submit. See
+        // wireRegisterInterestForm.
+        el.classList.remove("hidden");
+        el.innerHTML = `
+          <div class="riInner">
+            <p class="sectionSub" id="riLine">${line}</p>
+            <div class="hidden" id="riFields">
+              <div class="field">
+                <label for="riName">Name</label>
+                <input id="riName" type="text" autocomplete="name" />
+              </div>
+              <div class="field">
+                <label for="riEmail">Email</label>
+                <input id="riEmail" type="email" autocomplete="email" inputmode="email" />
+              </div>
+              <div class="field">
+                <label for="riMobile">Mobile</label>
+                <input id="riMobile" type="tel" autocomplete="tel" inputmode="tel" />
+              </div>
+              <div class="field">
+                <label for="riPostcode">Postcode (optional)</label>
+                <input id="riPostcode" type="text" autocomplete="postal-code" />
+              </div>
+            </div>
+            <button class="payButton riCompact" id="riSubmit" type="button">${buttonLabel}</button>
+            <p class="payHelper hidden" id="riMicro">${microcopy}</p>
+            <div class="statusNotice hidden" id="riNotice"></div>
+          </div>
+        `;
+
+        wireRegisterInterestForm(kind);
+      }
+
+      function wireRegisterInterestForm(kind) {
+        const submitBtn = byId("riSubmit");
+        if (!submitBtn) return;
+
+        // Collapsed until the first click reveals the fields. The state._riKind
+        // guard in renderRegisterInterest keeps an expanded form from being
+        // collapsed again on re-render.
+        let expanded = false;
+
+        const riNotice = (message, type = "") => {
+          const n = byId("riNotice");
+          if (!n) return;
+          if (!message) { n.className = "statusNotice hidden"; n.textContent = ""; return; }
+          n.className = `statusNotice ${type || ""}`;
+          n.textContent = message;
+        };
+
+        submitBtn.addEventListener("click", async () => {
+          // First click expands the form (reveal fields + microcopy, focus
+          // Name) rather than submitting.
+          if (!expanded) {
+            expanded = true;
+            byId("riFields")?.classList.remove("hidden");
+            byId("riMicro")?.classList.remove("hidden");
+            byId("riName")?.focus();
+            return;
+          }
+
+          const name = (byId("riName")?.value || "").trim();
+          const email = (byId("riEmail")?.value || "").trim();
+          const mobile = (byId("riMobile")?.value || "").trim();
+          const postcode = (byId("riPostcode")?.value || "").trim();
+
+          // Client-side validation — name/email/mobile required, basic email shape.
+          const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+          if (!name || !mobile || !emailOk) {
+            riNotice("Please add your name, a valid email and a mobile number.", "error");
+            return;
+          }
+
+          riNotice("");
+          submitBtn.disabled = true;
+          const originalLabel = submitBtn.textContent;
+          submitBtn.textContent = "Sending…";
+
+          let data, error;
+          try {
+            ({ data, error } = await supabase.functions.invoke("register-interest", {
+              body: {
+                drop_id: state.drop?.id || null,
+                kind,
+                name,
+                email,
+                phone: mobile,
+                postcode: postcode || null,
+              },
+            }));
+          } catch (e) {
+            error = e;
+          }
+
+          // Transport error vs function error — the same two-check used by the
+          // Pay flow on this page.
+          if (error || (data && data.error)) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalLabel;
+            riNotice("Sorry — that didn't go through. Please try again.", "error");
+            return;
+          }
+
+          const vendorName = (state.vendor && (state.vendor.display_name || state.vendor.name)) || "this vendor";
+          const el = byId("registerInterestBlock");
+          const message = data && data.already_registered
+            ? "You're already on the list."
+            : `You're on the list. ${escapeHtml(vendorName)} will be in touch.`;
+          // Replace the form with a calm confirmation. The state._riKind guard in
+          // renderRegisterInterest keeps this from being re-rendered away.
+          el.innerHTML = `<div class="riInner"><p class="sectionSub" style="text-align:center;">${message}</p></div>`;
+        });
       }
 
       function renderMenu() {
@@ -4209,7 +4403,7 @@ async function handoffToPayment() {
             <div class="sectionCardHead">
               <div>
                 <h3 class="sectionTitle">Menu</h3>
-                <p class="sectionSub">Today’s available items</p>
+                <p class="sectionSub">On the menu</p>
               </div>
             </div>
             <div class="menuLeadNote" id="menuLeadNote"></div>
