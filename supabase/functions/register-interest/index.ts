@@ -5,8 +5,8 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 // A customer who lands on a drop that is not yet open (kind='interest') or
 // that is sold out / closed (kind='waitlist') leaves their details so the
 // vendor can let them know. Writes a customers row (deduped on lower(email),
-// best-effort backfill of empty fields) and an idempotent
-// customer_relationships row scoped to this drop.
+// best-effort backfill of empty fields) and an idempotent drop_signals row
+// scoped to this (drop, customer, kind).
 //
 // verify_jwt = false. Customer flow has no authenticated user; the only
 // thing authorised is "this public drop exists", checked server-side. The
@@ -98,8 +98,8 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // 1. Drop must exist. Derive vendor_id server-side from the drop row —
-    //    never trust a client-supplied vendor_id.
+    // 1. Drop must exist. (vendor_id is selected only to reject orphan drops;
+    //    no client-supplied vendor_id is ever trusted.)
     const { data: drop, error: dropErr } = await serviceClient
       .from("drops")
       .select("id, vendor_id")
@@ -111,7 +111,6 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Drop lookup failed" }, 500);
     }
     if (!drop || !drop.vendor_id) return jsonResponse({ error: "Drop not found" }, 404);
-    const vendorId = drop.vendor_id as string;
 
     // 2. Dedupe customer on lower(email). All write paths store email
     //    lowercased (create-order upsert, bulk-create-customers), so an
@@ -164,47 +163,31 @@ Deno.serve(async (req) => {
       customerId = inserted.id as string;
     }
 
-    // 3. Idempotent relationship insert. A row scoped to this exact
-    //    (customer, vendor, source, drop) is the dedupe key — a customer can
-    //    legitimately hold an 'order' relationship AND an 'interest'/'waitlist'
-    //    one for the same drop, so source + source_drop_id are part of the key.
-    const { data: existingRel, error: relLookupErr } = await serviceClient
-      .from("customer_relationships")
-      .select("id")
-      .eq("customer_id", customerId)
-      .eq("owner_id", vendorId)
-      .eq("source", payload.kind)
-      .eq("source_drop_id", payload.drop_id)
-      .maybeSingle();
+    // 3. Idempotent demand-signal insert. The (drop_id, customer_id, kind)
+    //    triple is the dedupe key — a customer can legitimately hold an
+    //    'interest' AND a 'waitlist' signal for the same drop, so kind is
+    //    part of the key. ON CONFLICT DO NOTHING via ignoreDuplicates; the
+    //    .select() returns the inserted row on a real insert and nothing on
+    //    a conflict, which is how we distinguish first-time vs already-on-list.
+    const { data: signalRows, error: signalErr } = await serviceClient
+      .from("drop_signals")
+      .upsert(
+        {
+          drop_id: payload.drop_id,
+          customer_id: customerId,
+          kind: payload.kind,
+        },
+        { onConflict: "drop_id,customer_id,kind", ignoreDuplicates: true }
+      )
+      .select("id");
 
-    if (relLookupErr) {
-      console.error("relationship lookup failed", relLookupErr);
-      return jsonResponse({ error: "Relationship lookup failed" }, 500);
+    if (signalErr) {
+      console.error("signal insert failed", signalErr);
+      return jsonResponse({ error: "Signal write failed" }, 500);
     }
 
-    if (existingRel) {
-      return jsonResponse({ ok: true, already_registered: true }, 200);
-    }
-
-    const { error: relErr } = await serviceClient
-      .from("customer_relationships")
-      .insert({
-        customer_id: customerId,
-        owner_type: "vendor",
-        owner_id: vendorId,
-        consent_status: "granted",
-        source: payload.kind,
-        source_drop_id: payload.drop_id,
-        lawful_basis: "explicit_consent",
-        created_at: new Date().toISOString(),
-      });
-
-    if (relErr) {
-      console.error("relationship insert failed", relErr);
-      return jsonResponse({ error: "Relationship write failed" }, 500);
-    }
-
-    return jsonResponse({ ok: true, already_registered: false }, 200);
+    const alreadyRegistered = !signalRows || signalRows.length === 0;
+    return jsonResponse({ ok: true, already_registered: alreadyRegistered }, 200);
   } catch (err) {
     console.error("register-interest unhandled error", err);
     return jsonResponse({ error: "Unexpected error" }, 500);
