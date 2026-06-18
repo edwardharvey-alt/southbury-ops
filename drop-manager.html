@@ -3263,25 +3263,60 @@
       return Number.isFinite(opensAtMs) && opensAtMs > Date.now();
     }
 
-    // T5-8 — fire-and-forget quiet demand pill on each PRE-OPEN tile only.
-    // Calls the vendor-auth get-drop-signals EF; on interest_count >= 1 fills
-    // the tile's hidden placeholder pill. Renders nothing on zero interest, a
-    // failed invoke, or any error. Never throws into tile rendering.
+    // T5-8 — closed/sold-out = ordering has ended. Mirrors order.html's
+    // getOrderWindowState closed intent: stored status closed/completed, OR
+    // now is past closes_at, OR the capacity-driver order count has reached
+    // capacity. Operates on the v_drop_summary-sourced tile drop object, which
+    // carries status, closes_at, and capacity_units_used/_total. Drafts never
+    // count as a closed ordering surface.
+    function isClosedOrSoldOutDrop(drop) {
+      if (!drop) return false;
+      const status = String(drop.status || "").toLowerCase();
+      if (status === "closed" || status === "completed" || status === "complete") return true;
+      if (status === "draft") return false;
+      const closesAtMs = drop.closes_at ? new Date(drop.closes_at).getTime() : null;
+      if (closesAtMs !== null && Number.isFinite(closesAtMs) && closesAtMs < Date.now()) return true;
+      const total = Number(drop.capacity_units_total || 0);
+      const used = Number(drop.capacity_units_used || 0);
+      if (total > 0 && used >= total) return true;
+      return false;
+    }
+
+    // T5-8 — which demand signal a tile should show. Mutually exclusive;
+    // evaluated pre-open → closed/sold-out → nothing. Returns 'preopen',
+    // 'closed', or null (open-with-capacity / draft get no pill, no EF call).
+    function getTileSignalState(drop) {
+      if (isPreOpenDrop(drop)) return "preopen";
+      if (isClosedOrSoldOutDrop(drop)) return "closed";
+      return null;
+    }
+
+    // T5-8 — fire-and-forget quiet demand pill, only on PRE-OPEN and
+    // CLOSED/SOLD-OUT tiles. Pre-open reads interest_count → "{n} waiting";
+    // closed reads waitlist_count → "{n} waitlisted". Calls the vendor-auth
+    // get-drop-signals EF and fills the tile's hidden placeholder pill.
+    // Renders nothing (and the EF is never called) for any other state;
+    // renders nothing on zero count, a failed invoke, or any error. Never
+    // throws into tile rendering.
     function hydrateSignalPills(drops) {
       if (!Array.isArray(drops) || !state.vendorId) return;
       drops.forEach((drop) => {
-        if (!isPreOpenDrop(drop) || !drop.drop_id) return;
+        if (!drop || !drop.drop_id) return;
+        const signalState = getTileSignalState(drop);
+        if (!signalState) return;
         const dropId = drop.drop_id;
         try {
           supabase.functions.invoke("get-drop-signals", {
             body: { vendor_id: state.vendorId, drop_id: dropId }
           }).then(({ data, error }) => {
             if (error || !data || data.error) return;
-            const n = Number(data.interest_count || 0);
+            const countKey = signalState === "preopen" ? "interest_count" : "waitlist_count";
+            const label = signalState === "preopen" ? "waiting" : "waitlisted";
+            const n = Number(data[countKey] || 0);
             if (!Number.isFinite(n) || n < 1) return;
             const el = byId("signalPill-" + dropId);
             if (!el) return;
-            el.textContent = `${n} waiting`;
+            el.textContent = `${n} ${label}`;
             el.style.display = "";
           }).catch(() => {});
         } catch (_err) { /* fail quiet — no pill */ }
@@ -3324,7 +3359,7 @@
               <div class="dropCardStats">
                 <span class="miniChip">${Number(drop.capacity_units_used || 0)} / ${Number(drop.capacity_units_total || 0)} ${escapeHtml(getCapacityCategoryLabel(drop))}</span>
                 <span class="miniChip">${Number(drop.order_count || 0)} orders</span>
-                ${isPreOpenDrop(drop) ? `<span class="miniChip signalPill" id="signalPill-${escapeHtml(String(drop.drop_id))}" style="display:none;"></span>` : ""}
+                ${getTileSignalState(drop) ? `<span class="miniChip signalPill" id="signalPill-${escapeHtml(String(drop.drop_id))}" style="display:none;"></span>` : ""}
               </div>
             </div>
 
