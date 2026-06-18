@@ -203,6 +203,14 @@
       margin-top:0 !important;
     }
 
+    /* T5-8 — quiet pre-open demand signal pill. Subtle Hearthfire tint
+       so it reads as a positive operator signal; calm, no urgency. */
+    #dropBand .dropCardStats .signalPill{
+      background:rgba(196,81,26,0.10);
+      border-color:rgba(196,81,26,0.20);
+      color:var(--h-fire);
+    }
+
     #dropBand .dropCardActions{
       margin-top:auto !important;
     }
@@ -1758,13 +1766,6 @@
 
                   <div class="stageSection" id="reviewPromotionPlan"
                     style="background:var(--h-surface,#FAF8F4); border:1px solid var(--h-border); border-radius:12px; padding:16px 18px;"></div>
-
-                  <!-- T5-8 — quiet pre-open demand signal. Populated by
-                       renderDropSignals() from get-drop-signals; shown only
-                       when the drop is pre-open and has at least one interest
-                       registration. Hidden otherwise. -->
-                  <p class="stageSectionSub" id="reviewSignalLine"
-                    style="display:none; margin:12px 0 0; text-align:center;"></p>
                 </div>
 
                 <div class="reviewCardDivider"></div>
@@ -3253,6 +3254,40 @@
       indicator.textContent = `${current} of ${cards.length}`;
     }
 
+    // T5-8 — pre-open = published (status 'live') with ordering not yet open
+    // (opens_at parses to a finite time in the future). Operates on the
+    // v_drop_summary-sourced tile drop object, which carries status + opens_at.
+    function isPreOpenDrop(drop) {
+      if (!drop || drop.status !== "live" || !drop.opens_at) return false;
+      const opensAtMs = new Date(drop.opens_at).getTime();
+      return Number.isFinite(opensAtMs) && opensAtMs > Date.now();
+    }
+
+    // T5-8 — fire-and-forget quiet demand pill on each PRE-OPEN tile only.
+    // Calls the vendor-auth get-drop-signals EF; on interest_count >= 1 fills
+    // the tile's hidden placeholder pill. Renders nothing on zero interest, a
+    // failed invoke, or any error. Never throws into tile rendering.
+    function hydrateSignalPills(drops) {
+      if (!Array.isArray(drops) || !state.vendorId) return;
+      drops.forEach((drop) => {
+        if (!isPreOpenDrop(drop) || !drop.drop_id) return;
+        const dropId = drop.drop_id;
+        try {
+          supabase.functions.invoke("get-drop-signals", {
+            body: { vendor_id: state.vendorId, drop_id: dropId }
+          }).then(({ data, error }) => {
+            if (error || !data || data.error) return;
+            const n = Number(data.interest_count || 0);
+            if (!Number.isFinite(n) || n < 1) return;
+            const el = byId("signalPill-" + dropId);
+            if (!el) return;
+            el.textContent = `${n} waiting`;
+            el.style.display = "";
+          }).catch(() => {});
+        } catch (_err) { /* fail quiet — no pill */ }
+      });
+    }
+
     function renderDropBand() {
       const band = byId("dropBand");
       const drops = getFilteredDrops();
@@ -3289,6 +3324,7 @@
               <div class="dropCardStats">
                 <span class="miniChip">${Number(drop.capacity_units_used || 0)} / ${Number(drop.capacity_units_total || 0)} ${escapeHtml(getCapacityCategoryLabel(drop))}</span>
                 <span class="miniChip">${Number(drop.order_count || 0)} orders</span>
+                ${isPreOpenDrop(drop) ? `<span class="miniChip signalPill" id="signalPill-${escapeHtml(String(drop.drop_id))}" style="display:none;"></span>` : ""}
               </div>
             </div>
 
@@ -3302,6 +3338,7 @@
       }).join("");
 
       updateCarouselIndicator();
+      hydrateSignalPills(drops);
     }
 
     function renderHostOptions() {
@@ -4263,68 +4300,6 @@
       }
 
       /* Event windows visibility now managed in renderConditionalFields */
-
-      // T5-8 — fire-and-forget pre-open demand signal. Self-guards to the
-      // pre-open state and fails quiet, so it can never break the studio.
-      renderDropSignals();
-    }
-
-    // T5-8 — render the quiet "Signals building" line for a pre-open drop.
-    // Pre-open = published (status 'live') with ordering not yet open
-    // (opens_at in the future). Calls the vendor-auth get-drop-signals EF for
-    // the interest count; renders nothing on zero interest, a failed invoke,
-    // or any non-pre-open state. Never throws into renderReview.
-    async function renderDropSignals() {
-      const el = byId("reviewSignalLine");
-      if (!el) return;
-
-      const hide = () => { el.style.display = "none"; el.textContent = ""; };
-
-      const drop = state.drop;
-      const opensAtMs = drop && drop.opens_at ? new Date(drop.opens_at).getTime() : null;
-      const isPreOpen = Boolean(
-        drop &&
-        drop.status === "live" &&
-        opensAtMs !== null &&
-        Number.isFinite(opensAtMs) &&
-        opensAtMs > Date.now()
-      );
-
-      if (!isPreOpen || !state.vendorId || !state.selectedDropId) {
-        hide();
-        return;
-      }
-
-      const dropIdAtStart = state.selectedDropId;
-
-      try {
-        const { data, error } = await supabase.functions.invoke("get-drop-signals", {
-          body: { vendor_id: state.vendorId, drop_id: dropIdAtStart }
-        });
-
-        // Stale-guard: the user may have switched drops while the invoke was
-        // in flight. Only render if we're still on the same drop.
-        if (state.selectedDropId !== dropIdAtStart) { hide(); return; }
-
-        if (error || !data || data.error) {
-          console.warn("[drop-manager] get-drop-signals failed", error || data?.error);
-          hide();
-          return;
-        }
-
-        const n = Number(data.interest_count || 0);
-        if (!Number.isFinite(n) || n < 1) {
-          hide();
-          return;
-        }
-
-        const noun = n === 1 ? "person" : "people";
-        el.textContent = `Signals building — ${n} ${noun} waiting to order`;
-        el.style.display = "block";
-      } catch (err) {
-        console.warn("[drop-manager] get-drop-signals threw", err);
-        hide();
-      }
     }
 
     function renderQrCode(text) {
