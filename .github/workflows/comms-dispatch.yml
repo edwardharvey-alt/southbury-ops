@@ -1,0 +1,36 @@
+# comms-dispatch
+#
+# Scheduled ping for the dispatch-interest-open Edge Function so it runs
+# without anyone manually firing a curl.
+#
+# The dispatcher self-discovers the work to do (it scans for the relevant
+# drops/interest records itself) and dedupes its sends, so a single
+# invocation is idempotent and safe to repeat. That means this schedule
+# only has to be "often enough" to catch newly-opened drops in good time —
+# it does NOT need to line up with any particular event, and double-firing
+# causes no harm because the function dedupes.
+#
+# Because GitHub Actions cron drives this, there is no pg_net / Postgres
+# scheduling required on the Supabase side. The only secret needed is
+# INTERNAL_FUNCTION_SECRET (set as a repo Actions secret); the Supabase
+# project URL is not secret, so it is hardcoded below.
+
+name: comms-dispatch
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  interest-open:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch interest-open emails
+        run: |
+          curl -sS -X POST \
+            "https://tvqhhjvumgumyetvpgid.supabase.co/functions/v1/dispatch-interest-open" \
+            -H "Content-Type: application/json" \
+            -H "x-internal-secret: ${{ secrets.INTERNAL_FUNCTION_SECRET }}" \
+            -d '{}' \
+            --fail-with-body
