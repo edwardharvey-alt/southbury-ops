@@ -340,14 +340,25 @@ relationships across many vendors.
 - `consent_status` (default 'pending') — values: 'pending',
   'granted', 'imported', 'revoked'.
 - `source` (NOT NULL) — values include 'order', 'import',
-  'interest' and 'waitlist' (T5-8 / T-notify-next-time),
-  'community_invite' (T5-18, future).
+  'community_invite' (T5-18, future). NOTE: 'interest' / 'waitlist'
+  demand capture does NOT create a `customer_relationships` row — see
+  the correction note below.
 - `source_drop_id` (uuid, FK to `drops`) — the drop a relationship
-  originated from. Set by `register-interest` for 'interest' /
-  'waitlist' demand capture (T5-8); part of that flow's dedupe key
-  (customer_id + owner_id + source + source_drop_id).
-- `lawful_basis` — populated for imported records (T4-14) and for
-  demand capture ('explicit_consent', set by `register-interest`).
+  originated from.
+- `lawful_basis` — populated for imported records (T4-14).
+
+**Correction (2026-06-18) — `register-interest` is signals-only.**
+Earlier revisions of this file claimed `register-interest` writes a
+`customer_relationships` row (source 'interest' / 'waitlist',
+`source_drop_id`, `lawful_basis = 'explicit_consent'`). That is NOT
+what the deployed function does. `register-interest` writes only:
+(1) a `customers` row (dedupe on lower(email), best-effort backfill of
+empty fields), and (2) an idempotent `drop_signals` row keyed on
+(drop_id, customer_id, kind). It does NOT write `customer_relationships`
+for interest/waitlist demand capture — interest/waitlist registrants
+therefore have a `customers` row and a `drop_signals` row but no vendor
+consent relationship. (Verified against
+`supabase/functions/register-interest/index.ts`.)
 
 The standard vendor-customer query:
 ```javascript
