@@ -1614,6 +1614,50 @@ on top of the coding rules above.
     D4 reveal_line) — always verify the seed before building. (Build
     Coherence Audit, complete 2026-06-16.)
 
+87. **Comms engine (T5-11) spine: Trigger → Audience → Template →
+    Dispatch → Log.** The trigger is an external GitHub Actions cron
+    pinger, NOT `pg_net` — the database stays sealed (no DB outbound
+    HTTP). The dispatcher EF self-discovers its work (scans
+    `drop_signals` against currently-open drops) and dedupes via
+    `comms_log.dedupe_key` (`INSERT ... ON CONFLICT DO NOTHING` claim),
+    so the pinger is "dumb" and late/overlapping runs are harmless. New
+    touchpoints reuse this spine: new audience query + deterministic
+    in-voice template, same dispatch + log. (T5-11 slice 1, 2026-06-19.)
+
+88. **`comms_log` is the touchpoint-agnostic send ledger.**
+    `dedupe_key` UNIQUE = `'{touchpoint}:{drop}:{recipient}'`;
+    `customer_id` is NULLABLE (host/vendor-directed touchpoints have no
+    customer — `recipient` is the universal target); RLS on, no policies
+    (service-role only). (T5-11 slice 1, 2026-06-19.)
+
+89. **Cron/automated EF auth = the internal shared-secret pattern**
+    (`x-internal-secret` header vs `INTERNAL_FUNCTION_SECRET` env),
+    the same pattern as `stripe-webhook` → `send-order-confirmation`
+    (operational learning #47). `verify_jwt = false` at the gateway plus
+    an in-function compare — cron callers can't use JWT/`getUser()`.
+    (T5-11 slice 1, 2026-06-19.)
+
+90. **Create tables via a committed migration, never ad-hoc SQL run in
+    the editor.** `comms_log` was created both via the SQL editor AND
+    independently by a Claude Code migration → two divergent definitions;
+    it cost a drop-and-reapply reconciliation. (T5-11 slice 1,
+    2026-06-19.)
+
+91. **Secrets generated inline must be saved at creation.** A secret
+    generated inline (e.g. `INTERNAL_FUNCTION_SECRET` via
+    `openssl rand -hex 32`) must be saved to the password manager (and a
+    gitignored `supabase/.env`) the moment it is created. The live value
+    was unrecoverable and had to be reset, then the three consumers
+    redeployed (`stripe-webhook`, `send-order-confirmation`,
+    `dispatch-interest-open`). (T5-11 slice 1, 2026-06-19.)
+
+92. **Migration-history drift repaired 2026-06-19.** Four
+    shipped-but-unrecorded migrations were marked applied via
+    `supabase migration repair --status applied 20260505193331
+    20260612055452 20260612061555 20260618120000`. If `db push` offers
+    to re-run shipped migrations, repair — don't push. (T5-11 slice 1,
+    2026-06-19.)
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -2121,7 +2165,7 @@ Reveal hook field — `#dropRevealLine` is now a `<textarea>` (4 rows, `maxlengt
 - T5-6 — Customer accounts (order history, saved addresses) — open
 - T5-8 — Interest registration: signals mechanic — open
 - T5-9 — Recommendation engine: matured intelligence — open
-- T5-11 — Comms engine V1 (transactional + demand generation email) — partial. T5-11-minimum (order_confirmed email via Resend, fired by `stripe-webhook` after Stripe success) shipped 2026-05-16 (PR #266). Remaining triggers — order_ready automated SMS, drop_announced, drop_reminder, drop_early_access, post_drop_thank_you — and the `comms_log` audit table remain open per pre-launch scope decision.
+- T5-11 — Comms engine V1 (transactional + demand generation email) — partial. T5-11-minimum (order_confirmed email via Resend, fired by `stripe-webhook` after Stripe success) shipped 2026-05-16 (PR #266). Slice 1 ✓ COMPLETE 2026-06-19: interest-registrant ordering-open auto-email shipped — `dispatch-interest-open` EF + `comms_log` ledger, scheduled by a GitHub Actions pinger (`.github/workflows/comms-dispatch.yml`, every 30 min). Remaining triggers — order_ready automated SMS, drop_announced, drop_reminder, drop_early_access, post_drop_thank_you — remain open per pre-launch scope decision.
 - T5-12 — Vendor customer data import: advanced (POS / email / booking integrations) — open
 - T5-14 — Home page: demand orchestration dashboard — open
 - T5-15 — Insights: demand and audience intelligence layer — open

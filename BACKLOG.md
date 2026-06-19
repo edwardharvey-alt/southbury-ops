@@ -1798,7 +1798,16 @@ data_posture awareness: data-rich vendors receive import-first and demand-target
 
 Dependency: T4-28 (intelligence engine — complete), meaningful customer and order data from real drops. Do not build geographic scoring on synthetic test data — wait for Healthy Habits Cafe to run at least 2 drops before evaluating signal quality.
 
-T5-11: Comms engine V1 ✓ PARTIAL — T5-11-minimum (order_confirmed only) shipped 2026-05-16; remaining triggers and `comms_log` table open.
+T5-11: Comms engine V1 ✓ PARTIAL — T5-11-minimum (order_confirmed only) shipped 2026-05-16; slice 1 (interest-registrant ordering-open auto-email) shipped 2026-06-19; remaining triggers open.
+
+**T5-11 slice 1 closure note (2026-06-19):** Interest-registrant
+ordering-open auto-email shipped — `dispatch-interest-open` EF +
+`comms_log` ledger, scheduled by a GitHub Actions pinger
+(`.github/workflows/comms-dispatch.yml`, every 30 min). First
+automated (non-transactional) demand-generation trigger and first use
+of the `comms_log` send ledger. Establishes the comms engine spine
+(Trigger → Audience → Template → Dispatch → Log) documented in CLAUDE.md
+operational learnings.
 
 **T5-11-minimum closure note (2026-05-16, PR #266):** Shipped a
 narrowly-scoped first slice — `send-order-confirmation` Edge Function
@@ -2146,6 +2155,16 @@ to Phase 1, not a replacement). UK WhatsApp Coexistence availability.
 
 **Cross-reference:** T5-C1 (closed — design brief),
 Hearth_Drop_Communications_Architecture.md section 7 (Phase 2 detail).
+
+**WhatsApp API — PARKED post-launch (steer note, 2026-06-19).** When
+this work is picked up: Twilio first (one integration covers SMS +
+WhatsApp via a single BSP), 360dialog later (zero per-message markup at
+volume). Drop comms fall under Meta's Utility category (cheap; only UK
+Marketing-category pricing is pricey). The realistic Phase-1 shape with
+no API: email for the vendor's OWN customers (the comms engine sends it),
+and a `wa.me` deep-link into the HOST's existing group (one tap). The
+only clunky pre-API path is vendor broadcast-to-own-customers — don't
+centre the design on it.
 
 T5-C4: Drop activation guide — vendor-facing communication playbook
 
