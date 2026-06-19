@@ -1,31 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { buildFromHeader, FROM_HELLO } from "../_shared/email.ts";
+import { buildPostDropThankyouEmail } from "../_shared/postDropThankyouEmail.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 const RESEND_URL = "https://api.resend.com/emails";
-
-function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-GB", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "Europe/London",
-  }).toLowerCase().replace(":00", "").replace(" ", "");
-}
-
-function fmtDay(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: "Europe/London",
-  });
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -141,88 +120,64 @@ Deno.serve(async (req) => {
     if (recipients.length === 0) {
       return jsonResponse({
         sent: 0,
+        skipped: 0,
         total: 0,
         errors: [],
         message: "No orders with a valid customer email found for this drop.",
       }, 200);
     }
 
-    // ---- Email content ----------------------------------------------
-    const vendorName  = vendor.display_name || "Hearth";
-    const brandColour = vendor.brand_primary_color || "#8B6B3F";
-    const dropDay     = drop.delivery_start ? fmtDay(drop.delivery_start) : "recently";
-
-    // Next drop details — only included when a future drop exists
-    const nextDropUrl = nextDrop
-      ? `https://lovehearth.co.uk/order.html?drop=${nextDrop.slug}`
-      : null;
-    const nextDropDay = nextDrop?.delivery_start
-      ? fmtDay(nextDrop.delivery_start)
-      : null;
-    const nextDropOpensTime = nextDrop?.opens_at
-      ? fmtTime(nextDrop.opens_at)
-      : null;
-
-    const subject = custom_subject || `Thank you for your order — ${drop.name}`;
-
-    // Wrap a plain-text body (greeting → sign-off, paragraphs separated by
-    // blank lines) in the branded HTML shell. Same header, footer, and
-    // brand colour whether the body is custom or default — only the body
-    // content changes.
-    const buildHtml = (bodyText: string) => {
-      const paragraphs = bodyText
-        .split(/\n{2,}/)
-        .map((p) => p.trim())
-        .filter((p) => p.length > 0)
-        .map((p) => {
-          const safe = escapeHtml(p)
-            .replace(/(https?:\/\/[^\s]+)/g, `<a href="$1" style="color:${brandColour};">$1</a>`)
-            .replace(/\n/g, "<br>");
-          return `  <p style="margin:0 0 16px;font-size:15px;line-height:1.65;">${safe}</p>`;
-        })
-        .join("\n");
-
-      return `
-<div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#1F2937;background:#ffffff;">
-  <div style="margin-bottom:24px;">
-    <span style="font-size:15px;font-weight:700;color:#3D3530;">${vendorName}</span>
-    <span style="font-size:12px;color:#9CA3AF;margin-left:8px;">via Hearth</span>
-  </div>
-${paragraphs}
-</div>`.trim();
-    };
-
-    // Default plain-text body, used when the caller supplies no custom_body.
-    // Includes greeting, optional next-drop block, and sign-off so buildHtml
-    // wraps the whole thing.
-    const buildDefaultBody = (name: string) => {
-      const greeting = name ? `Hi ${name.split(" ")[0]},` : "Hi,";
-      const lines = [
-        greeting,
-        "",
-        `Thank you for ordering from ${drop.name} ${dropDay}. We hope you enjoyed it.`,
-      ];
-      if (nextDrop && nextDropUrl && nextDropDay) {
-        lines.push(
-          "",
-          "Coming up next",
-          "",
-          `${nextDrop.name} — ${nextDropDay}.${nextDropOpensTime ? ` Orders open ${nextDropOpensTime}.` : ""}`,
-          "",
-          `Order early: ${nextDropUrl}`,
-        );
-      }
-      lines.push("", vendorName);
-      return lines.join("\n");
-    };
-
     // ---- Send -------------------------------------------------------
+    // Each per-recipient send is claimed in comms_log via
+    // INSERT ... ON CONFLICT (dedupe_key) DO NOTHING RETURNING id (the
+    // .upsert ignoreDuplicates form), mirroring dispatch-interest-open. A
+    // returned row means this invocation owns the send; a conflict (no row)
+    // means a previous invocation already sent it — skip, don't double-send.
+    // `sb` is the service-role client (comms_log is service-role-only).
     let sent = 0;
+    let skipped = 0;
     const errors: string[] = [];
 
     for (const recipient of recipients) {
-      const text = custom_body || buildDefaultBody(recipient.name);
-      const html = buildHtml(text);
+      // recipient.email is already lowercased + trimmed (dedupe set above).
+      const dedupeKey = `post_drop_thankyou:${drop_id}:${recipient.email}`;
+
+      const { data: claimRows, error: claimErr } = await sb
+        .from("comms_log")
+        .upsert(
+          {
+            drop_id,
+            customer_id: null,
+            touchpoint: "post_drop_thankyou",
+            channel: "email",
+            recipient: recipient.email,
+            dedupe_key: dedupeKey,
+            status: "pending",
+          },
+          { onConflict: "dedupe_key", ignoreDuplicates: true }
+        )
+        .select("id");
+
+      if (claimErr) {
+        errors.push(`${recipient.email}: comms_log claim failed: ${claimErr.message}`);
+        console.error("[send-post-drop-thankyou] comms_log claim failed:", dedupeKey, claimErr);
+        continue;
+      }
+      if (!claimRows || claimRows.length === 0) {
+        // Already sent on a prior invocation — skip.
+        skipped++;
+        continue;
+      }
+      const logId = claimRows[0].id as string;
+
+      const { subject, html, text } = buildPostDropThankyouEmail({
+        recipientName: recipient.name,
+        vendor,
+        drop,
+        nextDrop,
+        customSubject: custom_subject,
+        customBody: custom_body,
+      });
 
       try {
         const res = await fetch(RESEND_URL, {
@@ -243,19 +198,33 @@ ${paragraphs}
 
         if (!res.ok) {
           const errText = await res.text();
+          await sb.from("comms_log")
+            .update({ status: "failed", error: `${res.status} ${errText}`.slice(0, 2000) })
+            .eq("id", logId);
           errors.push(`${recipient.email}: ${res.status} ${errText}`);
           console.error("[send-post-drop-thankyou] Resend error:", recipient.email, errText);
         } else {
+          let resendId: string | null = null;
+          try {
+            const json = await res.json();
+            resendId = (json && typeof json.id === "string") ? json.id : null;
+          } catch { /* body parse is best-effort */ }
+          await sb.from("comms_log")
+            .update({ status: "sent", sent_at: new Date().toISOString(), meta: { resend_id: resendId } })
+            .eq("id", logId);
           sent++;
         }
       } catch (err) {
+        await sb.from("comms_log")
+          .update({ status: "failed", error: ((err as Error).message || "send exception").slice(0, 2000) })
+          .eq("id", logId);
         errors.push(`${recipient.email}: ${(err as Error).message}`);
         console.error("[send-post-drop-thankyou] Exception:", recipient.email, err);
       }
     }
 
-    console.log(`[send-post-drop-thankyou] drop=${drop_id} total=${recipients.length} sent=${sent} errors=${errors.length}`);
-    return jsonResponse({ sent, total: recipients.length, errors }, 200);
+    console.log(`[send-post-drop-thankyou] drop=${drop_id} total=${recipients.length} sent=${sent} skipped=${skipped} errors=${errors.length}`);
+    return jsonResponse({ sent, skipped, total: recipients.length, errors }, 200);
 
   } catch (err) {
     return jsonResponse({ error: (err as Error).message }, 500);
