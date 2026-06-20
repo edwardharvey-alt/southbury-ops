@@ -684,6 +684,13 @@
       margin: 0;
     }
 
+    .act-sent-line {
+      margin-top: 0.4rem;
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+    .act-sent-line:empty { display: none; }
+
     .act-message-preview {
       background: rgba(139,107,63,0.04);
       border-left: 3px solid var(--home-border);
@@ -2630,7 +2637,7 @@
         label: opts.label,
         title: opts.title,
         channel: opts.channel,
-        bodyHtml: `<p>${opts.desc}</p>\n          <div class="act-actions">${res.html}</div>`,
+        bodyHtml: `<p>${opts.desc}</p>\n          <div class="act-sent-line" id="act-sent-card-${opts.cardNum}"></div>\n          <div class="act-actions">${res.html}</div>`,
         open,
         bodyId: 'act-tp-body-' + opts.cardNum
       });
@@ -2727,6 +2734,42 @@
         touchpointKey: null,  // done state handled inline above
         open: actCardOpen(opts.cardNum, !!entry, !!opts.locked)
       });
+    }
+
+    // Fetch the per-drop automated-comms summary once and distribute each
+    // touchpoint to its timeline slot (Card 4 ordering-opens, Card 3 early
+    // access, Card 9 thank-yous) plus order confirmations under the orders
+    // stat. Empty slots collapse via .act-sent-line:empty, so cards/stats
+    // with no send render nothing. Silent-degrading — never blocks the view.
+    async function hydrateSentComms(dropId) {
+      const setSlot = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+      try {
+        const { data, error } = await sb.functions.invoke('get-drop-comms', {
+          body: { vendor_id: state.vendor.id, drop_id: dropId }
+        });
+        if (error || (data && data.error)) return;
+        const items = (data && data.touchpoints) || [];
+        const COMMS_CARD = { interest_open: 4, early_access: 3, post_drop_thankyou: 9 };
+        const LINE = {
+          interest_open: 'Hearth emailed your interest list',
+          early_access: 'Hearth sent early access',
+          post_drop_thankyou: 'Hearth sent your thank-yous',
+        };
+        items.forEach(function (t) {
+          const when = t.last_sent_at
+            ? new Date(t.last_sent_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+            : null;
+          if (t.touchpoint === 'order_confirmation') {
+            setSlot('act-sent-confirmations', t.sent + ' confirmation' + (t.sent === 1 ? '' : 's') + ' sent');
+            return;
+          }
+          const cardNum = COMMS_CARD[t.touchpoint];
+          if (!cardNum || !LINE[t.touchpoint]) return;
+          const parts = [LINE[t.touchpoint], String(t.sent)];
+          if (when) parts.push(when);
+          setSlot('act-sent-card-' + cardNum, parts.join(' · '));
+        });
+      } catch (_e) { /* silent — never blocks the view */ }
     }
 
     function renderDropView(dropId){
@@ -3323,6 +3366,7 @@
 
       const card4Body = `
           <p>Pick where you're posting — the card shows you exactly what to do for that channel.</p>
+          <div class="act-sent-line" id="act-sent-card-4"></div>
           ${card4PillBar}
           <div class="act-actions">
             ${card4SocialFlow
@@ -3606,6 +3650,7 @@
             <p class="act-stat-label">Orders placed</p>
             <p class="act-stat-value">${orderCount}</p>
           </div>
+          <div class="act-sent-line" id="act-sent-confirmations"></div>
           <div class="act-stat-divider"></div>
           <div class="act-capacity">
             <div class="act-capacity-head">
@@ -3642,6 +3687,8 @@
           <aside class="act-layout-aside">${asideHtml}</aside>
         </div>
       `;
+
+      hydrateSentComms(dropId);
 
       actSetupMenuCard(summary, rawDrop);
       actMountSocialImageUpload(dropId, 'act-revealImageUploadContainer', '_revealImageUpload');
