@@ -684,6 +684,20 @@
       margin: 0;
     }
 
+    .act-comms-body {
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
+
+    .act-comms-row {
+      padding: 0.25rem 0;
+      border-top: 1px solid rgba(15,23,42,0.06);
+    }
+
+    .act-comms-row:first-child {
+      border-top: none;
+    }
+
     .act-message-preview {
       background: rgba(139,107,63,0.04);
       border-left: 3px solid var(--home-border);
@@ -2729,6 +2743,40 @@
       });
     }
 
+    // Read-only: list the automated comms Hearth has sent for this drop,
+    // live from get-drop-comms. Silent-degrading — never blocks the view.
+    async function hydrateSentComms(dropId) {
+      const el = document.getElementById('act-comms-sent');
+      if (!el) return;
+      const body = el.querySelector('.act-comms-body');
+      try {
+        const { data, error } = await sb.functions.invoke('get-drop-comms', {
+          body: { vendor_id: state.vendor.id, drop_id: dropId }
+        });
+        if (error || (data && data.error)) { body.textContent = 'Couldn’t load sent comms.'; return; }
+        const items = (data && data.touchpoints) || [];
+        if (items.length === 0) { body.textContent = 'Nothing sent yet.'; return; }
+        const LABELS = {
+          order_confirmation: 'Order confirmations',
+          interest_open: 'Interest list notified',
+          post_drop_thankyou: 'Thank-yous',
+          early_access: 'Early access',
+        };
+        body.innerHTML = items.map(function (t) {
+          const label = LABELS[t.touchpoint] || t.touchpoint;
+          const when = t.last_sent_at
+            ? new Date(t.last_sent_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+            : null;
+          const parts = [label, t.sent + ' sent'];
+          if (t.failed) parts.push(t.failed + ' failed');
+          if (when) parts.push(when);
+          return '<div class="act-comms-row">' + parts.join(' · ') + '</div>';
+        }).join('');
+      } catch (_e) {
+        body.textContent = 'Couldn’t load sent comms.';
+      }
+    }
+
     function renderDropView(dropId){
       // Flush any open message-textarea values into messageDrafts before
       // re-rendering so edits aren't lost when another card's action
@@ -3627,6 +3675,10 @@
           </div>
           ` : ''}
         </div>
+        <div class="act-stat-card" id="act-comms-sent">
+          <p class="act-stat-eyebrow">Sent by Hearth</p>
+          <div class="act-comms-body">Loading…</div>
+        </div>
       `;
 
       content.innerHTML = `
@@ -3642,6 +3694,8 @@
           <aside class="act-layout-aside">${asideHtml}</aside>
         </div>
       `;
+
+      hydrateSentComms(dropId);
 
       actSetupMenuCard(summary, rawDrop);
       actMountSocialImageUpload(dropId, 'act-revealImageUploadContainer', '_revealImageUpload');
