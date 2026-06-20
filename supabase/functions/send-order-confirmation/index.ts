@@ -358,7 +358,7 @@ Deno.serve(async (req) => {
     const { data: orderRow, error: orderErr } = await serviceClient
       .from("orders")
       .select(
-        "id, customer_name, customer_email, customer_notes, delivery_address, fulfilment_mode, total_pence, discount_pence, drop:drop_id ( name, delivery_start, delivery_end, collection_point_description, vendor:vendor_id ( display_name, name, email, tagline, brand_primary_color, brand_text_on_primary, powered_by_hearth_visible ) )"
+        "id, drop_id, customer_name, customer_email, customer_notes, delivery_address, fulfilment_mode, total_pence, discount_pence, drop:drop_id ( name, delivery_start, delivery_end, collection_point_description, vendor:vendor_id ( display_name, name, email, tagline, brand_primary_color, brand_text_on_primary, powered_by_hearth_visible ) )"
       )
       .eq("id", order_id)
       .maybeSingle();
@@ -390,6 +390,7 @@ Deno.serve(async (req) => {
       total_pence: Number(orderRow.total_pence ?? 0),
       discount_pence: orderRow.discount_pence != null ? Number(orderRow.discount_pence) : null,
     };
+    const drop_id = (orderRow.drop_id as string | null) ?? null;
     const drop: Drop = {
       name: (dropRow.name as string | null) ?? null,
       delivery_start: (dropRow.delivery_start as string | null) ?? null,
@@ -485,6 +486,25 @@ Deno.serve(async (req) => {
           body: errBody,
         })
       );
+      // Best-effort visibility logging — must never change the send result or response.
+      try {
+        const dedupeKey = `order_confirmation:${drop_id}:${order_id}`;
+        await serviceClient.from("comms_log").upsert(
+          {
+            drop_id,
+            customer_id: null,
+            touchpoint: "order_confirmation",
+            channel: "email",
+            recipient: order.customer_email,
+            dedupe_key: dedupeKey,
+            status: "failed",
+            error: String(errBody).slice(0, 2000),
+          },
+          { onConflict: "dedupe_key" }
+        );
+      } catch (_e) {
+        /* logging must never block the confirmation path */
+      }
       return jsonResponse({ error: "Resend API error", status: resendResp.status, detail: errBody }, 500);
     }
 
@@ -503,6 +523,27 @@ Deno.serve(async (req) => {
         resend_id: resendId,
       })
     );
+
+    // Best-effort visibility logging — must never change the send result or response.
+    try {
+      const dedupeKey = `order_confirmation:${drop_id}:${order_id}`;
+      await serviceClient.from("comms_log").upsert(
+        {
+          drop_id,
+          customer_id: null,
+          touchpoint: "order_confirmation",
+          channel: "email",
+          recipient: order.customer_email,
+          dedupe_key: dedupeKey,
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          meta: { resend_id: resendId },
+        },
+        { onConflict: "dedupe_key" }
+      );
+    } catch (_e) {
+      /* logging must never block the confirmation path */
+    }
 
     return jsonResponse({ ok: true, resend_id: resendId }, 200);
   } catch (err) {
