@@ -38,6 +38,14 @@
       --home-neutral:#374151;
     }
 
+    /* iOS Safari horizontal-overflow guard — must sit on html, not body
+       alone (operational learning #32). Keeps the activation detail view
+       free of horizontal scroll regardless of any single overrunning child. */
+    html, body {
+      overflow-x: hidden;
+      max-width: 100%;
+    }
+
     body{
       background:var(--home-bg);
       color:var(--home-text);
@@ -453,7 +461,7 @@
       color: #fff;
     }
 
-    .act-channel-bar{ display:inline-flex; gap:4px; padding:4px; background:rgba(139,107,63,0.08); border:1px solid rgba(139,107,63,0.16); border-radius:999px; margin-bottom:10px; align-self: flex-start; }
+    .act-channel-bar{ display:inline-flex; flex-wrap:wrap; gap:4px; padding:4px; background:rgba(139,107,63,0.08); border:1px solid rgba(139,107,63,0.16); border-radius:999px; margin-bottom:10px; align-self: flex-start; max-width:100%; }
     .act-zone{ display:flex; flex-direction:column; gap:10px; align-items:flex-start; padding-top:18px; border-top:1px solid #efe9df; }
     .act-zone:first-child{ padding-top:0; border-top:none; }
     .act-zone-label{ font-family:'Figtree', system-ui, sans-serif; font-size:11px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#9a8b73; margin-bottom:2px; }
@@ -502,7 +510,7 @@
     /* Persistent on/off format toggles for the Social channel. Read as
        settings, not one-tap adjustments — off is a subtle outline with an
        empty dot; on (.is-on) fills with brand colour and a light dot. */
-    .act-social-toggles{ display:inline-flex; gap:8px; align-self:flex-start; margin-top:8px; }
+    .act-social-toggles{ display:inline-flex; flex-wrap:wrap; gap:8px; align-self:flex-start; margin-top:8px; max-width:100%; }
     .act-social-toggle{ display:inline-flex; align-items:center; gap:7px; font-family:'Figtree', system-ui, sans-serif; font-size:12px; font-weight:700; letter-spacing:-0.01em; color:#6b4c1f; background:#fff; border:1px solid rgba(139,107,63,0.30); border-radius:8px; padding:6px 12px; cursor:pointer; transition:background .2s ease, border-color .2s ease, color .2s ease; }
     .act-social-toggle::before{ content:''; width:9px; height:9px; border-radius:50%; border:1.5px solid rgba(139,107,63,0.45); background:transparent; transition:background .2s ease, border-color .2s ease; }
     .act-social-toggle:hover{ border-color:rgba(139,107,63,0.55); }
@@ -754,6 +762,7 @@
       width: 100%;
       box-sizing: border-box;
       resize: vertical;
+      overflow-wrap: anywhere;
     }
 
     .act-email-field textarea {
@@ -762,6 +771,7 @@
 
     .act-confirm-row {
       display: flex;
+      flex-wrap: wrap;
       gap: 8px;
       align-items: center;
     }
@@ -837,8 +847,128 @@
         font-size: 22px;
       }
 
+      /* Artwork frame — the SINGLE shared class for all three scaled
+         social cards (menu/reveal = #act-menuCardFrame, orders-open =
+         #act-ordersOpenFrame, capacity = #act-capacityFrame). Clamp the
+         frame to the (now full-width) zone. */
       .menuCardArtworkFrame {
+        width: 100% !important;
+        min-width: 0 !important;
         max-width: 100% !important;
+      }
+
+      /* NOTE: the inner 540×540 artwork BOXES (.menuCardArtwork /
+         .act-orders-open-artwork / .act-capacity-artwork) are deliberately
+         NOT capped here. They must stay 540px in layout — the html2canvas
+         export rasterises the live node at that size and the inner <img>
+         cover geometry is welded to 540 (T5-25 hard rule). On-screen fit
+         is achieved by the JS transform:scale() inside the fluid,
+         overflow:hidden frame (.menuCardArtworkFrame, above) — never by
+         shrinking the box. A previous attempt capped the box with
+         max-width:100% !important; that was reverted because it would
+         shrink the export and misalign the 540-welded children. */
+
+      /* Scoped catch-all for the detail-card body: cropper canvas + form
+         controls stay within their container. Deliberately EXCLUDES `img`
+         and the `[class*="rtwork"]` boxes/images so the artwork cover
+         geometry and the html2canvas export remain untouched. */
+      .act-tp-body canvas,
+      .act-tp-body textarea,
+      .act-tp-body input {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      /* Every editable field in the detail cards — full-width, border-box,
+         and wrap long unbroken strings (e.g. order URLs in the message and
+         caption textareas) instead of overrunning the edge. Covers the
+         message/caption textareas, the email subject + body inputs, the
+         reveal-line + reveal-dish fields, and the guidance / poster-hook
+         inputs (several of which had no overflow-wrap before this fix). */
+      .act-tp-body textarea,
+      .act-tp-body input,
+      .act-email-field input,
+      .act-email-field textarea,
+      .act-message-edit textarea,
+      .act-reveal-fields textarea,
+      .act-reveal-fields select,
+      .act-guidance-input {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        overflow-wrap: anywhere !important;
+      }
+
+      /* The two-column image|message split (Cards 1, 4, 6) carries rigid
+         280px zone widths for desktop. Those fixed bases + min-width:280px
+         overrun the viewport on narrow phones (the primary horizontal-
+         overflow cause — the card image looks "cut off" because the whole
+         row runs past the screen edge). Stack both zones full-width on
+         mobile so they reflow within the viewport.
+
+         width:100% + min-width:0 stop the grid shrink-wrapping to its
+         widest child (the 540px artwork box) — its parent .act-actions
+         uses align-items:flex-start, which would otherwise size the grid
+         to max-content (540+) and keep frame.clientWidth at 540, pinning
+         the JS scale at 1. Forcing the grid to fill .act-actions makes the
+         frame measure the true narrow width so scale drops below 1. */
+      .act-social-grid {
+        gap: 18px;
+        width: 100% !important;
+        min-width: 0 !important;
+      }
+      .act-social-grid > .act-zone:first-child,
+      .act-social-grid > .act-zone:last-child {
+        flex: 1 1 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+      }
+
+      /* Caption / message / poster field containment.
+
+         Root cause (audit-confirmed): two base rules carry fixed px
+         widths — .act-message-edit (width:720px, :1102) and
+         .act-poster-hook (width:600px, :1354). Their max-width:100%
+         doesn't help because the enclosing .act-zone uses
+         align-items:flex-start (a shrink-to-content cross axis), so the
+         zone grows to the child's 720/600 preferred width and 100%
+         resolves against that wide zone. Every other offender
+         (.act-guidance-row, .act-guidance-input, .act-message-edit-row,
+         .act-copy-error, .act-poster-generate) carries NO fixed width —
+         it inherits the 720/600 from those two parents; .act-copy-error
+         has no CSS rule at all (inline-styled block, full parent width).
+         Constrain the real sources AND the named children so the column
+         can never exceed the viewport, and let chip/field rows wrap. */
+      .act-zone,
+      .act-message-edit,
+      .act-message-edit-row,
+      .act-guidance-row,
+      .act-guidance-input,
+      .act-copy-error,
+      .act-poster-hook,
+      .act-poster-generate {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+      }
+
+      /* Text-bearing fields also wrap long unbroken strings (e.g. order
+         URLs pasted into a caption/guidance field). */
+      .act-guidance-input,
+      .act-message-edit-row textarea,
+      .act-copy-error,
+      .act-email-send-error {
+        overflow-wrap: anywhere !important;
+      }
+
+      /* Chip / tweak rows (Shorter / Warmer / More intriguing …) wrap
+         instead of pushing a chip past the edge. Fixes the ROW, not the
+         chip width. .act-chip-row is already inline-flex+wrap; force wrap
+         defensively and keep .act-message-edit-row wrapping too. */
+      .act-chip-row,
+      .act-message-edit-row {
+        flex-wrap: wrap !important;
+        gap: 6px !important;
       }
     }
 
@@ -1039,6 +1169,7 @@
       resize: vertical;
       min-height: 100px;
       white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
 
     .act-message-edit-row {
@@ -3807,6 +3938,34 @@
           capObserver.observe(capacityFrame);
           state._capacityObserver = capObserver;
         }
+      }
+
+      // The synchronous actUpdate*Scale calls above measure frame.clientWidth
+      // before the ≤768px stacking/fluid-grid layout has fully settled, which
+      // can leave the initial paint pinned at scale(1) (frame still ~540).
+      // Recompute on the next frame once layout is final. Each fn early-returns
+      // on a missing/zero-width frame, so calling all three is safe and cheap.
+      // (Does not change the scale formula or the 540 constant.)
+      requestAnimationFrame(() => {
+        actUpdateMenuCardScale();
+        actUpdateOrdersOpenScale();
+        actUpdateCapacityScale();
+      });
+
+      // Bind a single window resize/orientation handler that re-fits the
+      // artworks whenever the viewport width changes (e.g. rotating the phone,
+      // or crossing the 768px breakpoint). The per-frame ResizeObservers cover
+      // most cases; this is belt-and-suspenders for orientation races.
+      if (!state._scaleResizeBound) {
+        state._scaleResizeBound = true;
+        const recomputeScales = () => {
+          if (state.view !== 'drop') return;
+          actUpdateMenuCardScale();
+          actUpdateOrdersOpenScale();
+          actUpdateCapacityScale();
+        };
+        window.addEventListener('resize', recomputeScales);
+        window.addEventListener('orientationchange', recomputeScales);
       }
     }
 
