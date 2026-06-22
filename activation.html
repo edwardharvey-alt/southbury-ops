@@ -922,6 +922,53 @@
         min-width: 0 !important;
         max-width: 100% !important;
       }
+
+      /* Caption / message / poster field containment.
+
+         Root cause (audit-confirmed): two base rules carry fixed px
+         widths — .act-message-edit (width:720px, :1102) and
+         .act-poster-hook (width:600px, :1354). Their max-width:100%
+         doesn't help because the enclosing .act-zone uses
+         align-items:flex-start (a shrink-to-content cross axis), so the
+         zone grows to the child's 720/600 preferred width and 100%
+         resolves against that wide zone. Every other offender
+         (.act-guidance-row, .act-guidance-input, .act-message-edit-row,
+         .act-copy-error, .act-poster-generate) carries NO fixed width —
+         it inherits the 720/600 from those two parents; .act-copy-error
+         has no CSS rule at all (inline-styled block, full parent width).
+         Constrain the real sources AND the named children so the column
+         can never exceed the viewport, and let chip/field rows wrap. */
+      .act-zone,
+      .act-message-edit,
+      .act-message-edit-row,
+      .act-guidance-row,
+      .act-guidance-input,
+      .act-copy-error,
+      .act-poster-hook,
+      .act-poster-generate {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+      }
+
+      /* Text-bearing fields also wrap long unbroken strings (e.g. order
+         URLs pasted into a caption/guidance field). */
+      .act-guidance-input,
+      .act-message-edit-row textarea,
+      .act-copy-error {
+        overflow-wrap: anywhere !important;
+      }
+
+      /* Chip / tweak rows (Shorter / Warmer / More intriguing …) wrap
+         instead of pushing a chip past the edge. Fixes the ROW, not the
+         chip width. .act-chip-row is already inline-flex+wrap; force wrap
+         defensively and keep .act-message-edit-row wrapping too. */
+      .act-chip-row,
+      .act-message-edit-row {
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+      }
     }
 
     /* Ported from service-board.html (lines 135–162) — keeps the operator
