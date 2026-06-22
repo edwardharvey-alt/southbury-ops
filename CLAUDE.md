@@ -2191,6 +2191,7 @@ Reveal hook field — `#dropRevealLine` is now a `<textarea>` (4 rows, `maxlengt
 - T-aggregator-savings-calculator — Vendor-facing aggregator cost comparison (competitor-derived, Slerp) — open
 - T-notify-next-time — Sold-out waitlist / demand capture (competitor-derived, Hotplate) — open
 - T-cart-hold-timer — Visible cart-hold countdown (competitor-derived, Hotplate) — open
+- T-comms-order-timeline — Comms→order timeline: honest correlation view (orders after each send), NOT attribution. Joins comms_log.sent_at against orders per drop for the Insights layer — open
 
 GenAI shared principles (model choice, hard rules, cost framing) live in
 BACKLOG.md alongside the ticket specs that depend on them — read there before
@@ -2300,6 +2301,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T-support-dryrun-checklist — Pre-drop dry-run checklist (document, not code) — open
 - T-support-issue-log — Internal vendor issue log — open
 - T-support-activation-ideas — manual onboarding runbook: curated per-vendor activation ideas (precursor to T5-C6) — open
+- T-support-healthy-habits-env-cleanup — revert the Big Ballz Catering drop's fake live/public test state + clear stray comms_log / interest / order_confirmation test rows before the Healthy Habits vendor walkthrough; audit-first (shared live DB); also resolve the Southbury Farm keep-as-demo-seed vs clear decision — open
 
 ### Tier 8 — Platform audit and design system consolidation
 - T8-1 — Brand and visual consistency audit — open
@@ -2307,6 +2309,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T8-3 — ~~Language, copy and tone audit (all operator pages)~~ ✓ COMPLETE
 - T8-3-sub1 — Operator pages: "menu" vs "offer" language consistency audit — open
 - T8-4 — Design system consolidation — open (depends on T8-1 → T8-3)
+- T8-5 — Per-vendor brand colour on generated social card scrims (reveal + capacity cards hardcode the warm-brown fallback instead of var(--vendor-brand-primary); keep html2canvas export faithful; #8B6B3F stays as the no-colour fallback per learning #85) — open
 
 ### Tier 9 — Agentic AI workstream
 - T9-1 — Auto-draft drops from demand signals — open
