@@ -1577,6 +1577,50 @@ scarcity, not manufactured urgency.
 
 **Relations:** order flow.
 
+T-comms-order-timeline: Comms→order timeline (honest correlation view, not attribution)
+
+**Status:** Open. Tier 5 / Insights. Post-order-flow — not pre-launch.
+
+**Scope.** Surface order volume in the window *following* each activation
+comms send, by joining `comms_log` (the send-side ledger — `sent_at`,
+`touchpoint`, `drop_id`) against the drop's `orders` so a vendor can SEE the
+shape of demand after each touchpoint (the ordering-opens email, the capacity
+signal, the early-access send, etc.). Presented as a readable per-drop
+timeline: sends marked along the time axis with the orders that landed after
+each one.
+
+**Framing constraint (load-bearing).** This is a READABLE TIMELINE /
+correlation view, NOT a causal attribution claim. With multiple channels
+firing close together — and customers who would have ordered anyway —
+single-send attribution is not provable and Hearth must not pretend it is.
+Copy must avoid conversion / funnel / "this send drove N orders" language;
+present as "orders after each send", honest and observational, in Hearth
+voice (no marketplace or growth-hacking framing). The vendor draws their own
+conclusions about which touchpoints move demand for them over repeated drops
+— the platform shows the shape, it does not assert the cause.
+
+**Why it exists.** T5-11 slice 1 gave us the `comms_log` ledger (sends are
+now recorded with `sent_at` + `touchpoint`); the natural next question a
+vendor asks is "did sending that do anything?". Answering it honestly —
+correlation, not attribution — is exactly the cadence-coaching / demand-
+visibility job of the Insights layer (the intelligence layer is "demand
+visibility and cadence coaching", not a reporting dashboard). Showing the
+demand shape after each touchpoint builds the vendor confidence the strategy
+doc names as the first link in the causal chain.
+
+**Dependencies.** None new — `comms_log` already carries `sent_at` +
+`touchpoint` + `drop_id`, and orders are joinable by `drop_id`. Read-only;
+fits the operator-read-auth pattern (a JWT-authed `get-*` EF reading the
+join server-side). Per operational learning #56(e), `orders` has no
+`vendor_id` — scope via `drop_id IN (vendor's drops)`.
+
+**Relations.** Sits beside T-comms-automation (behaviour-triggered comms +
+plain-language prompts) and the `get-drop-comms` read EF; surfaces into
+T5-15 (Insights demand/audience intelligence layer) and T5-11 (comms
+engine). Voice reference: the "honest, not attribution" framing above and
+the strategic-principles "we build the demand that fills the next one"
+line — observational, never a conversion claim.
+
 ## Hearth AI Strategy
 
 ### Why AI is central to Hearth's competitive position
@@ -5677,6 +5721,55 @@ and research input), T-support-dryrun-checklist (sibling onboarding runbook),
 T-support-issue-log (feedback capture), Hearth_Repetition_Layer_Voice_Spec.md (voice).
 Status: Open. Pre-launch — run during the Healthy Habits / Nathalie onboarding.
 
+T-support-healthy-habits-env-cleanup: Healthy Habits test-environment cleanup for vendor walkthrough
+
+**Status:** Open. Pre-walkthrough — do in a dedicated focused session, not
+folded into other work.
+
+**Scope.** During the mobile-overflow and activation testing work, the
+Big Ballz Catering drop (`e2a2fbd3-1637-46cd-92e8-3c0e2a7636d0`) was nudged
+into a fake live/public state to exercise the activation detail cards:
+`status`, `audience_scope = public`, `drop_type`, and shifted
+`opens_at` / `closes_at` / delivery timing no longer reflect a real drop.
+Alongside it are stray test rows that must come out before a real vendor sees
+the workspace:
+- `comms_log` seed rows (`vendor_open` / `interest_open` test sends),
+- a seeded interest row for `test@example.com`,
+- a test `order_confirmation` row.
+
+The environment must be reverted to a clean, honest state before the Healthy
+Habits workspace is walked through WITH the vendor (Nathalie) — a vendor
+should never see fabricated drop state or test-customer data in their own
+workspace.
+
+**Why it exists.** Test mutations on the shared live Supabase accumulate and
+will be visible to the real vendor during onboarding. Leaving fake live/public
+state on a drop also risks it appearing on customer-facing surfaces
+(`v_drop_public` scopes to `live`/`closed`/`completed` — operational learning
+#70), so this is not purely cosmetic.
+
+**Guardrail (load-bearing).** AUDIT-FIRST / read-only-inventory-first. This is
+the shared production database — enumerate every affected row (the drop's
+original vs current field values, the exact `comms_log` / interest /
+order_confirmation rows) and reason out the dependency order BEFORE any
+destructive delete or update. Deletes in FK-dependency order only. Prefer
+restoring the drop's real prior field values over guessing; if the originals
+aren't recoverable, set it back to a plain `draft` rather than inventing
+timing. No bulk deletes.
+
+**Also in scope.** Resolve the outstanding Southbury Farm Pizza
+keep-as-demo-seed vs clear decision (~28 drops of historical test data) — decide
+whether that history stays as the founding-vendor demo fixture or is cleared,
+and record the decision here.
+
+**Dependencies.** None code. Blocks the Healthy Habits dry run / vendor
+walkthrough (pre-launch sequence item 5). Best run immediately before that
+session.
+
+**Cross-reference.** T-support-dryrun-checklist (the walkthrough this unblocks),
+operational learning #70 (anon visibility of finished/public drops),
+CLAUDE.md "Vendors currently in the database" (fixture inventory).
+
 ### Tier 8 — Platform audit and design system consolidation
 
 Hearth has grown page by page, ticket by ticket. Each page is
@@ -5764,6 +5857,48 @@ This becomes the reference for all future pages and ensures the
 platform doesn't re-drift.
 
 Dependency: T8-1, T8-2, T8-3 complete.
+
+T8-5: Per-vendor brand colour on generated social card scrims
+Tier 8 — design-system / brand consistency. Open. Low priority.
+
+**Scope.** The reveal card (Card 1) and capacity card (Card 6) generated
+social assets currently hardcode their scrim/gradient colour to the warm-brown
+family `rgba(139,107,63, …)` (= the `#8B6B3F` neutral default) rather than
+driving it from `var(--vendor-brand-primary)`. This was a deliberate
+export-fidelity tradeoff for html2canvas 1.4.1 (most recently unified under
+#403, "one warm-brown family"). The orders-open card's flat tint already
+follows the vendor colour via `var()`; the two scrim-based cards do not — so a
+vendor with a custom `brand_primary_color` sees their colour on one generated
+card but not the other two.
+
+**Why it exists.** Per-vendor brand fidelity on the assets a vendor posts to
+their own audience is the whole point of the Activation card system (Hearth
+frames, vendor fills). The current state is an inconsistency: one of the three
+generated cards honours the vendor's colour, two fall back to Hearth's neutral
+brown. Investigate driving ALL generated-card scrims from
+`var(--vendor-brand-primary)` while keeping the html2canvas export
+pixel-faithful to the on-screen preview.
+
+**Constraints (load-bearing).** (1) Export fidelity is sacrosanct — html2canvas
+1.4.1 re-implements gradients/`object-fit` differently from the browser, which
+is why the explicit-pixel/hardcoded-colour approach exists (T5-25 hard rule
+family). Any change must keep preview and exported PNG identical by
+construction. (2) Respect the E4 decision (operational learning #85): `#8B6B3F`
+is RETAINED as the `--vendor-brand-primary` *fallback* (the neutral default
+when a vendor has set no colour) and must NOT be swapped to Hearthfire there —
+a colourless vendor's card must stay neutral, never render in Hearth's own
+accent (brand-bleed). So the fix is "use the vendor colour when set, fall back
+to the neutral brown when not", not "replace brown with Hearthfire".
+
+**Dependencies.** None hard. Touches `activation.html` generated-card render +
+the html2canvas export path; verify against a vendor WITH a custom
+`brand_primary_color` and one without (fallback). Audit-first — confirm the
+current scrim colour source per card before editing.
+
+**Relations.** #403 (scrim unification — the change this follows up),
+T-E4-activation-rgba-tints (the operator-chrome rgba convergence — sibling
+brand-colour cleanup), T5-25 (generated-asset export hard rules), operational
+learnings #63 and #85.
 
 ### Tier 9 — Agentic AI workstream
 
