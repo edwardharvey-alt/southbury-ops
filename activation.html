@@ -2763,6 +2763,15 @@
             setSlot('act-sent-confirmations', t.sent + ' confirmation' + (t.sent === 1 ? '' : 's') + ' sent');
             return;
           }
+          if (t.touchpoint === 'vendor_open') {
+            // Card 4's SECOND sent-line. Routed to its own slot rather than
+            // the cardNum-based act-sent-card-4 so it coexists with the
+            // interest_open line instead of overwriting it (setSlot replaces).
+            const vparts = ['Hearth emailed your customers', String(t.sent)];
+            if (when) vparts.push(when);
+            setSlot('act-sent-card-4-vendor', vparts.join(' · '));
+            return;
+          }
           const cardNum = COMMS_CARD[t.touchpoint];
           if (!cardNum || !LINE[t.touchpoint]) return;
           const parts = [LINE[t.touchpoint], String(t.sent)];
@@ -3247,6 +3256,8 @@
               <button class="act-copy-btn primary" type="button"
                 data-act="copy-message" data-touchpoint="vendor_open"
                 data-action="message_copied">Copy</button>
+              ${card4Active === 'email' ? `<button class="act-copy-btn primary" type="button"
+                data-act="send-vendor-open" data-touchpoint="vendor_open">Send to customers</button>` : ''}
             </div>
             <div class="act-copy-error" data-error-key="vendor_open"
               style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
@@ -3275,7 +3286,11 @@
             <button class="act-copy-btn primary" type="button"
               data-act="copy-message" data-touchpoint="vendor_open"
               data-action="message_copied">Copy</button>
+            ${card4Active === 'email' ? `<button class="act-copy-btn primary" type="button"
+              data-act="send-vendor-open" data-touchpoint="vendor_open">Send to customers</button>` : ''}
           </div>
+          <div class="act-copy-error" data-error-key="vendor_open"
+            style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
         `;
       }
 
@@ -3367,6 +3382,7 @@
       const card4Body = `
           <p>Pick where you're posting — the card shows you exactly what to do for that channel.</p>
           <div class="act-sent-line" id="act-sent-card-4"></div>
+          <div class="act-sent-line" id="act-sent-card-4-vendor"></div>
           ${card4PillBar}
           <div class="act-actions">
             ${card4SocialFlow
@@ -4321,24 +4337,33 @@
         return;
       }
 
-      const confirmEmail = e.target.closest('[data-act="confirm-email"]');
+      // Matches Card 3/9 emailCard "Confirm send" AND Card 4's Email-tab
+      // "Send to customers" (data-act="send-vendor-open"). The latter reuses
+      // this confirm step but reads its message from the channel draft and
+      // posts message_body to send-drop-open-email — branched via
+      // isVendorOpen throughout so Card 3/9 behaviour is unchanged.
+      const confirmEmail = e.target.closest('[data-act="confirm-email"],[data-act="send-vendor-open"]');
       if (confirmEmail) {
         e.preventDefault();
         const tp = confirmEmail.dataset.touchpoint;
         const dropId = state.selectedDropId;
+        const isVendorOpen = confirmEmail.dataset.act === 'send-vendor-open';
 
-        // Save final edits before sending
-        const subjectInput = document.querySelector(`.act-email-subject-input[data-email-key="${tp}"]`);
-        const bodyInput = document.querySelector(`.act-email-body-input[data-email-key="${tp}"]`);
-        if (subjectInput && bodyInput && state.emailDrafts && state.emailDrafts[tp]) {
-          state.emailDrafts[tp].subject = subjectInput.value;
-          state.emailDrafts[tp].body = bodyInput.value;
+        // Save final edits before sending (Card 3/9 emailCard inputs only)
+        if (!isVendorOpen) {
+          const subjectInput = document.querySelector(`.act-email-subject-input[data-email-key="${tp}"]`);
+          const bodyInput = document.querySelector(`.act-email-body-input[data-email-key="${tp}"]`);
+          if (subjectInput && bodyInput && state.emailDrafts && state.emailDrafts[tp]) {
+            state.emailDrafts[tp].subject = subjectInput.value;
+            state.emailDrafts[tp].body = bodyInput.value;
+          }
         }
 
         // Map touchpoint key → Edge Function name
         const fnMap = {
           early_access: 'send-early-access-email',
           thank_you:     'send-post-drop-thankyou',
+          vendor_open:   'send-drop-open-email',
         };
         const fnName = fnMap[tp];
 
@@ -4349,40 +4374,78 @@
           return;
         }
 
+        // Assemble the request body. vendor_open posts the composed Email
+        // channel draft as message_body; Card 3/9 post custom_subject/body.
+        let invokeBody;
+        if (isVendorOpen) {
+          // Flush the live Email textarea (if mid-edit) into the channel
+          // draft first, mirroring the copy-message handler.
+          const cd = state.channelDrafts?.['vendor_open'];
+          const ta = document.querySelector('[data-act="message-textarea"][data-touchpoint="vendor_open"]');
+          if (cd && ta) cd.drafts[cd.active] = ta.value;
+          const messageBody = ((cd && cd.drafts && cd.drafts.email) || '').trim();
+          const vNote = document.querySelector('.act-copy-error[data-error-key="vendor_open"]');
+          if (!messageBody) {
+            if (vNote) { vNote.style.color = '#b91c1c'; vNote.textContent = 'Write your message before sending.'; }
+            return;
+          }
+          if (vNote) vNote.textContent = '';
+          invokeBody = { vendor_id: state.vendor.id, drop_id: dropId, message_body: messageBody };
+        } else {
+          invokeBody = {
+            vendor_id: state.vendor.id,
+            drop_id:   dropId,
+            custom_subject: state.emailDrafts?.[tp]?.subject || null,
+            custom_body:    state.emailDrafts?.[tp]?.body    || null,
+          };
+        }
+
         // Show sending state — disable the button while in-flight
         state.sendingEmail[tp] = true;
         confirmEmail.disabled = true;
+        const restoreLabel = isVendorOpen ? 'Send to customers' : 'Confirm send';
         confirmEmail.textContent = 'Sending…';
 
         try {
-          const { data, error } = await sb.functions.invoke(fnName, {
-            body: {
-              vendor_id: state.vendor.id,
-              drop_id:   dropId,
-              custom_subject: state.emailDrafts?.[tp]?.subject || null,
-              custom_body:    state.emailDrafts?.[tp]?.body    || null,
-            },
-          });
+          const { data, error } = await sb.functions.invoke(fnName, { body: invokeBody });
 
           if (error) throw error;
           if (data && data.error) throw new Error(data.error);
 
-          // Success — collapse, log into done state with sent count
+          // Success — log into done state with sent count
           const sent  = data?.sent  ?? 0;
           const total = data?.total ?? 0;
           state.sendingEmail[tp] = false;
-          state.expandedEmailCards[tp] = false;
-          actLog(tp, 'email_confirmed', { sent, total });
+          if (isVendorOpen) {
+            actLog(tp, 'email_confirmed', { sent, total });
+            // actLog re-rendered the view; refresh the comms ledger so the
+            // vendor_open sent-line appears, then surface a calm result on
+            // the freshly-rendered note element (success green #166534).
+            await hydrateSentComms(dropId);
+            const okNote = document.querySelector('.act-copy-error[data-error-key="vendor_open"]');
+            if (okNote) {
+              okNote.style.color = '#166534';
+              okNote.textContent = `Sent to ${sent} customer${sent === 1 ? '' : 's'}.`;
+            }
+          } else {
+            state.expandedEmailCards[tp] = false;
+            actLog(tp, 'email_confirmed', { sent, total });
+          }
         } catch (err) {
           console.error('[activation] Email send failed:', tp, err);
           state.sendingEmail[tp] = false;
           // Restore the button so the vendor can retry
           confirmEmail.disabled = false;
-          confirmEmail.textContent = 'Confirm send';
+          confirmEmail.textContent = restoreLabel;
           // Show a brief inline error note below the button — leave the card
-          // in its expanded state (no re-render) so the note survives.
-          const note = document.querySelector(`.act-email-send-error[data-error-key="${tp}"]`);
-          if (note) note.textContent = 'Send failed — check your connection and try again.';
+          // in its current state (no re-render) so the note survives.
+          if (isVendorOpen) {
+            const errNote = document.querySelector('.act-copy-error[data-error-key="vendor_open"]');
+            if (errNote) { errNote.style.color = '#b91c1c'; errNote.textContent = 'Send failed — check your connection and try again.'; }
+          } else {
+            const note = document.querySelector(`.act-email-send-error[data-error-key="${tp}"]`);
+            if (note) note.textContent = 'Send failed — check your connection and try again.';
+          }
         }
         return;
       }
