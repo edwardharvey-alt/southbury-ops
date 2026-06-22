@@ -4383,14 +4383,33 @@
           const cd = state.channelDrafts?.['vendor_open'];
           const ta = document.querySelector('[data-act="message-textarea"][data-touchpoint="vendor_open"]');
           if (cd && ta) cd.drafts[cd.active] = ta.value;
-          const messageBody = ((cd && cd.drafts && cd.drafts.email) || '').trim();
+          const rawMessage = ((cd && cd.drafts && cd.drafts.email) || '').trim();
           const vNote = document.querySelector('.act-copy-error[data-error-key="vendor_open"]');
+          // Lift a leading "Subject: ..." line out of the composed email draft
+          // and pass it as the EF's subject. Otherwise send-drop-open-email's
+          // default header ("Ordering is now open") wins and the typed Subject
+          // line shows up as the first line of the email body. If no Subject
+          // line is present (e.g. after an AI regenerate), leave the EF default
+          // standing and send the body unchanged.
+          let parsedSubject = null;
+          let messageBody = rawMessage;
+          if (rawMessage) {
+            const lines = rawMessage.split('\n');
+            const subjMatch = lines[0].match(/^subject:\s*(.+)$/i);
+            if (subjMatch) {
+              parsedSubject = subjMatch[1].trim();
+              let rest = lines.slice(1);
+              if (rest.length && rest[0].trim() === '') rest = rest.slice(1);
+              messageBody = rest.join('\n').trim();
+            }
+          }
           if (!messageBody) {
             if (vNote) { vNote.style.color = '#b91c1c'; vNote.textContent = 'Write your message before sending.'; }
             return;
           }
           if (vNote) vNote.textContent = '';
           invokeBody = { vendor_id: state.vendor.id, drop_id: dropId, message_body: messageBody };
+          if (parsedSubject) invokeBody.subject = parsedSubject;
         } else {
           invokeBody = {
             vendor_id: state.vendor.id,
