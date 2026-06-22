@@ -38,6 +38,14 @@
       --home-neutral:#374151;
     }
 
+    /* iOS Safari horizontal-overflow guard — must sit on html, not body
+       alone (operational learning #32). Keeps the activation detail view
+       free of horizontal scroll regardless of any single overrunning child. */
+    html, body {
+      overflow-x: hidden;
+      max-width: 100%;
+    }
+
     body{
       background:var(--home-bg);
       color:var(--home-text);
@@ -453,7 +461,7 @@
       color: #fff;
     }
 
-    .act-channel-bar{ display:inline-flex; gap:4px; padding:4px; background:rgba(139,107,63,0.08); border:1px solid rgba(139,107,63,0.16); border-radius:999px; margin-bottom:10px; align-self: flex-start; }
+    .act-channel-bar{ display:inline-flex; flex-wrap:wrap; gap:4px; padding:4px; background:rgba(139,107,63,0.08); border:1px solid rgba(139,107,63,0.16); border-radius:999px; margin-bottom:10px; align-self: flex-start; max-width:100%; }
     .act-zone{ display:flex; flex-direction:column; gap:10px; align-items:flex-start; padding-top:18px; border-top:1px solid #efe9df; }
     .act-zone:first-child{ padding-top:0; border-top:none; }
     .act-zone-label{ font-family:'Figtree', system-ui, sans-serif; font-size:11px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#9a8b73; margin-bottom:2px; }
@@ -502,7 +510,7 @@
     /* Persistent on/off format toggles for the Social channel. Read as
        settings, not one-tap adjustments — off is a subtle outline with an
        empty dot; on (.is-on) fills with brand colour and a light dot. */
-    .act-social-toggles{ display:inline-flex; gap:8px; align-self:flex-start; margin-top:8px; }
+    .act-social-toggles{ display:inline-flex; flex-wrap:wrap; gap:8px; align-self:flex-start; margin-top:8px; max-width:100%; }
     .act-social-toggle{ display:inline-flex; align-items:center; gap:7px; font-family:'Figtree', system-ui, sans-serif; font-size:12px; font-weight:700; letter-spacing:-0.01em; color:#6b4c1f; background:#fff; border:1px solid rgba(139,107,63,0.30); border-radius:8px; padding:6px 12px; cursor:pointer; transition:background .2s ease, border-color .2s ease, color .2s ease; }
     .act-social-toggle::before{ content:''; width:9px; height:9px; border-radius:50%; border:1.5px solid rgba(139,107,63,0.45); background:transparent; transition:background .2s ease, border-color .2s ease; }
     .act-social-toggle:hover{ border-color:rgba(139,107,63,0.55); }
@@ -754,6 +762,7 @@
       width: 100%;
       box-sizing: border-box;
       resize: vertical;
+      overflow-wrap: anywhere;
     }
 
     .act-email-field textarea {
@@ -762,6 +771,7 @@
 
     .act-confirm-row {
       display: flex;
+      flex-wrap: wrap;
       gap: 8px;
       align-items: center;
     }
@@ -839,6 +849,22 @@
 
       .menuCardArtworkFrame {
         max-width: 100% !important;
+      }
+
+      /* The two-column image|message split (Cards 1, 4, 6) carries rigid
+         280px zone widths for desktop. Those fixed bases + min-width:280px
+         overrun the viewport on narrow phones (the primary horizontal-
+         overflow cause — the card image looks "cut off" because the whole
+         row runs past the screen edge). Stack both zones full-width on
+         mobile so they reflow within the viewport. */
+      .act-social-grid {
+        gap: 18px;
+      }
+      .act-social-grid > .act-zone:first-child,
+      .act-social-grid > .act-zone:last-child {
+        flex: 1 1 100%;
+        min-width: 0;
+        max-width: 100%;
       }
     }
 
@@ -1039,6 +1065,7 @@
       resize: vertical;
       min-height: 100px;
       white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
 
     .act-message-edit-row {
