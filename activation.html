@@ -857,27 +857,24 @@
         max-width: 100% !important;
       }
 
-      /* The inner 540×540 artwork boxes are fixed-width and shrunk to fit
-         via a JS transform:scale() driven by a ResizeObserver on the
-         frame. Cap them (and any future artwork variant) so that if a
-         scale recompute lags a frame-width change the box can never push
-         past the frame's right edge. Does NOT touch the 540px export
-         geometry — these are render-time caps inside the ≤768px query
-         only, and the html2canvas export resets transform to scale(1)
-         against the untouched 540px box (T5-25 hard rule preserved). */
-      .menuCardArtwork,
-      .act-orders-open-artwork,
-      .act-capacity-artwork {
-        max-width: 100% !important;
-      }
+      /* NOTE: the inner 540×540 artwork BOXES (.menuCardArtwork /
+         .act-orders-open-artwork / .act-capacity-artwork) are deliberately
+         NOT capped here. They must stay 540px in layout — the html2canvas
+         export rasterises the live node at that size and the inner <img>
+         cover geometry is welded to 540 (T5-25 hard rule). On-screen fit
+         is achieved by the JS transform:scale() inside the fluid,
+         overflow:hidden frame (.menuCardArtworkFrame, above) — never by
+         shrinking the box. A previous attempt capped the box with
+         max-width:100% !important; that was reverted because it would
+         shrink the export and misalign the 540-welded children. */
 
-      /* Scoped catch-all for the detail-card body: any media element,
-         field, or artwork-named element stays within its container. */
-      .act-tp-body img,
+      /* Scoped catch-all for the detail-card body: cropper canvas + form
+         controls stay within their container. Deliberately EXCLUDES `img`
+         and the `[class*="rtwork"]` boxes/images so the artwork cover
+         geometry and the html2canvas export remain untouched. */
       .act-tp-body canvas,
       .act-tp-body textarea,
-      .act-tp-body input,
-      .act-tp-body [class*="rtwork"] {
+      .act-tp-body input {
         max-width: 100% !important;
         box-sizing: border-box !important;
       }
@@ -906,9 +903,18 @@
          overrun the viewport on narrow phones (the primary horizontal-
          overflow cause — the card image looks "cut off" because the whole
          row runs past the screen edge). Stack both zones full-width on
-         mobile so they reflow within the viewport. */
+         mobile so they reflow within the viewport.
+
+         width:100% + min-width:0 stop the grid shrink-wrapping to its
+         widest child (the 540px artwork box) — its parent .act-actions
+         uses align-items:flex-start, which would otherwise size the grid
+         to max-content (540+) and keep frame.clientWidth at 540, pinning
+         the JS scale at 1. Forcing the grid to fill .act-actions makes the
+         frame measure the true narrow width so scale drops below 1. */
       .act-social-grid {
         gap: 18px;
+        width: 100% !important;
+        min-width: 0 !important;
       }
       .act-social-grid > .act-zone:first-child,
       .act-social-grid > .act-zone:last-child {
@@ -3884,6 +3890,34 @@
           capObserver.observe(capacityFrame);
           state._capacityObserver = capObserver;
         }
+      }
+
+      // The synchronous actUpdate*Scale calls above measure frame.clientWidth
+      // before the ≤768px stacking/fluid-grid layout has fully settled, which
+      // can leave the initial paint pinned at scale(1) (frame still ~540).
+      // Recompute on the next frame once layout is final. Each fn early-returns
+      // on a missing/zero-width frame, so calling all three is safe and cheap.
+      // (Does not change the scale formula or the 540 constant.)
+      requestAnimationFrame(() => {
+        actUpdateMenuCardScale();
+        actUpdateOrdersOpenScale();
+        actUpdateCapacityScale();
+      });
+
+      // Bind a single window resize/orientation handler that re-fits the
+      // artworks whenever the viewport width changes (e.g. rotating the phone,
+      // or crossing the 768px breakpoint). The per-frame ResizeObservers cover
+      // most cases; this is belt-and-suspenders for orientation races.
+      if (!state._scaleResizeBound) {
+        state._scaleResizeBound = true;
+        const recomputeScales = () => {
+          if (state.view !== 'drop') return;
+          actUpdateMenuCardScale();
+          actUpdateOrdersOpenScale();
+          actUpdateCapacityScale();
+        };
+        window.addEventListener('resize', recomputeScales);
+        window.addEventListener('orientationchange', recomputeScales);
       }
     }
 
