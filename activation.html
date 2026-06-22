@@ -1490,6 +1490,32 @@
       return `<span class="actod-status actod-status--muted">${escapeHtml(st.label)}</span>`;
     }
 
+    // The inner HTML for an overview card's "Next — … · X of N done" line.
+    // Extracted so the suffix can be re-rendered in place once a drop's
+    // persisted activation log is hydrated (see refreshCardProgress).
+    function nextLineHtml(s){
+      const progress = getDropProgress(s);
+      const stepsSuffix = progress.total > 0
+        ? ` <span class="actod-sep">·</span> <span class="actod-steps">${progress.completed} of ${progress.total} done</span>`
+        : '';
+      return (progress.nextTitle && progress.completed < progress.total)
+        ? `<div class="actod-next"><span class="actod-next-key">Next</span> — ${escapeHtml(progress.nextTitle)}${stepsSuffix}</div>`
+        : (progress.total > 0 && progress.completed === progress.total)
+          ? `<div class="actod-next actod-next--done">All steps complete</div>`
+          : '';
+    }
+
+    // Re-render a single overview card's progress line from current
+    // state.activationLog. Called after that drop's log is hydrated so the
+    // "X of N done" suffix reflects saved done-states. No-op if the card is
+    // no longer in the DOM (e.g. the vendor navigated into a drop view).
+    function refreshCardProgress(dropId){
+      const s = state.summaryById[dropId];
+      if (!s) return;
+      const wrap = document.getElementById('actod-next-wrap-' + dropId);
+      if (wrap) wrap.innerHTML = nextLineHtml(s);
+    }
+
     function cardHtml(s){
       const host = s.host_name ? String(s.host_name) : '';
       const fm = String(s.fulfilment_mode || '').toLowerCase();
@@ -1514,15 +1540,7 @@
             </div>
           </div>`;
 
-      const progress = getDropProgress(s);
-      const stepsSuffix = progress.total > 0
-        ? ` <span class="actod-sep">·</span> <span class="actod-steps">${progress.completed} of ${progress.total} done</span>`
-        : '';
-      const nextLine = (progress.nextTitle && progress.completed < progress.total)
-        ? `<div class="actod-next"><span class="actod-next-key">Next</span> — ${escapeHtml(progress.nextTitle)}${stepsSuffix}</div>`
-        : (progress.total > 0 && progress.completed === progress.total)
-          ? `<div class="actod-next actod-next--done">All steps complete</div>`
-          : '';
+      const nextLine = nextLineHtml(s);
 
       const sbLink = isLive
         ? `<a class="actod-link" href="${HearthNav.withVendor('./service-board.html')}">Service board</a>`
@@ -1539,7 +1557,7 @@
           </div>
           ${ordersMetric}
           <div class="actod-foot">
-            <div class="actod-next-wrap">${nextLine}</div>
+            <div class="actod-next-wrap" id="actod-next-wrap-${escapeHtml(s.drop_id)}">${nextLine}</div>
             <div class="actod-actions">
               ${sbLink}
               <a class="actod-cta" href="#" data-drop-id="${escapeHtml(s.drop_id)}">Open activation →</a>
@@ -1556,6 +1574,17 @@
         return;
       }
       content.innerHTML = `<div class="activation-grid">${rows.map(cardHtml).join('')}</div>`;
+      // Cards render immediately with their un-hydrated step count (which is 0
+      // until a drop's detail view is opened, because progress reads the
+      // in-memory state.activationLog). Hydrate each shown drop's persisted log
+      // and patch its "X of N done" suffix in place as the call resolves, so
+      // the overview reflects saved progress without opening each drop. A
+      // failed call leaves that card's count untouched.
+      rows.forEach(s => {
+        const dropId = s && s.drop_id;
+        if (!dropId) return;
+        hydrateDropLog(dropId).then(ok => { if (ok) refreshCardProgress(dropId); });
+      });
     }
 
     async function loadDrops(){
@@ -1664,6 +1693,40 @@
     // when actLog() is called.
     function getDropLog(dropId) {
       return (state.activationLog || []).filter(e => e.dropId === dropId);
+    }
+
+    // Hydrate a single drop's activation log from the persisted store,
+    // REPLACING that drop's in-memory entries. Mirrors the replace-per-drop
+    // semantics in showDropView so it is idempotent — re-hydrating a drop
+    // already opened/loaded this session never duplicates entries. Resolves
+    // true on success, false if the call failed (caller keeps the
+    // un-hydrated count rather than breaking).
+    async function hydrateDropLog(dropId) {
+      try {
+        const { data: logRows, error: logError } = await sb.functions.invoke('activation-events', {
+          body: { op: 'list', drop_id: dropId }
+        });
+        if (logError) { console.error('activation-events list failed', logError); return false; }
+        if (!Array.isArray(logRows)) return false;
+        state.activationLog = state.activationLog.filter(e => e.dropId !== dropId);
+        // Rows arrive newest-first; reverse to oldest-first so first-match
+        // helpers return the earliest entry per touchpoint (matches the
+        // in-memory push order and showDropView's hydration).
+        logRows.slice().reverse().forEach(row => {
+          state.activationLog.push({
+            touchpoint: row.touchpoint,
+            action: row.action,
+            dropId: row.drop_id,
+            timestamp: row.created_at,
+            ...(row.meta || {}),
+            actor: row.actor
+          });
+        });
+        return true;
+      } catch (e) {
+        console.error('activation-events list failed', e);
+        return false;
+      }
     }
 
     // Returns progress for a drop: { completed, total, nextTitle }
