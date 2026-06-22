@@ -847,10 +847,58 @@
         font-size: 22px;
       }
 
+      /* Artwork frame — the SINGLE shared class for all three scaled
+         social cards (menu/reveal = #act-menuCardFrame, orders-open =
+         #act-ordersOpenFrame, capacity = #act-capacityFrame). Clamp the
+         frame to the (now full-width) zone. */
       .menuCardArtworkFrame {
         width: 100% !important;
-        min-width: 0;
+        min-width: 0 !important;
         max-width: 100% !important;
+      }
+
+      /* The inner 540×540 artwork boxes are fixed-width and shrunk to fit
+         via a JS transform:scale() driven by a ResizeObserver on the
+         frame. Cap them (and any future artwork variant) so that if a
+         scale recompute lags a frame-width change the box can never push
+         past the frame's right edge. Does NOT touch the 540px export
+         geometry — these are render-time caps inside the ≤768px query
+         only, and the html2canvas export resets transform to scale(1)
+         against the untouched 540px box (T5-25 hard rule preserved). */
+      .menuCardArtwork,
+      .act-orders-open-artwork,
+      .act-capacity-artwork {
+        max-width: 100% !important;
+      }
+
+      /* Scoped catch-all for the detail-card body: any media element,
+         field, or artwork-named element stays within its container. */
+      .act-tp-body img,
+      .act-tp-body canvas,
+      .act-tp-body textarea,
+      .act-tp-body input,
+      .act-tp-body [class*="rtwork"] {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      /* Every editable field in the detail cards — full-width, border-box,
+         and wrap long unbroken strings (e.g. order URLs in the message and
+         caption textareas) instead of overrunning the edge. Covers the
+         message/caption textareas, the email subject + body inputs, the
+         reveal-line + reveal-dish fields, and the guidance / poster-hook
+         inputs (several of which had no overflow-wrap before this fix). */
+      .act-tp-body textarea,
+      .act-tp-body input,
+      .act-email-field input,
+      .act-email-field textarea,
+      .act-message-edit textarea,
+      .act-reveal-fields textarea,
+      .act-reveal-fields select,
+      .act-guidance-input {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        overflow-wrap: anywhere !important;
       }
 
       /* The two-column image|message split (Cards 1, 4, 6) carries rigid
