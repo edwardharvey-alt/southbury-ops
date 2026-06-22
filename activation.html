@@ -4777,5 +4777,24 @@
     init();
   </script>
   <script>HearthNav.decorateLinks();</script>
+
+  <!-- DEBUG-OVERFLOW: temporary on-screen diagnostic; remove after investigation -->
+  <div id="hearthDebug" style="position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#000;color:#0f0;font:10px/1.3 monospace;padding:6px;max-height:45vh;overflow:auto;white-space:pre-wrap;pointer-events:none"></div>
+  <script>
+  // DEBUG-OVERFLOW: temporary on-screen diagnostic; remove after investigation
+  (function(){
+    var el=document.getElementById('hearthDebug');
+    function scan(){
+      var vw=window.innerWidth, mq=window.matchMedia('(max-width:768px)').matches, off=[];
+      document.querySelectorAll('body *').forEach(function(n){
+        if(n.id==='hearthDebug')return;
+        var r=n.getBoundingClientRect();
+        if(r.right>vw+1&&r.width>40){off.push(n.tagName.toLowerCase()+(typeof n.className==='string'&&n.className?'.'+n.className.trim().split(/\s+/).slice(0,2).join('.'):'')+' w='+Math.round(r.width)+' right='+Math.round(r.right));}
+      });
+      el.textContent='BUILD 2026-06-22T15:48:30Z\nvw='+vw+'  mq<=768:'+mq+'\noffenders '+off.length+':\n'+off.slice(-12).join('\n');
+    }
+    setInterval(scan,1500);scan();
+  })();
+  </script>
 </body>
 </html>
