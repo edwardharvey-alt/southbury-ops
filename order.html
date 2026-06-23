@@ -1790,7 +1790,7 @@
       <div class="basketHead">
         <div>
           <h3 class="sectionTitle">Your order</h3>
-          <p class="sectionSub">Review your basket and enter delivery details</p>
+          <p class="sectionSub" id="basketHeadSub">Review your basket and enter delivery details</p>
         </div>
         <button class="btnGhost" id="closeBasketBtn" type="button">Done</button>
       </div>
@@ -1844,7 +1844,7 @@
         </div>
 
         <div id="addressWrap">
-          <p class="addressGroupLabel">Your address</p>
+          <p class="addressGroupLabel" id="addressGroupLabel">Your address</p>
           <div class="addressGroup">
             <div class="field">
               <label for="addrLine1">Address line 1</label>
@@ -3479,6 +3479,20 @@
 
         byId("tableWrap").classList.toggle("hidden", !canUseTable);
         byId("collectionWrap").classList.toggle("hidden", !isCollection);
+
+        // Address is required for every order (collection included), but the
+        // framing must match the chosen mode: a collection customer reads the
+        // address block as a contact address, not a delivery destination.
+        const basketHeadSub = byId("basketHeadSub");
+        if (basketHeadSub) {
+          basketHeadSub.textContent = isCollection
+            ? "Review your basket and enter your details"
+            : "Review your basket and enter delivery details";
+        }
+        const addressGroupLabel = byId("addressGroupLabel");
+        if (addressGroupLabel) {
+          addressGroupLabel.textContent = isCollection ? "Your contact address" : "Your address";
+        }
 
         const locationName = state.host?.name || state.dropSummary?.host_name || state.vendor?.display_name || state.vendor?.name || "the location";
         byId("collectionNotice").textContent = `Collection instructions: please collect from ${locationName} during the stated service window.`;
