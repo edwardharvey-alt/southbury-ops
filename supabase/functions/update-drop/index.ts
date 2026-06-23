@@ -68,6 +68,7 @@ const ALLOWED_FIELDS = new Set([
 
 const VALID_DROP_TYPES = new Set(["neighbourhood", "community", "event"]);
 const VALID_AUDIENCE_SCOPES = new Set(["public", "community"]);
+const VALID_FULFILMENT_MODES = new Set(["collection", "delivery", "mixed"]);
 const VALID_FUNDRAISING_MODELS = new Set(["percentage", "per_order"]);
 const VALID_HOST_SHARE_MODELS = new Set(["percentage", "per_order", "fixed"]);
 
@@ -200,6 +201,17 @@ Deno.serve(async (req) => {
       const as = update.audience_scope;
       if (as !== null && (typeof as !== "string" || !VALID_AUDIENCE_SCOPES.has(as))) {
         return jsonResponse({ error: "Invalid audience_scope" }, 400);
+      }
+    }
+
+    // fulfilment_mode: only validated when the partial update actually
+    // touches it (absent → untouched, still succeeds). When present, it
+    // must be a valid mode — null/"" /invalid are all rejected (unlike
+    // audience_scope, fulfilment_mode has no meaningful "clear to null").
+    if (Object.prototype.hasOwnProperty.call(update, "fulfilment_mode")) {
+      const fm = update.fulfilment_mode;
+      if (typeof fm !== "string" || !VALID_FULFILMENT_MODES.has(fm)) {
+        return jsonResponse({ error: "fulfilment_mode must be one of: collection, delivery, mixed" }, 400);
       }
     }
 

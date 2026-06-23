@@ -48,6 +48,7 @@ const ALLOWED_FIELDS = new Set([
 
 const VALID_DROP_TYPES = new Set(["neighbourhood", "community", "event"]);
 const VALID_AUDIENCE_SCOPES = new Set(["public", "community"]);
+const VALID_FULFILMENT_MODES = new Set(["collection", "delivery", "mixed"]);
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -132,6 +133,14 @@ Deno.serve(async (req) => {
 
     if (insert.audience_scope !== undefined && !VALID_AUDIENCE_SCOPES.has(insert.audience_scope as string)) {
       return jsonResponse({ error: "Invalid audience_scope" }, 400);
+    }
+
+    // fulfilment_mode is optional at creation (a fresh draft may have none
+    // yet — publish is gated client-side, not creation). null/undefined is
+    // already null-stripped above, so absent → allowed. But if a value IS
+    // present (including ""), it must be one of the valid modes.
+    if (insert.fulfilment_mode !== undefined && !VALID_FULFILMENT_MODES.has(insert.fulfilment_mode as string)) {
+      return jsonResponse({ error: "fulfilment_mode must be one of: collection, delivery, mixed" }, 400);
     }
 
     const { data, error } = await serviceClient
