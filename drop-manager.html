@@ -2473,7 +2473,6 @@
         Boolean(dropData.name) &&
         Boolean(dropData.slug) &&
         Boolean(dropData.drop_type) &&
-        Boolean(dropData.fulfilment_mode) &&
         capacityValid &&
         (!requiresHost || Boolean(dropData.host_id));
 
@@ -2530,6 +2529,7 @@
         commercials_valid: commercialsValid,
         ready_to_publish:
           basicsComplete &&
+          Boolean(dropData.fulfilment_mode) &&
           timingComplete &&
           menuComplete &&
           hasCapacityItem &&
@@ -4257,7 +4257,7 @@
 
       const items = [
         { ok: readiness.basics_complete, label: "Basics complete" },
-        { ok: readiness.fulfilment_mode_set, label: "Fulfilment mode" },
+        { ok: readiness.fulfilment_mode_set, label: "Fulfilment mode set" },
         { ok: readiness.timing_complete, label: "Timing complete" },
         { ok: readiness.menu_complete, label: "At least one menu item enabled" },
         { ok: readiness.capacity_product_present, label: "At least one enabled item has capacity impact" },
