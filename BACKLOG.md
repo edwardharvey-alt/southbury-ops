@@ -2948,6 +2948,114 @@ Once obtained, update the proof section of landing.html to replace the placehold
 
 Status: Open. Blocked on dry run completion.
 
+**T-menu-import: Menu page — AI-assisted menu import (extract-to-curate)**
+
+**Status:** Open. Tier 5. Priority: post-launch — first
+acquisition-enablement item. Not in the pre-launch sequence. Validate
+the spec against Healthy Habits' real menu during the dry run before
+building.
+
+**The problem**
+
+The Menu page asks a non-technical vendor to hand-build their catalogue
+from a blank state. This is real friction at the moment a self-serve
+vendor's confidence is most fragile, and it bears on the model's known
+soft spot (cost-to-serve per vendor doesn't compress cheaply). Most
+vendors arrive with an existing menu — website, printed card, aggregator
+listing — that already holds the raw material.
+
+**The reframe (strategic spine — do not skip)**
+
+The job is NOT to reproduce a vendor's full à la carte catalogue. A
+scraped menu is a sprawling list; the Hearth drop menu is a designed,
+restrained selection. "Menu builder → your menu is built" pushes vendors
+toward exactly the sprawling behaviour the model exists to avoid. The
+framing is to extract candidates so the vendor curates down. The review
+step IS the product: "here's everything we found — now pick what belongs
+in your drops", never "here's your menu, confirmed." This removes typing,
+not deciding.
+
+**Scope**
+
+In: categories, product names, prices.
+
+Out, deliberately manual:
+
+- Capacity. Categories carry capacity semantics; a scraped menu has zero
+  signal about the capacity driver. AI must never guess — a wrong setup
+  is invisible to a non-technical vendor. Set knowingly at drop creation.
+- Bundles. Too much operational judgement. Manual.
+- Auto-commit. Prices are money; vision models misread £8.50 as £8.00 and
+  invent items. Everything lands editable, the vendor confirms, then it
+  writes. Sits inside the AI-approval requirement by design.
+
+**Four stages (weight on stage 3)**
+
+1. Input — empty-state CTA "Start from a menu you already have." Photo
+   upload or link. Photos are the reliable primary; link degrades
+   gracefully.
+2. Extract — Edge Function receives images/page text, calls the model,
+   returns structured JSON. Key never touches the client.
+3. Review & curate — editable table; edit name/price, deselect freely.
+   25+ items selected → one calm line in repetition-layer voice. Capacity
+   named, not hidden.
+4. Commit — confirmed items write via Edge Function. Nothing persists
+   before this.
+
+**Technical (validate against live system first)**
+
+- New Edge Function, canonical auth (`verify_jwt = false` + in-function
+  `getUser()`).
+- Model returns JSON only; parsed defensively; never trusted as final.
+- Write path uses the same tables as the manual Menu flow. AUDIT-FIRST:
+  confirm insert path + column names via `information_schema` before any
+  build prompt.
+
+**v1 recommendation:** photos-only. The link path is where most failure
+and engineering live, for the least reliable result. Add later if vendors
+ask.
+
+**Open decisions:** vision model choice + image size/count limits; link
+path in v1 or not; curation-nudge threshold (25 is a placeholder).
+
+**T-menu-restraint-layer: Menu selectivity as a repetition layer**
+
+**Status:** Open. Tier 5. Copy to be authored as a design reference
+first (chat), then implemented. Not pre-launch. Build only after copy
+exists.
+
+**The gap**
+
+The platform never tells vendors that a drop menu is a designed,
+restrained selection. Restraint is currently implicit. The manuscript and
+May strategy both treat the per-drop menu as "a considered selection,
+part of the moment" — but no surface says so.
+
+**The shape (parallel to the cadence repetition layer)**
+
+Restraint is a property of the DROP menu, not the Menu library. The
+library is allowed to be broad. Author the principle once; surface it at
+three moments, heaviest where the selection decision is made:
+
+- Menu page — LIGHT anchor only: "This is your full set of items. Each
+  drop uses a designed selection from it." Sets expectation without
+  telling vendors to under-build their library.
+- Drop Studio, at menu assembly — the REAL nudge (highest-leverage;
+  currently silent). This is where the selection happens.
+- Import flow — curation step (already covered in T-menu-import stage 3).
+
+**Internal convention to keep legible:** nav and page = "Menu"; the
+per-drop selection = "drop menu" wherever named in Drop Studio.
+
+**Voice:** repetition-layer (calm, factual, warm). Banned words apply.
+
+**Not this ticket:** vendor selectivity (Hearth isn't for every business)
+— related in spirit, different surface and audience (flagged in May
+strategy session). Track separately; do not merge.
+
+**Dependency:** canonical copy authored first, like the repetition-layer
+voice spec.
+
 ### Tier 5-A — Auth workstream
 
 Must complete before any real vendor enters live data. The current
