@@ -119,8 +119,10 @@ strategy docs it notices — the list is the floor, not the ceiling.
   Grep the codebase for each.
 - **E2.** No marketplace / discovery / fake-urgency / aggregator language in UI copy
   (e.g. "popular near you", "limited-time offer", "selling fast", "listing").
-- **E3.** Nav labels are current: **Brand** (not "Brand Hearth"), **Offer** (not "Menu Library").
-  Flag any stale label.
+- **E3.** Nav labels are current: **Brand** (not "Brand Hearth"), **Menu** (not "Menu Library"
+  or "Offer"). Flag any stale label. *Note: "Offer" was a T8-3 term; it has been partially
+  reverted to "Menu" — "Offer" was never in the locked brand vocabulary, the playbook's term is
+  "Menu".*
 - **E4.** Design tokens are consistent with the brand: primary `#8B6B3F`, `#CBB89D`,
   background `#FAF8F4`, text `#1F2937`; Cormorant Garamond (display) + Figtree (UI).
   Flag hardcoded off-palette colours or off-system fonts.

@@ -1177,7 +1177,7 @@
             </button>
             <button class="stagePill" data-stage="menu" type="button">
               <span class="stageIcon" id="icon-menu">3</span>
-              <span>Offer</span>
+              <span>Menu</span>
             </button>
             <button class="stagePill" data-stage="commercials" type="button">
               <span class="stageIcon" id="icon-commercials">4</span>
@@ -1577,7 +1577,7 @@
                       <div class="helperText">Enable items from your catalogue, override prices and set stock limits for this drop.</div>
                     </div>
                     <div class="row" style="gap:8px; flex-wrap:wrap;">
-                      <a href="drop-menu.html" class="utilityLink">Open Offer</a>
+                      <a href="drop-menu.html" class="utilityLink">Open Menu</a>
                     </div>
                   </div>
 
@@ -1586,7 +1586,7 @@
                     <div class="menuOrderingNote">
                       <div>
                         <div style="font-weight:800; margin-bottom:4px;">Per-drop ordering</div>
-                        <p class="helperText">Drag rows within a category to change the order shown on the ordering page for this drop only. Offer remains the master default.</p>
+                        <p class="helperText">Drag rows within a category to change the order shown on the ordering page for this drop only. Menu remains the master default.</p>
                       </div>
                       <span class="menuOrderingBadge">Drag within category</span>
                     </div>
@@ -2278,7 +2278,7 @@
       if (!list) return;
       const selectedSet = new Set((selectedIds || []).map(String));
       if (!state.categories.length) {
-        list.innerHTML = '<p class="helperText">No categories yet. Add categories in Offer.</p>';
+        list.innerHTML = '<p class="helperText">No categories yet. Add categories in Menu.</p>';
         return;
       }
       list.innerHTML = state.categories.map(cat => `
@@ -2623,7 +2623,7 @@
       const map = {
         basics: ["Basics", "Define the core setup for this drop"],
         timing: ["Timing", "Set fulfilment timing, ordering window and recurrence"],
-        menu: ["Offer", "Choose what can be ordered for this drop"],
+        menu: ["Menu", "Choose what can be ordered for this drop"],
         commercials: ["Commercials", "Community fundraising and host fee."],
         review: ["Review", "Check readiness, share and publish"]
       };
@@ -3704,7 +3704,7 @@
       }
 
       if (!state.menuAssignments.length) {
-        summary.textContent = "No catalogue items found yet. Build products and bundles in Offer first.";
+        summary.textContent = "No catalogue items found yet. Build products and bundles in Menu first.";
         container.innerHTML = `<div class="emptyState">No menu items found.</div>`;
         return;
       }

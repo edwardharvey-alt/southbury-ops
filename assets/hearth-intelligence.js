@@ -414,7 +414,7 @@
         priority: priority++,
         title: 'Protect and amplify the strongest menu driver',
         body: `${safe(bestItem.product_name)} is your top revenue item in this lens. Use it as a commercial anchor, then test which adjacent items improve basket value without adding too much operational load.`,
-        cta: 'Open Menu Library',
+        cta: 'Open Menu',
         ctaTarget: 'drop-menu',
         label: 'Menu',
         tone: 'good'
