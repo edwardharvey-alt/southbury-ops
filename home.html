@@ -1301,7 +1301,7 @@
           complete: Boolean(state.vendor.logo_url && state.vendor.brand_primary_color && state.vendor.display_name)
         },
         {
-          label: 'Build your offer',
+          label: 'Build your menu',
           href: './drop-menu.html',
           complete: [...state.products, ...state.bundles].some(i => i.is_active !== false)
         },
@@ -1609,13 +1609,13 @@
         }),
         workspaceCard({
           icon:'ML',
-          title:'Offer',
+          title:'Menu',
           status: activeProducts || activeBundles ? pill('good','Catalogue active') : pill('warn','Needs setup'),
           description:'Products, bundles and items — ready to assign to any drop.',
           meta: activeProducts || activeBundles
             ? `${fmtNum(activeProducts)} active product${activeProducts === 1 ? '' : 's'} and ${fmtNum(activeBundles)} active bundle${activeBundles === 1 ? '' : 's'}.`
             : 'Build the catalogue before publishing drops.',
-          primaryLabel: activeProducts || activeBundles ? 'Manage offer catalogue' : 'Build your offer',
+          primaryLabel: activeProducts || activeBundles ? 'Manage your menu library' : 'Build your menu',
           primaryHref:HearthNav.withVendor('./drop-menu.html')
         }),
         workspaceCard({
