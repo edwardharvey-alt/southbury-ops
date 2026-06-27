@@ -1353,6 +1353,14 @@
       font-weight:700;
     }
 
+    .payHold{
+      margin-bottom:10px;
+      text-align:center;
+      font-size:12px;
+      line-height:1.4;
+      color:var(--h-muted);
+    }
+
     .bundleModal{
       position:fixed;
       inset:0;
@@ -1903,6 +1911,7 @@
         </div>
 
         <div class="checkoutFooter">
+          <div class="payHold" id="payHold">We'll hold your place for 30 minutes while you check out.</div>
           <button class="payButton" id="payBtn" type="button">Pay £0.00</button>
           <div class="payHelper" id="payHelper">
             Apple Pay / Google Pay / Card will be handled via Stripe when connected.
@@ -3507,6 +3516,19 @@
             : `Yes — keep me informed about future drops from ${vendorDisplayName}. No spam, ever.`;
         }
 
+        // Holding-line honesty: the place-hold promise is min(30 min, time to
+        // close). Reuse the same closes_at the orderability gate reads
+        // (getOrderWindowState -> state.drop.closes_at) — no second source.
+        const HOLD_WINDOW_MS = 30 * 60 * 1000;
+        const payHoldEl = byId("payHold");
+        if (payHoldEl) {
+          const closesAt = getOrderWindowState().closesAt;
+          const timeToCloseMs = closesAt ? closesAt.getTime() - Date.now() : null;
+          payHoldEl.textContent = (timeToCloseMs !== null && timeToCloseMs < HOLD_WINDOW_MS)
+            ? "This drop closes soon — we'll hold your place until then."
+            : "We'll hold your place for 30 minutes while you check out.";
+        }
+
         const remaining = getCapacityRemainingAfterBasket();
         if (remaining < 0) {
           showCheckoutNotice(`Your basket is over the available ${getCategoryDisplayName()} capacity for this service.`, "error");
@@ -3952,6 +3974,20 @@ async function handoffToPayment() {
   payBtn.innerHTML = '<span class="spinner"></span>Placing order\u2026';
 
   const payload = buildCheckoutPayload();
+
+  // Backstop: an individual order must resolve to a concrete fulfilment mode.
+  // Collection/delivery drops always send one and mixed drops force a picker,
+  // so this only fires if 'mixed' (or null) leaks through the structural
+  // fallback in buildCheckoutPayload. Block client-side rather than let
+  // create-order reject with a 400 the customer can't act on.
+  const outgoingMode = payload && payload.fulfilment && payload.fulfilment.mode;
+  if (outgoingMode !== 'collection' && outgoingMode !== 'delivery') {
+    showCheckoutNotice('Please choose collection or delivery before paying.', 'error');
+    isSubmitting = false;
+    payBtn.disabled = false;
+    payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
+    return;
+  }
 
   const { data, error } = await supabase.functions.invoke(
     'create-order',
