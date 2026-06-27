@@ -81,7 +81,9 @@ image area. CSS background-size or min-height fix required.
 
 ### Tier 2 — Must work before showing anyone
 
-T2-1: Global navigation — add all pages to every header
+T2-1: Global navigation — add all pages to every header ✓ COMPLETE
+Subsumed by T4-22 (nav consistency sweep, complete) — verified 2026-06-27,
+all operator pages build nav via HearthNav.renderNav.
 Every operator page needs consistent nav: Home, Service Board, Drop Studio,
 Menu Library, Brand Hearth, Insights. Currently inconsistent.
 
@@ -1983,10 +1985,11 @@ Dependency: none. Can run in parallel with ongoing platform build work. Does not
 T5-C2: WhatsApp activation system — templates, segmentation, consent,
 and broadcast management
 
-**Status:** Open. Tier 5. Should land before Healthy Habits Cafe's
-first drop — the template system and phone number capture with WhatsApp
-consent are required before vendors can execute the communications
-architecture described in Hearth_Drop_Communications_Architecture.md.
+**Status:** Open. Tier 5. Post-launch — the Phase-1 comms shape
+(comms-engine email to the vendor's own customers + a wa.me deep-link into
+the host's existing group, per the 2026-06-19 steer note) covers launch;
+the full WhatsApp template/consent/broadcast system is post-launch and not
+a launch blocker.
 
 **The problem**
 
@@ -3293,14 +3296,27 @@ slug no longer leaks into URLs unauthenticated visitors see.
 operator-read-auth: migrate the entire operator
 order / capacity / production / analytics read surface to
 JWT-authenticated, ownership-verifying Edge Functions; capstone
-revokes anon SELECT on the two still-definer views.
+revokes anon SELECT on the two still-definer views. ✓ COMPLETE 2026-06-27
 
-**Status:** Open (partial). Tier 5-A. **Slice 1 (service-board
-selected-drop pipeline) DONE 2026-05-19.** SUBSUMES the narrow
-T5-A14 (`v_drop_summary`-only migration) — same pattern, same
-EFs, same capstone shape; T5-A14's invoker-flip approach
-remains abandoned per operational learning #52. Load-bearing
-operational learning #53 captures the rationale.
+**Status:** ✓ COMPLETE 2026-06-27. Tier 5-A. Read-auth track closed.
+All six get-* EFs present on disk (`get-drop`, `get-home-dashboard`,
+`get-insights`, `get-customers-workspace`, `get-vendor-customer-count`,
+`get-demand-preview`); `REVOKE SELECT` on `v_drop_summary` and
+`drop_capacity` confirmed via `information_schema`; zero direct anon
+reads remain across home / scorecard / insights / customers / hosts /
+host-profile / drop-manager / service-board (verified 2026-06-27,
+reconciliation audit). SUBSUMED the narrow T5-A14 (`v_drop_summary`-only
+migration) — same pattern, same EFs, same capstone shape; T5-A14's
+invoker-flip approach remains abandoned per operational learning #52.
+Load-bearing operational learning #53 captures the rationale.
+
+**Capstone carry-forward — NOT fully done.** The capstone's
+`drop_capacity` disposition is incomplete: after the SELECT revoke, anon
+still retains the six non-SELECT table privileges (INSERT, UPDATE,
+DELETE, TRUNCATE, REFERENCES, TRIGGER) on both `v_drop_summary` and
+`drop_capacity`. Carried forward to new ticket **T-drop-capacity-anon-grants**
+(Tier 5-B, post-launch low priority — write-side hygiene, not a read
+exposure).
 
 **Background — invoker-regression blast radius.** The T5-A3
 `security_invoker` view-layer rollout regressed the entire
@@ -4070,7 +4086,12 @@ Reference: full RLS audit performed in session dated 27 April 2026
 2 May audit confirmed products specifically still has the duplicate.
 
 T5-B33: Restore missing T5-B29 / T5-B30 / T5-B31 ticket bodies in
-BACKLOG.md. CLAUDE.md's Tier 5-B index lists T5-B29 (multi-window
+BACKLOG.md. ✓ COMPLETE / obsolete — T5-B29/B30/B31 detail now lives in
+self-sufficient CLAUDE.md open-index lines (full paragraph-length, with
+context + fix). Restoring separate BACKLOG bodies is no longer warranted —
+confirmed 2026-06-27. (T5-B29 itself was separately resolved 2026-06-27 by
+the fulfilment mandate.)
+CLAUDE.md's Tier 5-B index lists T5-B29 (multi-window
 parent drop fulfilment.mode bug), T5-B30 (Edge Function CORS
 allow-list excludes Netlify deploy previews), and T5-B31 (legacy
 capacity columns cleanup) as open tickets, but BACKLOG.md has no
@@ -4703,6 +4724,18 @@ T-dead-centre-postcode-cleanup — remove dead centrePostcode input from drop-ma
 **Fix shape (not built):** grep for `centrePostcode` and `centre_postcode` in drop-manager.html, remove the hidden input and any references that are no longer reachable. Verify no Edge Function or view still expects `centre_postcode` on save payloads (T3-12a-fu2 closed the equivalent for the radius pair).
 
 **Cross-reference:** T3-12a (closed 2026-05-03), T3-12a-fu2 (closed 2026-05-04 — equivalent cleanup for the radius inputs).
+
+T-drop-capacity-anon-grants — revoke residual non-SELECT anon privileges on v_drop_summary / drop_capacity
+
+**Status:** Open. Tier 5-B. Post-launch, low priority — write-side hygiene, not a read exposure. Carried forward from the operator-read-auth capstone (✓ COMPLETE 2026-06-27), which revoked anon SELECT but did not address the remaining grants.
+
+**Problem:** After the operator-read-auth capstone revoked anon `SELECT` on `v_drop_summary` and `drop_capacity`, the anon role still retains the other six table privileges on both objects — `INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`, `REFERENCES`, `TRIGGER`. On `v_drop_summary` these are inert: it is a non-updatable aggregating view, so the write privileges cannot do anything. On `drop_capacity` they may be a live write exposure **if** `drop_capacity` is a base table rather than a view — an aggregating/derived view would make them inert there too, but a base table would let the anon role mutate capacity rows.
+
+**Fix shape (not built):**
+1. Determine relation-vs-view for `drop_capacity` first (`SELECT relkind FROM pg_class WHERE relname = 'drop_capacity'`, or `information_schema.tables`). This overlaps T5-B5's open `drop_capacity` disposition question.
+2. `REVOKE ALL ON v_drop_summary, drop_capacity FROM anon`. Safe: `order.html` reads `v_drop_public`, `host-view.html` uses the `host-view-summary` EF, and the operator-read-auth audit confirmed zero direct anon reads of either object remain.
+
+**Cross-reference:** operator-read-auth (parent — the capstone that surfaced this), T5-B5 (open `drop_capacity` relation-vs-view question).
 
 T-hearth-intelligence-revenue-field-audit — audit hearth-intelligence.js for stale revenue field names
 
