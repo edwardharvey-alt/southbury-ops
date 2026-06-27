@@ -142,12 +142,18 @@ Cafe. Items marked ✓ are complete; everything else is open.
 2. ✓ T-customers-page-import-entry — COMPLETE 2026-05-22
 3. ✓ T-intelligence-engine-import-recommendation — COMPLETE 2026-05-23
 4. ✓ Admin-aware login routing (auth-callback.html) — COMPLETE 2026-05-22
-5. Healthy Habits Cafe dry run (next)
-6. ✓ T1-3 closure — COMPLETE 2026-05-26 (resolved by T5-A5)
-7. T3-8 Stripe live mode conversion
-8. T6-5 Supabase Pro PITR upgrade (parallel — Ed completes
-   independently)
-9. Go live
+5. T-B5-delivery-not-a-line-item — remove the "Delivery — Free"
+   basket line from order.html (delivery is structurally absent)
+6. T-support-healthy-habits-env-cleanup — revert the Big Ballz
+   Catering fake live/public test state + clear stray comms_log /
+   interest / order test rows; audit-first (hard predecessor to the
+   dry run)
+7. Healthy Habits Cafe dry run (next)
+8. ✓ T1-3 closure — COMPLETE 2026-05-26 (resolved by T5-A5)
+9. T3-8 Stripe live mode conversion
+10. T6-5 Supabase Pro PITR upgrade (parallel — Ed completes
+    independently)
+11. Go live
 
 Post-launch: T5-25 Part 0 (Instagram menu card image).
 
@@ -2077,7 +2083,6 @@ a ticket closes, mark it ✓ COMPLETE in BACKLOG.md and remove its line from thi
 index.
 
 ### Tier 2 — Must work before showing anyone
-- T2-1 — Global navigation: add all pages to every header — open
 - T2-2 — Service Board: remove need to scroll to reach Kanban — open
 
 ### Tier 3 — Should be done before regular use
@@ -2198,11 +2203,11 @@ BACKLOG.md alongside the ticket specs that depend on them — read there before
 building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 
 ### Tier 5-A — Auth workstream
-- T5-A3 — RLS rewrite: server-side vendor scoping — partial. Operator view layer closed (all 34 `v_*` views set `security_invoker = on`, bottom-up); anon order page re-pointed to `v_drop_public`; interim narrowing of `order.html` anon `vendors` read landed; **host-view authorisation sub-track closed 2026-05-19** via the token-auth `host-view-summary` + JWT-auth `get-drop-host-token` Edge Functions, verified end-to-end on production. Priority 2 (`vendors_select_all` removal + `v_vendor_public`) + two-vendor adversarial isolation test still open. The planned `v_drop_summary` invoker flip is abandoned (see operational learning #52); the wider closure of the invoker-regression blast radius across the operator order / capacity / production / analytics surface is now the **operator-read-auth** track (operational learning #53) which subsumes the narrow T5-A14. See the "View security model" standing-context section above and the BACKLOG.md T5-A3 DONE / OPEN narrative.
-- operator-read-auth — consolidated track that SUBSUMES the narrow T5-A14 (`v_drop_summary`-only). Migrate every direct anon read of the order / capacity / production / analytics view surface to JWT-authenticated, ownership-verifying Edge Functions (service-role read of the invoker views, rows returned verbatim under additive top-level keys); capstone = `REVOKE SELECT FROM anon` on the two still-definer views (`v_drop_summary` and `drop_capacity`) once nothing reads them directly. See operational learnings #52 + #53 and the BACKLOG.md operator-read-auth entry for the sequenced slices. **Slice 1 (service-board selected-drop pipeline) DONE 2026-05-19** (commits 3b064fc, 9c63c5f, a471990); remaining slices — home dashboard (fold home.html:1212-1222 into a `get-home-dashboard` EF), scorecard, insights, customers workspace, hosts / host-profile, drop-manager single-drop (folds into `get-drop`); then the capstone. — open
+- T5-A3 — RLS rewrite: server-side vendor scoping — partial. Operator view layer closed (all 34 `v_*` views set `security_invoker = on`, bottom-up); anon order page re-pointed to `v_drop_public`; interim narrowing of `order.html` anon `vendors` read landed; **host-view authorisation sub-track closed 2026-05-19** via the token-auth `host-view-summary` + JWT-auth `get-drop-host-token` Edge Functions, verified end-to-end on production. Priority 2 (`vendors_select_all` removal + `v_vendor_public`) + two-vendor adversarial isolation test still open. The planned `v_drop_summary` invoker flip is abandoned (see operational learning #52); the wider closure of the invoker-regression blast radius across the operator order / capacity / production / analytics surface was the **operator-read-auth** track (operational learning #53), which subsumed the narrow T5-A14 and is now ✓ COMPLETE 2026-06-27 (see BACKLOG.md). See the "View security model" standing-context section above and the BACKLOG.md T5-A3 DONE / OPEN narrative.
 
 ### Tier 5-B — Platform improvements
 - T5-B5 — Schema cleanup: legacy artefacts and missing constraints — open
+- T-drop-capacity-anon-grants — revoke residual non-SELECT anon privileges (INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER) on `v_drop_summary` / `drop_capacity` left after the operator-read-auth SELECT revoke; inert on the aggregating view, possibly a live write exposure on `drop_capacity` if it's a base table (determine relation-vs-view first — overlaps T5-B5). Post-launch, low priority. — open
 - T5-B6 — invite-vendor: hardcoded production redirect URL — open
 - T5-B7 — Edge Functions missing top-level try/catch — partial (create-host remaining)
 - T5-B8 — invite-vendor: doesn't use jsonResponse helper — open
@@ -2220,7 +2225,6 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B24 — Password reset page: button stuck on "Sending..." — open (cosmetic)
 - T5-B25 — admin.html: vendor creation is not atomic — open
 - T5-B32 — Duplicate anon SELECT policies on products — open
-- T5-B33 — Restore missing T5-B29 / T5-B30 / T5-B31 ticket bodies in BACKLOG.md — open
 - T5-B36 — duplicate-bundle rollback verification — open
 - T5-B37 — save-bundle-line update-path partial-failure note — open
 - T5-B40 — Audit v_*_enriched views for missing columns — open
