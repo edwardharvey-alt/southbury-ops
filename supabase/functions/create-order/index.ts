@@ -13,6 +13,12 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 
 const ORDERABLE_STATUSES = new Set(["live", "scheduled"]);
 
+// Capacity-hold / Stripe Checkout window, single-sourced so the order row's
+// expires_at and the Stripe session deadline can't drift apart. Stripe's
+// documented minimum for a session's expires_at is 1800 seconds (30 minutes)
+// from session creation; the reserved capacity is held for the same window.
+const HOLD_WINDOW_SECONDS = 1800;
+
 type BasketSelection = {
   bundle_line_id: string;
   selected_product_id: string;
@@ -563,6 +569,10 @@ Deno.serve(async (req) => {
       total_pence: payload.totals.total_pence,
       status: "pending_payment",
       stripe_payment_status: "pending",
+      // Capacity hold deadline — matches the Stripe session expires_at below
+      // (both from HOLD_WINDOW_SECONDS). After this, the reserved capacity is
+      // reclaimed and the order is reconciled/expired.
+      expires_at: new Date(Date.now() + HOLD_WINDOW_SECONDS * 1000).toISOString(),
       platform_fee_pence: platformFeePence,
       discount_pence: computedDiscount,
       discount_breakdown: matchedTier
@@ -709,8 +719,9 @@ Deno.serve(async (req) => {
         mode: "payment",
         // Stripe's documented minimum for expires_at is 1800 seconds
         // (30 minutes) from Checkout Session creation. Below 1800 the
-        // API rejects with an invalid_request_error.
-        expires_at: Math.floor(Date.now() / 1000) + 1800,
+        // API rejects with an invalid_request_error. HOLD_WINDOW_SECONDS
+        // single-sources this with the order row's expires_at above.
+        expires_at: Math.floor(Date.now() / 1000) + HOLD_WINDOW_SECONDS,
         customer_email: payload.customer.email || undefined,
         billing_address_collection: "auto",
         line_items: payload.basket.map((item) => ({

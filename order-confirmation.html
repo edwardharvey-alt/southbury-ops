@@ -743,6 +743,26 @@
         }
       }
 
+      // On-demand reconcile backstop. If the Stripe webhook is slow or dropped,
+      // the order stays pending_payment and the customer is stranded. Ask the
+      // reconcile EF to transition this one order against Stripe truth (anon /
+      // on-demand mode — no internal secret; it only ever touches this order).
+      // Best-effort: any failure is covered by the cron backstop. Its orders
+      // UPDATE trips the realtime handler above, so no extra status handling.
+      async function triggerReconcile() {
+        try {
+          await supabase.functions.invoke('reconcile-pending-orders', {
+            body: { order_id: orderId }
+          });
+        } catch (err) {
+          /* swallow — the scheduled reconcile cron is the safety net */
+        }
+      }
+
+      // Once on entry — this page is reached precisely when the webhook may
+      // have lagged or been missed.
+      triggerReconcile();
+
       channel = supabase
         .channel('order-' + orderId)
         .on(
@@ -755,6 +775,9 @@
       pollInterval = setInterval(refetch, 3000);
 
       timeoutHandle = setTimeout(() => {
+        // One more reconcile attempt at the 60s mark before showing the manual
+        // refresh fallback — covers a webhook that never arrived.
+        triggerReconcile();
         const subEl = document.getElementById('pendingSub');
         const actionEl = document.getElementById('pendingTimeoutAction');
         if (subEl) {
