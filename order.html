@@ -3516,6 +3516,19 @@
             : `Yes — keep me informed about future drops from ${vendorDisplayName}. No spam, ever.`;
         }
 
+        // Holding-line honesty: the place-hold promise is min(30 min, time to
+        // close). Reuse the same closes_at the orderability gate reads
+        // (getOrderWindowState -> state.drop.closes_at) — no second source.
+        const HOLD_WINDOW_MS = 30 * 60 * 1000;
+        const payHoldEl = byId("payHold");
+        if (payHoldEl) {
+          const closesAt = getOrderWindowState().closesAt;
+          const timeToCloseMs = closesAt ? closesAt.getTime() - Date.now() : null;
+          payHoldEl.textContent = (timeToCloseMs !== null && timeToCloseMs < HOLD_WINDOW_MS)
+            ? "This drop closes soon — we'll hold your place until then."
+            : "We'll hold your place for 30 minutes while you check out.";
+        }
+
         const remaining = getCapacityRemainingAfterBasket();
         if (remaining < 0) {
           showCheckoutNotice(`Your basket is over the available ${getCategoryDisplayName()} capacity for this service.`, "error");
