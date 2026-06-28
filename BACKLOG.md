@@ -3179,6 +3179,33 @@ T5-A3 OPEN:
   check whether T5-A2 `resolveVendor` should own it) — dropping the
   policy before that blanks all operator pages at boot. Then create
   column-safe `v_vendor_public` as the anon path.
+
+  **Half A ✓ COMPLETE 2026-06-27 (#413).** Column-safe public views
+  for the anon order path. `v_host_public` CREATED (`id`, `name`,
+  `host_type` only) — this closes the customer-facing host-PII leak:
+  `contact_email` / `contact_phone` / `contact_name` and
+  `notes_internal` no longer reach anon. `v_vendor_public` was found
+  to ALREADY EXIST (a 23-column PII-safe branding view predating this
+  work) and was REUSED as-is, not created — `order.html` selects its
+  11 vendor columns by name so the re-point works against the wider
+  view. `order.html`'s two anon reads (vendors ~:2458, hosts ~:2470)
+  re-pointed onto the two views; the host read also switched to
+  `.maybeSingle()`, with host conditionality preserved. Migration
+  `20260627194122_vendor_host_public_views.sql` creates only
+  `v_host_public` + grants; repaired `--status applied` 2026-06-27.
+  Known residual: both views carry inert non-SELECT anon grants
+  (INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER) — same pattern as
+  T-drop-capacity-anon-grants, inert on non-updatable views; folded
+  into that ticket, no new ticket opened.
+
+  **Half B — STILL OPEN.** The vendor-data exposure is NOT yet closed.
+  `vendors_select_all` is still live: anon still reads the full base
+  `vendors` row via four session-identity reads (`hearth-vendor.js:33`
+  boot read — load-bearing; `activation-poster.html:346`;
+  `auth-callback.html:429`; `set-password.html:442`). Remaining work:
+  build a `get-current-vendor` JWT Edge Function, re-point those four
+  reads onto it, then the `DROP POLICY vendors_select_all` capstone.
+  Creating `v_vendor_public` is NOT needed — it already exists.
 - **Two-vendor adversarial isolation test:** residual verification —
   needs a second real vendor or the Catering Direct fixture
   (vendor_id `a2a757fd-6882-49f8-9a54-7e682eab1e90`).
