@@ -1925,8 +1925,17 @@ authenticated callers. Two patterns are used deliberately:
 - **Public-facing views are column-safe definer views.**
   `v_drop_public` is live: 29 customer-safe columns,
   `WHERE status IN ('live','scheduled','completed')`, granted to
-  `anon` and `authenticated`. `v_vendor_public` is still to be
-  created (T5-A3 Priority 2).
+  `anon` and `authenticated`. `v_vendor_public` EXISTS — a 23-column
+  PII-safe branding view (predates T5-A3); `order.html` reuses it for
+  its anon vendor read as of #413, selecting 11 columns by name.
+  `v_host_public` EXISTS (`id`, `name`, `host_type` only) — created by
+  #413 and read by `order.html`'s anon host path, closing the
+  customer-facing host-PII leak. Both shipped as T5-A3 Priority 2
+  Half A. `vendors_select_all` is still live pending Half B — the four
+  session-identity reads (`hearth-vendor.js:33` boot read,
+  `activation-poster.html:346`, `auth-callback.html:429`,
+  `set-password.html:442`) still depend on anon SELECT on `vendors`
+  until a `get-current-vendor` JWT Edge Function lands.
 - **All 34 operator `v_*` views are `security_invoker = on`**,
   scoped via the existing authenticated-owner base-table RLS
   (`vendor_id IN (SELECT id FROM vendors WHERE auth_user_id =
@@ -2203,7 +2212,7 @@ BACKLOG.md alongside the ticket specs that depend on them — read there before
 building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 
 ### Tier 5-A — Auth workstream
-- T5-A3 — RLS rewrite: server-side vendor scoping — partial. Operator view layer closed (all 34 `v_*` views set `security_invoker = on`, bottom-up); anon order page re-pointed to `v_drop_public`; interim narrowing of `order.html` anon `vendors` read landed; **host-view authorisation sub-track closed 2026-05-19** via the token-auth `host-view-summary` + JWT-auth `get-drop-host-token` Edge Functions, verified end-to-end on production. Priority 2 (`vendors_select_all` removal + `v_vendor_public`) + two-vendor adversarial isolation test still open. The planned `v_drop_summary` invoker flip is abandoned (see operational learning #52); the wider closure of the invoker-regression blast radius across the operator order / capacity / production / analytics surface was the **operator-read-auth** track (operational learning #53), which subsumed the narrow T5-A14 and is now ✓ COMPLETE 2026-06-27 (see BACKLOG.md). See the "View security model" standing-context section above and the BACKLOG.md T5-A3 DONE / OPEN narrative.
+- T5-A3 — RLS rewrite: server-side vendor scoping — partial. Operator view layer closed (all 34 `v_*` views set `security_invoker = on`, bottom-up); anon order page re-pointed to `v_drop_public`; interim narrowing of `order.html` anon `vendors` read landed; **host-view authorisation sub-track closed 2026-05-19** via the token-auth `host-view-summary` + JWT-auth `get-drop-host-token` Edge Functions, verified end-to-end on production. Priority 2 Half A ✓ COMPLETE 2026-06-27 (#413): column-safe public views for the anon order path — pre-existing 23-col PII-safe `v_vendor_public` reused + `v_host_public` created, `order.html` re-pointed, customer-facing host PII closed. Priority 2 Half B still open (`get-current-vendor` EF + re-point the four session-identity reads + `vendors_select_all` REVOKE capstone); two-vendor adversarial isolation test still open. The planned `v_drop_summary` invoker flip is abandoned (see operational learning #52); the wider closure of the invoker-regression blast radius across the operator order / capacity / production / analytics surface was the **operator-read-auth** track (operational learning #53), which subsumed the narrow T5-A14 and is now ✓ COMPLETE 2026-06-27 (see BACKLOG.md). See the "View security model" standing-context section above and the BACKLOG.md T5-A3 DONE / OPEN narrative.
 
 ### Tier 5-B — Platform improvements
 - T5-B5 — Schema cleanup: legacy artefacts and missing constraints — open
@@ -2441,6 +2450,15 @@ for quick chronological recall across the whole platform.
     existing readinessItem/pass/fail CSS (fail is amber #b45309, not red).
     Not a publish gate. getDropProfile() drop-type logic is the reference
     for the host/neighbourhood distinction.
+
+- 2026-06-27: T5-A3 Priority 2 Half A complete (#413). Column-safe
+  public views for the anon order path — `v_host_public` created
+  (`id` / `name` / `host_type`), pre-existing 23-col PII-safe
+  `v_vendor_public` reused; `order.html` re-pointed; customer-facing
+  host PII (`contact_email` / `contact_phone` / `contact_name`,
+  `notes_internal`) off the anon path. Half B (`get-current-vendor` EF
+  + four session-identity re-points + `DROP POLICY vendors_select_all`
+  capstone) remains — the vendor-data exposure is not yet closed.
 
 ## Future architecture
 
