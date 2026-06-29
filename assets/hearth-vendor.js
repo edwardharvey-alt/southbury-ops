@@ -29,16 +29,27 @@
     var { data: { session } } = await _sb.auth.getSession();
 
     if (session) {
-      var { data, error } = await _sb
-        .from('vendors')
-        .select('*')
-        .eq('auth_user_id', session.user.id)
-        .maybeSingle();
-      if (error || !data) return null;
+      // T5-A3 P2 Half B: resolve the caller's own vendor row server-side via
+      // the JWT-authenticated get-current-vendor EF instead of a direct anon
+      // SELECT on vendors. Identity travels in the JWT (empty body).
+      //   - 404  → valid session, no vendor row → return null (the
+      //            security-correct null-on-no-row; NO .limit(1) / impersonation
+      //            fallback). Callers handle null as "Vendor not found".
+      //   - any other error → transient/unexpected; propagate rather than
+      //            silently blanking as "not found".
+      var { data, error } = await _sb.functions.invoke('get-current-vendor', { body: {} });
+      if (error) {
+        var status = error.context && error.context.status;
+        if (status === 404) return null;
+        throw error;
+      }
       return data;
     }
 
     // No session — localhost dev override by slug param.
+    // Known-broken after vendors_select_all REVOKE (T5-A3 P2): relies on
+    // anon SELECT on vendors. Dev-only localhost path; real-login covers
+    // the common case. Proper fix deferred to T6-2 (local dev env).
     if (isLocal && slugParam) {
       var { data: slugData, error: slugError } = await _sb
         .from('vendors')

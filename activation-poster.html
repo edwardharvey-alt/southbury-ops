@@ -342,14 +342,17 @@
         return;
       }
 
-      // Fetch vendor
-      const { data: vendor } = await sb
-        .from('vendors')
-        .select('id, display_name, brand_primary_color')
-        .eq('auth_user_id', session.user.id)
-        .maybeSingle();
+      // Fetch vendor (T5-A3 P2 Half B: JWT-authed EF in place of a direct
+      // anon SELECT on vendors; identity travels in the JWT). The full row is
+      // returned — we read the same three fields (id, display_name,
+      // brand_primary_color) as before. Preserves prior behaviour: any failure
+      // (404 no-row, or other error) surfaces as the existing "Vendor not
+      // found." state.
+      const { data: vendor, error: vendorError } = await sb.functions.invoke(
+        'get-current-vendor', { body: {} }
+      );
 
-      if (!vendor) {
+      if (vendorError || !vendor) {
         byId('posterState').textContent = 'Vendor not found.';
         return;
       }
