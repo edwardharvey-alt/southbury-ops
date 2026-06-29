@@ -5080,7 +5080,17 @@ CLAUDE.md operational learnings added in the same commit.
 
 T-B5-delivery-not-a-line-item — Delivery shown as a "Free" basket line, not structurally absent
 
-**Status:** Open. Pre-launch. Source: Pass B / B5 (CONTRADICTION).
+**Status:** ✓ COMPLETE. Pre-launch. Source: Pass B / B5 (CONTRADICTION).
+
+**Closure note (verified against live order.html):** the `basketDelivery`
+span and its 'Delivery — Free' render are removed; #basketTotals renders
+Subtotal / Volume discount / Total only, delivery structurally absent. The
+only remaining 'Delivery' string is the legitimate fulfilment-mode choice
+card. Fix landed untagged in an earlier PR, which is why prior docs sweeps
+missed it. The dormant fee scaffolding (`getDeliveryChargePence()` returning
+0, `delivery_pence` in the order payload + create-order validation) is
+deliberately retained — its retirement remains tracked under the still-open
+T-B5-retire-delivery-scaffolding.
 
 **Problem:** `order.html` renders a "Delivery — Free" basket line (the
 `basketDelivery` span, ~1779-1782; render path ~3223) via
