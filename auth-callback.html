@@ -426,13 +426,22 @@
           console.warn("admin-verify check failed; continuing to vendor lookup:", adminErr);
         }
 
-        const { data: vendor, error: vendorError } = await _sb
-          .from("vendors")
-          .select("id, onboarding_completed")
-          .eq("auth_user_id", session.user.id)
-          .maybeSingle();
+        // T5-A3 P2 Half B: resolve the caller's own vendor row via the
+        // JWT-authed get-current-vendor EF instead of a direct anon SELECT on
+        // vendors. Identity travels in the JWT (empty body); the full row is
+        // returned and we read the same fields as before.
+        //   - 404 (no vendor row) → preserve the old !vendor path (new vendor →
+        //     onboarding).
+        //   - any other error → preserve the old throw path (outer catch →
+        //     showError); never collapse a transient error into the no-row path.
+        const { data: vendor, error: vendorError } = await _sb.functions.invoke(
+          "get-current-vendor", { body: {} }
+        );
 
-        if (vendorError) throw vendorError;
+        if (vendorError) {
+          const status = vendorError.context && vendorError.context.status;
+          if (status !== 404) throw vendorError;
+        }
 
         if (!vendor){
           redirectTo("./onboarding.html");
