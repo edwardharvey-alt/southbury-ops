@@ -1,3 +1,9 @@
+> **SUPERSEDED — 2026-06-29.** T5-A3 is now ✓ COMPLETE (Priority 2 Half A
+> #413 / Half B #415; `vendors_select_all` dropped). This is a historical
+> point-in-time audit artefact, retained for the record. For current state
+> see the "View security model" section of CLAUDE.md and the T5-A3 DONE/OPEN
+> narrative in BACKLOG.md.
+
 # T5-A3 reads audit — 2026-05-17
 
 **Ticket:** T5-A3 — RLS rewrite: server-side vendor scoping (reads-audit step,

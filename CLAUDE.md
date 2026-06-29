@@ -1931,11 +1931,20 @@ authenticated callers. Two patterns are used deliberately:
   `v_host_public` EXISTS (`id`, `name`, `host_type` only) — created by
   #413 and read by `order.html`'s anon host path, closing the
   customer-facing host-PII leak. Both shipped as T5-A3 Priority 2
-  Half A. `vendors_select_all` is still live pending Half B — the four
-  session-identity reads (`hearth-vendor.js:33` boot read,
-  `activation-poster.html:346`, `auth-callback.html:429`,
-  `set-password.html:442`) still depend on anon SELECT on `vendors`
-  until a `get-current-vendor` JWT Edge Function lands.
+  Half A. **`vendors_select_all` is now DROPPED — T5-A3 Priority 2
+  Half B closed (#415, 2026-06-29).** The four session-identity reads
+  (`hearth-vendor.js` `resolveVendor()` boot read, `activation-poster.html`,
+  `auth-callback.html`, `set-password.html`) all route through the new
+  JWT-authed `get-current-vendor` Edge Function (in-function
+  `auth.getUser()`, service-role read of the caller's own `vendors` row
+  by `auth_user_id`). No anon SELECT policy remains on `vendors` —
+  confirmed via `pg_policy`, only `Vendors: admin insert`,
+  `Vendors: authenticated owner select` (inert defence-in-depth), and
+  `Vendors: authenticated owner update` survive. `stripe_account_id`,
+  `auth_user_id`, contact fields and onboarding answers are off the anon
+  path. The customer order page still renders full vendor branding in an
+  anon session because `v_vendor_public` is a definer view, unaffected
+  by the base-table policy drop.
 - **All 34 operator `v_*` views are `security_invoker = on`**,
   scoped via the existing authenticated-owner base-table RLS
   (`vendor_id IN (SELECT id FROM vendors WHERE auth_user_id =
@@ -1982,10 +1991,12 @@ authenticated callers. Two patterns are used deliberately:
     `drop_host_tokens` was returning empty rows under the
     anon role (RLS rejection), so the token is now fetched
     through this EF and appended to the host-view URL.
-- **Interim hotfix:** `order.html`'s anonymous `vendors` read was
-  narrowed to safe display columns only (commits 390985e,
-  65d66c1). Interim until `vendors_select_all` is removed in
-  T5-A3 Priority 2.
+- **Anon `vendors` read — now via `v_vendor_public`.** `order.html`'s
+  anonymous `vendors` read was first narrowed to safe display columns
+  only (commits 390985e, 65d66c1), then re-pointed onto the column-safe
+  `v_vendor_public` definer view in #413. With `vendors_select_all`
+  dropped (#415), there is no longer any anon SELECT path against the
+  base `vendors` table.
 - **Select-narrowing validation rule.** Every explicit column
   list shipped under the T5-A3 / anon-revoke / operator-read-auth
   narrowing must be cross-checked against
@@ -2115,7 +2126,7 @@ T-ops-rls-customer-import closed 2026-05-15: built `bulk-create-customers` Edge 
 
 T5-11-minimum closed 2026-05-16 (parent T5-11 remains partial): built `send-order-confirmation` Edge Function and wired `stripe-webhook` to invoke it after `checkout.session.completed` transitions the order to placed/paid (PR #266). Resend HTTP API called directly with `RESEND_API_KEY`; inter-function call authenticated via shared `INTERNAL_FUNCTION_SECRET` in `X-Internal-Secret` header (`verify_jwt = false` at gateway). Webhook treats every error from the send function as non-fatal — try/catch + return 200 regardless of email outcome — so a Resend outage cannot cause Stripe to retry the webhook and double-place an order. First application-level Resend integration in production. Establishes two reusable patterns documented as operational learnings #46 (application-level Resend) and #47 (inter-Edge-Function shared-secret auth) for future T5-11 triggers (order_ready automated SMS, drop_announced, drop_reminder, drop_early_access, post_drop_thank_you), all of which remain open per pre-launch scope decision. Full closure narrative in BACKLOG.md.
 
-T5-A3 checkpoint 2026-05-19 (in progress, not closed): operator view layer closed — all 34 vendor-scoped `v_*` views set `security_invoker = on`, applied bottom-up (canary `v_products_enriched` → Tier 0 → Tier 1 → Tier 2+3), each tier verified via the authenticated app path. Anonymous customer reads now route through column-safe `v_drop_public` (29 safe columns, status-filtered, granted `anon` + `authenticated`); `order.html` re-pointed in commit 8d4c63d. Interim narrowing of `order.html`'s anonymous `vendors` read landed in commits 390985e + 65d66c1. **Host-view authorisation sub-track CLOSED 2026-05-19, verified end-to-end on production:** `host-view.html` no longer reads `v_drop_summary` or `drop_host_tokens` directly. The page now invokes the new token-authenticated `host-view-summary` Edge Function (slug + `&t=` token; 18-field minimal projection; never returns `drop_gmv_pence` or raw host-share mechanics — `host_share_descriptor` is built server-side; uniform `403 {"error":"not_authorised"}` on any failure to prevent enumeration). Drop Studio's "Copy host link" routes through the new JWT-authenticated `get-drop-host-token` EF (mirrors `get-drop`'s auth pattern; verifies caller owns the drop's vendor; returns `{ host_access_token }`) — direct PostgREST against `drop_host_tokens` was returning empty rows because the anon role hit RLS, see operational learning #52. Section A of the T5-A3 reads audit also corrected stale handover claims: the platform has exactly one anon SELECT policy per table (not six on `drops`; not duplicate policies on `categories` / `products`); duplicate anon SELECT (`qual = true`) policies exist only on `drop_products`; `orders`, `order_items`, `order_item_selections`, `customers`, `customer_relationships` and `hosts` carry NO anon policy (already locked; T5-B39 confirmed), so their operator reads are out of T5-A3 confidentiality scope — their robustness depends on the separate auth-attach workstream, not on any policy T5-A3 changes. **Major framing change (2026-05-19):** the planned `v_drop_summary security_invoker` flip is ABANDONED (operational learning #52) — under the auth-attach bug, operator pages read `v_drop_summary` as anon, so the flip would zero out every operator page. The closure of the `v_drop_summary` cross-vendor exposure now requires the JWT-auth EF migration documented in the new ticket T5-A14 (BACKLOG.md). Open residuals: T5-A14 (v_drop_summary closure track — supersedes the abandoned invoker flip); T5-A3 Priority 2 — remove `vendors_select_all`, gated on remediating the `hearth-vendor.js:33` boot read, then create `v_vendor_public`; two-vendor adversarial isolation test; deferred low-severity catalog anon policies. Full DONE / OPEN narrative in BACKLOG.md.
+T5-A3 checkpoint 2026-05-19 (in progress, not closed): operator view layer closed — all 34 vendor-scoped `v_*` views set `security_invoker = on`, applied bottom-up (canary `v_products_enriched` → Tier 0 → Tier 1 → Tier 2+3), each tier verified via the authenticated app path. Anonymous customer reads now route through column-safe `v_drop_public` (29 safe columns, status-filtered, granted `anon` + `authenticated`); `order.html` re-pointed in commit 8d4c63d. Interim narrowing of `order.html`'s anonymous `vendors` read landed in commits 390985e + 65d66c1. **Host-view authorisation sub-track CLOSED 2026-05-19, verified end-to-end on production:** `host-view.html` no longer reads `v_drop_summary` or `drop_host_tokens` directly. The page now invokes the new token-authenticated `host-view-summary` Edge Function (slug + `&t=` token; 18-field minimal projection; never returns `drop_gmv_pence` or raw host-share mechanics — `host_share_descriptor` is built server-side; uniform `403 {"error":"not_authorised"}` on any failure to prevent enumeration). Drop Studio's "Copy host link" routes through the new JWT-authenticated `get-drop-host-token` EF (mirrors `get-drop`'s auth pattern; verifies caller owns the drop's vendor; returns `{ host_access_token }`) — direct PostgREST against `drop_host_tokens` was returning empty rows because the anon role hit RLS, see operational learning #52. Section A of the T5-A3 reads audit also corrected stale handover claims: the platform has exactly one anon SELECT policy per table (not six on `drops`; not duplicate policies on `categories` / `products`); duplicate anon SELECT (`qual = true`) policies exist only on `drop_products`; `orders`, `order_items`, `order_item_selections`, `customers`, `customer_relationships` and `hosts` carry NO anon policy (already locked; T5-B39 confirmed), so their operator reads are out of T5-A3 confidentiality scope — their robustness depends on the separate auth-attach workstream, not on any policy T5-A3 changes. **Major framing change (2026-05-19):** the planned `v_drop_summary security_invoker` flip is ABANDONED (operational learning #52) — under the auth-attach bug, operator pages read `v_drop_summary` as anon, so the flip would zero out every operator page. The closure of the `v_drop_summary` cross-vendor exposure now requires the JWT-auth EF migration documented in the new ticket T5-A14 (BACKLOG.md). Open residuals: T5-A14 (v_drop_summary closure track — supersedes the abandoned invoker flip); T5-A3 Priority 2 — remove `vendors_select_all`, gated on remediating the `hearth-vendor.js:33` boot read, then create `v_vendor_public`; two-vendor adversarial isolation test; deferred low-severity catalog anon policies. Full DONE / OPEN narrative in BACKLOG.md. **[Closure update 2026-06-29] These residuals are now resolved: T5-A14 was subsumed by the operator-read-auth track (✓ COMPLETE 2026-06-27); T5-A3 Priority 2 Half A (#413, 2026-06-27) created the column-safe public views; Half B (#415, 2026-06-29) shipped the `get-current-vendor` EF, re-pointed the four session-identity reads, and DROPPED `vendors_select_all` (capstone). T5-A3 is CLOSED. The only carry-forward is the Catering Direct two-vendor adversarial isolation test (empirical, non-blocking, structurally guaranteed by EF design).**
 
 T5-25 Part 0 — SHIPPED (prod, squash commit f95c12c). Vendor Monday
 "reveal" Instagram post asset (auto-generated 1080x1080 card).
@@ -2212,7 +2223,7 @@ BACKLOG.md alongside the ticket specs that depend on them — read there before
 building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 
 ### Tier 5-A — Auth workstream
-- T5-A3 — RLS rewrite: server-side vendor scoping — partial. Operator view layer closed (all 34 `v_*` views set `security_invoker = on`, bottom-up); anon order page re-pointed to `v_drop_public`; interim narrowing of `order.html` anon `vendors` read landed; **host-view authorisation sub-track closed 2026-05-19** via the token-auth `host-view-summary` + JWT-auth `get-drop-host-token` Edge Functions, verified end-to-end on production. Priority 2 Half A ✓ COMPLETE 2026-06-27 (#413): column-safe public views for the anon order path — pre-existing 23-col PII-safe `v_vendor_public` reused + `v_host_public` created, `order.html` re-pointed, customer-facing host PII closed. Priority 2 Half B still open (`get-current-vendor` EF + re-point the four session-identity reads + `vendors_select_all` REVOKE capstone); two-vendor adversarial isolation test still open. The planned `v_drop_summary` invoker flip is abandoned (see operational learning #52); the wider closure of the invoker-regression blast radius across the operator order / capacity / production / analytics surface was the **operator-read-auth** track (operational learning #53), which subsumed the narrow T5-A14 and is now ✓ COMPLETE 2026-06-27 (see BACKLOG.md). See the "View security model" standing-context section above and the BACKLOG.md T5-A3 DONE / OPEN narrative.
+- T5-A3 — RLS rewrite: server-side vendor scoping — ✓ COMPLETE 2026-06-29. Operator view layer closed (all 34 `v_*` views set `security_invoker = on`, bottom-up); anon order page re-pointed to `v_drop_public`; **host-view authorisation sub-track closed 2026-05-19** via the token-auth `host-view-summary` + JWT-auth `get-drop-host-token` Edge Functions, verified end-to-end on production. Priority 2 Half A ✓ COMPLETE 2026-06-27 (#413): column-safe public views for the anon order path — pre-existing 23-col PII-safe `v_vendor_public` reused + `v_host_public` created, `order.html` re-pointed, customer-facing host PII closed. Priority 2 Half B ✓ COMPLETE 2026-06-29 (#415): `get-current-vendor` EF built and deployed, the four session-identity reads re-pointed onto it, and the `vendors_select_all` policy DROPPED (capstone) — no anon SELECT remains on `vendors`, confirmed via `pg_policy`. The planned `v_drop_summary` invoker flip is abandoned (see operational learning #52); the wider closure of the invoker-regression blast radius across the operator order / capacity / production / analytics surface was the **operator-read-auth** track (operational learning #53), which subsumed the narrow T5-A14 and is ✓ COMPLETE 2026-06-27 (see BACKLOG.md). RESIDUAL (not blocking, carry forward): the Catering Direct two-vendor adversarial isolation test — empirical cross-vendor check, structurally guaranteed by the EF design, to run before the dry run once fixture access is sorted. See the "View security model" standing-context section above and the BACKLOG.md T5-A3 DONE / OPEN narrative.
 
 ### Tier 5-B — Platform improvements
 - T5-B5 — Schema cleanup: legacy artefacts and missing constraints — open
@@ -2270,7 +2281,8 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T6-2 — Local development environment — open
 - T6-3 — Staging environment — open
 - T6-4 — Branch protection and PR review workflow — open
-- T6-5 — Supabase Pro upgrade for point-in-time recovery — open
+- T-admins-table-migration-backfill — `admins` table was created out-of-band in the SQL editor and has no CREATE TABLE migration; 7 admin EFs depend on it, so a fresh-environment rebuild would silently 403 all admin access. Audit-first (confirm live constraints + RLS via `pg_constraint` / `pg_policies`), author the migration, then `migration repair`. Hard predecessor to T6-5. — open
+- T6-5 — Supabase Pro upgrade for point-in-time recovery — open (gated on T-admins-table-migration-backfill)
 - T6-6 — Transactional email via Resend / Postmark — partial (auth/onboarding wired; transactional triggers not built)
 - T6-8 — Dev workflow tooling — Claude Code skills, MCP integrations, knowledge base — open
 
@@ -2459,6 +2471,37 @@ for quick chronological recall across the whole platform.
   `notes_internal`) off the anon path. Half B (`get-current-vendor` EF
   + four session-identity re-points + `DROP POLICY vendors_select_all`
   capstone) remains — the vendor-data exposure is not yet closed.
+
+- 2026-06-29: T5-A3 Priority 2 Half B complete (#415) — **T5-A3
+  Priority 2 fully CLOSED, the vendor-data anon exposure is shut.**
+  `get-current-vendor` EF built and deployed (`verify_jwt = false` at
+  gateway, in-function `auth.getUser()` JWT verify, service-role read of
+  the caller's own `vendors` row by `auth_user_id`; 401 no-JWT / 404
+  no-row / 500 unexpected; full-row select by design). All four
+  session-identity reads re-pointed onto `invoke('get-current-vendor')`:
+  `hearth-vendor.js` `resolveVendor()` boot read (load-bearing),
+  `activation-poster.html`, `auth-callback.html`, `set-password.html`.
+  The boot read now splits 404→null (security-correct null-on-no-row, no
+  `.limit(1)` fallback) from any-other-error→throw — STRICTER than the
+  old code, which collapsed both into null; this hardened the
+  load-bearing read. The localhost `?vendor=` dev override in
+  `hearth-vendor.js` is left in place, intentionally inert post-REVOKE,
+  marked with a known-broken comment; proper fix deferred to T6-2 (local
+  dev env). CAPSTONE: `vendors_select_all` dropped — confirmed via
+  `pg_policy` that only `Vendors: admin insert`, `Vendors: authenticated
+  owner select` (inert defence-in-depth, intentionally left) and
+  `Vendors: authenticated owner update` remain; no anon SELECT policy.
+  Verified on live: every operator surface resolves identity through
+  `get-current-vendor` (network tab shows the EF invoke, no direct
+  `vendors` REST read); the customer `order.html` renders full vendor
+  branding in an incognito/anon session post-REVOKE (`v_vendor_public`
+  is a definer view, unaffected by the base-table policy drop). RESIDUAL
+  (not blocking, carry forward): Catering Direct adversarial isolation —
+  the empirical cross-vendor check is still outstanding (no fixture login
+  available tonight). Structurally guaranteed by EF design (resolves
+  strictly by the caller's own `auth_user_id`; there is no parameter to
+  request another vendor's row). Run before the dry run once Catering
+  Direct access is sorted (Robin may hold it).
 
 ## Future architecture
 
