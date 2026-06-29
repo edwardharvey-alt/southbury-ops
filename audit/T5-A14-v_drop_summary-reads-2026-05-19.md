@@ -1,3 +1,9 @@
+> **SUPERSEDED — 2026-06-29.** T5-A14 was subsumed by the operator-read-auth
+> track (✓ COMPLETE 2026-06-27; `v_drop_summary` and `drop_capacity` REVOKEd
+> from anon). This is a historical point-in-time audit artefact, retained for
+> the record. For current state see the "View security model" section of
+> CLAUDE.md and the BACKLOG.md operator-read-auth narrative.
+
 # T5-A14 Phase A — `v_drop_summary` operator-read audit
 
 **Date:** 2026-05-19

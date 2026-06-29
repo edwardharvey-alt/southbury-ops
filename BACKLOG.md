@@ -3129,6 +3129,17 @@ previously planned `v_drop_summary security_invoker` flip is
 ABANDONED — closure now tracked under T5-A14 (see operational
 learning #52).
 
+[Closure — 2026-06-29] **T5-A3 is now ✓ COMPLETE.** Priority 2 Half A
+(#413, 2026-06-27) shipped the column-safe public views; Priority 2
+Half B (#415, 2026-06-29) shipped the `get-current-vendor` EF, re-pointed
+the four session-identity reads, and DROPPED `vendors_select_all`
+(capstone) — no anon SELECT remains on `vendors`. The T5-A14
+`v_drop_summary` closure was subsumed by the operator-read-auth track
+(✓ COMPLETE 2026-06-27). The only carry-forward is the Catering Direct
+two-vendor adversarial isolation test (empirical, non-blocking,
+structurally guaranteed by the EF design). Detail in the Half B and
+"Two-vendor adversarial isolation test" entries below.
+
 T5-A3 DONE:
 
 - Reads audit and view-reads audit artefacts produced
@@ -3172,13 +3183,13 @@ T5-A3 DONE:
 
 T5-A3 OPEN:
 
-- **Priority 2:** remove `vendors_select_all` (anon SELECT,
-  `qual = true`; exposes `stripe_account_id`, `auth_user_id`,
-  contact fields). Gated on remediating the `hearth-vendor.js:33`
-  boot read (route via authenticated path / confirm auth attaches;
-  check whether T5-A2 `resolveVendor` should own it) — dropping the
-  policy before that blanks all operator pages at boot. Then create
-  column-safe `v_vendor_public` as the anon path.
+- **Priority 2 — ✓ COMPLETE 2026-06-29 (Half A #413, Half B #415).**
+  Originally: remove `vendors_select_all` (anon SELECT, `qual = true`;
+  exposes `stripe_account_id`, `auth_user_id`, contact fields), gated on
+  remediating the `hearth-vendor.js` boot read, then provide a
+  column-safe anon path. Closed across the two halves below — the boot
+  read was re-pointed onto the `get-current-vendor` EF (Half B) and
+  `vendors_select_all` was dropped as the capstone.
 
   **Half A ✓ COMPLETE 2026-06-27 (#413).** Column-safe public views
   for the anon order path. `v_host_public` CREATED (`id`, `name`,
@@ -3198,17 +3209,41 @@ T5-A3 OPEN:
   T-drop-capacity-anon-grants, inert on non-updatable views; folded
   into that ticket, no new ticket opened.
 
-  **Half B — STILL OPEN.** The vendor-data exposure is NOT yet closed.
-  `vendors_select_all` is still live: anon still reads the full base
-  `vendors` row via four session-identity reads (`hearth-vendor.js:33`
-  boot read — load-bearing; `activation-poster.html:346`;
-  `auth-callback.html:429`; `set-password.html:442`). Remaining work:
-  build a `get-current-vendor` JWT Edge Function, re-point those four
-  reads onto it, then the `DROP POLICY vendors_select_all` capstone.
-  Creating `v_vendor_public` is NOT needed — it already exists.
-- **Two-vendor adversarial isolation test:** residual verification —
-  needs a second real vendor or the Catering Direct fixture
-  (vendor_id `a2a757fd-6882-49f8-9a54-7e682eab1e90`).
+  **Half B ✓ COMPLETE 2026-06-29 (#415).** The vendor-data anon
+  exposure is now SHUT — T5-A3 Priority 2 fully closed. The
+  `get-current-vendor` JWT Edge Function was built and deployed
+  (`verify_jwt = false` at gateway, in-function `auth.getUser()` JWT
+  verify, service-role read of the caller's own `vendors` row by
+  `auth_user_id`; 401 no-JWT / 404 no-row / 500 unexpected; full-row
+  select by design). All four session-identity reads re-pointed onto
+  `invoke('get-current-vendor')`: `hearth-vendor.js` `resolveVendor()`
+  boot read (load-bearing), `activation-poster.html`,
+  `auth-callback.html`, `set-password.html`. The boot read now splits
+  404→null (security-correct null-on-no-row, no `.limit(1)` fallback)
+  from any-other-error→throw — STRICTER than the old code, which
+  collapsed both into null; this hardened the load-bearing read. The
+  localhost `?vendor=` dev override in `hearth-vendor.js` is left in
+  place, intentionally inert post-REVOKE, marked with a known-broken
+  comment; proper fix deferred to T6-2 (local dev env). CAPSTONE:
+  `DROP POLICY vendors_select_all` applied — confirmed via `pg_policy`
+  that only `Vendors: admin insert`, `Vendors: authenticated owner
+  select` (inert defence-in-depth, intentionally left), and `Vendors:
+  authenticated owner update` remain; no anon SELECT policy on
+  `vendors`. `stripe_account_id`, `auth_user_id`, contact fields and
+  onboarding answers are off the anon path. Verified on live: every
+  operator surface resolves identity through `get-current-vendor`
+  (network tab shows the EF invoke, no direct `vendors` REST read); the
+  customer `order.html` renders full vendor branding in an
+  incognito/anon session post-REVOKE (`v_vendor_public` is a definer
+  view, unaffected by the base-table policy drop).
+- **Two-vendor adversarial isolation test — RESIDUAL (carry forward,
+  not blocking).** Empirical cross-vendor check still outstanding
+  (no fixture login available the night of closure). Structurally
+  guaranteed by the EF design (resolves strictly by the caller's own
+  `auth_user_id`; there is no parameter to request another vendor's
+  row). Run before the dry run once Catering Direct access is sorted
+  (Robin may hold it; fixture vendor_id
+  `a2a757fd-6882-49f8-9a54-7e682eab1e90`).
 - **Deferred low-severity:** catalog anon policies (`categories`
   `qual=true`; `products` / `bundles` `is_active`; `drop_menu_items`
   `is_available`; `drop_products` duplicate `true` policies) —
@@ -4028,6 +4063,25 @@ schema, Edge Functions, and canonical admin EF auth pattern.
 
 Cross-reference: T7-14 (admins table), T7-1 (MVP cockpit closure that
 landed in the same workstream).
+
+[Verification confirmation — 2026-06-29] Re-verified against the live
+system tonight. Admin identity is DATA-DRIVEN via the `admins` table,
+decided by the caller's verified-JWT `auth_user_id` against
+`is_active = true` — NO hardcoded UID remains anywhere in the auth path
+(checked the auth-callback admin-verify branch and all admin EFs).
+Inherently multi-admin. Server-side gating is enforced across SEVEN
+Edge Functions, each running the same admins-table check via a
+service-role client (not client-side bypassable): `admin-verify`,
+`admin-list-vendors`, `admin-get-vendor`, `admin-list-vendor-drops`,
+`admin-list-drop-orders`, `invite-vendor`, `create-vendor`. The two
+surface pages `platform-admin.html` + `platform-admin-vendor.html` exist
+and gate via `admin-verify`. PROVISIONED in the DB tonight: two active
+admins — `ed@lovehearth.co.uk` and `robin@lovehearth.co.uk`, both
+`is_active = true` — so Robin is a working second admin today (no
+further admin provisioning needed). Caveat carried forward as a new
+ticket: the `admins` table itself has no committed CREATE TABLE
+migration (it was created out-of-band in the SQL editor) — see
+T-admins-table-migration-backfill below.
 
 T5-B27: Edge Function `.single()` vs `.maybeSingle()` consistency sweep ✓ COMPLETE
 Confirmed complete. All audited Edge Functions use .maybeSingle() for
@@ -5428,6 +5482,13 @@ migration or accidental data deletion has no recovery path beyond
 whatever daily backup Supabase's free tier provides. Separate from
 Netlify Pro (which is about bandwidth — also needed, flagged elsewhere).
 
+HARD PREDECESSOR: T-admins-table-migration-backfill must be done first.
+The `admins` table was created out-of-band in the SQL editor and has no
+CREATE TABLE migration, so the migration history cannot reproduce it.
+Any fresh-environment rebuild (a likely part of validating PITR/restore)
+would silently lose the table and 403 all admin access. Backfill the
+migration before relying on T6-5's recovery path.
+
 T6-6: Transactional email via Resend or Postmark
 Supabase currently sends auth emails (magic links, password reset,
 vendor invites) from its default noreply address. These can look
@@ -5690,8 +5751,56 @@ access) — Robin can now be added via the standard flow. T5-B25
 addressed by this work, but the admin-verify pattern is now in place
 to support a future atomic flow.
 
+[Update — 2026-06-29] Robin is provisioned: `robin@lovehearth.co.uk`
+holds an active `admins` row alongside `ed@lovehearth.co.uk` (both
+`is_active = true`, verified in the DB tonight) — multi-admin is live in
+production, not just enabled.
+
+[Caveat — 2026-06-29] The column list above (UNIQUE FK on
+`auth_user_id`, RLS-enabled-no-policies, the partial index) is the
+DOCUMENTED shape and is UNVERIFIED against the live DB —
+`information_schema.columns` confirms the five columns
+(`id` uuid, `auth_user_id` uuid, `email` text, `is_active` boolean,
+`granted_at` timestamptz, all NOT NULL) but the constraints and RLS
+state have NOT been confirmed via `pg_constraint` / `pg_policies`. There
+is also NO committed CREATE TABLE migration for this table. Do not author
+a migration against the documented shape blind — see
+T-admins-table-migration-backfill.
+
 See CLAUDE.md "Platform admin MVP" section for the full schema, Edge
 Functions, views, pages, and canonical admin EF auth pattern.
+
+T-admins-table-migration-backfill — OPEN
+Tier: schema reproducibility / pre-launch. Hard predecessor to T6-5
+(Supabase Pro PITR upgrade).
+
+Problem: the `admins` table was created out-of-band in the Supabase SQL
+editor; there is NO CREATE TABLE migration for it in
+`supabase/migrations/`. Seven admin Edge Functions depend on it
+(`admin-verify`, `admin-list-vendors`, `admin-get-vendor`,
+`admin-list-vendor-drops`, `admin-list-drop-orders`, `invite-vendor`,
+`create-vendor`). The live DB therefore holds an object the migration
+history cannot reproduce. The risk surfaces at T6-5 (PITR) and any
+fresh-environment rebuild: the table won't reconstruct and all admin
+access silently 403s (including the auth-callback `admin-verify` branch).
+
+Live table shape (verified tonight via `information_schema`, all NOT
+NULL): `id` uuid, `auth_user_id` uuid, `email` text, `is_active`
+boolean, `granted_at` timestamptz. NOTE: constraints (PK, UNIQUE/FK on
+`auth_user_id`) and RLS state are NOT yet confirmed —
+`information_schema.columns` shows columns only. The documented shape
+(CLAUDE.md) claims UNIQUE + FK + RLS-no-policies but this is UNVERIFIED
+and must not be trusted.
+
+Fix shape (NOT built): (1) confirm live constraints + RLS via
+`pg_constraint` and `pg_policies` on `admins` before authoring; (2)
+write a CREATE TABLE `admins` migration matching the live definition
+INCLUDING real constraints; (3) `supabase migration repair` to mark it
+already-applied so it does not attempt to re-create the live table.
+Audit-first: confirm constraints against the DB, do not reproduce the
+documented shape blind.
+
+Priority: do before T6-5, not after.
 
 T7-15: Admin write capability — vendor and drop data amendment
 T7-1 through T7-7 cover read-only oversight. A write surface is needed

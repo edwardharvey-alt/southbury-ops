@@ -1,3 +1,9 @@
+> **SUPERSEDED — 2026-06-29.** T5-A3 is now ✓ COMPLETE (Priority 2 Half A
+> #413 / Half B #415; `vendors_select_all` dropped). This is a historical
+> point-in-time audit artefact, retained for the record. For current state
+> see the "View security model" section of CLAUDE.md and the T5-A3 DONE/OPEN
+> narrative in BACKLOG.md.
+
 # T5-A3 Priority 1 — frontend v_* view read map (2026-05-17)
 
 This is a **read-only** investigation. No HTML, JS, config, or database
