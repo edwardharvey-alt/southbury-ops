@@ -5780,9 +5780,26 @@ T-admins-table-migration-backfill.
 See CLAUDE.md "Platform admin MVP" section for the full schema, Edge
 Functions, views, pages, and canonical admin EF auth pattern.
 
-T-admins-table-migration-backfill — OPEN
+T-admins-table-migration-backfill — ✓ COMPLETE
 Tier: schema reproducibility / pre-launch. Hard predecessor to T6-5
 (Supabase Pro PITR upgrade).
+
+**Closure note (2026-06-29):** Live table shape verified against production
+via `information_schema.columns`, `pg_constraint`, `pg_indexes`, `pg_class`
+(RLS state), `pg_policies` (confirmed zero policies) and
+`role_table_grants`. CREATE TABLE migration
+`20260629221021_create_admins_table.sql` added (#419) reproducing the exact
+shape — five columns, PK on `id`, UNIQUE + ON DELETE CASCADE FK on
+`auth_user_id`, the partial index `idx_admins_auth_user_id_active`, RLS
+enabled (not forced), zero policies. The migration deliberately diverges from
+the live grant state in one way: it `REVOKE ALL ON public.admins FROM anon,
+authenticated` as defence-in-depth (the live table carries Supabase's default
+broad grants, inert only because RLS-with-no-policies denies them; this closes
+the latent privilege-escalation path on fresh environments). Reconciled on
+production via `supabase migration repair --status applied 20260629221021` —
+history now reproduces the table, so a PITR restore / fresh staging build will
+not silently 403 all admin access. The live table and its data were not
+modified. Unblocks T6-5.
 
 Problem: the `admins` table was created out-of-band in the Supabase SQL
 editor; there is NO CREATE TABLE migration for it in
