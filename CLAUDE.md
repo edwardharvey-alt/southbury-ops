@@ -2239,7 +2239,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B18 — Stripe status visibility surface — open
 - T5-B19 — drop-menu.html: CSP eval-blocked warning — open
 - T5-B21 — Window cancellation with existing orders (refunds + audit trail) — open
-- T-fulfilment-mode-publish-gate — PR open (pending Ed deploy + migration apply). Adds the missing server-side `fulfilment_mode` check to `transition-drop-status` `evaluateLiveReadiness()` and drops the contradictory column-level NOT NULL on `drops.fulfilment_mode` (migration `20260630120000`), so the live-drop fulfilment_mode guarantee moves from the column constraint up to the publish gate. Ed's order: deploy the EF first, then apply the migration, then merge (operational learning #43). See 2026-06-30 Recent updates entry.
+- T-fulfilment-mode-publish-gate — COMPLETE — deployed + migration applied + merged 2026-06-30. Adds the missing server-side `fulfilment_mode` check to `transition-drop-status` `evaluateLiveReadiness()` and drops the contradictory column-level NOT NULL on `drops.fulfilment_mode` (migration `20260630120000`), so the live-drop fulfilment_mode guarantee moves from the column constraint up to the publish gate. Ed's order: deploy the EF first, then apply the migration, then merge (operational learning #43). See 2026-06-30 Recent updates entry.
 - T5-B29 — Multi-window parent drop fulfilment.mode bug — open. When ordering against a drop with `window_group_id` set and `fulfilment_mode = null` (the multi-window parent pattern), `buildCheckoutPayload()` in order.html sends `fulfilment.mode: null` and create-order rejects with 400. Either: (a) order.html's window-selection step in init() should route customers to a child drop before allowing basket entry, or (b) `buildCheckoutPayload` should read `fulfilment_mode` from the selected child window rather than `state.drop`. Also: `validateCheckout()` should refuse to submit when `fulfilment.mode` is null, surfacing a user-friendly error instead of relying on the server's 400. Discovered during Phase 3 manual testing on 2026-05-01.
 - T5-B30 — Edge Function CORS allow-list excludes Netlify deploy previews — open. All current Edge Functions hardcode `ALLOWED_ORIGIN = 'https://lovehearth.co.uk'`, which means deploy previews on `*.netlify.app` cannot exercise the customer flow. Phase 3 testing had to be completed against production after merge rather than against the deploy preview. Widen the allow-list to include the Netlify preview domain pattern, or accept the limitation and document it in the PR template (deploy preview testing requires merge-to-prod for final visual confirmation).
 - T5-B31 — Legacy capacity columns cleanup — open. `orders.pizzas` (NOT NULL CHECK >= 1), `drops.capacity_pizzas`, `drops.max_orders` are still being populated as `Math.max(1, capacity_units)`. Audit all read sites for these columns; remove those reads; then drop the columns. Currently written-only by the create-order Edge Function (line marked with `// LEGACY: see SCHEMA.md — orders.pizzas column slated for removal`). Bounded one-session piece of work.
@@ -2502,8 +2502,8 @@ for quick chronological recall across the whole platform.
   request another vendor's row). Run before the dry run once Catering
   Direct access is sorted (Robin may hold it).
 
-- 2026-06-30: T-fulfilment-mode-publish-gate (PR open, pending Ed
-  deploy + migration apply). `drops.fulfilment_mode` carried a
+- 2026-06-30: T-fulfilment-mode-publish-gate (COMPLETE 2026-06-30).
+  `drops.fulfilment_mode` carried a
   column-level NOT NULL that contradicted its own CHECK (which permits
   NULL) and blocked `create-drop` — a fresh draft is created with no
   fulfilment_mode by design (the vendor sets it later in the Fulfilment
