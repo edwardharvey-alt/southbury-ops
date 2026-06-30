@@ -2280,8 +2280,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T6-2 — Local development environment — open
 - T6-3 — Staging environment — open
 - T6-4 — Branch protection and PR review workflow — open
-- T-admins-table-migration-backfill — `admins` table was created out-of-band in the SQL editor and has no CREATE TABLE migration; 7 admin EFs depend on it, so a fresh-environment rebuild would silently 403 all admin access. Audit-first (confirm live constraints + RLS via `pg_constraint` / `pg_policies`), author the migration, then `migration repair`. Hard predecessor to T6-5. — open
-- T6-5 — Supabase Pro upgrade for point-in-time recovery — open (gated on T-admins-table-migration-backfill)
+- T6-5 — Supabase Pro upgrade for point-in-time recovery — open (predecessor T-admins-table-migration-backfill ✓ COMPLETE 2026-06-29 / #419 — gate cleared)
 - T6-6 — Transactional email via Resend / Postmark — partial (auth/onboarding wired; transactional triggers not built)
 - T6-8 — Dev workflow tooling — Claude Code skills, MCP integrations, knowledge base — open
 
