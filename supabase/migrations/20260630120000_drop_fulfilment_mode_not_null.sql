@@ -1,0 +1,1 @@
+ALTER TABLE drops ALTER COLUMN fulfilment_mode DROP NOT NULL;

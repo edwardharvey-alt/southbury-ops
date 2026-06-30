@@ -39,6 +39,7 @@ type Drop = Record<string, unknown> & {
   expected_guests: number | null;
   discount_tiers: unknown;
   host_id: string | null;
+  fulfilment_mode?: string | null;
   delivery_start: string | null;
   delivery_end: string | null;
   closes_at: string | null;
@@ -75,6 +76,7 @@ async function evaluateLiveReadiness(
   if (!drop.name) return { ready: false, reason: "Drop name is required" };
   if (!drop.slug) return { ready: false, reason: "Drop slug is required" };
   if (!drop.drop_type) return { ready: false, reason: "Drop type is required" };
+  if (!drop.fulfilment_mode) return { ready: false, reason: "Fulfilment mode is required" };
 
   // Event drops bypass capacity — single organiser pays for a group,
   // capacity reservation is skipped server-side. expected_guests is
