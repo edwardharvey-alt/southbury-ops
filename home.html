@@ -1582,6 +1582,8 @@
 
       const insightSignal = state.insightsDrops.length >= 3;
 
+      const shareable = liveDrop || scheduledCount > 0;
+
       el.innerHTML = [
         workspaceCard({
           icon:'SB',
@@ -1606,6 +1608,25 @@
               : 'No future drop yet — create the next moment here.',
           primaryLabel: draftCount ? 'Continue planning' : 'Create drop',
           primaryHref:HearthNav.withVendor('./drop-manager.html')
+        }),
+        workspaceCard({
+          icon:'SH',
+          title:'Share',
+          status: liveDrop
+            ? pill('good','Live now')
+            : scheduledCount
+              ? pill('good','Ready to share')
+              : pill('neutral','No drop yet'),
+          description:'The reveal, the messages, the moment that fills each drop.',
+          meta: liveDrop
+            ? 'A live drop is running — share it while orders are open.'
+            : scheduledCount
+              ? `You've a drop coming up — this is where you fill it.`
+              : `Publish a drop and this is where you'll share it.`,
+          primaryLabel: shareable ? 'Share a drop' : 'Create a drop first',
+          primaryHref: shareable
+            ? HearthNav.withVendor('./activation.html')
+            : HearthNav.withVendor('./drop-manager.html')
         }),
         workspaceCard({
           icon:'ML',
