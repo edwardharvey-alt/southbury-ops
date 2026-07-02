@@ -6,7 +6,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Hearth — Activation</title>
+  <title>Hearth — Share</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
@@ -1434,7 +1434,7 @@
         <a class="brandMark" href="./home.html" aria-label="Hearth home">H</a>
         <div>
           <div class="brandTitle">Hearth</div>
-          <div class="brandSubtitle" id="actHeaderVendorSub">Activation</div>
+          <div class="brandSubtitle" id="actHeaderVendorSub">Share</div>
         </div>
       </div>
       <nav class="nav" id="operatorNav" aria-label="Primary"></nav>
@@ -1443,7 +1443,7 @@
     <div class="home-shell">
 
       <section class="home-card home-pad-lg">
-        <h2 class="home-sectionTitle">Activation</h2>
+        <h2 class="home-sectionTitle">Share</h2>
         <p class="home-sectionSub">Fill your drops. The work of making each moment land.</p>
         <div id="activationContent" style="margin-top:18px;">
           <div class="home-loading">Loading your drops…</div>
@@ -1686,7 +1686,7 @@
             <div class="actod-next-wrap" id="actod-next-wrap-${escapeHtml(s.drop_id)}">${nextLine}</div>
             <div class="actod-actions">
               ${sbLink}
-              <a class="actod-cta" href="#" data-drop-id="${escapeHtml(s.drop_id)}">Open activation →</a>
+              <a class="actod-cta" href="#" data-drop-id="${escapeHtml(s.drop_id)}">Share this drop →</a>
             </div>
           </div>
         </article>
@@ -3984,7 +3984,7 @@
       state.view = 'drop';
       state.selectedDropId = dropId;
       if (state.products.length === 0) {
-        byId('activationContent').innerHTML = `<div class="home-loading">Loading drop activation…</div>`;
+        byId('activationContent').innerHTML = `<div class="home-loading">Loading…</div>`;
         try {
           const { data, error } = await sb.from('products').select('*').eq('vendor_id', state.vendor.id);
           if (!error && Array.isArray(data)) state.products = data;
@@ -4058,7 +4058,7 @@
 
         // Set the header subtitle to the vendor display name once resolved.
         const sub = document.getElementById('actHeaderVendorSub');
-        if (sub) sub.textContent = state.vendor.display_name || state.vendor.name || 'Activation';
+        if (sub) sub.textContent = state.vendor.display_name || state.vendor.name || 'Share';
 
         // Deep-link: ?drop=<drop_id> opens the per-drop view directly.
         const deepDropId = new URLSearchParams(window.location.search).get('drop');

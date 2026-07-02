@@ -58,7 +58,7 @@
     { file: "drop-menu.html", label: "Menu" },
     { file: "drop-manager.html", label: "Drop Studio" },
     { file: "service-board.html", label: "Service Board" },
-    { file: "activation.html", label: "Activation" },
+    { file: "activation.html", label: "Share" },
     { file: "insights.html", label: "Insights" },
     { file: "customers.html", label: "Customers" },
     { file: "hosts.html", label: "Hosts", utility: true },
