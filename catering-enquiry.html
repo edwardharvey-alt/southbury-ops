@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Catering enquiry</title>
+  <link rel="stylesheet" href="./assets/hearth.css?v=31" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Figtree:wght@400;500;700&display=swap" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --ce-brand-primary: #8B6B3F;
+      --ce-brand-secondary: #CBB89D;
+      --ce-bg: #FAF8F4;
+      --ce-ink: #1F2937;
+      --ce-muted: #6B7280;
+      --ce-line: #E7E1D8;
+      --ce-brand-text: #ffffff;
+      --ce-brand-soft: rgba(139, 107, 63, 0.10);
+    }
+
+    html, body {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    html { overflow-x: hidden; }
+
+    body {
+      margin: 0;
+      background: var(--ce-bg);
+      color: var(--ce-ink);
+      font-family: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .ce-wrap {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 24px 20px 64px;
+    }
+
+    /* Header — vendor identity */
+    .ce-header {
+      text-align: center;
+      padding: 16px 0 8px;
+    }
+    .ce-logo {
+      max-width: 96px;
+      max-height: 96px;
+      width: auto;
+      height: auto;
+      margin: 0 auto 14px;
+      display: block;
+      border-radius: 10px;
+    }
+    .ce-logo.hidden { display: none; }
+    .ce-vendor-name {
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-weight: 600;
+      font-size: 34px;
+      line-height: 1.15;
+      margin: 0;
+      color: var(--ce-ink);
+    }
+    .ce-eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--ce-brand-primary);
+      margin: 0 0 6px;
+    }
+
+    /* Intro */
+    .ce-intro {
+      margin: 20px 0 26px;
+      text-align: center;
+      color: var(--ce-muted);
+      font-size: 16px;
+    }
+    .ce-intro p { margin: 0 0 10px; }
+    .ce-intro p:last-child { margin-bottom: 0; }
+
+    /* Card / form */
+    .ce-card {
+      background: #ffffff;
+      border: 1px solid var(--ce-line);
+      border-radius: 16px;
+      padding: 22px 20px;
+      box-shadow: 0 1px 2px rgba(31, 41, 55, 0.04);
+    }
+
+    .ce-field { margin-bottom: 18px; }
+    .ce-field:last-of-type { margin-bottom: 0; }
+
+    .ce-label {
+      display: block;
+      font-weight: 500;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: var(--ce-ink);
+    }
+    .ce-label .ce-opt {
+      color: var(--ce-muted);
+      font-weight: 400;
+    }
+
+    .ce-input,
+    .ce-textarea,
+    .ce-select {
+      width: 100%;
+      box-sizing: border-box;
+      font-family: inherit;
+      font-size: 16px;
+      color: var(--ce-ink);
+      background: #ffffff;
+      border: 1px solid var(--ce-line);
+      border-radius: 10px;
+      padding: 12px 14px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .ce-input:focus,
+    .ce-textarea:focus,
+    .ce-select:focus {
+      outline: none;
+      border-color: var(--ce-brand-primary);
+      box-shadow: 0 0 0 3px var(--ce-brand-soft);
+    }
+    .ce-textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .ce-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 460px) {
+      .ce-row { grid-template-columns: 1fr; gap: 0; }
+      .ce-row .ce-field { margin-bottom: 18px; }
+    }
+
+    /* Choice buttons (collection / delivery) */
+    .ce-choice {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .ce-choice-btn {
+      appearance: none;
+      background: #ffffff;
+      border: 1px solid var(--ce-line);
+      border-radius: 10px;
+      padding: 12px;
+      font-family: inherit;
+      font-size: 15px;
+      color: var(--ce-ink);
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .ce-choice-btn.is-selected {
+      border-color: var(--ce-brand-primary);
+      background: var(--ce-brand-soft);
+      font-weight: 500;
+    }
+
+    /* Consent */
+    .ce-consent {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-top: 20px;
+      font-size: 14px;
+      color: var(--ce-muted);
+    }
+    .ce-consent input {
+      margin-top: 3px;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      accent-color: var(--ce-brand-primary);
+    }
+
+    /* Honeypot — hidden from real users */
+    .ce-hp {
+      position: absolute;
+      left: -9999px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+
+    /* Submit */
+    .ce-submit {
+      appearance: none;
+      width: 100%;
+      margin-top: 22px;
+      padding: 15px;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ce-brand-text);
+      background: var(--ce-brand-primary);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: opacity 0.15s ease;
+    }
+    .ce-submit:disabled { opacity: 0.6; cursor: default; }
+
+    .ce-notice {
+      margin-top: 14px;
+      font-size: 14px;
+      color: #b45309;
+      text-align: center;
+    }
+    .ce-notice.hidden { display: none; }
+
+    /* Success state */
+    .ce-success { text-align: center; padding: 8px 0; }
+    .ce-success h2 {
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-weight: 600;
+      font-size: 28px;
+      margin: 0 0 12px;
+    }
+    .ce-success p {
+      color: var(--ce-muted);
+      font-size: 16px;
+      margin: 0 auto;
+      max-width: 380px;
+    }
+
+    /* Footer */
+    .ce-footer {
+      text-align: center;
+      margin-top: 28px;
+      font-size: 13px;
+      color: var(--ce-muted);
+    }
+    .ce-footer a { color: var(--ce-muted); }
+
+    .ce-state-msg {
+      text-align: center;
+      padding: 64px 20px;
+      color: var(--ce-muted);
+      font-size: 16px;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="ce-wrap">
+    <!-- Loading / error state before the vendor resolves -->
+    <div id="ceState" class="ce-state-msg">Loading…</div>
+
+    <!-- Main content, revealed once the vendor resolves -->
+    <main id="ceMain" class="hidden">
+      <header class="ce-header">
+        <img id="ceLogo" class="ce-logo hidden" alt="" />
+        <p class="ce-eyebrow">Catering</p>
+        <h1 id="ceVendorName" class="ce-vendor-name">Vendor</h1>
+      </header>
+
+      <div class="ce-intro">
+        <p id="ceIntroLine">Planning something? Tell us about your event and we'll be in touch.</p>
+      </div>
+
+      <div class="ce-card">
+        <form id="ceForm" novalidate>
+          <div class="ce-field">
+            <label class="ce-label" for="ceName">Your name</label>
+            <input class="ce-input" id="ceName" name="contact_name" type="text"
+                   maxlength="120" autocomplete="name" required />
+          </div>
+
+          <div class="ce-row">
+            <div class="ce-field">
+              <label class="ce-label" for="ceEmail">Email</label>
+              <input class="ce-input" id="ceEmail" name="contact_email" type="email"
+                     maxlength="255" autocomplete="email" />
+            </div>
+            <div class="ce-field">
+              <label class="ce-label" for="cePhone">Phone</label>
+              <input class="ce-input" id="cePhone" name="contact_phone" type="tel"
+                     maxlength="255" autocomplete="tel" />
+            </div>
+          </div>
+
+          <div class="ce-row">
+            <div class="ce-field">
+              <label class="ce-label" for="ceDate">Event date <span class="ce-opt">(optional)</span></label>
+              <input class="ce-input" id="ceDate" name="event_date" type="date" />
+            </div>
+            <div class="ce-field">
+              <label class="ce-label" for="ceGuests">Approx. guests <span class="ce-opt">(optional)</span></label>
+              <input class="ce-input" id="ceGuests" name="guest_count" type="number"
+                     min="0" inputmode="numeric" />
+            </div>
+          </div>
+
+          <div class="ce-field">
+            <label class="ce-label" for="ceType">Type of event <span class="ce-opt">(optional)</span></label>
+            <input class="ce-input" id="ceType" name="event_type" type="text"
+                   maxlength="255" placeholder="Birthday, wedding, office lunch…" />
+          </div>
+
+          <div class="ce-field">
+            <label class="ce-label">How would you like it? <span class="ce-opt">(optional)</span></label>
+            <div class="ce-choice" id="ceFulfilment">
+              <button type="button" class="ce-choice-btn" data-value="collection">Collection</button>
+              <button type="button" class="ce-choice-btn" data-value="delivery">Delivery</button>
+            </div>
+          </div>
+
+          <div class="ce-field">
+            <label class="ce-label" for="ceBrief">Tell us about your event <span class="ce-opt">(optional)</span></label>
+            <textarea class="ce-textarea" id="ceBrief" name="brief" maxlength="2000"
+                      placeholder="Anything that helps us understand what you have in mind."></textarea>
+          </div>
+
+          <!-- Honeypot: hidden from real users; bots that fill it are dropped silently -->
+          <div class="ce-hp" aria-hidden="true">
+            <label for="ceCompany">Company</label>
+            <input id="ceCompany" name="company" type="text" tabindex="-1" autocomplete="off" />
+          </div>
+
+          <label class="ce-consent">
+            <input id="ceConsent" type="checkbox" required />
+            <span id="ceConsentLabel">I'm happy for this vendor to contact me about this enquiry.</span>
+          </label>
+
+          <button type="submit" class="ce-submit" id="ceSubmit">Send enquiry</button>
+          <p id="ceFormNotice" class="ce-notice hidden"></p>
+        </form>
+      </div>
+
+      <div class="ce-footer" id="ceFooter"></div>
+    </main>
+
+    <!-- Success state -->
+    <div id="ceDone" class="hidden ce-card">
+      <div class="ce-success">
+        <h2>Thank you</h2>
+        <p id="ceDoneLine">Your enquiry's in. We'll be in touch shortly.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var CONFIG = window.HEARTH_CONFIG || {};
+      var SUPABASE_URL = CONFIG.SUPABASE_URL;
+      var SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
+
+      var byId = function (id) { return document.getElementById(id); };
+      var getParam = function (name) {
+        return new URLSearchParams(window.location.search).get(name);
+      };
+      var escapeHtml = function (v) {
+        return String(v == null ? "" : v)
+          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+      };
+      var hexToRgba = function (hex, alpha) {
+        var h = String(hex || "").replace("#", "");
+        if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+        var r = parseInt(h.slice(0, 2), 16),
+            g = parseInt(h.slice(2, 4), 16),
+            b = parseInt(h.slice(4, 6), 16);
+        if ([r, g, b].some(function (x) { return Number.isNaN(x); })) {
+          return "rgba(139,107,63," + alpha + ")";
+        }
+        return "rgba(" + r + ", " + g + ", " + b + ", " + alpha + ")";
+      };
+
+      var state = { vendor: null, fulfilment: null, submitting: false };
+      var supabase = null;
+
+      function showState(msg) {
+        byId("ceState").textContent = msg;
+        byId("ceState").classList.remove("hidden");
+        byId("ceMain").classList.add("hidden");
+      }
+
+      function applyBranding(vendor) {
+        var primary = vendor.brand_primary_color || "#8B6B3F";
+        var secondary = vendor.brand_secondary_color || primary;
+        var textOnPrimary = vendor.brand_text_on_primary || "#ffffff";
+        var name = vendor.display_name || vendor.name || "This vendor";
+
+        var root = document.documentElement.style;
+        root.setProperty("--ce-brand-primary", primary);
+        root.setProperty("--ce-brand-secondary", secondary);
+        root.setProperty("--ce-brand-text", textOnPrimary);
+        root.setProperty("--ce-brand-soft", hexToRgba(primary, 0.10));
+
+        byId("ceVendorName").textContent = name;
+
+        var logo = byId("ceLogo");
+        if (vendor.logo_url) {
+          logo.src = vendor.logo_url;
+          logo.alt = name;
+          logo.classList.remove("hidden");
+        } else {
+          logo.classList.add("hidden");
+        }
+
+        byId("ceIntroLine").textContent =
+          "Planning something? " + name + " offers catering — tell us about your event and they'll be in touch.";
+        byId("ceConsentLabel").textContent =
+          "I'm happy for " + name + " to contact me about this enquiry.";
+
+        // Footer — optional website link + subtle Powered by Hearth.
+        var footerParts = [];
+        if (vendor.website_url) {
+          footerParts.push(
+            '<a href="' + escapeHtml(vendor.website_url) + '" target="_blank" rel="noopener noreferrer">Visit ' +
+            escapeHtml(name) + "</a>"
+          );
+        }
+        if (vendor.powered_by_hearth_visible !== false) {
+          footerParts.push("Powered by Hearth");
+        }
+        footerParts.push('<a href="privacy.html" target="_blank" rel="noopener noreferrer">Privacy policy</a>');
+        byId("ceFooter").innerHTML = footerParts.join(" &middot; ");
+
+        document.title = name + " — Catering enquiry";
+      }
+
+      function wireFulfilment() {
+        var wrap = byId("ceFulfilment");
+        wrap.addEventListener("click", function (e) {
+          var btn = e.target.closest(".ce-choice-btn");
+          if (!btn) return;
+          var value = btn.getAttribute("data-value");
+          if (state.fulfilment === value) {
+            state.fulfilment = null;
+            btn.classList.remove("is-selected");
+            return;
+          }
+          state.fulfilment = value;
+          Array.prototype.forEach.call(wrap.querySelectorAll(".ce-choice-btn"), function (b) {
+            b.classList.toggle("is-selected", b === btn);
+          });
+        });
+      }
+
+      function showNotice(msg) {
+        var el = byId("ceFormNotice");
+        el.textContent = msg;
+        el.classList.remove("hidden");
+      }
+      function clearNotice() {
+        byId("ceFormNotice").classList.add("hidden");
+      }
+
+      function validateClientSide() {
+        var name = byId("ceName").value.trim();
+        if (!name) return "Please tell us your name.";
+        var email = byId("ceEmail").value.trim();
+        var phone = byId("cePhone").value.trim();
+        if (!email && !phone) return "Please leave an email or a phone number so we can reply.";
+        if (!byId("ceConsent").checked) {
+          return "Please confirm you're happy to be contacted about this enquiry.";
+        }
+        return null;
+      }
+
+      async function handleSubmit(e) {
+        e.preventDefault();
+        if (state.submitting) return;
+        clearNotice();
+
+        var problem = validateClientSide();
+        if (problem) { showNotice(problem); return; }
+
+        var guestsRaw = byId("ceGuests").value.trim();
+        var payload = {
+          vendor_id: state.vendor.id,
+          contact_name: byId("ceName").value.trim(),
+          contact_email: byId("ceEmail").value.trim() || null,
+          contact_phone: byId("cePhone").value.trim() || null,
+          event_date: byId("ceDate").value || null,
+          guest_count: guestsRaw === "" ? null : Number(guestsRaw),
+          event_type: byId("ceType").value.trim() || null,
+          fulfilment: state.fulfilment,
+          brief: byId("ceBrief").value.trim() || null,
+          consent: byId("ceConsent").checked,
+          company: byId("ceCompany").value // honeypot
+        };
+
+        state.submitting = true;
+        var btn = byId("ceSubmit");
+        btn.disabled = true;
+        btn.textContent = "Sending…";
+
+        var result;
+        try {
+          result = await supabase.functions.invoke("submit-catering-enquiry", { body: payload });
+        } catch (err) {
+          result = { error: err };
+        }
+
+        var data = result && result.data;
+        var error = result && result.error;
+
+        if (error || (data && data.ok === false)) {
+          var msg = (data && data.error) || "Something went wrong — please try again.";
+          showNotice(msg);
+          state.submitting = false;
+          btn.disabled = false;
+          btn.textContent = "Send enquiry";
+          return;
+        }
+
+        // Success — replace the form with a calm confirmation.
+        byId("ceMain").classList.add("hidden");
+        var done = byId("ceDone");
+        var name = state.vendor.display_name || state.vendor.name || "The team";
+        byId("ceDoneLine").textContent =
+          "Your enquiry's in. " + name + " will be in touch shortly.";
+        done.classList.remove("hidden");
+        window.scrollTo(0, 0);
+      }
+
+      async function init() {
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+          showState("This page isn't configured correctly. Please check back soon.");
+          return;
+        }
+        if (!window.supabase || !window.supabase.createClient) {
+          showState("Something went wrong loading this page. Please refresh.");
+          return;
+        }
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        var slug = getParam("vendor");
+        if (!slug) {
+          showState("This catering page isn't available — the link looks incomplete.");
+          return;
+        }
+
+        var res;
+        try {
+          res = await supabase
+            .from("v_vendor_public")
+            .select("id, slug, display_name, name, logo_url, website_url, brand_primary_color, brand_secondary_color, brand_text_on_primary, powered_by_hearth_visible")
+            .eq("slug", slug)
+            .maybeSingle();
+        } catch (err) {
+          res = { error: err };
+        }
+
+        if (res.error || !res.data) {
+          showState("This catering page isn't available.");
+          return;
+        }
+
+        state.vendor = res.data;
+        applyBranding(state.vendor);
+        wireFulfilment();
+        byId("ceForm").addEventListener("submit", handleSubmit);
+
+        byId("ceState").classList.add("hidden");
+        byId("ceMain").classList.remove("hidden");
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
