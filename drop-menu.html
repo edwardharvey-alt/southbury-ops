@@ -818,6 +818,25 @@
                     </div>
                   </div>
 
+                  <div class="stageSection" id="productChoicesSection">
+                    <div class="row space" style="margin-bottom:10px;">
+                      <div>
+                        <h4 class="stageSectionTitle">Choices</h4>
+                        <p class="stageSectionSub">Let customers choose an option that comes with this dish — like a dressing or a protein.</p>
+                      </div>
+                    </div>
+
+                    <div id="productChoicesGroups"></div>
+
+                    <div style="display:flex; flex-direction:row; gap:8px; flex-wrap:wrap; margin-top:12px;">
+                      <button class="btnGhost" id="addOptionGroupBtn" type="button" style="font-size:12px; min-height:36px; padding:0 14px;">Add a choice</button>
+                    </div>
+
+                    <div class="menuEditorActions">
+                      <button class="btnAccent" id="saveOptionGroupsBtn" type="button">Save choices</button>
+                    </div>
+                  </div>
+
                   <div class="stageSection">
                     <h4 class="stageSectionTitle">Performance snapshot</h4>
                     <p class="stageSectionSub">Quick signals to help decide what to keep, improve or remove</p>
@@ -1306,6 +1325,14 @@
         editProductAllergens: new Set(),
         editProductDietaryFlags: new Set(),
 
+        // Product options (modifiers) — Stage 2. Map of product_id -> array
+        // of saved groups (each with nested options), loaded from
+        // get-product-options. editProductOptionGroups is the editable draft
+        // for the currently-selected product (name + options only; the fixed
+        // v1 min/max/required values are applied on save).
+        productOptionGroupsByProduct: {},
+        editProductOptionGroups: [],
+
         // T4-31b-products: per-bundle photo upload state.
         editBundlePhotoUpload: null,
         mountedEditBundleId: null,
@@ -1540,6 +1567,7 @@
         state.bundleAnalytics = bundleAnalyticsRes.data || [];
 
         await loadBundleChildren();
+        await loadProductOptionGroups();
         ensureSelectionsStillValid();
         ensureOrderingSelectionsStillValid();
       }
@@ -2716,6 +2744,8 @@
           byId("productSelectionLabel").textContent = "No product selected";
           byId("productSelectionMetrics").innerHTML = "";
           renderAnalyticsBlock("productAnalyticsBlock", null);
+          state.editProductOptionGroups = [];
+          renderProductOptionGroups();
           return;
         }
 
@@ -2750,6 +2780,163 @@
         ].join("");
 
         renderAnalyticsBlock("productAnalyticsBlock", analytics);
+        state.editProductOptionGroups = cloneOptionGroups(state.productOptionGroupsByProduct[product.id] || []);
+        renderProductOptionGroups();
+      }
+
+      // --- Product options (modifiers) — Stage 2 -----------------------------
+      // Definitions only. Nothing customer-facing and nothing money-related
+      // reads these yet (order page + checkout are later stages).
+
+      // Load every option group for the vendor via the service-role read
+      // function (the raw tables are RLS-locked + anon-revoked, so a direct
+      // browser read returns nothing). Non-fatal: a failure here must never
+      // blank the catalogue, so we log and leave the map empty.
+      async function loadProductOptionGroups() {
+        state.productOptionGroupsByProduct = {};
+        if (!state.products.length) return;
+        try {
+          const { data, error } = await supabase.functions.invoke("get-product-options", {
+            body: { vendor_id: state.vendorId }
+          });
+          if (error) { console.error("get-product-options failed:", error); return; }
+          if (data && data.error) { console.error("get-product-options error:", data.error); return; }
+          const groups = (data && data.groups) || [];
+          const map = {};
+          for (const g of groups) {
+            if (!map[g.product_id]) map[g.product_id] = [];
+            map[g.product_id].push(g);
+          }
+          state.productOptionGroupsByProduct = map;
+        } catch (err) {
+          console.error("get-product-options threw:", err);
+        }
+      }
+
+      // Reduce saved groups (from the DB / EF response) to the editable draft
+      // shape: name + options (name, price). The fixed v1 min/max/required
+      // values are re-applied on save, so the draft doesn't carry them.
+      function cloneOptionGroups(groups) {
+        return (groups || []).map((g) => ({
+          name: g.name || "",
+          options: (g.options || []).map((o) => ({
+            name: o.name || "",
+            price_delta_pence: Number(o.price_delta_pence) || 0
+          }))
+        }));
+      }
+
+      function renderProductOptionGroups() {
+        const wrap = byId("productChoicesGroups");
+        if (!wrap) return;
+        const hasProduct = !!state.selectedProductId;
+        byId("addOptionGroupBtn").disabled = !hasProduct;
+        byId("saveOptionGroupsBtn").disabled = !hasProduct;
+
+        if (!hasProduct) {
+          wrap.innerHTML = `<div class="compactMuted">Select a product to add choices.</div>`;
+          return;
+        }
+
+        const groups = state.editProductOptionGroups || [];
+        if (!groups.length) {
+          wrap.innerHTML = `<div class="compactMuted">No choices yet. Add one like “Protein” or “Dressing”.</div>`;
+          return;
+        }
+
+        wrap.innerHTML = groups.map((group, gi) => {
+          const optionsHtml = (group.options || []).map((opt, oi) => `
+            <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+              <input type="text" data-group="${gi}" data-option="${oi}" data-field="optName" value="${escapeHtml(opt.name || "")}" placeholder="Option name, e.g. Salmon" style="flex:2;" />
+              <div style="display:flex; align-items:center; gap:4px;">
+                <span style="color:var(--h-slate);">£</span>
+                <input type="number" min="0" step="0.01" data-group="${gi}" data-option="${oi}" data-field="optPrice" value="${((Number(opt.price_delta_pence) || 0) / 100).toFixed(2)}" style="width:88px;" />
+              </div>
+              <button type="button" class="btnGhost optRemoveBtn" data-group="${gi}" data-option="${oi}" style="min-height:36px; padding:0 12px; color:#991b1b;">Remove</button>
+            </div>
+          `).join("");
+
+          return `
+            <div class="stageSection" style="margin-bottom:14px;">
+              <div class="field">
+                <label>Choice name</label>
+                <input type="text" data-group="${gi}" data-field="groupName" value="${escapeHtml(group.name || "")}" placeholder="e.g. Protein" />
+              </div>
+              <p class="helperText" style="margin:6px 0;">Customers pick one. Add the extra £ on top of the base price for options that cost more — leave at 0.00 if they're the same price.</p>
+              <div>${optionsHtml}</div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+                <button type="button" class="btnGhost optAddBtn" data-group="${gi}" style="min-height:34px; padding:0 12px; font-size:12px;">Add option</button>
+                <button type="button" class="btnGhost groupRemoveBtn" data-group="${gi}" style="min-height:34px; padding:0 12px; font-size:12px; color:#991b1b;">Remove choice</button>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      // Read the current input values back into the draft, so structural
+      // changes (add/remove) and saves don't lose in-progress edits. Mirrors
+      // syncBundleDraftFromUi.
+      function syncOptionGroupsFromDom() {
+        const wrap = byId("productChoicesGroups");
+        if (!wrap) return;
+        (state.editProductOptionGroups || []).forEach((group, gi) => {
+          const nameInput = wrap.querySelector(`input[data-group="${gi}"][data-field="groupName"]`);
+          if (nameInput) group.name = nameInput.value;
+          (group.options || []).forEach((opt, oi) => {
+            const on = wrap.querySelector(`input[data-group="${gi}"][data-option="${oi}"][data-field="optName"]`);
+            const op = wrap.querySelector(`input[data-group="${gi}"][data-option="${oi}"][data-field="optPrice"]`);
+            if (on) opt.name = on.value;
+            if (op) opt.price_delta_pence = Math.max(0, Math.round(Number(op.value || 0) * 100));
+          });
+        });
+      }
+
+      async function saveProductOptionGroups() {
+        const product = state.products.find((p) => p.id === state.selectedProductId);
+        if (!product) throw new Error("No product selected.");
+        syncOptionGroupsFromDom();
+
+        // v1: every group is required + pick-exactly-one. Store the fixed
+        // min/max/required values; the UI doesn't expose these controls yet.
+        const groups = (state.editProductOptionGroups || []).map((group, gi) => ({
+          name: (group.name || "").trim(),
+          min_select: 1,
+          max_select: 1,
+          is_required: true,
+          sort_order: (gi + 1) * 10,
+          is_active: true,
+          options: (group.options || []).map((opt, oi) => ({
+            name: (opt.name || "").trim(),
+            price_delta_pence: Math.max(0, Math.round(Number(opt.price_delta_pence) || 0)),
+            sort_order: (oi + 1) * 10,
+            is_active: true
+          }))
+        }));
+
+        // Friendly client-side guardrails mirroring the server validation.
+        for (const g of groups) {
+          if (!g.name) throw new Error("Give every choice a name.");
+          if (!g.options.length) throw new Error(`"${g.name}" needs at least one option.`);
+          for (const o of g.options) {
+            if (!o.name) throw new Error(`Every option in "${g.name}" needs a name.`);
+          }
+        }
+
+        setSaveState("saving");
+        const { data, error } = await supabase.functions.invoke("save-product-options", {
+          body: { vendor_id: state.vendorId, product_id: product.id, groups }
+        });
+        if (error) { setSaveState("error", error.message || "Save failed"); throw error; }
+        if (data && data.error) { setSaveState("error", data.error); throw new Error(data.error); }
+
+        // Reflect the saved rows without a hard reload (mirrors the
+        // applySavedRowToState pattern used by product/bundle saves).
+        const savedGroups = (data && data.groups) || [];
+        state.productOptionGroupsByProduct[product.id] = savedGroups;
+        state.editProductOptionGroups = cloneOptionGroups(savedGroups);
+        renderProductOptionGroups();
+        setSaveState("saved");
+        showInlineSuccess("Choices saved");
       }
 
       function renderEverything() {
@@ -3581,6 +3768,48 @@
           } catch (err) {
             console.error(err);
             showError(err.message || "Unable to save product.");
+          }
+        });
+
+        // Product options (modifiers) — Stage 2 wiring. The groups container
+        // is re-rendered on every change, so its row buttons use delegation
+        // on the persistent parent (wired once).
+        byId("addOptionGroupBtn").addEventListener("click", () => {
+          if (!state.selectedProductId) return;
+          syncOptionGroupsFromDom();
+          state.editProductOptionGroups.push({
+            name: "",
+            options: [{ name: "", price_delta_pence: 0 }]
+          });
+          renderProductOptionGroups();
+        });
+
+        byId("productChoicesGroups").addEventListener("click", (e) => {
+          const addOpt = e.target.closest(".optAddBtn");
+          const remOpt = e.target.closest(".optRemoveBtn");
+          const remGroup = e.target.closest(".groupRemoveBtn");
+          if (!addOpt && !remOpt && !remGroup) return;
+          syncOptionGroupsFromDom();
+          if (addOpt) {
+            const gi = Number(addOpt.dataset.group);
+            state.editProductOptionGroups[gi].options.push({ name: "", price_delta_pence: 0 });
+          } else if (remOpt) {
+            const gi = Number(remOpt.dataset.group);
+            const oi = Number(remOpt.dataset.option);
+            state.editProductOptionGroups[gi].options.splice(oi, 1);
+          } else if (remGroup) {
+            const gi = Number(remGroup.dataset.group);
+            state.editProductOptionGroups.splice(gi, 1);
+          }
+          renderProductOptionGroups();
+        });
+
+        byId("saveOptionGroupsBtn").addEventListener("click", async () => {
+          try {
+            await saveProductOptionGroups();
+          } catch (err) {
+            console.error(err);
+            showError(err.message || "Unable to save choices.");
           }
         });
 
