@@ -1664,6 +1664,43 @@ on top of the coding rules above.
     to re-run shipped migrations, repair — don't push. (T5-11 slice 1,
     2026-06-19.)
 
+93. **LOAD-BEARING — the server is the sole pricing authority; the client
+    is NEVER trusted for any price.** `create-order` re-derives every
+    charged amount server-side from the database and hard-stops on any
+    mismatch with the client-declared total. The base unit price is
+    `drop_menu_items.price_override_pence ?? products.price_pence` (the
+    drop's override wins, else catalogue list price); each chosen product
+    option's delta is re-read from `product_options.price_delta_pence` and
+    folded into `serverUnitPrice[i]` BEFORE the subtotal is summed; the
+    client's declared `unit_price_pence` and the display-only
+    `option_selections[].price_delta_pence` are ignored entirely. Step 7
+    compares the server-computed total against `payload.totals.total_pence`
+    and returns a 400 ("Total does not match basket") on any divergence —
+    so an under-declared total cannot buy an upgrade, and a tampered line
+    price cannot discount an order. Any future money-path audit MUST assert
+    this explicitly (verified end-to-end for options on 2026-07-04: honest
+    Steak/Salmon accepted at the true total, tamper rejected, bogus client
+    delta ignored). Refs: PR #427 (pricing authority) + PR #432 (option
+    deltas). See also learning #55 (`orders.total_pence` is the only source
+    of truth for what was charged).
+
+94. **LOAD-BEARING — hard-reset the local tree to remote before every
+    `supabase functions deploy`.** Run `git fetch origin && git reset
+    --hard origin/<branch>` immediately before deploying so the code you
+    ship is the branch's remote HEAD, never a stale local working tree.
+    `supabase functions deploy` uploads whatever is on disk — it does not
+    check that disk matches the branch — so a drifted local checkout
+    silently deploys OLD code while the CLI reports success. This caused a
+    real production incident: an option-blind `create-order` was deployed
+    from a stale local checkout during the product-options rollout and
+    appeared to work because the test order's total coincidentally matched
+    the (delta-less) server computation — the drift only surfaced when a
+    differently-priced option was tried. Mirrors critical rule #10 (always
+    start a session from `git reset --hard origin/main`) and rule #15
+    (deploy-before-merge); this is the deploy-time corollary. Verify with
+    `git status` (clean) and `git log origin/<branch> --oneline -1`
+    (matches HEAD) before the deploy command.
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
@@ -2276,6 +2313,8 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T-E3-stale-nav-labels — PARTIAL. Dry-run-visible labels fixed (#379: home.html card titles, three drop-manager.html "Menu Library"→"Offer", brand-hearth.html error). Still OPEN, folded into T8-3-sub1: vendor-terms.html legal copy, order-entry.html legacy dev tool, home.html card icon glyphs 'ML'/'BH'. Source: Pass E / E3. — open
 - T-E4-activation-accent — ✓ DONE 2026-06-16 (#380). Hearthfire (`var(--h-fire)`/`#c4511a`) is the canonical Hearth accent; `#8B6B3F` retired as a Hearth primary but RETAINED as the `--vendor-brand-primary` fallback (must NOT migrate there — brand-bleed). Activation operator-chrome refs migrated; vendor-colour slots held. Source: Pass E / E4.
 - T-E4-activation-rgba-tints — finish the Activation Hearthfire convergence: `.act-channel-badge` (~:390) and `.act-social-toggle.is-on` (~:509) couple `#8B6B3F` with `rgba(139,107,63,…)` tints; `.actod-cta:hover` (~:125) uses `#75592f`. Held during #380 to avoid guessing tints. Also: the external brand playbook still names `#8B6B3F` primary and needs updating to Hearthfire. Post-launch, low priority. Source: #380. — open
+- Product options (menu modifiers) — feature ✓ COMPLETE (PRs #429–#434); see `docs/features/product-options.md` + operational learning #93. Deferred v1 scope (schema supports, UI does not yet write), all open post-launch: **T-opt-per-option-stock** (per-option stock limits); **T-opt-per-drop-override** (per-drop override of an option's `price_delta_pence`); **T-opt-on-bundles** (options on bundle lines — v1 is products-only, `create-order` rejects options on non-product lines); **T-opt-multiselect-groups** (multi-select / min-max groups — v1 writes fixed `1/1/required`). Full spec in BACKLOG.md. — open
+- T-sb-bundle-selection-aggregates — bundle *choice selections* render on the Service Board kanban card (Stage 5) but the aggregate views still show bundles parent-only: the "All items" prep sheet and "All orders" compact table have no per-selection breakdown (Stage 6 added *option* counts to the prep sheet, not bundle selection counts). NOT T-sb-3 (the prep-sheet build itself, ✓ COMPLETE #277) — a distinct, previously-untracked gap. Low priority, display-only. See BACKLOG.md. — open
 
 ### Tier 6 — Production readiness
 - T6-2 — Local development environment — open
@@ -2284,6 +2323,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T6-5 — Supabase Pro upgrade for point-in-time recovery — open (predecessor T-admins-table-migration-backfill ✓ COMPLETE 2026-06-29 / #419 — gate cleared)
 - T6-6 — Transactional email via Resend / Postmark — partial (auth/onboarding wired; transactional triggers not built)
 - T6-8 — Dev workflow tooling — Claude Code skills, MCP integrations, knowledge base — open
+- T-base-ddl-backfill — Committed base-table schema dump. The tracked repo has no reliable machine-checkable dump: `SCHEMA.md` is tracked but documented-stale (learnings #54/#57), the structural JSON dump apparatus (`schema-snapshot/`) exists only as untracked local files (commit it first), and `prod-schema.sql` is an empty untracked placeholder. Then add a plain-SQL `CREATE TABLE` reconstruction. Post-launch; enables SQL-level schema audits. See BACKLOG.md. — open
 
 ### Tier 7 — Platform oversight (Phase 1, before ~10 vendors)
 - T7-2 — Vendor profile page — open

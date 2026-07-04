@@ -50,6 +50,69 @@ Service Board hardening workstream, all four tickets shipped and merged
 
 ---
 
+### Product options (menu modifiers) — ✓ COMPLETE
+
+Per-product option groups (modifiers) — a named, required, pick-exactly-one
+choice attached to a single product, each option carrying a price delta in pence
+(e.g. Protein: Salmon +£2, Steak +£3, Tofu +£0). Distinct from bundles (which
+group several products). Shipped across PRs #429–#434 (2026-07) and live in
+production. Full reference: `docs/features/product-options.md`. Pricing-authority
+invariant: CLAUDE.md operational learning #93.
+
+- **Stage 1 (#429)** — schema only, inert: `product_option_groups`,
+  `product_options`, `order_option_selections` (snapshot columns
+  `option_name_snapshot` / `price_delta_pence_snapshot`). Service-role only (RLS
+  on, no policies, `REVOKE`d from anon/authenticated); vendor-scoped via parent
+  chain (no `vendor_id` column).
+- **Stage 2 (#430)** — vendor "Choices" editor in `drop-menu.html`, via
+  `save-product-options` / `get-product-options` EFs.
+- **Stage 3 (#431)** — customer chooser in `order.html`, via the anon-safe
+  `get-drop-product-options` EF; chosen `group_id` + `option_id` added to the
+  checkout payload.
+- **Stage 4 (#432)** — `create-order` re-derives the option delta server-side from
+  `product_options.price_delta_pence`, tenancy-checks it, folds it into the
+  charged total, and writes the snapshots. Client price never trusted (verified
+  end-to-end 2026-07-04).
+- **Stage 5 (#433)** — chosen option shown on the confirmation page
+  (`fetch-order`), confirmation email (`send-order-confirmation`), and the
+  Service Board kanban card (`get-drop` now returns `order_item_lines` with
+  `options[]`).
+- **Stage 6 (#434)** — chosen option shown on the two remaining Service Board
+  views: the "All orders" compact table (inline suffix) and the "All items" prep
+  sheet (product total + indented option-count sub-lines, on screen and in the
+  branded PNG export).
+
+**Future scope (deferred from v1 — schema supports, UI does not yet write):**
+
+- **T-opt-per-option-stock** — per-option stock limits (v1 has none; only
+  product/drop-level stock applies). — open
+- **T-opt-per-drop-override** — per-drop override of an option's
+  `price_delta_pence` (v1 has a single catalogue delta; only the product *base*
+  price is drop-overridable). — open
+- **T-opt-on-bundles** — options on bundle lines (v1 attaches options to
+  standalone products only; `create-order` rejects options on non-product lines).
+  — open
+- **T-opt-multiselect-groups** — multi-select and min/max option groups (schema
+  carries `min_select` / `max_select` / `is_required`; the v1 editor writes a
+  fixed `1 / 1 / required`). — open
+
+**Related Service Board follow-up (not a product-options ticket, recorded here for
+proximity):**
+
+- **T-sb-bundle-selection-aggregates** — bundle *choice selections* now render on
+  the Service Board **kanban card** (Stage 5, via `get-drop`'s
+  `order_item_lines[].selections[]`), but the aggregate/scan views still render
+  bundles **parent-only**: the "All items" prep sheet and the "All orders" compact
+  table show the bundle name and quantity without a per-selection breakdown (the
+  Stage 6 sub-line work added *option* counts to the prep sheet, not bundle
+  selection counts). The render hooks are already marked in `service-board.html`
+  (`renderAllItems` / `buildPrepSheetMarkup` bundle-sub-row comments). Note: this
+  is **not** T-sb-3 (which is the prep-sheet build itself, ✓ COMPLETE PR #277) —
+  it is a distinct, previously-untracked gap surfaced while documenting Stage 6.
+  Low priority, display-only. — open
+
+---
+
 ### Tier 1 — Must work before first real drop
 
 T1-1: Double-submit protection on order.html ✓ COMPLETE
@@ -5621,6 +5684,39 @@ required). Part 4 if and when convenient.
 Cross-reference: T6-2 extension (Supabase MCP scope), T6-3 extension
 (production read-only MCP), T6-4 extension (PR review as safety net),
 operational learnings #16, #24, #25.
+
+T-base-ddl-backfill: Committed base-table DDL / SQL schema dump — open
+The base tables of the live DB were largely created out-of-band in the
+Supabase SQL editor and are NOT reconstructable from
+`supabase/migrations/`. Consequence: schema audits and select-narrowing
+work keep needing live-DB `NEEDS-ED-VERIFY` queries because there is no
+plain-SQL DDL dump to check against locally.
+
+Current state (verified against the repo 2026-07 — the tracked repo has
+NO reliable machine-checkable schema dump):
+- `SCHEMA.md` IS tracked, but is documented-stale and must not be used for
+  adjudication (operational learnings #54, #57 — it omits columns and lists
+  a `host_type` set conflicting with the live constraint). Hence audits keep
+  falling back to live-DB `NEEDS-ED-VERIFY` queries.
+- A structural JSON dump apparatus (`schema-snapshot/` —
+  `columns-constraints-indexes.json` + `views.json` + a `README.md` with the
+  refresh queries, captured 2026-06-30) exists ONLY as **untracked local
+  files** in Ed's working tree — it is NOT committed to `origin/main`, so a
+  fresh clone, CI, or another session does not have it. **First action:
+  commit that directory** so there is a ground-truth structural dump in the
+  repo (the `README.md` there already documents the two refresh queries).
+- `prod-schema.sql` at the repo root is an empty 0-byte **untracked**
+  placeholder — either populate it with a real `pg_dump --schema-only` (or an
+  equivalent generated DDL of the base tables) or remove it, so it stops
+  implying a dump exists when it doesn't.
+- Still missing beyond that: a plain-SQL `CREATE TABLE` reconstruction of the
+  base tables, so the schema can be rebuilt / diffed as SQL rather than read
+  out of JSON.
+
+The `T-base-ddl-backfill` name is referenced in the (untracked)
+`schema-snapshot/README.md` but was not previously tracked as a backlog
+ticket — this entry formalises it. Post-launch; enables SQL-level schema
+audits and a self-contained rebuild path. — open
 
 ### Tier 7 — Platform oversight and administration
 
