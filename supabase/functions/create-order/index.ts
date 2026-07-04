@@ -304,6 +304,9 @@ Deno.serve(async (req) => {
       category_id: string | null;
       counts_toward_capacity: boolean;
       capacity_weight: number;
+      // Catalog list price. Used in Step 6.5 as the fallback when the drop's
+      // drop_menu_items row carries no price_override_pence for this item.
+      price_pence: number | null;
     };
     const productMap = new Map<string, CapacityLookup>();
     const bundleMap = new Map<string, CapacityLookup>();
@@ -318,7 +321,7 @@ Deno.serve(async (req) => {
     if (productIds.length > 0) {
       const { data: products, error: prodErr } = await serviceClient
         .from("products")
-        .select("id, vendor_id, category_id, counts_toward_capacity, capacity_weight")
+        .select("id, vendor_id, category_id, counts_toward_capacity, capacity_weight, price_pence")
         .in("id", productIds);
       if (prodErr) return jsonResponse({ error: "Product lookup failed" }, 500);
       const found = new Set((products || []).map((p) => p.id));
@@ -333,6 +336,7 @@ Deno.serve(async (req) => {
           category_id: (p.category_id as string | null) ?? null,
           counts_toward_capacity: Boolean(p.counts_toward_capacity),
           capacity_weight: Number(p.capacity_weight ?? 1),
+          price_pence: p.price_pence == null ? null : Number(p.price_pence),
         });
       }
     }
@@ -340,7 +344,7 @@ Deno.serve(async (req) => {
     if (bundleIds.length > 0) {
       const { data: bundles, error: bunErr } = await serviceClient
         .from("bundles")
-        .select("id, vendor_id, category_id, counts_toward_capacity, capacity_weight")
+        .select("id, vendor_id, category_id, counts_toward_capacity, capacity_weight, price_pence")
         .in("id", bundleIds);
       if (bunErr) return jsonResponse({ error: "Bundle lookup failed" }, 500);
       const found = new Set((bundles || []).map((b) => b.id));
@@ -355,6 +359,7 @@ Deno.serve(async (req) => {
           category_id: (b.category_id as string | null) ?? null,
           counts_toward_capacity: Boolean(b.counts_toward_capacity),
           capacity_weight: Number(b.capacity_weight ?? 1),
+          price_pence: b.price_pence == null ? null : Number(b.price_pence),
         });
       }
     }
@@ -391,13 +396,66 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Step 7 — totals match basket. Guards against client-side tampering.
-    // T3-13b — apply the matched bulk-discount tier to the server-computed
-    // subtotal before comparing against the client total. matchedTier and
-    // computedDiscount remain in scope for Step B (orders insert) so the
-    // values can be persisted and forwarded to Stripe in 3.3.
+    // Step 6.5 — server-authoritative effective price. The server, not the
+    // client, is the pricing authority. For each basket item we re-derive the
+    // unit price from the database using the SAME override-then-catalog logic
+    // the order page displays from:
+    //   effective price = drop_menu_items.price_override_pence (this drop)
+    //                     ?? products/bundles.price_pence (catalog)
+    //                     ?? 0
+    // (mirrors order.html getDropMenuItems(): base_price_pence =
+    //  row.price_override_pence ?? catalog.price_pence ?? 0). Bundle prices are
+    // fixed at the bundle's effective price — choice selections never upcharge,
+    // matching the client. payload.basket[*].unit_price_pence is now display-only
+    // and is NEVER read for any charge calculation below.
+    //
+    // Overrides are keyed by the drop's is_available menu rows, exactly the set
+    // the order page renders from, so an item the customer could not have seen
+    // contributes no override and falls back to catalog price.
+    const productOverride = new Map<string, number>();
+    const bundleOverride = new Map<string, number>();
+    {
+      const { data: menuRows, error: menuErr } = await serviceClient
+        .from("drop_menu_items")
+        .select("menu_item_type, product_id, bundle_id, price_override_pence")
+        .eq("drop_id", payload.drop_id)
+        .eq("is_available", true);
+      if (menuErr) return jsonResponse({ error: "Menu lookup failed" }, 500);
+      for (const row of menuRows || []) {
+        if (row.price_override_pence == null) continue; // null → use catalog price
+        const override = Number(row.price_override_pence);
+        if (!Number.isFinite(override) || override < 0) continue;
+        if (row.menu_item_type === "product" && typeof row.product_id === "string") {
+          productOverride.set(row.product_id, override);
+        } else if (row.menu_item_type === "bundle" && typeof row.bundle_id === "string") {
+          bundleOverride.set(row.bundle_id, override);
+        }
+      }
+    }
+
+    const effectivePriceFor = (item: BasketItem): number => {
+      if (item.type === "product") {
+        const ov = productOverride.get(item.product_id as string);
+        if (ov !== undefined) return ov;
+        return productMap.get(item.product_id as string)?.price_pence ?? 0;
+      }
+      const ov = bundleOverride.get(item.bundle_id as string);
+      if (ov !== undefined) return ov;
+      return bundleMap.get(item.bundle_id as string)?.price_pence ?? 0;
+    };
+
+    // Per-item server unit price, indexed to payload.basket. Reused for the
+    // subtotal, the Stripe line items, and the order_items price snapshot so
+    // all three are guaranteed to agree.
+    const serverUnitPrice: number[] = payload.basket.map(effectivePriceFor);
+
+    // Step 7 — server total is the charge authority; the client's declared
+    // total is only cross-checked against it. T3-13b — apply the matched
+    // bulk-discount tier to the server-computed subtotal before comparing.
+    // matchedTier and computedDiscount remain in scope for Step B (orders
+    // insert) so the values can be persisted and forwarded to Stripe in 3.3.
     const computedSubtotal = payload.basket.reduce(
-      (sum, item) => sum + item.unit_price_pence * item.quantity,
+      (sum, item, i) => sum + serverUnitPrice[i] * item.quantity,
       0
     );
     const matchedTier = findMatchingTier(computedSubtotal, dropAreaRow?.discount_tiers ?? null);
@@ -504,7 +562,10 @@ Deno.serve(async (req) => {
     });
 
     const platformFeePct = Number(vendor.platform_fee_pct ?? 0);
-    const platformFeePence = Math.floor((payload.totals.total_pence * platformFeePct) / 100);
+    // Hearth's take is computed from the server-derived total (which equals the
+    // client total here — the Step 7 guard rejected any mismatch), never the
+    // client's declared figure.
+    const platformFeePence = Math.floor((computedTotal * platformFeePct) / 100);
     const capacityUnitsConsumed = Math.max(1, totalOrderConsumption);
 
     // Database writes — sequence with cleanup. No transactions over
@@ -566,7 +627,8 @@ Deno.serve(async (req) => {
       delivery_address: payload.fulfilment.address,
       contact_opt_in: payload.customer.contact_opt_in,
       contact_opt_in_scope: payload.customer.contact_opt_in_scope,
-      total_pence: payload.totals.total_pence,
+      // Server-derived total (post-discount), not the client's declared value.
+      total_pence: computedTotal,
       status: "pending_payment",
       stripe_payment_status: "pending",
       // Capacity hold deadline — matches the Stripe session expires_at below
@@ -633,7 +695,8 @@ Deno.serve(async (req) => {
           bundle_id: item.type === "bundle" ? item.bundle_id : null,
           item_name_snapshot: item.name,
           qty: item.quantity,
-          price_pence: item.unit_price_pence,
+          // Server-derived effective price, not the client's declared value.
+          price_pence: serverUnitPrice[i],
           capacity_units_snapshot: serverItemCapacity[i],
         })
         .select("id")
@@ -724,11 +787,12 @@ Deno.serve(async (req) => {
         expires_at: Math.floor(Date.now() / 1000) + HOLD_WINDOW_SECONDS,
         customer_email: payload.customer.email || undefined,
         billing_address_collection: "auto",
-        line_items: payload.basket.map((item) => ({
+        line_items: payload.basket.map((item, i) => ({
           price_data: {
             currency: "gbp",
             product_data: { name: item.name },
-            unit_amount: item.unit_price_pence,
+            // Server-derived effective price, not the client's declared value.
+            unit_amount: serverUnitPrice[i],
           },
           quantity: item.quantity,
         })),
