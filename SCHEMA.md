@@ -215,6 +215,26 @@ choice (`category_id` set), or a free-choice slot.
 products available. `bundle_line_id` (FK), `product_id` (FK),
 `sort_order`.
 
+**product_option_groups** — a named, per-product modifier (a "pick
+from these choices" on ONE product, distinct from bundles which group
+several products). `product_id` (FK to `products`, NOT NULL, ON DELETE
+CASCADE), `name` (NOT NULL), `min_select` (integer, NOT NULL DEFAULT 1),
+`max_select` (integer, NOT NULL DEFAULT 1), `is_required` (boolean,
+NOT NULL DEFAULT true), `sort_order` (integer, NOT NULL DEFAULT 0),
+`is_active` (boolean, NOT NULL DEFAULT true), `created_at`. No
+`vendor_id` — scopes through `products`. Service-role only (RLS on,
+no policies; anon/authenticated revoked). Added Stage 1 of the
+product-options feature; inert until later stages wire it up.
+
+**product_options** — the individual choices inside a
+`product_option_groups`. `group_id` (FK to `product_option_groups`,
+NOT NULL, ON DELETE CASCADE), `name` (NOT NULL), `price_delta_pence`
+(integer, NOT NULL DEFAULT 0 — per-option price adjustment, e.g.
+salmon +£3 = 300), `sort_order` (integer, NOT NULL DEFAULT 0),
+`is_active` (boolean, NOT NULL DEFAULT true), `created_at`. No
+`vendor_id` — scopes through the group then `products`. Service-role
+only (RLS on, no policies; anon/authenticated revoked).
+
 **categories** — vendor-owned groupings used both for menu structure
 and for capacity categorisation on drops. `vendor_id` (FK), `name`,
 `slug`, `is_active`, `sort_order`.
@@ -314,6 +334,19 @@ deletes.
 **order_item_selections** — for bundle line items, the specific
 choices the customer made. `order_item_id` (FK),
 `bundle_line_id` (FK), `selected_product_id` (FK), `quantity`.
+
+**order_option_selections** — for product option groups (modifiers),
+the specific option a customer chose on an order line, snapshotted.
+`order_item_id` (FK to `order_items`, NOT NULL, ON DELETE CASCADE),
+`option_id` (FK to `product_options`, NOT NULL), `group_id` (FK to
+`product_option_groups`, NOT NULL), `option_name_snapshot` (NOT NULL),
+`price_delta_pence_snapshot` (integer, NOT NULL), `created_at`. The
+`option_id` / `group_id` FKs have no cascade — an ordered option can't
+be hard-deleted (retire with `is_active = false`); the snapshot columns
+are what reporting reads, so historical orders survive option edits.
+No `vendor_id` — scopes through `order_items` → `orders` → `drops`.
+Service-role only (RLS on, no policies; anon/authenticated revoked).
+Added Stage 1 of the product-options feature; inert until later stages.
 
 **order_status_events** — append-only audit trail of order status
 transitions. `order_id` (FK), `drop_id` (FK), `from_status`,
