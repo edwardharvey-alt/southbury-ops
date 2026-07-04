@@ -1947,6 +1947,32 @@
     </div>
   </div>
 
+  <div class="bundleModal" id="optionsModalBackdrop" role="dialog" aria-modal="true" aria-label="Choose options">
+    <div class="bundleModalHeader">
+      <div>
+        <h3 class="sectionTitle" id="optionsModalTitle">Choose options</h3>
+        <p class="sectionSub" id="optionsModalSub">Pick one from each choice below</p>
+      </div>
+      <button class="btnGhost" id="closeOptionsModalBtn" type="button">Done</button>
+    </div>
+
+    <div class="bundleModalBody" id="optionsModalBody">
+      <div id="optionsModalContent">
+        <div class="emptyState">Loading options…</div>
+      </div>
+    </div>
+
+    <div class="bundleModalFooter">
+      <div class="basketTotals" style="padding:10px 12px;">
+        <div class="basketTotalLine">
+          <span>Price</span>
+          <strong id="optionsModalPrice">£0.00</strong>
+        </div>
+      </div>
+      <button class="bundleAddButton" id="addOptionsBtn" type="button">Add to order</button>
+    </div>
+  </div>
+
   <script>
     (function () {
       const CONFIG = window.HEARTH_CONFIG || {};
@@ -1974,6 +2000,8 @@
         basket: [],
         selectedFulfilmentMode: null,
         bundleDraft: null,
+        productOptionGroups: {} /* product_id -> [group, ...] (Stage 3 modifiers) */,
+        optionsDraft: null /* in-progress product-options selection */,
         menuScrollObserver: null,
         nextDrop: null,
         deliveryAreaBlocked: false /* T3-12a */,
@@ -2580,6 +2608,8 @@
           state.bundleChoiceProducts = [];
         }
 
+        await loadProductOptionGroups();
+
         state.selectedFulfilmentMode = getDefaultSelectedFulfilmentMode();
 
         if (getOrderWindowState().state === "closed" && state.drop?.vendor_id) {
@@ -2605,6 +2635,57 @@
         if (raw === "delivery") return "delivery";
         if (raw === "collection") return "collection";
         return null;
+      }
+
+      /* Stage 3 modifiers — fetch this drop's product option groups via the
+         anon get-drop-product-options Edge Function (order.html has no JWT and
+         the option tables are sealed from anon, so a direct read is impossible;
+         the function is the anon-safe, drop-scoped read path). Keyed by
+         product_id. A product with no groups is simply absent from the map and
+         behaves exactly as before — regression-safe. If the fetch fails we log
+         and proceed with no groups: pricing is server-authoritative (a later
+         stage), so a missing chooser degrades to today's behaviour rather than
+         charging anything wrong. */
+      async function loadProductOptionGroups() {
+        state.productOptionGroups = {};
+        if (!state.drop?.id) return;
+        try {
+          const { data, error } = await supabase.functions.invoke(
+            "get-drop-product-options",
+            { body: { drop_id: state.drop.id } }
+          );
+          if (error) throw error;
+          const groups = Array.isArray(data?.groups) ? data.groups : [];
+          const byProduct = {};
+          groups.forEach((group) => {
+            const pid = group.product_id;
+            if (!pid) return;
+            if (!byProduct[pid]) byProduct[pid] = [];
+            byProduct[pid].push({
+              ...group,
+              options: Array.isArray(group.options) ? group.options : []
+            });
+          });
+          state.productOptionGroups = byProduct;
+        } catch (err) {
+          console.warn("Could not load product options:", err?.message || err);
+          state.productOptionGroups = {};
+        }
+      }
+
+      function getProductOptionGroups(productId) {
+        return state.productOptionGroups[productId] || [];
+      }
+
+      function productHasOptionGroups(productId) {
+        return getProductOptionGroups(productId).length > 0;
+      }
+
+      /* "+£3.00" for a positive delta; "" for a £0 delta (never "+£0.00"). */
+      function formatOptionDelta(pence) {
+        const value = Number(pence || 0);
+        if (value <= 0) return "";
+        return "+" + formatMoneyPence(value);
       }
 
       function getDropMenuItems() {
@@ -3167,6 +3248,11 @@
         if (ordersHidden) return "";
         const disabled = item.is_sold_out || isDropClosed();
         if (item.menu_item_type === "product") {
+          /* Optioned products always open the chooser — never an inline
+             stepper — because each unit's choices are made in the modal. */
+          if (productHasOptionGroups(item.id)) {
+            return `<button type="button" class="menuItemAddSmall" aria-label="Choose options" ${disabled ? "disabled" : ""}>+</button>`;
+          }
           const qty = getProductBasketQuantity(item.id);
           if (qty > 0) {
             return `
@@ -3186,6 +3272,9 @@
         if (ordersHidden) return "";
         const disabled = item.is_sold_out || isDropClosed();
         if (item.menu_item_type === "product") {
+          if (productHasOptionGroups(item.id)) {
+            return `<button type="button" class="menuItemAddLarge" ${disabled ? "disabled" : ""}>${item.is_sold_out ? "Sold out" : "Add to order"}</button>`;
+          }
           const qty = getProductBasketQuantity(item.id);
           if (qty > 0) {
             return `
@@ -3405,8 +3494,10 @@
               ? (item.selections || [])
                   .map((s) => String(s.product_name || s.label || "").trim())
                   .filter(Boolean)
-              : [];
-            const optionsLine = item.type === "bundle"
+              : (item.option_selections || [])
+                  .map((s) => String(s.option_name || "").trim())
+                  .filter(Boolean);
+            const optionsLine = selectedOptions.length
               ? `<div class="basketItemMeta">${escapeHtml(selectedOptions.join(" · "))}</div>`
               : "";
             const eachLine = qty > 1
@@ -3768,6 +3859,158 @@
         byId("bundleModalSub").textContent = validationMessage || (getBundleById(state.bundleDraft.bundle_id)?.description || "Choose what goes inside this bundle");
       }
 
+      /* ---- Stage 3 product options (modifiers) chooser ---------------------
+         Reuses the bundle chooser's radio/choiceCard visual pattern, but adds
+         live price updates as the customer picks (the bundle modal never did).
+         v1: every group is required and pick-exactly-one, so all inputs are
+         radios and nothing is pre-selected — the customer must actively choose
+         each group before the item can be added. Presentation + payload only;
+         create-order remains the pricing authority and re-derives every delta
+         server-side (a later stage). */
+      function openOptionsModal(productId) {
+        const menuItem = getDropMenuItems().find((x) => x.menu_item_type === "product" && x.id === productId);
+        const groups = getProductOptionGroups(productId);
+        if (!menuItem || !groups.length) return;
+
+        state.optionsDraft = {
+          product_id: productId,
+          name: menuItem.name,
+          base_price_pence: Number(menuItem.base_price_pence || 0),
+          capacity_units: Number(menuItem.capacity_units || 0),
+          allergens: Array.isArray(menuItem.allergens) ? menuItem.allergens : [],
+          groups,
+          selections: {}, /* group_id -> option_id */
+          unit_price_pence: Number(menuItem.base_price_pence || 0)
+        };
+
+        byId("optionsModalTitle").textContent = menuItem.name;
+        byId("optionsModalContent").innerHTML = groups.map((group) => renderOptionGroup(group)).join("");
+
+        syncOptionsDraftFromUi();
+
+        byId("optionsModalBackdrop").classList.add("open");
+        byId("optionsModalBody").scrollTop = 0;
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeOptionsModal() {
+        byId("optionsModalBackdrop").classList.remove("open");
+        state.optionsDraft = null;
+        if (!byId("basketBackdrop").classList.contains("open")) {
+          document.body.style.overflow = "";
+        }
+      }
+
+      function renderOptionGroup(group) {
+        const options = Array.isArray(group.options) ? group.options : [];
+        return `
+          <div class="bundleLineBlock" data-option-group-id="${escapeHtml(group.id)}">
+            <div class="bundleLineHead">
+              <div>
+                <h4 class="bundleLineTitle">${escapeHtml(group.name)}</h4>
+                <div class="bundleLineSub">Choose one</div>
+              </div>
+            </div>
+
+            <div class="bundleOptions">
+              ${options.length ? options.map((opt) => {
+                const delta = formatOptionDelta(opt.price_delta_pence);
+                return `
+                  <label class="bundleOption">
+                    <input type="radio" name="optionGroup:${escapeHtml(group.id)}" value="${escapeHtml(opt.id)}" />
+                    <div class="bundleOptionBody">
+                      <div class="bundleOptionName">${escapeHtml(opt.name)}</div>
+                      ${delta ? `<div class="bundleOptionSub">${escapeHtml(delta)}</div>` : ""}
+                    </div>
+                  </label>
+                `;
+              }).join("") : `<div class="emptyState">No options available for this choice.</div>`}
+            </div>
+          </div>
+        `;
+      }
+
+      function syncOptionsDraftFromUi() {
+        if (!state.optionsDraft) return;
+        const draft = state.optionsDraft;
+
+        const selections = {};
+        let deltaPence = 0;
+        let allChosen = true;
+
+        draft.groups.forEach((group) => {
+          const block = document.querySelector(`[data-option-group-id="${CSS.escape(group.id)}"]`);
+          const checked = block ? block.querySelector("input:checked") : null;
+          if (checked) {
+            selections[group.id] = checked.value;
+            const opt = (group.options || []).find((o) => o.id === checked.value);
+            if (opt) deltaPence += Number(opt.price_delta_pence || 0);
+          } else {
+            allChosen = false;
+          }
+        });
+
+        document.querySelectorAll("#optionsModalContent .bundleOption").forEach((opt) => {
+          const input = opt.querySelector("input");
+          opt.classList.toggle("active", Boolean(input?.checked));
+        });
+
+        draft.selections = selections;
+        draft.unit_price_pence = Number(draft.base_price_pence || 0) + deltaPence;
+
+        byId("optionsModalPrice").textContent = formatMoneyPence(draft.unit_price_pence);
+        byId("addOptionsBtn").disabled = !allChosen;
+        byId("optionsModalSub").textContent = allChosen
+          ? "Pick one from each choice below"
+          : "Please choose one from each option to add this to your order.";
+      }
+
+      function addOptionedProductToBasket() {
+        const draft = state.optionsDraft;
+        if (!draft) return;
+
+        const allChosen = draft.groups.every((g) => draft.selections[g.id]);
+        if (!allChosen) {
+          syncOptionsDraftFromUi();
+          return;
+        }
+
+        if (!canAddCapacity(draft.capacity_units || 0)) {
+          showCheckoutNotice(`No more ${pluralizeLabel(getCategoryDisplayName())} capacity is available for this service.`, "warn");
+          return;
+        }
+
+        const optionSelections = draft.groups.map((group) => {
+          const optionId = draft.selections[group.id];
+          const opt = (group.options || []).find((o) => o.id === optionId);
+          return {
+            group_id: group.id,
+            group_name: group.name,
+            option_id: optionId,
+            option_name: opt?.name || "",
+            /* display-only — the server re-derives the real delta in a later
+               stage and must never trust this client value */
+            price_delta_pence: Number(opt?.price_delta_pence || 0)
+          };
+        });
+
+        state.basket.push({
+          key: `product:${draft.product_id}:${Date.now()}`,
+          type: "product",
+          product_id: draft.product_id,
+          name: draft.name,
+          unit_price_pence: Number(draft.unit_price_pence || 0),
+          base_price_pence: Number(draft.base_price_pence || 0),
+          capacity_units: Number(draft.capacity_units || 0),
+          allergens: Array.isArray(draft.allergens) ? draft.allergens : [],
+          quantity: 1,
+          option_selections: optionSelections
+        });
+
+        closeOptionsModal();
+        renderAll();
+      }
+
       function formatPostcode(raw) {
         const stripped = raw.replace(/\s/g, "").toUpperCase();
         if (stripped.length < 4) return stripped;
@@ -3883,6 +4126,16 @@
               product_name: s.product_name,
               quantity: Number(s.quantity || 1),
               drives_capacity: Boolean(s.drives_capacity)
+            })),
+            /* Stage 3 product-options (modifiers). group_id + option_id are the
+               authoritative selection identifiers; option_name and
+               price_delta_pence are DISPLAY-ONLY and the server must not trust
+               them — a later stage re-derives the price from the option row. */
+            option_selections: (item.option_selections || []).map((s) => ({
+              group_id: s.group_id,
+              option_id: s.option_id,
+              option_name: s.option_name,
+              price_delta_pence: Number(s.price_delta_pence || 0)
             }))
           }))
         };
@@ -4137,7 +4390,11 @@ async function handoffToPayment() {
             const item = getDropMenuItems().find((x) => x.id === itemId);
             if (!item) return;
             if (item.menu_item_type === "product") {
-              addProductToBasket(itemId, 1);
+              if (productHasOptionGroups(itemId)) {
+                openOptionsModal(itemId);
+              } else {
+                addProductToBasket(itemId, 1);
+              }
             } else if (item.menu_item_type === "bundle") {
               openBundleModal(itemId);
             }
@@ -4189,6 +4446,11 @@ async function handoffToPayment() {
             });
 
             syncBundleDraftFromUi();
+            return;
+          }
+
+          if (e.target.closest("[data-option-group-id]")) {
+            syncOptionsDraftFromUi();
           }
         });
 
@@ -4249,6 +4511,17 @@ async function handoffToPayment() {
           syncBundleDraftFromUi();
           if (byId("addBundleBtn").disabled) return;
           addBundleToBasket(state.bundleDraft);
+        });
+
+        byId("closeOptionsModalBtn").addEventListener("click", closeOptionsModal);
+        byId("optionsModalBackdrop").addEventListener("click", (e) => {
+          if (e.target === byId("optionsModalBackdrop")) closeOptionsModal();
+        });
+
+        byId("addOptionsBtn").addEventListener("click", () => {
+          syncOptionsDraftFromUi();
+          if (byId("addOptionsBtn").disabled) return;
+          addOptionedProductToBasket();
         });
 
         byId("payBtn").addEventListener("click", handoffToPayment);
