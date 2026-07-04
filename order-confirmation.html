@@ -524,18 +524,30 @@
       // Build item rows (with bundle selections nested for bundle items)
       const itemRows = (items || []).map((item) => {
         const lineTotal = Number(item.price_pence || 0) * Number(item.qty || 1);
-        let selectionsBlock = "";
+        // Sub-lines beneath the item name. One block, two sources: bundle
+        // choices (for bundle items) and chosen product options / modifiers
+        // (for any item). Options are descriptive only — the line price
+        // already includes any option price delta, so no charge is added here.
+        const subLines = [];
         if (item.item_type === "bundle" && Array.isArray(item.selections) && item.selections.length > 0) {
-          const selectionLines = item.selections.map((sel) => {
+          item.selections.forEach((sel) => {
             const label = sel.bundle_line_label || "";
             const productName = sel.selected_product_name || "—";
             const qty = Number(sel.quantity || 1);
             const labelPart = label ? `${escapeHtml(label)}: ` : "";
             const qtyPart = qty > 1 ? ` ×${qty}` : "";
-            return `<div class="confItemSelection">${labelPart}${escapeHtml(productName)}${qtyPart}</div>`;
-          }).join("");
-          selectionsBlock = `<div class="confItemSelections">${selectionLines}</div>`;
+            subLines.push(`<div class="confItemSelection">${labelPart}${escapeHtml(productName)}${qtyPart}</div>`);
+          });
         }
+        if (Array.isArray(item.options) && item.options.length > 0) {
+          item.options.forEach((opt) => {
+            const optName = opt.option_name_snapshot || "—";
+            subLines.push(`<div class="confItemSelection">${escapeHtml(optName)}</div>`);
+          });
+        }
+        const selectionsBlock = subLines.length > 0
+          ? `<div class="confItemSelections">${subLines.join("")}</div>`
+          : "";
         return `<div class="confItem">
           <div class="confItemLeft">
             <p class="confItemName">${escapeHtml(item.item_name_snapshot || "Item")}</p>
