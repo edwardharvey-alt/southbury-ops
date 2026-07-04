@@ -26,6 +26,26 @@ type BasketSelection = {
   drives_capacity?: boolean;
 };
 
+// Stage 4 product options (modifiers). The client sends only WHICH option was
+// chosen (group_id + option_id). option_name and price_delta_pence ride along
+// for the customer's own display but are NEVER trusted server-side — the
+// server re-derives both from product_options at charge time.
+type OptionSelection = {
+  group_id: string;
+  option_id: string;
+  option_name?: string;
+  price_delta_pence?: number;
+};
+
+// Server-derived option snapshot: the values actually charged and recorded,
+// resolved from product_options, not from the client payload.
+type ResolvedOption = {
+  option_id: string;
+  group_id: string;
+  option_name: string;
+  price_delta_pence: number;
+};
+
 type BasketItem = {
   type: "product" | "bundle";
   product_id: string | null;
@@ -35,6 +55,7 @@ type BasketItem = {
   quantity: number;
   capacity_units: number;
   selections?: BasketSelection[];
+  option_selections?: OptionSelection[];
 };
 
 type Payload = {
@@ -186,6 +207,16 @@ function validatePayload(body: unknown): { ok: true; data: Payload } | { ok: fal
       if (!isFiniteNumber(s.quantity) || s.quantity < 1 || !Number.isInteger(s.quantity)) {
         return { ok: false, reason: `basket[${i}] selection quantity must be a positive integer` };
       }
+    }
+    // Stage 4 product options. Only the two identifiers are validated and
+    // trusted; option_name / price_delta_pence are display-only and ignored.
+    if (item.option_selections !== undefined && !Array.isArray(item.option_selections)) {
+      return { ok: false, reason: `basket[${i}].option_selections must be an array if present` };
+    }
+    for (const o of (item.option_selections as OptionSelection[] | undefined) || []) {
+      if (!o || typeof o !== "object") return { ok: false, reason: `basket[${i}] option_selection must be an object` };
+      if (!isUuid(o.group_id)) return { ok: false, reason: `basket[${i}] option_selection group_id must be a uuid` };
+      if (!isUuid(o.option_id)) return { ok: false, reason: `basket[${i}] option_selection option_id must be a uuid` };
     }
   }
 
@@ -449,6 +480,114 @@ Deno.serve(async (req) => {
     // all three are guaranteed to agree.
     const serverUnitPrice: number[] = payload.basket.map(effectivePriceFor);
 
+    // Step 6.6 — product options (modifiers). The client sends only WHICH
+    // option was chosen (group_id + option_id); the server alone decides HOW
+    // MUCH each option costs, re-deriving the delta from
+    // product_options.price_delta_pence and ignoring the display-only
+    // price_delta_pence in the payload entirely. Each chosen option is checked
+    // for tenancy (option -> group -> product) against THIS line's product, so
+    // a customer cannot attach another product's — or another vendor's —
+    // option to their line. The resolved delta is folded into
+    // serverUnitPrice[i] BEFORE the subtotal is summed, so the subtotal, the
+    // Step 7 total guard, the Stripe amount, the platform fee, and the
+    // order_items price snapshot all inherit it automatically. Lines with no
+    // option_selections are untouched (regression-safe).
+    //
+    // serverOptionSelections[i] holds the server-derived snapshot rows to
+    // write into order_option_selections once each order_items id exists.
+    const serverOptionSelections: ResolvedOption[][] = payload.basket.map(() => []);
+    {
+      const allOptionIds = Array.from(
+        new Set(
+          payload.basket.flatMap((item) =>
+            (item.option_selections || []).map((o) => o.option_id)
+          )
+        )
+      );
+      if (allOptionIds.length > 0) {
+        const { data: optionRows, error: optErr } = await serviceClient
+          .from("product_options")
+          .select("id, name, price_delta_pence, is_active, group_id")
+          .in("id", allOptionIds);
+        if (optErr) return jsonResponse({ error: "Option lookup failed" }, 500);
+
+        const optionById = new Map<
+          string,
+          { name: string; price_delta_pence: number; is_active: boolean; group_id: string }
+        >();
+        for (const r of optionRows || []) {
+          optionById.set(r.id as string, {
+            name: String(r.name ?? ""),
+            price_delta_pence: Number(r.price_delta_pence ?? 0),
+            is_active: Boolean(r.is_active),
+            group_id: String(r.group_id),
+          });
+        }
+
+        const groupIds = Array.from(
+          new Set(Array.from(optionById.values()).map((o) => o.group_id))
+        );
+        const groupById = new Map<string, { product_id: string; is_active: boolean }>();
+        if (groupIds.length > 0) {
+          const { data: groupRows, error: grpErr } = await serviceClient
+            .from("product_option_groups")
+            .select("id, product_id, is_active")
+            .in("id", groupIds);
+          if (grpErr) return jsonResponse({ error: "Option group lookup failed" }, 500);
+          for (const g of groupRows || []) {
+            groupById.set(g.id as string, {
+              product_id: String(g.product_id),
+              is_active: Boolean(g.is_active),
+            });
+          }
+        }
+
+        for (let i = 0; i < payload.basket.length; i++) {
+          const item = payload.basket[i];
+          const chosen = item.option_selections || [];
+          if (chosen.length === 0) continue;
+
+          // Options attach to products only. A non-product line carrying
+          // option_selections is malformed — reject rather than silently drop.
+          if (item.type !== "product" || !item.product_id) {
+            return jsonResponse({ error: "Options can only be added to product items" }, 400);
+          }
+
+          let lineDelta = 0;
+          for (const sel of chosen) {
+            const option = optionById.get(sel.option_id);
+            // Unknown or retired option — not resolvable, reject the order.
+            if (!option || !option.is_active) {
+              return jsonResponse({ error: "Basket contains an unknown or unavailable option" }, 400);
+            }
+            const group = groupById.get(option.group_id);
+            if (!group || !group.is_active) {
+              return jsonResponse({ error: "Basket contains an option from an unavailable group" }, 400);
+            }
+            // Tenancy: option -> group -> product must be THIS line's product.
+            if (group.product_id !== item.product_id) {
+              return jsonResponse({ error: "An option does not belong to the chosen product" }, 400);
+            }
+            // Integrity cross-check: the client's declared group_id must agree
+            // with the option's real group. Never used for pricing.
+            if (sel.group_id !== option.group_id) {
+              return jsonResponse({ error: "An option does not match its declared group" }, 400);
+            }
+
+            // Server value only — the client's price_delta_pence is ignored.
+            lineDelta += option.price_delta_pence;
+            serverOptionSelections[i].push({
+              option_id: sel.option_id,
+              group_id: option.group_id,
+              option_name: option.name,
+              price_delta_pence: option.price_delta_pence,
+            });
+          }
+          serverUnitPrice[i] += lineDelta;
+        }
+      }
+    }
+
     // Step 7 — server total is the charge authority; the client's declared
     // total is only cross-checked against it. T3-13b — apply the matched
     // bulk-discount tier to the server-computed subtotal before comparing.
@@ -682,8 +821,12 @@ Deno.serve(async (req) => {
       }
     };
 
-    // C. Insert order_items. Capture each id for D.
-    const insertedItemIds: { id: string; selections: BasketSelection[] }[] = [];
+    // C. Insert order_items. Capture each id for D and D.5.
+    const insertedItemIds: {
+      id: string;
+      selections: BasketSelection[];
+      optionSelections: ResolvedOption[];
+    }[] = [];
     for (let i = 0; i < payload.basket.length; i++) {
       const item = payload.basket[i];
       const { data: itemRow, error: itemErr } = await serviceClient
@@ -706,7 +849,11 @@ Deno.serve(async (req) => {
         await markCancelled("order_items_insert_failed");
         return jsonResponse({ error: "Order item write failed" }, 500);
       }
-      insertedItemIds.push({ id: itemRow.id as string, selections: item.selections || [] });
+      insertedItemIds.push({
+        id: itemRow.id as string,
+        selections: item.selections || [],
+        optionSelections: serverOptionSelections[i],
+      });
     }
 
     // D. Insert order_item_selections for bundle items.
@@ -726,6 +873,30 @@ Deno.serve(async (req) => {
         console.error("order_item_selections insert failed", selErr);
         await markCancelled("order_item_selections_insert_failed");
         return jsonResponse({ error: "Order selection write failed" }, 500);
+      }
+    }
+
+    // D.5 — Insert order_option_selections for chosen product options. The
+    // snapshot columns record the SERVER-derived name and delta at charge time
+    // (product_options.name / price_delta_pence), never the client's display
+    // values — the same snapshot discipline as order_items.price_pence.
+    for (const { id: orderItemId, optionSelections } of insertedItemIds) {
+      if (!optionSelections.length) continue;
+      const { error: optSelErr } = await serviceClient
+        .from("order_option_selections")
+        .insert(
+          optionSelections.map((o) => ({
+            order_item_id: orderItemId,
+            option_id: o.option_id,
+            group_id: o.group_id,
+            option_name_snapshot: o.option_name,
+            price_delta_pence_snapshot: o.price_delta_pence,
+          }))
+        );
+      if (optSelErr) {
+        console.error("order_option_selections insert failed", optSelErr);
+        await markCancelled("order_option_selections_insert_failed");
+        return jsonResponse({ error: "Order option write failed" }, 500);
       }
     }
 
