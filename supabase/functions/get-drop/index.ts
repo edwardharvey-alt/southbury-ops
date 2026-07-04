@@ -171,6 +171,147 @@ Deno.serve(async (req) => {
       console.error("orders by drop_id threw", e);
     }
 
+    // Stage 5 (product options display): line-level order items for the
+    // Service Board's per-order kitchen ticket. The existing item source above
+    // (v_order_item_detail_expanded, returned as `order_items`) is EXPLODED
+    // (one row per product, bundles flattened) and carries no order_item_id, so
+    // a chosen product option cannot be reliably attached to it — order_id +
+    // product_id is ambiguous when a customer orders two of the same product
+    // with different options. This ADDITIVE projection returns base order_items
+    // (carrying id), enriched with the category_id/capacity_units the board's
+    // classifier needs, plus each line's chosen options and bundle selections
+    // keyed by order_item_id. The exploded source above is untouched — the
+    // production/prep aggregates keep reading it, so bundle-component counts are
+    // preserved exactly. Non-fatal throughout: on any failure this stays [] and
+    // the board falls back to its existing (exploded, option-less) behaviour.
+    let orderItemLines: unknown[] = [];
+    try {
+      const orderIds = (dropOrders as Array<{ id?: string }>)
+        .map((o) => o.id)
+        .filter((id): id is string => Boolean(id));
+
+      if (orderIds.length > 0) {
+        const { data: baseItems, error: baseErr } = await serviceClient
+          .from("order_items")
+          .select(
+            "id, order_id, item_type, product_id, bundle_id, item_name_snapshot, qty, capacity_units_snapshot, created_at"
+          )
+          .in("order_id", orderIds)
+          .order("created_at", { ascending: true });
+
+        if (baseErr) {
+          console.error("order_items (line-level) lookup failed", baseErr);
+        } else {
+          const lines = baseItems ?? [];
+          const lineIds = lines.map((r: Record<string, unknown>) => r.id as string);
+
+          // Enrich product lines with category_id + capacity_units so the
+          // board's isCapacityItem() classifies line-level rows exactly as it
+          // does the enriched exploded rows (mirrors the client-side
+          // enrichItemDetailsWithProductData, done server-side here). Bundle
+          // lines have no product_id and fall back to capacity_units_snapshot.
+          const productIds = [
+            ...new Set(
+              lines
+                .filter((r: Record<string, unknown>) => r.product_id)
+                .map((r: Record<string, unknown>) => String(r.product_id))
+            ),
+          ];
+          const productMap = new Map<
+            string,
+            { category_id: string | null; capacity_units: number | null }
+          >();
+          if (productIds.length > 0) {
+            const { data: prods, error: prodErr } = await serviceClient
+              .from("products")
+              .select("id, category_id, capacity_units")
+              .in("id", productIds);
+            if (prodErr) console.error("products enrich lookup failed", prodErr);
+            for (const p of prods ?? []) {
+              const row = p as Record<string, unknown>;
+              productMap.set(String(row.id), {
+                category_id: (row.category_id as string | null) ?? null,
+                capacity_units: (row.capacity_units as number | null) ?? null,
+              });
+            }
+          }
+
+          // Chosen product options (modifiers) per line — snapshot name only.
+          const optionsByItem: Record<string, Array<{ option_name_snapshot: string }>> = {};
+          // Bundle choice selections per line — mirrors fetch-order's join.
+          const selectionsByItem: Record<
+            string,
+            Array<{
+              bundle_line_label: string | null;
+              selected_product_name: string | null;
+              quantity: number;
+            }>
+          > = {};
+
+          if (lineIds.length > 0) {
+            const { data: optRows, error: optErr } = await serviceClient
+              .from("order_option_selections")
+              .select("order_item_id, option_name_snapshot")
+              .in("order_item_id", lineIds);
+            if (optErr) console.error("order_option_selections (board) lookup failed", optErr);
+            for (const o of optRows ?? []) {
+              const row = o as Record<string, unknown>;
+              const oid = row.order_item_id as string;
+              (optionsByItem[oid] ||= []).push({
+                option_name_snapshot: (row.option_name_snapshot as string) ?? "",
+              });
+            }
+
+            const { data: selRows, error: selErr } = await serviceClient
+              .from("order_item_selections")
+              .select(
+                "order_item_id, quantity, products:selected_product_id ( name ), bundle_lines:bundle_line_id ( label )"
+              )
+              .in("order_item_id", lineIds);
+            if (selErr) console.error("order_item_selections (board) lookup failed", selErr);
+            for (const s of selRows ?? []) {
+              const row = s as Record<string, unknown>;
+              const oid = row.order_item_id as string;
+              const prod = row.products;
+              const bl = row.bundle_lines;
+              (selectionsByItem[oid] ||= []).push({
+                bundle_line_label:
+                  bl && typeof bl === "object" && !Array.isArray(bl)
+                    ? ((bl as { label?: string }).label ?? null)
+                    : null,
+                selected_product_name:
+                  prod && typeof prod === "object" && !Array.isArray(prod)
+                    ? ((prod as { name?: string }).name ?? null)
+                    : null,
+                quantity: Number((row.quantity as number) ?? 1),
+              });
+            }
+          }
+
+          orderItemLines = lines.map((r: Record<string, unknown>) => {
+            const enrich = r.product_id ? productMap.get(String(r.product_id)) : null;
+            const id = r.id as string;
+            return {
+              order_item_id: id,
+              order_id: r.order_id,
+              item_type: r.item_type,
+              product_id: r.product_id ?? null,
+              bundle_id: r.bundle_id ?? null,
+              item_name: r.item_name_snapshot,
+              qty: r.qty,
+              capacity_units_snapshot: r.capacity_units_snapshot ?? null,
+              category_id: enrich ? enrich.category_id : null,
+              capacity_units: enrich ? enrich.capacity_units : null,
+              options: optionsByItem[id] || [],
+              selections: selectionsByItem[id] || [],
+            };
+          });
+        }
+      }
+    } catch (e) {
+      console.error("order_item_lines build threw", e);
+    }
+
     // Operator-read-auth Slice 7b: additively compute new-vs-returning
     // customer counts for the Scorecard's audience section. Server-side
     // compute means zero customer emails leave the EF — strict PII
@@ -233,6 +374,7 @@ Deno.serve(async (req) => {
       orders_summary: ordersSummary ?? [],
       order_items: orderItems ?? [],
       order_items_source: orderItemsSource ?? null,
+      order_item_lines: orderItemLines,
       item_sales: itemSales,
       drop_orders: dropOrders,
       new_customers: newCustomers,

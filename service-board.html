@@ -512,6 +512,24 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+    /* Per-order kitchen ticket: chosen options + bundle selections beneath the
+       item line. Indented, muted, one per row so multi-option orders read
+       unambiguously. */
+    .compactSubLines {
+      margin: 1px 0 4px 12px;
+      display: grid;
+      gap: 1px;
+    }
+    .compactSubLine {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--h-stone);
+      line-height: 1.35;
+    }
+    .compactSubLine::before {
+      content: "\2022\00a0";
+      opacity: 0.6;
+    }
     /* Desktop: 3 columns now that units chip moves to its own line */
     .cardActionsInline {
       grid-template-columns: 1fr 52px 1fr;
@@ -1196,6 +1214,7 @@
       dropSummary: null,
       ordersSummary: [],
       itemDetails: [],
+      itemLines: [],
       expandedOrders: new Set(),
       tableStatusFilter: "all",
       tableSearch: "",
@@ -1436,7 +1455,19 @@
     }
 
     function buildOrderModels() {
-      const itemsByOrder = groupItemDetailsByOrder(state.itemDetails);
+      // Per-order kitchen ticket reads the LINE-LEVEL source (state.itemLines,
+      // base order_items carrying id, each with its options[] and bundle
+      // selections[]) so a chosen option can be shown against the exact line
+      // and two identical products with different options stay distinct. Falls
+      // back to the exploded state.itemDetails if line-level data is absent
+      // (e.g. get-drop not yet redeployed) so the board never renders blank.
+      // The aggregate/production views (renderConsolidatedView, buildAllItemsModel,
+      // next-to-make) deliberately keep reading the exploded state.itemDetails —
+      // bundle-component production counts are preserved there exactly.
+      const perOrderSource = (state.itemLines && state.itemLines.length)
+        ? state.itemLines
+        : state.itemDetails;
+      const itemsByOrder = groupItemDetailsByOrder(perOrderSource);
 
       return state.ordersSummary.map((order) => {
         const lines = (itemsByOrder.get(order.order_id) || []).map((line) => ({
@@ -2583,6 +2614,31 @@
       }
     }
 
+    // One shared sub-line mechanism for BOTH product options (modifiers) and
+    // bundle choice selections, shown beneath the item on the per-order kitchen
+    // ticket. Fulfilment instruction only — no price (the charge is already
+    // settled; this tells the kitchen what to make). Bundle selections first,
+    // then chosen options. Names are interpolated unescaped to match this
+    // file's existing convention for item names (vendor-owned catalogue data).
+    function renderLineModifiers(line) {
+      const subs = [];
+      if (Array.isArray(line.selections)) {
+        line.selections.forEach((sel) => {
+          const labelPart = sel.bundle_line_label ? `${sel.bundle_line_label}: ` : "";
+          const name = sel.selected_product_name || "—";
+          const q = Number(sel.quantity || 1);
+          const qtyPart = q > 1 ? ` ×${q}` : "";
+          subs.push(`<div class="compactSubLine">${labelPart}${name}${qtyPart}</div>`);
+        });
+      }
+      if (Array.isArray(line.options)) {
+        line.options.forEach((opt) => {
+          subs.push(`<div class="compactSubLine">${opt.option_name_snapshot || "—"}</div>`);
+        });
+      }
+      return subs.length ? `<div class="compactSubLines">${subs.join("")}</div>` : "";
+    }
+
     function renderCompactBlock(title, lines) {
       if (!lines.length) {
         return `
@@ -2598,6 +2654,7 @@
           <span>${line._item_name}</span>
           <span>×${line._item_qty}</span>
         </div>
+        ${renderLineModifiers(line)}
       `).join("");
 
       return `
@@ -2867,6 +2924,7 @@
         state.ordersSummary = [];
         state.dropOrders = [];
         state.itemDetails = [];
+        state.itemLines = [];
         return;
       }
 
@@ -2885,6 +2943,7 @@
         state.ordersSummary = [];
         state.dropOrders = [];
         state.itemDetails = [];
+        state.itemLines = [];
         await loadDrops();
         return;
       }
@@ -2898,6 +2957,11 @@
         ? dropData.drop_orders
         : [];
       state.itemDetails = await enrichItemDetailsWithProductData(dropData.order_items || []);
+      // Line-level items for the per-order kitchen ticket (already enriched
+      // server-side with category_id/capacity_units + options + selections).
+      state.itemLines = Array.isArray(dropData.order_item_lines)
+        ? dropData.order_item_lines
+        : [];
     }
 
     // ---- Optimistic status change with undo toast ----
