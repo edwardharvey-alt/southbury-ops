@@ -961,6 +961,20 @@
         </div>
       </section>
 
+      <!-- CATERING ENQUIRIES -->
+      <section class="home-card home-pad-lg" id="cateringSection" style="display:none;">
+        <div class="home-sectionHead">
+          <div>
+            <h2 class="home-sectionTitle">Catering enquiries</h2>
+            <p class="home-sectionSub">People who've asked about catering with you.</p>
+          </div>
+        </div>
+
+        <div id="cateringContent">
+          <div class="home-loading">Loading enquiries…</div>
+        </div>
+      </section>
+
       <!-- WORKSPACES -->
       <section class="home-card home-pad-lg" id="workspaces">
         <div class="home-sectionHead">
@@ -1007,7 +1021,8 @@
       customers: [],
       segments: { loyalCore: [], occasional: [], lapsed: [] },
       itemSales: [],
-      hostPerformance: []
+      hostPerformance: [],
+      cateringEnquiries: []
     };
 
     function getUrlParam(name){
@@ -1083,17 +1098,20 @@
         dropsRes,
         productsRes,
         bundlesRes,
-        homeRes
+        homeRes,
+        cateringRes
       ] = await Promise.all([
         (async () => { try { const { data, error } = await sb.functions.invoke('list-drops', { body: {} }); if (error || (data && data.error)) return { data: [] }; return { data: Array.isArray(data?.drops) ? data.drops : [] }; } catch(e) { return { data: [] }; } })(),
         sb.from('products').select('*').eq('vendor_id', vendorId),
         sb.from('bundles').select('*').eq('vendor_id', vendorId),
-        (async () => { try { const { data, error } = await sb.functions.invoke('get-home-dashboard', { body: {} }); if (error || (data && data.error)) return {}; return data || {}; } catch(e) { return {}; } })()
+        (async () => { try { const { data, error } = await sb.functions.invoke('get-home-dashboard', { body: {} }); if (error || (data && data.error)) return {}; return data || {}; } catch(e) { return {}; } })(),
+        (async () => { try { const { data, error } = await sb.functions.invoke('list-catering-enquiries', { body: {} }); if (error || (data && data.error)) return { failed: true }; return { enquiries: Array.isArray(data?.enquiries) ? data.enquiries : [] }; } catch(e) { return { failed: true }; } })()
       ]);
 
       state.drops = dropsRes.data || [];
       state.products = productsRes.data || [];
       state.bundles = bundlesRes.data || [];
+      state.cateringEnquiries = cateringRes.failed ? null : (cateringRes.enquiries || []);
       state.summary = homeRes.hearth_summary || null;
       state.insightsDrops = homeRes.hearth_drop_stats || [];
       state.itemSales = homeRes.item_sales || [];
@@ -2142,6 +2160,76 @@
       return actions.slice(0, 3);
     }
 
+    function renderCateringEnquiries(){
+      const section = document.getElementById('cateringSection');
+      const content = document.getElementById('cateringContent');
+      if (!section || !content) return;
+
+      // Load failed — quiet inline message, never blocks the rest of Home.
+      if (state.cateringEnquiries === null) {
+        section.style.display = '';
+        content.innerHTML = `<div class="home-empty">Catering enquiries couldn't be loaded just now.</div>`;
+        return;
+      }
+
+      const enquiries = state.cateringEnquiries || [];
+      section.style.display = '';
+
+      if (!enquiries.length) {
+        content.innerHTML = `<div class="home-empty">No catering enquiries yet.</div>`;
+        return;
+      }
+
+      const rows = enquiries.map(e => {
+        const name = escapeHtml(e.contact_name || 'Someone');
+
+        const facts = [];
+        if (e.event_date) facts.push(escapeHtml(fmtDate(e.event_date)));
+        if (e.guest_count) facts.push(`~${fmtNum(e.guest_count)} guests`);
+        if (e.event_type) facts.push(escapeHtml(titleCase(e.event_type)));
+        if (e.fulfilment) facts.push(escapeHtml(titleCase(e.fulfilment)));
+        const factsLine = facts.length
+          ? `<div class="home-todayMeta" style="margin-top:2px;">${facts.join(' · ')}</div>`
+          : '';
+
+        const briefRaw = (e.brief || '').trim();
+        const brief = briefRaw
+          ? `<div style="font-size:13px; color:var(--home-text); margin-top:8px; white-space:pre-line;">${escapeHtml(briefRaw.length > 220 ? briefRaw.slice(0, 220).trimEnd() + '…' : briefRaw)}</div>`
+          : '';
+
+        const contactBits = [];
+        if (e.contact_email) {
+          const em = escapeHtml(e.contact_email);
+          contactBits.push(`<a href="mailto:${em}" style="color:var(--home-muted); text-decoration:none;">${em}</a>`);
+        }
+        if (e.contact_phone) {
+          const ph = escapeHtml(e.contact_phone);
+          contactBits.push(`<a href="tel:${ph}" style="color:var(--home-muted); text-decoration:none;">${ph}</a>`);
+        }
+        const contactLine = contactBits.length
+          ? `<div style="font-size:13px; margin-top:8px;">${contactBits.join(' &nbsp;·&nbsp; ')}</div>`
+          : '';
+
+        const received = e.created_at
+          ? `<div style="font-size:12px; color:var(--home-muted); white-space:nowrap;">${escapeHtml(fmtDate(e.created_at))}</div>`
+          : '';
+
+        return `
+          <div style="display:flex; align-items:flex-start; gap:14px;">
+            <div style="min-width:0; flex:1;">
+              <div class="home-todayLabel">${name}</div>
+              ${factsLine}
+              ${brief}
+              ${contactLine}
+            </div>
+            ${received}
+          </div>
+        `;
+      }).join('<div style="height:1px; background:var(--home-border); margin:16px 0;"></div>');
+
+      content.innerHTML = rows;
+    }
+
     function render(){
       renderSetupNotice();
       renderToday();
@@ -2150,6 +2238,7 @@
       renderHero();
       renderPulse();
       renderAssetSnapshot();
+      renderCateringEnquiries();
       renderWorkspaces();
       renderActions();
       setTimeout(() => checkStripeStatus(), 0);
