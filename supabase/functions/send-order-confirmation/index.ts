@@ -80,6 +80,11 @@ type Selection = {
   quantity: number;
 };
 
+type OptionSelection = {
+  option_name_snapshot: string;
+  price_delta_pence_snapshot: number;
+};
+
 type Item = {
   id: string;
   item_type: string;
@@ -88,6 +93,7 @@ type Item = {
   price_pence: number;
   bundle_id: string | null;
   selections: Selection[];
+  options: OptionSelection[];
 };
 
 type Vendor = {
@@ -162,6 +168,18 @@ function renderHtml(order: Order, items: Item[], drop: Drop, vendor: Vendor): st
         lineRows.push(
           `<tr>` +
             `<td colspan="3" style="padding:2px 0 2px 16px;font-family:${bodyStack};font-size:13px;color:${muted};">+ ${escapeHtml(label)} &times;${escapeHtml(sel.quantity)}</td>` +
+            `</tr>`
+        );
+      }
+    }
+    // Chosen product options (modifiers) as descriptive sub-rows — same
+    // treatment as bundle selections. The line price above already includes
+    // any option price delta, so the option is shown by name only, no charge.
+    if (item.options.length > 0) {
+      for (const opt of item.options) {
+        lineRows.push(
+          `<tr>` +
+            `<td colspan="3" style="padding:2px 0 2px 16px;font-family:${bodyStack};font-size:13px;color:${muted};">+ ${escapeHtml(opt.option_name_snapshot)}</td>` +
             `</tr>`
         );
       }
@@ -265,6 +283,11 @@ function renderText(order: Order, items: Item[], drop: Drop, vendor: Vendor): st
       for (const sel of item.selections) {
         const label = sel.selected_product_name || sel.bundle_line_label || "Selection";
         lines.push(`  + ${label} ×${sel.quantity}`);
+      }
+    }
+    if (item.options.length > 0) {
+      for (const opt of item.options) {
+        lines.push(`  + ${opt.option_name_snapshot}`);
       }
     }
   }
@@ -417,7 +440,7 @@ Deno.serve(async (req) => {
     const { data: itemRows, error: itemsErr } = await serviceClient
       .from("order_items")
       .select(
-        "id, item_type, item_name_snapshot, qty, price_pence, bundle_id, selections:order_item_selections ( quantity, bundle_line:bundle_line_id ( label ), product:selected_product_id ( name ) )"
+        "id, item_type, item_name_snapshot, qty, price_pence, bundle_id, selections:order_item_selections ( quantity, bundle_line:bundle_line_id ( label ), product:selected_product_id ( name ) ), options:order_option_selections ( option_name_snapshot, price_delta_pence_snapshot )"
       )
       .eq("order_id", order_id)
       .order("id", { ascending: true });
@@ -440,6 +463,11 @@ Deno.serve(async (req) => {
           };
         })
         .sort((a, b) => (a.bundle_line_label || "").localeCompare(b.bundle_line_label || ""));
+      const optionRows = (row.options as Record<string, unknown>[] | null) ?? [];
+      const options: OptionSelection[] = optionRows.map((o) => ({
+        option_name_snapshot: (o.option_name_snapshot as string) ?? "",
+        price_delta_pence_snapshot: Number(o.price_delta_pence_snapshot ?? 0),
+      }));
       return {
         id: row.id as string,
         item_type: (row.item_type as string) ?? "product",
@@ -448,6 +476,7 @@ Deno.serve(async (req) => {
         price_pence: Number(row.price_pence ?? 0),
         bundle_id: (row.bundle_id as string | null) ?? null,
         selections,
+        options,
       };
     });
 

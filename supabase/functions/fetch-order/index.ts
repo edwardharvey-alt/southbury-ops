@@ -140,6 +140,35 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Step 3b — product-option selections (modifiers) for any item, keyed
+    // by order_item_id exactly like the bundle selections above. Uses the
+    // snapshot columns so historical orders survive later option edits.
+    // Non-fatal on error: a broken options read must not 500 the whole
+    // receipt — the page then renders each line exactly as it did before
+    // options existed (display-only, regression-safe).
+    let optionsByItemId: Record<
+      string,
+      Array<{ option_name_snapshot: string; price_delta_pence_snapshot: number }>
+    > = {};
+    if (itemIds.length > 0) {
+      const { data: optionRows, error: optErr } = await serviceClient
+        .from("order_option_selections")
+        .select("order_item_id, option_name_snapshot, price_delta_pence_snapshot")
+        .in("order_item_id", itemIds);
+      if (optErr) {
+        console.error("order_option_selections lookup failed", optErr);
+      } else {
+        for (const o of optionRows || []) {
+          const oid = o.order_item_id as string;
+          if (!optionsByItemId[oid]) optionsByItemId[oid] = [];
+          optionsByItemId[oid].push({
+            option_name_snapshot: o.option_name_snapshot as string,
+            price_delta_pence_snapshot: Number(o.price_delta_pence_snapshot ?? 0),
+          });
+        }
+      }
+    }
+
     // Step 4 — drop.
     const { data: drop, error: dropErr } = await serviceClient
       .from("drops")
@@ -202,6 +231,7 @@ Deno.serve(async (req) => {
           item_type: item.item_type,
           capacity_units_snapshot: item.capacity_units_snapshot,
           selections: selectionsByItemId[item.id as string] || [],
+          options: optionsByItemId[item.id as string] || [],
         })),
         drop: {
           id: drop.id,
