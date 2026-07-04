@@ -1761,13 +1761,28 @@
       renderSummaryList("summaryOtherList", sortEntries(otherMap));
     }
 
+    // Stage 6 (product options display): compact inline suffix of a line's
+    // chosen option(s) for the "All orders in this drop" scan table. Same
+    // option data the kanban card shows via renderLineModifiers
+    // (line.options[].option_name_snapshot from state.itemLines), rendered
+    // inline here to keep the scan view dense — e.g. "Mexican Brunch ×1 · Salmon".
+    // Display only: no price, no effect on the ×qty. Lines with no options
+    // return "" and render exactly as before.
+    function optionSuffixForLine(line) {
+      if (!Array.isArray(line.options) || !line.options.length) return "";
+      const names = line.options
+        .map((opt) => (opt.option_name_snapshot || "").trim())
+        .filter(Boolean);
+      return names.length ? ` · ${names.join(" · ")}` : "";
+    }
+
     function renderItemsBlock(lines, emptyText) {
       if (!lines.length) {
         return `<div class="compactMuted">${emptyText}</div>`;
       }
       return `
         <div class="itemsBlock">
-          ${lines.map((line) => `<div class="itemsLine">${line._item_name} ×${line._item_qty}</div>`).join("")}
+          ${lines.map((line) => `<div class="itemsLine">${line._item_name} ×${line._item_qty}${optionSuffixForLine(line)}</div>`).join("")}
         </div>
       `;
     }
@@ -1934,6 +1949,41 @@
       return categories;
     }
 
+    // Stage 6 (product options display): aggregate chosen option counts per
+    // product for the prep-sheet sub-breakdown. Read from the LINE-LEVEL source
+    // (state.itemLines) — the exploded state.itemDetails that buildAllItemsModel
+    // sums for the base ×qty total carries no options. Keyed by getItemName(line)
+    // so it matches buildAllItemsModel's entry.name (both resolve item_name first).
+    // Options attach to products only (enforced server-side), so bundle rows are
+    // untouched. STRICTLY additive: this feeds sub-line counts only and NEVER the
+    // base total — the ×qty and every existing row are computed exactly as before.
+    // Returns Map(productName -> Array<{ name, count }>) sorted by count desc.
+    function buildOptionCountsByProduct() {
+      const byProduct = new Map(); // productName -> Map(optionName -> count)
+      const lines = (state.itemLines && state.itemLines.length) ? state.itemLines : [];
+      lines.forEach((line) => {
+        if (!Array.isArray(line.options) || !line.options.length) return;
+        const productName = getItemName(line);
+        const qty = getItemQty(line) || 1;
+        let optMap = byProduct.get(productName);
+        if (!optMap) { optMap = new Map(); byProduct.set(productName, optMap); }
+        line.options.forEach((opt) => {
+          const optName = (opt.option_name_snapshot || "").trim();
+          if (!optName) return;
+          optMap.set(optName, (optMap.get(optName) || 0) + qty);
+        });
+      });
+
+      const result = new Map();
+      byProduct.forEach((optMap, productName) => {
+        const rows = [...optMap.entries()]
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => (b.count - a.count) || a.name.localeCompare(b.name));
+        result.set(productName, rows);
+      });
+      return result;
+    }
+
     function renderAllItems() {
       const body = byId("allItemsBody");
       if (!body) return;
@@ -1946,6 +1996,7 @@
 
       const byCategory = isCategoryCapacityDriver();
       const categories = buildAllItemsModel();
+      const optionCounts = buildOptionCountsByProduct();
 
       categories.forEach((cat) => {
         const catRow = document.createElement("tr");
@@ -1970,6 +2021,21 @@
             <td>${stock}</td>
           `;
           body.appendChild(tr);
+
+          // Stage 6 (product options display): indented option-count sub-rows
+          // beneath this product's total, e.g. "· Salmon ×3". Counts come from
+          // buildOptionCountsByProduct (line-level state.itemLines), keyed by the
+          // entry name. The parent ×qty total above is untouched — this only adds
+          // a breakdown. Products with no chosen options add no sub-rows.
+          const optionRows = optionCounts.get(entry.name);
+          if (optionRows && optionRows.length) {
+            optionRows.forEach((optRow) => {
+              const subTr = document.createElement("tr");
+              subTr.className = "bundleSubRow";
+              subTr.innerHTML = `<td colspan="5">· ${optRow.name} ×${optRow.count}</td>`;
+              body.appendChild(subTr);
+            });
+          }
 
           // T-sb-3 bundle selection detail: state.itemDetails
           // (v_order_item_detail_expanded) carries no reliable bundle→selection
@@ -2009,6 +2075,7 @@
         : "";
       const byCategory = isCategoryCapacityDriver();
       const categories = buildAllItemsModel();
+      const optionCounts = buildOptionCountsByProduct();
 
       const th = "padding:0 8px 8px 0; font-family:'Figtree',sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#8a8276; text-align:left;";
       const td = "padding:6px 8px 6px 0; font-family:'Figtree',sans-serif; font-size:13px;";
@@ -2033,6 +2100,17 @@
             ? ` <span style="font-size:10px; letter-spacing:.04em; text-transform:uppercase; color:${accent};">· capacity</span>`
             : "";
           const stock = entry.stockLimit === null ? "—" : String(entry.stockLimit);
+          // Stage 6 (product options display): indented option-count sub-rows
+          // beneath this product on the printed prep sheet, matching the on-screen
+          // "All items" table. Additive breakdown only — the ×qty total is untouched.
+          const optionRows = optionCounts.get(entry.name);
+          const optionRowsHtml = (optionRows && optionRows.length)
+            ? optionRows.map((optRow) => `
+            <tr>
+              <td colspan="5" style="padding:2px 8px 2px 26px; font-family:'Figtree',sans-serif; font-size:12px; color:#8a8276;">· ${optRow.name} ×${optRow.count}</td>
+            </tr>
+          `).join("")
+            : "";
           // Bundle selection sub-rows would be injected beneath each Bundle
           // parent here when selection detail is available (see renderAllItems).
           return `
@@ -2043,6 +2121,7 @@
               <td style="padding:6px 8px; font-family:'Figtree',sans-serif; font-size:13px; font-weight:600;">×${entry.qty}</td>
               <td style="padding:6px 0 6px 8px; font-family:'Figtree',sans-serif; font-size:13px; color:#8a8276;">${stock}</td>
             </tr>
+            ${optionRowsHtml}
           `;
         }).join("");
         return catHeading + itemRows;
