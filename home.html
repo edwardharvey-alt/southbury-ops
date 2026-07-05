@@ -589,6 +589,24 @@
       margin-top:2px;
     }
 
+    /* Body + contact lines for richer list rows (e.g. catering enquiries) */
+    .home-todayBody{
+      font-size:13px;
+      color:var(--home-text);
+      margin-top:8px;
+      white-space:pre-line;
+    }
+
+    .home-todayContacts{
+      font-size:13px;
+      margin-top:8px;
+    }
+
+    .home-todayContacts a{
+      color:var(--home-muted);
+      text-decoration:none;
+    }
+
     /* Asset snapshot */
     .home-assetGrid{
       display:grid;
@@ -2191,29 +2209,29 @@
         if (e.event_type) facts.push(escapeHtml(titleCase(e.event_type)));
         if (e.fulfilment) facts.push(escapeHtml(titleCase(e.fulfilment)));
         const factsLine = facts.length
-          ? `<div class="home-todayMeta" style="margin-top:2px;">${facts.join(' · ')}</div>`
+          ? `<div class="home-todayMeta">${facts.join(' · ')}</div>`
           : '';
 
         const briefRaw = (e.brief || '').trim();
         const brief = briefRaw
-          ? `<div style="font-size:13px; color:var(--home-text); margin-top:8px; white-space:pre-line;">${escapeHtml(briefRaw.length > 220 ? briefRaw.slice(0, 220).trimEnd() + '…' : briefRaw)}</div>`
+          ? `<div class="home-todayBody">${escapeHtml(briefRaw.length > 220 ? briefRaw.slice(0, 220).trimEnd() + '…' : briefRaw)}</div>`
           : '';
 
         const contactBits = [];
         if (e.contact_email) {
           const em = escapeHtml(e.contact_email);
-          contactBits.push(`<a href="mailto:${em}" style="color:var(--home-muted); text-decoration:none;">${em}</a>`);
+          contactBits.push(`<a href="mailto:${em}">${em}</a>`);
         }
         if (e.contact_phone) {
           const ph = escapeHtml(e.contact_phone);
-          contactBits.push(`<a href="tel:${ph}" style="color:var(--home-muted); text-decoration:none;">${ph}</a>`);
+          contactBits.push(`<a href="tel:${ph}">${ph}</a>`);
         }
         const contactLine = contactBits.length
-          ? `<div style="font-size:13px; margin-top:8px;">${contactBits.join(' &nbsp;·&nbsp; ')}</div>`
+          ? `<div class="home-todayContacts">${contactBits.join(' &nbsp;·&nbsp; ')}</div>`
           : '';
 
         const received = e.created_at
-          ? `<div style="font-size:12px; color:var(--home-muted); white-space:nowrap;">${escapeHtml(fmtDate(e.created_at))}</div>`
+          ? `<div style="font-size:13px; color:var(--home-muted); white-space:nowrap;">${escapeHtml(fmtDate(e.created_at))}</div>`
           : '';
 
         return `
@@ -2227,7 +2245,7 @@
             ${received}
           </div>
         `;
-      }).join('<div style="height:1px; background:var(--home-border); margin:16px 0;"></div>');
+      }).join('<div style="height:1px; background:var(--home-border); margin:10px 0;"></div>');
 
       content.innerHTML = rows;
     }
