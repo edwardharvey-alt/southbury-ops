@@ -965,14 +965,19 @@
     /* Toggle is a quiet text control, not a call-to-action button. */
     .cposter-toggle{
       align-self:flex-start;
+      display:inline-flex; align-items:center; gap:6px;
       background:none; border:none; padding:0;
       font:inherit; font-size:13px; color:var(--home-accent); cursor:pointer;
     }
-    .cposter-toggle:hover{ text-decoration:underline; }
+    .cposter-toggle:hover .cposter-toggle__text{ text-decoration:underline; }
+    .cposter-toggle__chev{ font-size:11px; line-height:1; transition:transform .15s ease; }
+    .cposter-toggle[aria-expanded="true"] .cposter-toggle__chev{ transform:rotate(180deg); }
 
-    /* Expanded preview (revealed on toggle). */
+    /* Expanded block (revealed on toggle) — context line, poster, then link. */
     .cposter-preview{ margin-top:16px; }
+    .cposter-preview__intro{ font-size:13px; color:var(--home-muted); margin:0 0 14px; }
     .cposter-actions{ margin-top:16px; display:flex; justify-content:center; }
+    .cposter-preview .cposter-share__row{ margin-top:16px; }
 
     /* Print: show ONLY the poster at true A5, isolated from the nav and list.
        The poster is relocated to <body> root during printing (JS beforeprint/
@@ -1018,22 +1023,24 @@
            always to hand, the full A5 poster preview is one tap away. Never
            gated on enquiry count.) -->
       <section class="home-card home-pad" id="cateringPosterCard">
+        <!-- Collapsed: ONE quiet line — the catering page and one way in. The
+             URL is never shown on its own; the link lives inside the expanded
+             block, beneath the poster, as part of the same thing. -->
         <div class="cposter-strip">
-          <div class="cposter-strip__label">Your catering poster</div>
-
-          <div class="cposter-share__row">
-            <span class="cposter-share__url" id="cposterShareUrl"></span>
-            <button type="button" class="home-button-secondary" id="cposterCopyBtn" style="font-size:13px;">Copy link</button>
-          </div>
+          <div class="cposter-strip__label">Your catering page</div>
 
           <button type="button" class="cposter-toggle" id="cposterToggleBtn"
-                  aria-expanded="false" aria-controls="cposterPreview">Preview &amp; print poster</button>
+                  aria-expanded="false" aria-controls="cposterPreview">
+            <span class="cposter-toggle__text">Show poster &amp; link</span>
+            <span class="cposter-toggle__chev" aria-hidden="true">&#9662;</span>
+          </button>
         </div>
 
-        <!-- Expanded preview — hidden until the toggle is opened. The QR is
-             generated lazily on first expand (generating into a hidden
-             container can yield a zero-size QR). -->
+        <!-- Expanded — poster and link together, stacked. Hidden until the
+             toggle is opened; the QR is generated lazily on first expand
+             (generating into a hidden container can yield a zero-size QR). -->
         <div class="cposter-preview" id="cposterPreview" hidden>
+          <p class="cposter-preview__intro">Print a poster for your counter, or share the link online.</p>
           <div class="cposter-stage">
             <div class="cposter-scaler" id="cateringPosterScaler">
               <div class="cposter" id="cateringPoster">
@@ -1054,6 +1061,11 @@
 
           <div class="cposter-actions">
             <button type="button" class="home-button" id="cposterPrintBtn">Print poster</button>
+          </div>
+
+          <div class="cposter-share__row">
+            <span class="cposter-share__url" id="cposterShareUrl"></span>
+            <button type="button" class="home-button-secondary" id="cposterCopyBtn" style="font-size:13px;">Copy link</button>
           </div>
         </div>
       </section>
@@ -1371,17 +1383,23 @@
       const preview = document.getElementById('cposterPreview');
       if (!toggle || !preview || toggle.dataset.wired) return;
       toggle.dataset.wired = '1';
+      // Update only the label span so the chevron (rotated via aria-expanded)
+      // survives; toggle.textContent would wipe both children.
+      const toggleText = toggle.querySelector('.cposter-toggle__text');
+      const setToggleLabel = (label) => {
+        if (toggleText) toggleText.textContent = label;
+      };
       toggle.addEventListener('click', () => {
         const expanded = toggle.getAttribute('aria-expanded') === 'true';
         if (expanded) {
           preview.hidden = true;
           toggle.setAttribute('aria-expanded', 'false');
-          toggle.textContent = 'Preview & print poster';
+          setToggleLabel('Show poster & link');
         } else {
           preview.hidden = false;              // reveal first, then draw the QR
           ensurePosterQr();                    // into a now-laid-out container
           toggle.setAttribute('aria-expanded', 'true');
-          toggle.textContent = 'Hide poster preview';
+          setToggleLabel('Hide');
         }
       });
     }
