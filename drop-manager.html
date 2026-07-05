@@ -3637,6 +3637,21 @@
       if (delivMs && d.closes_at) {
         byId("closeLeadSelect").value = nearestLeadOption(Math.round((delivMs - new Date(d.closes_at).getTime()) / 60000), byId("closeLeadSelect"));
       }
+      /* Timing-init fix: a drop can load with delivery_start set but closes_at
+         null (today only converted catering drops — convert-catering-enquiry
+         inserts delivery_start/_end but never opens_at/closes_at). The change
+         handler on "Open for orders straight away" derives closes_at from the
+         delivery window via deriveTimingFromDelivery(); the load path historically
+         did not, so the order window read "Not set" and "Timing complete" failed
+         until the vendor toggled the box. Run the same derivation on load, GUARDED
+         to fire only when the close field is empty (mirrors the d.closes_at guard
+         above) — a stored/custom closes_at is never overwritten. In immediate mode
+         (opens_at null) deriveTimingFromDelivery only fills the close inputs; it
+         does not markDirty(), so loading a catering draft doesn't spuriously dirty
+         it, and normal drafts (non-null closes_at) skip this branch entirely. */
+      if (delivMs && !d.closes_at) {
+        deriveTimingFromDelivery();
+      }
       recapCloseOptions();
       state.timingTouched = { opensAt: false, closesAt: false, openPattern: false };
 
