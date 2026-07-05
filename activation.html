@@ -3801,21 +3801,48 @@
       // exactly like the other message cards. Rendered before Card 7.
       if (inProfile(10)) {
         const cateringCtx = state.cateringContextById?.[dropId] || null;
-        const ccName = (cateringCtx?.contact_name || '').trim() || 'there';
-        const ccEvent = (cateringCtx?.event_type || '').trim() || 'your event';
+        // SEED first name: the enquiry stores the full name in one field
+        // (contact_name), so greet with just the first token. This is a simple
+        // first-word split — fine for typical names, and the vendor edits before
+        // sending; the AI-generated draft (generate-activation-copy) handles
+        // names more robustly.
+        const ccFullName = (cateringCtx?.contact_name || '').trim();
+        const ccName = ccFullName ? ccFullName.split(/\s+/)[0] : 'there';
+        // SEED event phrase: read naturally as "catering your {event}". Lowercase
+        // a common leading event word (Birthday → birthday) but preserve proper
+        // nouns (Diwali, Eid, a company name) by only touching a known common-word
+        // set. Simple heuristic for the template; the AI draft applies the same
+        // rule with fuller judgement.
+        const COMMON_EVENT_WORDS = new Set([
+          'birthday','wedding','party','lunch','dinner','anniversary','christening',
+          'graduation','retirement','engagement','reunion','celebration','gathering',
+          'breakfast','brunch','barbecue','bbq','picnic','baptism','wake','funeral',
+          'meeting','conference','housewarming','leaving'
+        ]);
+        const ccEventRaw = (cateringCtx?.event_type || '').trim();
+        let ccEvent;
+        if (!ccEventRaw) {
+          ccEvent = 'your event';
+        } else {
+          const parts = ccEventRaw.split(/\s+/);
+          const lead = COMMON_EVENT_WORDS.has(parts[0].toLowerCase())
+            ? parts[0].toLowerCase()
+            : parts[0];
+          ccEvent = `your ${[lead, ...parts.slice(1)].join(' ')}`;
+        }
         const ccDate = cateringCtx?.event_date
           ? new Date(cateringCtx.event_date).toLocaleDateString('en-GB', {
               weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London'
             })
           : '';
         const ccWhen = ccDate ? ` on ${ccDate}` : '';
-        const ccBy = ccDate ? ` by ${ccDate}` : ' when you have a moment';
         // Static seed the AI works from — also the fallback if the vendor never
-        // hits Generate. The order link is always the accurate ordering URL.
+        // hits Generate. The order link is always the accurate ordering URL. The
+        // event date lives in the opening sentence only — no redundant deadline.
         if (!state.messageDrafts['catering_confirm']) {
           state.messageDrafts['catering_confirm'] =
             `Hi ${ccName}, we're looking forward to catering ${ccEvent}${ccWhen}. Here's your link to confirm the order and pay: ${orderingLink}` +
-            `\n\nIf you could complete it${ccBy} that's everything sorted — and let me know if you'd like to change anything.`;
+            `\n\nOnce that's done, everything's sorted — and let me know if you'd like to change anything.`;
         }
         const card10Caption = state.messageDrafts['catering_confirm'];
         const card10ActionHtml = `
