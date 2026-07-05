@@ -953,23 +953,24 @@
     /* Collapsed utility strip — quiet and subordinate to the enquiry list; the
        copyable link stays to hand, the full poster is one tap away. */
     .cposter-strip{ display:flex; flex-direction:column; gap:10px; }
-    .cposter-strip__label{
-      font-size:13px; font-weight:600; color:var(--home-muted); letter-spacing:.01em;
-    }
     .cposter-share__row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .cposter-share__url{
       flex:1; min-width:0; font-size:13px; color:var(--home-text);
       background:var(--home-soft); border:1px solid var(--home-border); border-radius:10px;
       padding:9px 12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     }
-    /* Toggle is a quiet text control, not a call-to-action button. */
+    /* Toggle is a quiet, low-emphasis show/hide — muted text (matching the
+       platform's meta-text token), not a primary action. It is NOT orange:
+       Hearthfire is a primary-button fill only, never a text colour. Mirrors
+       the muted collapsible-trigger treatment used elsewhere (drop-menu's
+       .capacitySlotsTrigger). */
     .cposter-toggle{
       align-self:flex-start;
       display:inline-flex; align-items:center; gap:6px;
       background:none; border:none; padding:0;
-      font:inherit; font-size:13px; color:var(--home-accent); cursor:pointer;
+      font:inherit; font-size:13px; color:var(--home-muted); cursor:pointer;
     }
-    .cposter-toggle:hover .cposter-toggle__text{ text-decoration:underline; }
+    .cposter-toggle:hover{ color:var(--home-text); }
     .cposter-toggle__chev{ font-size:11px; line-height:1; transition:transform .15s ease; }
     .cposter-toggle[aria-expanded="true"] .cposter-toggle__chev{ transform:rotate(180deg); }
 
@@ -1027,7 +1028,7 @@
              URL is never shown on its own; the link lives inside the expanded
              block, beneath the poster, as part of the same thing. -->
         <div class="cposter-strip">
-          <div class="cposter-strip__label">Your catering page</div>
+          <h2 class="home-sectionTitle">Your catering page</h2>
 
           <button type="button" class="cposter-toggle" id="cposterToggleBtn"
                   aria-expanded="false" aria-controls="cposterPreview">
