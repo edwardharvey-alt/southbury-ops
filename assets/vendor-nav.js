@@ -61,6 +61,7 @@
     { file: "activation.html", label: "Share" },
     { file: "insights.html", label: "Insights" },
     { file: "customers.html", label: "Customers" },
+    { file: "enquiries.html", label: "Enquiries" },
     { file: "hosts.html", label: "Hosts", utility: true },
     { file: "onboarding.html", label: "Setup", utility: true },
     { label: "Sign out", utility: true, action: "signout" }
@@ -82,6 +83,7 @@
     "insights.html": true,
     "onboarding.html": true,
     "customers.html": true,
+    "enquiries.html": true,
     "customer-import.html": true,
     "scorecard.html": true,
     "order-entry.html": true,
