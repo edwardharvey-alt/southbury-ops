@@ -6426,6 +6426,14 @@
         updateTypeFilterSummary();
         await loadVendorId();
         await loadVendorCustomerCount();
+        // Open a specific drop when arriving with ?drop=<id> (e.g. the Home
+        // "Turn into catering drop" bridge). One-shot: consumed here before the
+        // first load so later refreshAll() calls don't snap back to it. A bad or
+        // cross-vendor id is caught by loadDrops()'s exists-check and
+        // loadSelectedDropData()'s stale-id guard, which fall back to the
+        // default selection.
+        const requestedDropId = getUrlParam('drop');
+        if (requestedDropId) state.selectedDropId = requestedDropId;
         await refreshAll();
       } catch (err) {
         console.error(err);
