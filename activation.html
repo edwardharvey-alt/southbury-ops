@@ -1819,11 +1819,13 @@
       // one client — so it survives. Card 10 (booking confirmation) is the
       // first bespoke single-recipient touchpoint (T-comms-direct step 3a-i): a
       // one-to-one message the vendor sends their client via their own channel,
-      // rendered BEFORE card 7. The remaining single-recipient touchpoints
-      // (reminder / follow-up) arrive in later steps. Keyed strictly on
-      // audience_scope === 'direct', so every non-direct drop skips this and
-      // reaches the identical matrix as before.
-      if (summary.audience_scope === 'direct') return { openness, card4, card5, cards: [10, 7], optional: [] };
+      // rendered BEFORE card 7. Cards 11 (pre-event reminder) and 12 (post-event
+      // follow-up) are the remaining single-recipient touchpoints (T-comms-direct
+      // step 3b) — both compose-and-copy only, no platform send — rendered AFTER
+      // card 7 so the timeline reads confirmation → order-ready → reminder →
+      // follow-up. Keyed strictly on audience_scope === 'direct', so every
+      // non-direct drop skips this and reaches the identical matrix as before.
+      if (summary.audience_scope === 'direct') return { openness, card4, card5, cards: [10, 7, 11, 12], optional: [] };
 
       if (openness === 'open'   && hasHost)  return { openness, card4, card5, cards: [1,2,3,4,5,6,7,8,9], optional: [] };
       if (openness === 'open'   && !hasHost) return { openness, card4, card5, cards: [1,3,4,6,7,8,9],     optional: [] };
@@ -1893,7 +1895,9 @@
         7: null,
         8: 'post_drop',
         9: 'thank_you',
-        10: 'catering_confirm'
+        10: 'catering_confirm',
+        11: 'catering_reminder',
+        12: 'catering_followup'
       };
 
       const cardTitleMap = {
@@ -1906,7 +1910,9 @@
         7: 'Order ready notifications',
         8: 'Post drop content',
         9: 'Send thank-you email',
-        10: 'Confirm the booking'
+        10: 'Confirm the booking',
+        11: 'Send a pre-event reminder',
+        12: 'Send a post-event follow-up'
       };
 
       // The only host-origin event that counts toward vendor progress is the
@@ -2725,6 +2731,10 @@
         // neighbourhood drops (null host) get the EF's neighbourhood fallback.
         host_name:       summary?.host_name || rawDrop.host_name || null,
         delivery_day:    deliveryDay,
+        // Pre-formatted clock time of delivery_start — read only by the catering
+        // reminder case ("everything ready at <time>"); inert for every other
+        // touchpoint. Null when delivery_start is unset.
+        delivery_time:   fmtT(rawDrop.delivery_start),
         opens_day:       opensDay,
         opens_time:      fmtT(rawDrop.opens_at),
         closes_time:     fmtT(rawDrop.closes_at),
@@ -2750,6 +2760,42 @@
             })
           : null,
       };
+    }
+
+    // Shared catering seed fields for the direct-drop relationship cards
+    // (pre-event reminder / post-event follow-up). Mirrors Card 10's inline
+    // first-name split + natural-occasion phrasing ("your <occasion>", lowercase
+    // a common leading event word, preserve proper nouns) so the pre-generation
+    // seed reads naturally; the AI draft applies the same rules with fuller
+    // judgement. Card 10 keeps its own inline copy and is deliberately left
+    // untouched — this helper serves only the new cards.
+    function actCateringSeed(cateringCtx){
+      const fullName = (cateringCtx?.contact_name || '').trim();
+      const firstName = fullName ? fullName.split(/\s+/)[0] : 'there';
+      const COMMON_EVENT_WORDS = new Set([
+        'birthday','wedding','party','lunch','dinner','anniversary','christening',
+        'graduation','retirement','engagement','reunion','celebration','gathering',
+        'breakfast','brunch','barbecue','bbq','picnic','baptism','wake','funeral',
+        'meeting','conference','housewarming','leaving'
+      ]);
+      const raw = (cateringCtx?.event_type || '').trim();
+      let eventPhrase;
+      if (!raw) {
+        eventPhrase = 'your event';
+      } else {
+        const parts = raw.split(/\s+/);
+        const lead = COMMON_EVENT_WORDS.has(parts[0].toLowerCase())
+          ? parts[0].toLowerCase()
+          : parts[0];
+        eventPhrase = `your ${[lead, ...parts.slice(1)].join(' ')}`;
+      }
+      const dateStr = cateringCtx?.event_date
+        ? new Date(cateringCtx.event_date).toLocaleDateString('en-GB', {
+            weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London'
+          })
+        : '';
+      const whenClause = dateStr ? ` on ${dateStr}` : '';
+      return { firstName, eventPhrase, whenClause, dateStr };
     }
 
     // Strips the platform-assembled tail from a vendor_open draft, leaving
@@ -2793,7 +2839,10 @@
       // the vendor sends it to their client once the drop is published, ahead
       // of ordering — so it auto-expands as the first action on a direct drop.
       if (n === 1 || n === 2 || n === 3 || n === 10) return 'pre-open';
-      if (n === 4 || n === 5 || n === 6 || n === 7) return 'live';
+      // Card 11 (pre-event reminder) sits in the live window, a day or two
+      // before the event; Card 12 (post-event follow-up) is a closed-phase card
+      // and falls through to 'closed' below.
+      if (n === 4 || n === 5 || n === 6 || n === 7 || n === 11) return 'live';
       return 'closed';
     }
 
@@ -3933,6 +3982,138 @@
         }));
       }
 
+      // Card 11 — pre-event reminder (is-vendor, direct drops only). A day or
+      // two before the event: warm reassurance that everything is in hand.
+      // Compose-and-copy ONLY — NO platform send (the vendor sends it via their
+      // OWN channel, usually WhatsApp). Seeded from the linked catering enquiry
+      // (client name, event, date) + the drop's fulfilment/time; AI-drafts on
+      // voice via the catering_reminder touchpoint, with regen chips + manual
+      // overwrite exactly like Card 10. No ordering link — the order is already
+      // confirmed. Rendered after Card 7 so the timeline reads
+      // confirmation → order-ready → reminder → follow-up.
+      if (inProfile(11)) {
+        const crCtx = state.cateringContextById?.[dropId] || null;
+        const { firstName: crName, eventPhrase: crEvent, whenClause: crWhen } = actCateringSeed(crCtx);
+        const crMode = (summary.fulfilment_mode || rawDrop.fulfilment_mode || '').trim().toLowerCase();
+        const crTime = fmtT(rawDrop.delivery_start);
+        const crTimeClause = crTime ? ` at ${crTime}` : '';
+        const crFulfilSentence = crMode === 'delivery'
+          ? `We'll have everything ready for delivery${crTimeClause}.`
+          : crMode === 'collection'
+          ? `We'll have everything ready for collection${crTimeClause}.`
+          : (crTime ? `We'll have everything ready${crTimeClause}.` : '');
+        // Static seed the AI works from — also the fallback if the vendor never
+        // hits Generate. No ordering link: the order is already confirmed & paid.
+        if (!state.messageDrafts['catering_reminder']) {
+          state.messageDrafts['catering_reminder'] =
+            `Hi ${crName}, just a note that we're all set for ${crEvent}${crWhen}.` +
+            (crFulfilSentence ? ` ${crFulfilSentence}` : '') +
+            ` Looking forward to it.`;
+        }
+        const card11Caption = state.messageDrafts['catering_reminder'];
+        const card11ActionHtml = `
+          <div class="act-message-edit">
+            <textarea
+              data-act="message-textarea"
+              data-touchpoint="catering_reminder"
+              rows="5">${escapeHtml(card11Caption)}</textarea>
+            ${state.messageGenerated?.['catering_reminder'] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
+            <div class="act-chip-row">
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="catering_reminder" data-instruction="Make it shorter and more concise">Shorter</button>
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="catering_reminder" data-instruction="Make it warmer and more personal">Warmer</button>
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="catering_reminder" data-instruction="Make it a little more formal and reassuring">More formal</button>
+            </div>
+            <div class="act-guidance-row">
+              <input type="text" class="act-guidance-input"
+                data-touchpoint="catering_reminder"
+                placeholder="e.g. shorter, warmer, confirm the timings, mention the menu...">
+            </div>
+            <div class="act-message-edit-row">
+              <button
+                data-act="generate-copy"
+                data-touchpoint="catering_reminder"
+                class="act-copy-btn">
+                ${state.messageGenerated?.['catering_reminder'] ? '↺ Regenerate →' : '✦ Generate →'}
+              </button>
+              ${copyBtn('Copy message', 'catering_reminder', 'copied', true)}
+            </div>
+            <div class="act-copy-error" data-error-key="catering_reminder"
+              style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
+          </div>
+        `;
+        // No touchpointKey (like Card 10): a compose-and-copy card stays open so
+        // the vendor can re-copy; copying logs 'copied' which counts progress.
+        cards.push(tpCard({
+          typeClass: 'is-vendor',
+          cardNum: 11,
+          label: 'BEFORE THE EVENT',
+          title: 'Send your client a pre-event reminder',
+          channel: 'Direct',
+          desc: "A day or two before, send a warm note that everything's in hand. This goes to them directly — edit it to sound like you, then copy it into your own email or WhatsApp.",
+          actionHtml: card11ActionHtml
+        }));
+      }
+
+      // Card 12 — post-event follow-up (is-vendor, direct drops only). The
+      // morning after the event: the compounding relationship message — warm
+      // thanks and a low-key invitation to work together again. Compose-and-copy
+      // ONLY — NO platform send, NO sell, NO ordering link. Seeded from the
+      // linked catering enquiry; AI-drafts on voice via the catering_followup
+      // touchpoint. Rendered last on the direct timeline.
+      if (inProfile(12)) {
+        const cfCtx = state.cateringContextById?.[dropId] || null;
+        const { firstName: cfName, eventPhrase: cfEvent } = actCateringSeed(cfCtx);
+        // Static seed the AI works from — also the fallback if the vendor never
+        // hits Generate. The event is in the past; no link, no sell.
+        if (!state.messageDrafts['catering_followup']) {
+          state.messageDrafts['catering_followup'] =
+            `Hi ${cfName}, thank you for having us cater ${cfEvent} — I hope it went well.` +
+            ` We'd love to cook for you again whenever you're planning something next.`;
+        }
+        const card12Caption = state.messageDrafts['catering_followup'];
+        const card12ActionHtml = `
+          <div class="act-message-edit">
+            <textarea
+              data-act="message-textarea"
+              data-touchpoint="catering_followup"
+              rows="5">${escapeHtml(card12Caption)}</textarea>
+            ${state.messageGenerated?.['catering_followup'] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
+            <div class="act-chip-row">
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="catering_followup" data-instruction="Make it shorter and more concise">Shorter</button>
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="catering_followup" data-instruction="Make it warmer and more personal">Warmer</button>
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="catering_followup" data-instruction="Make it a little more formal">More formal</button>
+            </div>
+            <div class="act-guidance-row">
+              <input type="text" class="act-guidance-input"
+                data-touchpoint="catering_followup"
+                placeholder="e.g. shorter, warmer, mention a favourite dish...">
+            </div>
+            <div class="act-message-edit-row">
+              <button
+                data-act="generate-copy"
+                data-touchpoint="catering_followup"
+                class="act-copy-btn">
+                ${state.messageGenerated?.['catering_followup'] ? '↺ Regenerate →' : '✦ Generate →'}
+              </button>
+              ${copyBtn('Copy message', 'catering_followup', 'copied', true)}
+            </div>
+            <div class="act-copy-error" data-error-key="catering_followup"
+              style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
+          </div>
+        `;
+        // No touchpointKey (like Card 10): stays open for re-copy; copying logs
+        // 'copied' which counts progress.
+        cards.push(tpCard({
+          typeClass: 'is-vendor',
+          cardNum: 12,
+          label: 'AFTER THE EVENT',
+          title: 'Follow up with your client',
+          channel: 'Direct',
+          desc: "The morning after, a warm thank-you and an open door to cook for them again. This goes to them directly — edit it to sound like you, then copy it into your own email or WhatsApp.",
+          actionHtml: card12ActionHtml
+        }));
+      }
+
       // Card 8 — post-drop content (is-prompted, locked until closed)
       if (inProfile(8)) {
         // Editable caption draft, seeded from the assembled template.
@@ -4640,6 +4821,8 @@
           host_link:       'host_link',
           post_drop:         'post_drop',
           catering_confirm:  'catering_confirm',
+          catering_reminder: 'catering_reminder',
+          catering_followup: 'catering_followup',
         };
         if (!tpMap[tp]) return;
 

@@ -68,6 +68,7 @@ interface CopyInput {
   drop_name: string;
   host_name: string | null;
   delivery_day: string;
+  delivery_time: string | null;  // pre-formatted clock time of delivery_start; read by the catering reminder case
   opens_day: string | null;
   opens_time: string | null;
   closes_time: string | null;
@@ -105,7 +106,7 @@ interface CopyInput {
 function buildPrompt(input: CopyInput): string {
   const {
     touchpoint, vendor_name, drop_name, host_name,
-    delivery_day, opens_day, opens_time, closes_time,
+    delivery_day, delivery_time, opens_day, opens_time, closes_time,
     capacity, ordering_url, fulfilment_mode, reveal_dish, cadence, posterType, channel,
     contact_name, event_type, event_date
   } = input;
@@ -193,6 +194,48 @@ Facts:
 - Occasion: ${eventLabel}${eventWhen ? `\n- Date: ${eventWhen}` : ""}
 - Ordering link (they use this to confirm the order and pay): ${ordering_url}
 Cover, in this order and in plain warm language: greet the client by their FIRST name only — the name in the Facts may be a full name, so use just the first name; then that you're looking forward to catering their occasion, phrased naturally as "catering your <occasion>${whenClause}" (take <occasion> from the Occasion${eventWhen ? " and Date" : ""} above — lowercase a common event word such as Birthday → birthday, Wedding → wedding or Party → party, but preserve proper nouns exactly as given, e.g. Diwali, Eid, or a company name); then that here is their link to confirm the order and pay — include it exactly: ${ordering_url}; then a warm close that once that is done everything is sorted (do NOT restate the date as a deadline — the event date belongs in the opening sentence only); and an invitation to let you know if they'd like to change anything. 3 to 4 short sentences. Keep the ordering link exactly as given. UK spelling. Calm and warm, no urgency — the tone of a message to someone you're glad to be working with. Output only the message, nothing else.`;
+    }
+
+    case "catering_reminder": {
+      // Direct, one-to-one PRE-EVENT reminder to the single named catering
+      // client, a day or two before their event — warm reassurance that
+      // everything is in hand. NOT a sell and NOT a new order link (the order is
+      // already confirmed and paid). Mirrors catering_confirm's first-name +
+      // natural-occasion grammar. Facts come only from the linked enquiry + the
+      // drop; anything missing is simply omitted (never invented, per COPY_FLOOR).
+      const clientName = (contact_name || "").trim() || "there";
+      const eventLabel = (event_type || "").trim() || "your event";
+      const eventWhen = (event_date || "").trim();
+      const whenClause = eventWhen ? ` on ${eventWhen}` : "";
+      const fulfil = (fulfilment_mode || "").trim().toLowerCase();
+      const timeClause = delivery_time ? ` at ${delivery_time}` : "";
+      const fulfilFact = fulfil === "delivery"
+        ? `You are delivering to them${timeClause}.`
+        : fulfil === "collection"
+        ? `They are collecting${timeClause}.`
+        : (delivery_time ? `Everything will be ready${timeClause}.` : "");
+      return `Write a warm, personal pre-event reminder message from ${vendor_name} to a single catering client, a day or two before their event. This is a direct one-to-one message (email or WhatsApp), NOT a public post or a broadcast — write as if speaking to just them.
+Facts:
+- Client's name: ${clientName}
+- Occasion: ${eventLabel}${eventWhen ? `\n- Date: ${eventWhen}` : ""}${fulfilFact ? `\n- Fulfilment: ${fulfilFact}` : ""}
+Cover, in plain warm language: greet the client by their FIRST name only — the name in the Facts may be a full name, so use just the first name; then a calm note that everything is in hand for their occasion, phrased naturally as "your <occasion>${whenClause}" (take <occasion> from the Occasion${eventWhen ? " and Date" : ""} above — lowercase a common event word such as Birthday → birthday, Wedding → wedding or Party → party, but preserve proper nouns exactly as given, e.g. Diwali, Eid, or a company name); ${fulfilFact ? "then, only because the Fulfilment fact is given, a brief honest note of how and when they will get the food; " : ""}then a warm close that you are looking forward to it. Do NOT include any ordering or payment link — the order is already confirmed. Do NOT add urgency or restate the date as a deadline. 2 to 3 short sentences. UK spelling. Calm and warm — the tone of a message to someone you are glad to be working with. Output only the message, nothing else.`;
+    }
+
+    case "catering_followup": {
+      // Direct, one-to-one POST-EVENT follow-up to the single named catering
+      // client, the morning after their event — the compounding relationship
+      // message: warm thanks and a low-key invitation to work together again.
+      // NOT a pitch, NOT a sell, NO link, NO review ask. Mirrors
+      // catering_confirm's first-name + natural-occasion grammar. Facts come
+      // only from the linked enquiry; anything missing is omitted (per COPY_FLOOR).
+      const clientName = (contact_name || "").trim() || "there";
+      const eventLabel = (event_type || "").trim() || "your event";
+      const eventWhen = (event_date || "").trim();
+      return `Write a warm, personal post-event follow-up message from ${vendor_name} to a single catering client, the morning after their event. This is a direct one-to-one message (email or WhatsApp), NOT a public post or a broadcast — write as if speaking to just them.
+Facts:
+- Client's name: ${clientName}
+- Occasion: ${eventLabel}${eventWhen ? `\n- Date: ${eventWhen}` : ""}
+Cover, in plain warm language: greet the client by their FIRST name only — the name in the Facts may be a full name, so use just the first name; then thank them for having you cater their occasion, phrased naturally as "catering your <occasion>" (take <occasion> from the Occasion above — lowercase a common event word such as Birthday → birthday, Wedding → wedding or Party → party, but preserve proper nouns exactly as given, e.g. Diwali, Eid, or a company name), and that you hope it went well; then a warm, low-key close inviting them to cook for them again whenever they are next planning something. Do NOT include any ordering or payment link. Do NOT sell, add urgency, or ask for a review. 2 to 3 short sentences. UK spelling. Warm and genuine — the tone of a message to someone you would love to work with again. Output only the message, nothing else.`;
     }
 
     default:
