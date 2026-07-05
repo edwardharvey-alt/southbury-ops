@@ -82,6 +82,13 @@ interface CopyInput {
   fulfilment_mode?: string | null;
   reveal_dish?: string | null;
   cadence?: string | null;
+  // Catering-confirm context (direct / catering drops only) — the single named
+  // client the drop was converted for. Inert for every other touchpoint; read
+  // solely by the catering_confirm case. event_date arrives pre-formatted as a
+  // human string (the frontend formats it), so it is used verbatim.
+  contact_name?: string | null;
+  event_type?: string | null;
+  event_date?: string | null;
   // Card 4 poster framing: 'till' (open/walk-up, default) | 'noticeboard'
   // (closed/pinned sheet). Read only by the poster_hook case.
   posterType?: string | null;
@@ -99,7 +106,8 @@ function buildPrompt(input: CopyInput): string {
   const {
     touchpoint, vendor_name, drop_name, host_name,
     delivery_day, opens_day, opens_time, closes_time,
-    capacity, ordering_url, fulfilment_mode, reveal_dish, cadence, posterType, channel
+    capacity, ordering_url, fulfilment_mode, reveal_dish, cadence, posterType, channel,
+    contact_name, event_type, event_date
   } = input;
 
   const ch = (channel === 'social' || channel === 'email') ? channel : 'whatsapp';   // default/unknown → whatsapp
@@ -167,6 +175,24 @@ Facts:
 - This drop is: ${cadence || "standalone"}  (event = a one-off; series = part of a regular rhythm; standalone = a single planned occasion)
 
 Rules: Write ONE line of 12 words or fewer, present tense, that reads as an invitation to act now and sits naturally above 'Scan to order'. Use only the one or two facts that make the strongest short line — you don't need them all. If a reveal dish is given you may lead with it. Reflect fulfilment honestly: collection at a venue means they collect there; delivery means it's delivered; if not specified, say nothing about it. On frequency: if a series, you may hint at the regular rhythm; if an event, a one-off framing is fine; if standalone, say nothing about how often it happens. Do NOT use the word 'drop' or explain what one is. Do NOT include any number or count — the poster is printed and cannot update. Return only the line — no quotation marks, no markdown, nothing else.`;
+
+    case "catering_confirm": {
+      // Direct, one-to-one booking confirmation to a single named catering
+      // client. Not a broadcast — address the client by name. Facts come only
+      // from the linked catering enquiry; anything missing is simply omitted
+      // (never invented, per COPY_FLOOR).
+      const clientName = (contact_name || "").trim() || "there";
+      const eventLabel = (event_type || "").trim() || "your event";
+      const eventWhen = (event_date || "").trim();
+      const whenClause = eventWhen ? ` on ${eventWhen}` : "";
+      const byClause = eventWhen ? ` by ${eventWhen}` : " when you have a moment";
+      return `Write a warm, personal booking-confirmation message from ${vendor_name} to a single catering client called ${clientName}. This is a direct one-to-one message (email or WhatsApp), NOT a public post or a broadcast — address ${clientName} by name and write as if speaking to just them.
+Facts:
+- Client: ${clientName}
+- Occasion: ${eventLabel}${eventWhen ? `\n- Date: ${eventWhen}` : ""}
+- Ordering link (they use this to confirm the order and pay): ${ordering_url}
+Cover, in this order and in plain warm language: that you're looking forward to catering ${eventLabel}${whenClause}; that here is their link to confirm the order and pay — include it exactly: ${ordering_url}; a gentle ask to complete it${byClause} so everything is sorted; and an invitation to let you know if they'd like to change anything. 3 to 4 short sentences. Keep the ordering link exactly as given. Calm and warm — the tone of a message to someone you're glad to be working with. Output only the message, nothing else.`;
+    }
 
     default:
       return `Write a short, warm social media post for ${vendor_name} about their '${drop_name}' food drop at ${host} this ${delivery_day}. 2 sentences.`;
