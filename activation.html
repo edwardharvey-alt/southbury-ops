@@ -3818,6 +3818,32 @@
             `\n\nIf you could complete it${ccBy} that's everything sorted — and let me know if you'd like to change anything.`;
         }
         const card10Caption = state.messageDrafts['catering_confirm'];
+        // Does the client have an email on file? get-catering-context (loaded
+        // in showDropView, awaited before render) carries contact_email, which
+        // is nullable — a client may have given a phone only. Only offer the
+        // platform send when we have an address to send TO; otherwise the card
+        // is Copy-only + a calm note (step 3a-ii, Gate 5). Never the drop's
+        // customer audience — a single named client.
+        const ccEmail = (cateringCtx?.contact_email || '').trim();
+        // Persistent "already sent" marker + soft re-send driver — read from the
+        // log so it survives reload and re-render (getDropProgress counts this
+        // touchpoint independently, so dropping the tpCard done-collapse below
+        // does not affect progress).
+        const ccSentEntry = (state.activationLog || []).find(e =>
+          e.touchpoint === 'catering_confirm' && e.action === 'confirm_sent' &&
+          e.dropId === dropId && e.actor !== 'host'
+        ) || null;
+        // Copy is the primary CTA only when there's no email to send to;
+        // otherwise Send is primary and Copy is the secondary option.
+        const card10SendBtn = ccEmail
+          ? `<button class="act-copy-btn primary" type="button" data-act="send-catering-confirm" data-touchpoint="catering_confirm">Send to client</button>`
+          : '';
+        const card10NoEmailNote = ccEmail
+          ? ''
+          : `<div style="font-size:12px;color:#9a8b73;line-height:1.5;margin-top:8px;">This client gave a phone number only — copy the message and send it your way.</div>`;
+        const card10SentMarker = ccSentEntry
+          ? `<div class="act-done-state">✓ Sent to your client · ${formatLogTime(ccSentEntry.timestamp)}</div>`
+          : '';
         const card10ActionHtml = `
           <div class="act-message-edit">
             <textarea
@@ -3835,6 +3861,7 @@
                 data-touchpoint="catering_confirm"
                 placeholder="e.g. shorter, warmer, mention the guest count, confirm the menu...">
             </div>
+            ${card10SentMarker}
             <div class="act-message-edit-row">
               <button
                 data-act="generate-copy"
@@ -3842,21 +3869,28 @@
                 class="act-copy-btn">
                 ${state.messageGenerated?.['catering_confirm'] ? '↺ Regenerate →' : '✦ Generate →'}
               </button>
-              ${copyBtn('Copy message', 'catering_confirm', 'copied', true)}
+              ${copyBtn('Copy message', 'catering_confirm', 'copied', !ccEmail)}
+              ${card10SendBtn}
             </div>
+            ${card10NoEmailNote}
             <div class="act-copy-error" data-error-key="catering_confirm"
               style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
           </div>
         `;
+        // No touchpointKey: unlike the copy-only 3a-i shape, a send-capable card
+        // must stay open for a legitimate re-send (Gate 6). tpCard's
+        // touchpointKey collapses a logged card to a bare "✓ Done", removing the
+        // action area — which would hard-block re-send. Card 4 (vendor_open),
+        // the existing send-capable message card, deliberately does the same;
+        // Card 10 mirrors it, rendering its own persistent sent marker above.
         cards.push(tpCard({
           typeClass: 'is-vendor',
           cardNum: 10,
           label: 'ONCE PUBLISHED',
           title: 'Confirm the booking with your client',
           channel: 'Direct',
-          desc: "Send your client their confirmation and order link. This goes to them directly — edit it to sound like you, then copy it into your own email or WhatsApp and send.",
-          actionHtml: card10ActionHtml,
-          touchpointKey: 'catering_confirm'
+          desc: "Send your client their confirmation and order link. This goes to them directly — edit it to sound like you, then send it to them, or copy it into your own email or WhatsApp.",
+          actionHtml: card10ActionHtml
         }));
       }
 
@@ -4335,6 +4369,71 @@
         const originalLabel = copyMsg.textContent;
         await actCopyToClipboard(text, copyMsg, originalLabel);
         actLog(tp, copyMsg.dataset.action || 'message_copied');
+        return;
+      }
+
+      // Card 10 (catering booking confirmation) — SEND to the single named
+      // client (step 3a-ii). Vendor-fronted, single recipient, never a
+      // broadcast: send-catering-confirm resolves the ONE linked client
+      // server-side. The vendor has already seen and edited the draft in the
+      // card, so this is an explicit, non-silent send. Re-send is allowed
+      // behind a soft confirm — never a hard block.
+      const sendCatering = e.target.closest('[data-act="send-catering-confirm"]');
+      if (sendCatering) {
+        e.preventDefault();
+        const tp = 'catering_confirm';
+        const dropId = state.selectedDropId;
+        // Send exactly what the vendor sees — flush the live textarea first.
+        const ta = document.querySelector('[data-act="message-textarea"][data-touchpoint="catering_confirm"]');
+        if (ta) state.messageDrafts[tp] = ta.value;
+        const bodyText = (state.messageDrafts[tp] || '').trim();
+        const noteEl = document.querySelector('.act-copy-error[data-error-key="catering_confirm"]');
+        if (!bodyText) {
+          if (noteEl) { noteEl.style.color = '#b91c1c'; noteEl.textContent = 'Write your message before sending.'; }
+          return;
+        }
+        // Soft re-send confirm (Gate 6) — never a hard block.
+        const alreadySent = (state.activationLog || []).some(en =>
+          en.touchpoint === 'catering_confirm' && en.action === 'confirm_sent' &&
+          en.dropId === dropId && en.actor !== 'host'
+        );
+        if (alreadySent && !window.confirm("You've already sent this confirmation to your client. Send it again?")) {
+          return;
+        }
+        if (noteEl) { noteEl.style.color = '#b91c1c'; noteEl.textContent = ''; }
+
+        const restoreLabel = sendCatering.textContent;
+        sendCatering.disabled = true;
+        sendCatering.textContent = 'Sending…';
+
+        try {
+          const { data, error } = await sb.functions.invoke('send-catering-confirm', {
+            body: { vendor_id: state.vendor.id, drop_id: dropId, custom_subject: null, custom_body: bodyText },
+          });
+          if (error) throw error;
+          if (data && data.error) throw new Error(data.error);
+
+          // Belt-and-braces: the button only renders with an email on file, but
+          // if the server resolved no recipient, don't log a send — fall back to
+          // the copy-and-send-your-way guidance.
+          if (data && (data.skipped_reason === 'no_email_recipient' || (data.sent ?? 0) === 0)) {
+            sendCatering.disabled = false;
+            sendCatering.textContent = restoreLabel;
+            if (noteEl) { noteEl.style.color = '#9a8b73'; noteEl.textContent = 'No email on file for this client — copy the message and send it your way.'; }
+            return;
+          }
+
+          // Success — log (re-renders the card with a persistent "✓ Sent"
+          // marker), then surface a calm green confirmation on the fresh DOM.
+          actLog(tp, 'confirm_sent', { sent: data?.sent ?? 1, total: data?.total ?? 1 });
+          const okNote = document.querySelector('.act-copy-error[data-error-key="catering_confirm"]');
+          if (okNote) { okNote.style.color = '#166534'; okNote.textContent = 'Sent to your client.'; }
+        } catch (err) {
+          console.error('[activation] catering confirm send failed:', err);
+          sendCatering.disabled = false;
+          sendCatering.textContent = restoreLabel;
+          if (noteEl) { noteEl.style.color = '#b91c1c'; noteEl.textContent = 'Send failed — check your connection and try again.'; }
+        }
         return;
       }
 
