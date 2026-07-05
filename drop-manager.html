@@ -1217,6 +1217,12 @@
 
             <div class="stagePane active" id="pane-basics">
               <div class="stagePaneInner">
+                <div class="stageSection hidden" id="cateringEnquirySection">
+                  <h4 class="stageSectionTitle">Catering enquiry</h4>
+                  <p class="stageSectionSub">Who this drop is for. From the original enquiry — read-only here.</p>
+                  <div class="hostPreview" id="cateringEnquiryBody"></div>
+                </div>
+
                 <div class="stageSection">
                   <h4 class="stageSectionTitle">Identity</h4>
                   <p class="stageSectionSub">Name the drop and define its type.</p>
@@ -1889,6 +1895,7 @@
       selectedDropId: null,
       selectedDropSummary: null,
       drop: null,
+      cateringEnquiry: null,
       readiness: null,
       dropMenuItems: [],
       dropMenuItemStock: [],
@@ -3016,6 +3023,7 @@
 
     async function loadSelectedDrop() {
       existingWindowsLoaded = false; // reset so existing windows are re-fetched for new drop
+      state.cateringEnquiry = null;  // reset per drop; only a converted catering drop repopulates it below
       if (!state.selectedDropId) {
         state.drop = null;
         state.selectedDropSummary = null;
@@ -3089,6 +3097,24 @@
       state.dropMenuItemStock = stockRes.data || [];
       state.menuAssignments = buildMenuAssignments();
       manualSlugEdited = false;
+
+      // Catering client context: a converted catering enquiry becomes a
+      // 'direct' event drop, and the client's structured details live only on
+      // the linked catering_enquiries row (not on drops, not parsed from
+      // notes_internal). Fetch that context for the drops that could carry it
+      // (direct scope, or any event drop for legacy conversions predating the
+      // 'direct' stamp). get-catering-context is null-safe — a drop with no
+      // linked enquiry returns { enquiry: null }, so the panel simply stays
+      // hidden. Non-fatal: any failure leaves cateringEnquiry null.
+      if (state.drop && (state.drop.audience_scope === "direct" || state.drop.drop_type === "event")) {
+        try {
+          const { data: ctx, error: ctxErr } = await supabase.functions.invoke("get-catering-context", {
+            body: { drop_id: state.drop.id }
+          });
+          if (!ctxErr && ctx && !ctx.error) state.cateringEnquiry = ctx.enquiry || null;
+        } catch (_) { /* non-fatal — panel stays hidden */ }
+      }
+
       setSaveState("saved");
     }
 
@@ -3566,6 +3592,57 @@
       if (!el || !count) return;
       const len = (el.value || "").length;
       count.textContent = `${len} / 280`;
+    }
+
+    // Friendly display date for the catering enquiry panel (event_date is a
+    // DATE, e.g. "2026-08-15" → "15 August 2026"). Empty string on any gap.
+    function formatEnquiryDate(value) {
+      if (!value) return "";
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/London" });
+    }
+
+    // Read-only "Catering enquiry" panel: shows the client a converted catering
+    // drop is for, sourced from the linked catering_enquiries row via
+    // get-catering-context (never from notes_internal, never from a drops
+    // column). Hidden unless a linked enquiry was resolved. Every field is
+    // null-safe — a phone-only client shows the phone and no email; any absent
+    // field is simply omitted. Renders like the existing .hostPreview block:
+    // a bold name heading followed by plain "Label — value" lines, so it needs
+    // no bespoke styles.
+    function renderCateringEnquiryPanel() {
+      const section = byId("cateringEnquirySection");
+      const body = byId("cateringEnquiryBody");
+      if (!section || !body) return;
+
+      const enq = state.cateringEnquiry;
+      if (!enq) {
+        section.classList.add("hidden");
+        body.innerHTML = "";
+        return;
+      }
+
+      const lines = [];
+      const addLine = (label, value) => {
+        if (value === null || value === undefined || String(value).trim() === "") return;
+        lines.push(`<div>${escapeHtml(label)} — ${escapeHtml(String(value).trim())}</div>`);
+      };
+
+      // Contact — email and/or phone; a client may have given only one.
+      const contact = [enq.contact_email, enq.contact_phone]
+        .filter((v) => v && String(v).trim())
+        .join(" · ");
+      addLine("Contact", contact);
+      addLine("Event", enq.event_type);
+      addLine("Date", formatEnquiryDate(enq.event_date));
+      addLine("Guests", enq.guest_count != null ? String(enq.guest_count) : "");
+      addLine("Fulfilment", enq.fulfilment ? titleCase(enq.fulfilment) : "");
+      addLine("Brief", enq.brief);
+
+      const name = (enq.contact_name && String(enq.contact_name).trim()) || "Catering client";
+      body.innerHTML = `<strong>${escapeHtml(name)}</strong>${lines.join("")}`;
+      section.classList.remove("hidden");
     }
 
     function populateForm() {
@@ -5247,6 +5324,7 @@
       renderDropBand();
       renderFirstDropGuidance();
       populateForm();
+      renderCateringEnquiryPanel();
       renderAssignments();
       renderConditionalFields();
       renderScheduleRows();
