@@ -178,20 +178,21 @@ Rules: Write ONE line of 12 words or fewer, present tense, that reads as an invi
 
     case "catering_confirm": {
       // Direct, one-to-one booking confirmation to a single named catering
-      // client. Not a broadcast — address the client by name. Facts come only
-      // from the linked catering enquiry; anything missing is simply omitted
-      // (never invented, per COPY_FLOOR).
+      // client. Not a broadcast — address the client by their first name. Facts
+      // come only from the linked catering enquiry; anything missing is simply
+      // omitted (never invented, per COPY_FLOOR). contact_name may be a full
+      // name (the enquiry stores it in one field) — the prompt instructs the
+      // model to greet by first name only.
       const clientName = (contact_name || "").trim() || "there";
       const eventLabel = (event_type || "").trim() || "your event";
       const eventWhen = (event_date || "").trim();
       const whenClause = eventWhen ? ` on ${eventWhen}` : "";
-      const byClause = eventWhen ? ` by ${eventWhen}` : " when you have a moment";
-      return `Write a warm, personal booking-confirmation message from ${vendor_name} to a single catering client called ${clientName}. This is a direct one-to-one message (email or WhatsApp), NOT a public post or a broadcast — address ${clientName} by name and write as if speaking to just them.
+      return `Write a warm, personal booking-confirmation message from ${vendor_name} to a single catering client. This is a direct one-to-one message (email or WhatsApp), NOT a public post or a broadcast — write as if speaking to just them.
 Facts:
-- Client: ${clientName}
+- Client's name: ${clientName}
 - Occasion: ${eventLabel}${eventWhen ? `\n- Date: ${eventWhen}` : ""}
 - Ordering link (they use this to confirm the order and pay): ${ordering_url}
-Cover, in this order and in plain warm language: that you're looking forward to catering ${eventLabel}${whenClause}; that here is their link to confirm the order and pay — include it exactly: ${ordering_url}; a gentle ask to complete it${byClause} so everything is sorted; and an invitation to let you know if they'd like to change anything. 3 to 4 short sentences. Keep the ordering link exactly as given. Calm and warm — the tone of a message to someone you're glad to be working with. Output only the message, nothing else.`;
+Cover, in this order and in plain warm language: greet the client by their FIRST name only — the name in the Facts may be a full name, so use just the first name; then that you're looking forward to catering their occasion, phrased naturally as "catering your <occasion>${whenClause}" (take <occasion> from the Occasion${eventWhen ? " and Date" : ""} above — lowercase a common event word such as Birthday → birthday, Wedding → wedding or Party → party, but preserve proper nouns exactly as given, e.g. Diwali, Eid, or a company name); then that here is their link to confirm the order and pay — include it exactly: ${ordering_url}; then a warm close that once that is done everything is sorted (do NOT restate the date as a deadline — the event date belongs in the opening sentence only); and an invitation to let you know if they'd like to change anything. 3 to 4 short sentences. Keep the ordering link exactly as given. UK spelling. Calm and warm, no urgency — the tone of a message to someone you're glad to be working with. Output only the message, nothing else.`;
     }
 
     default:
