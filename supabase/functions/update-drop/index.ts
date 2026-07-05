@@ -67,7 +67,10 @@ const ALLOWED_FIELDS = new Set([
 ]);
 
 const VALID_DROP_TYPES = new Set(["neighbourhood", "community", "event"]);
-const VALID_AUDIENCE_SCOPES = new Set(["public", "community"]);
+// 'direct' is the reachability value on catering conversions (T-comms-direct-1).
+// It must be accepted here so a Drop Studio save of a converted catering drop
+// persists 'direct' rather than being 400-rejected. (T-comms-direct-2a)
+const VALID_AUDIENCE_SCOPES = new Set(["public", "community", "direct"]);
 const VALID_FULFILMENT_MODES = new Set(["collection", "delivery", "mixed"]);
 const VALID_FUNDRAISING_MODELS = new Set(["percentage", "per_order"]);
 const VALID_HOST_SHARE_MODELS = new Set(["percentage", "per_order", "fixed"]);

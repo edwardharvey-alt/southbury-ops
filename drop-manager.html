@@ -4395,7 +4395,15 @@
         name: byId("dropName").value.trim(),
         slug: slugify(byId("dropSlug").value.trim()),
         drop_type: byId("dropType").value,
-        audience_scope: byId("dropType").value === "community" ? byId("audienceScope").value : null,
+        // Community drops take their scope from the "Who's this for?" control.
+        // For every other drop type the scope is null EXCEPT when the loaded
+        // drop is already 'direct' (a converted catering drop, stamped by
+        // convert-catering-enquiry) — that value must survive the save rather
+        // than being wiped to null. Only 'direct' persistence changes here;
+        // all other types still save exactly as before. (T-comms-direct-2a)
+        audience_scope: byId("dropType").value === "community"
+          ? byId("audienceScope").value
+          : (existing.audience_scope === "direct" ? "direct" : null),
         host_id: byId("hostSelect").value || null,
         drop_intro: byId("dropIntro").value.trim() || null,
         // reveal_line and reveal_product_id are owned by Activation now.
