@@ -2172,13 +2172,15 @@
         return;
       }
 
+      // No open enquiries — hide the section entirely rather than showing an
+      // empty card to every vendor (most aren't running catering).
       const enquiries = state.cateringEnquiries || [];
-      section.style.display = '';
-
       if (!enquiries.length) {
-        content.innerHTML = `<div class="home-empty">No catering enquiries yet.</div>`;
+        section.style.display = 'none';
         return;
       }
+
+      section.style.display = '';
 
       const rows = enquiries.map(e => {
         const name = escapeHtml(e.contact_name || 'Someone');
