@@ -950,17 +950,29 @@
       margin-top:6mm; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9a8f84;
     }
 
-    /* Copy-link block (digital front door). */
-    .cposter-share{ margin-top:22px; }
-    .cposter-share__heading{ font-size:14px; font-weight:600; color:var(--home-text); }
-    .cposter-share__note{ font-size:13px; color:var(--home-muted); margin:4px 0 0; }
-    .cposter-share__row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    /* Collapsed utility strip — quiet and subordinate to the enquiry list; the
+       copyable link stays to hand, the full poster is one tap away. */
+    .cposter-strip{ display:flex; flex-direction:column; gap:10px; }
+    .cposter-strip__label{
+      font-size:13px; font-weight:600; color:var(--home-muted); letter-spacing:.01em;
+    }
+    .cposter-share__row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .cposter-share__url{
       flex:1; min-width:0; font-size:13px; color:var(--home-text);
       background:var(--home-soft); border:1px solid var(--home-border); border-radius:10px;
       padding:9px 12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     }
-    .cposter-actions{ margin-top:18px; display:flex; justify-content:center; }
+    /* Toggle is a quiet text control, not a call-to-action button. */
+    .cposter-toggle{
+      align-self:flex-start;
+      background:none; border:none; padding:0;
+      font:inherit; font-size:13px; color:var(--home-accent); cursor:pointer;
+    }
+    .cposter-toggle:hover{ text-decoration:underline; }
+
+    /* Expanded preview (revealed on toggle). */
+    .cposter-preview{ margin-top:16px; }
+    .cposter-actions{ margin-top:16px; display:flex; justify-content:center; }
 
     /* Print: show ONLY the poster at true A5, isolated from the nav and list.
        The poster is relocated to <body> root during printing (JS beforeprint/
@@ -1001,6 +1013,51 @@
         </div>
       </section>
 
+      <!-- CATERING POSTER (standing utility — collapsed by default so the
+           enquiry list below stays the visual priority; the copyable link is
+           always to hand, the full A5 poster preview is one tap away. Never
+           gated on enquiry count.) -->
+      <section class="home-card home-pad" id="cateringPosterCard">
+        <div class="cposter-strip">
+          <div class="cposter-strip__label">Your catering poster</div>
+
+          <div class="cposter-share__row">
+            <span class="cposter-share__url" id="cposterShareUrl"></span>
+            <button type="button" class="home-button-secondary" id="cposterCopyBtn" style="font-size:13px;">Copy link</button>
+          </div>
+
+          <button type="button" class="cposter-toggle" id="cposterToggleBtn"
+                  aria-expanded="false" aria-controls="cposterPreview">Preview &amp; print poster</button>
+        </div>
+
+        <!-- Expanded preview — hidden until the toggle is opened. The QR is
+             generated lazily on first expand (generating into a hidden
+             container can yield a zero-size QR). -->
+        <div class="cposter-preview" id="cposterPreview" hidden>
+          <div class="cposter-stage">
+            <div class="cposter-scaler" id="cateringPosterScaler">
+              <div class="cposter" id="cateringPoster">
+                <img class="cposter__logo" id="cposterLogo" alt="" hidden />
+                <div class="cposter__vendor" id="cposterVendor"></div>
+                <div class="cposter__eyebrow">Catering</div>
+                <h3 class="cposter__headline">Planning something?</h3>
+                <p class="cposter__invite" id="cposterInvite"></p>
+                <div class="cposter__qrzone">
+                  <div class="cposter__qr" id="cposterQr"></div>
+                  <div class="cposter__scan">Scan to tell us about your event</div>
+                </div>
+                <div class="cposter__url" id="cposterUrl"></div>
+                <div class="cposter__hearth">Powered by Hearth</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cposter-actions">
+            <button type="button" class="home-button" id="cposterPrintBtn">Print poster</button>
+          </div>
+        </div>
+      </section>
+
       <!-- ENQUIRIES -->
       <!--
         First enquiry archetype: catering. The page is structured as one
@@ -1018,48 +1075,6 @@
 
         <div id="cateringContent">
           <div class="home-loading">Loading enquiries…</div>
-        </div>
-      </section>
-
-      <!-- CATERING POSTER (standing — always present, never gated on enquiry
-           count; a vendor makes the poster before the first enquiry arrives) -->
-      <section class="home-card home-pad-lg" id="cateringPosterCard">
-        <div class="home-sectionHead">
-          <div>
-            <h2 class="home-sectionTitle">Your catering poster</h2>
-            <p class="home-sectionSub">Print it for your counter, or share the link online — people can tell you about their event from anywhere.</p>
-          </div>
-        </div>
-
-        <div class="cposter-stage">
-          <div class="cposter-scaler" id="cateringPosterScaler">
-            <div class="cposter" id="cateringPoster">
-              <img class="cposter__logo" id="cposterLogo" alt="" hidden />
-              <div class="cposter__vendor" id="cposterVendor"></div>
-              <div class="cposter__eyebrow">Catering</div>
-              <h3 class="cposter__headline">Planning something?</h3>
-              <p class="cposter__invite" id="cposterInvite"></p>
-              <div class="cposter__qrzone">
-                <div class="cposter__qr" id="cposterQr"></div>
-                <div class="cposter__scan">Scan to tell us about your event</div>
-              </div>
-              <div class="cposter__url" id="cposterUrl"></div>
-              <div class="cposter__hearth">Powered by Hearth</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="cposter-actions">
-          <button type="button" class="home-button" id="cposterPrintBtn">Print poster</button>
-        </div>
-
-        <div class="cposter-share">
-          <div class="cposter-share__heading">Or share your catering link</div>
-          <p class="cposter-share__note">Add it to your email signature or social profiles so people can enquire from anywhere.</p>
-          <div class="cposter-share__row">
-            <span class="cposter-share__url" id="cposterShareUrl"></span>
-            <button type="button" class="home-button-secondary" id="cposterCopyBtn" style="font-size:13px;">Copy link</button>
-          </div>
         </div>
       </section>
 
@@ -1263,6 +1278,30 @@
       return `https://lovehearth.co.uk/catering-enquiry.html?vendor=${encodeURIComponent(slug)}`;
     }
 
+    // Draw the poster QR once, lazily, the first time the preview is expanded.
+    // Generating into a still-hidden container can produce a zero-size / broken
+    // QR (a known qrcodejs pitfall), so this is only ever called after the
+    // preview has been revealed. Idempotent — subsequent toggles are no-ops.
+    // Always high-contrast dark-on-white: vendors may print in black and white,
+    // so a brand-tinted code could fail to scan; the brand accent never touches
+    // the QR.
+    let posterQrDrawn = false;
+    function ensurePosterQr(){
+      if (posterQrDrawn) return;
+      const qrEl = document.getElementById('cposterQr');
+      if (!qrEl || !window.QRCode) return;
+      qrEl.innerHTML = '';
+      new QRCode(qrEl, {
+        text: cateringEnquiryUrl(),
+        width: 220,
+        height: 220,
+        colorDark: '#1f2937',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      posterQrDrawn = true;
+    }
+
     // Standing catering poster + copyable link. Reads only the already-resolved
     // vendor (logo, name, brand colour, slug) and its own FIXED copy — it does
     // NOT read reveal_line or any drop field (activation-poster.html's content
@@ -1294,21 +1333,9 @@
       const shareUrlEl = document.getElementById('cposterShareUrl');
       if (shareUrlEl) shareUrlEl.textContent = url;
 
-      // QR — always high-contrast dark-on-white. Vendors may print in black and
-      // white, so a brand-tinted code could fail to scan; the accent never
-      // touches the QR.
-      const qrEl = document.getElementById('cposterQr');
-      if (qrEl && window.QRCode) {
-        qrEl.innerHTML = '';
-        new QRCode(qrEl, {
-          text: url,
-          width: 220,
-          height: 220,
-          colorDark: '#1f2937',
-          colorLight: '#ffffff',
-          correctLevel: QRCode.CorrectLevel.M
-        });
-      }
+      // NB: the QR is NOT generated here. The poster preview starts collapsed
+      // (hidden), and generating into a hidden container can yield a zero-size
+      // QR — so it is drawn lazily on first expand via ensurePosterQr().
 
       // Copy link — with a brief "Copied ✓" confirmation.
       const copyBtn = document.getElementById('cposterCopyBtn');
@@ -1335,6 +1362,28 @@
           setTimeout(() => { copyBtn.textContent = orig; copyBtn.disabled = false; }, 1800);
         });
       }
+    }
+
+    // Collapsed-by-default toggle for the poster preview. On first expand it
+    // draws the QR (lazy — see ensurePosterQr). Quiet utility, not a CTA.
+    function setupPosterToggle(){
+      const toggle = document.getElementById('cposterToggleBtn');
+      const preview = document.getElementById('cposterPreview');
+      if (!toggle || !preview || toggle.dataset.wired) return;
+      toggle.dataset.wired = '1';
+      toggle.addEventListener('click', () => {
+        const expanded = toggle.getAttribute('aria-expanded') === 'true';
+        if (expanded) {
+          preview.hidden = true;
+          toggle.setAttribute('aria-expanded', 'false');
+          toggle.textContent = 'Preview & print poster';
+        } else {
+          preview.hidden = false;              // reveal first, then draw the QR
+          ensurePosterQr();                    // into a now-laid-out container
+          toggle.setAttribute('aria-expanded', 'true');
+          toggle.textContent = 'Hide poster preview';
+        }
+      });
     }
 
     // Print isolation. The poster lives inside the operator shell on screen, so
@@ -1376,6 +1425,7 @@
     function render(){
       renderCateringEnquiries();
       renderCateringPoster();
+      setupPosterToggle();
       setupPosterPrint();
     }
 
