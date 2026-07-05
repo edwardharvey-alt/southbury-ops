@@ -173,6 +173,13 @@ Deno.serve(async (req) => {
       name,
       slug,
       drop_type: "event",
+      // Reachability: a catering conversion is a single-client booking, not a
+      // broadcast or host-relayed drop. Stamp 'direct' (T-comms-direct-1) so a
+      // later Share step can select single-recipient touchpoints. Foundation
+      // only — this value does not yet change which cards the drop shows: a
+      // 'direct' event drop still resolves to the same 'closed' openness and
+      // [3,7,9] profile it had when audience_scope was null.
+      audience_scope: "direct",
       notes_internal: notesInternal,
     };
     // fulfilment maps 1:1 (collection|delivery). Only 'collection'/'delivery'
