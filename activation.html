@@ -1808,6 +1808,21 @@
         ? { channels: ['whatsapp', 'email', 'social'] }
         : { channels: ['whatsapp', 'email'] };
 
+      // A 'direct' drop is a converted catering booking — a single named
+      // client, audience_scope stamped 'direct' at conversion (T-comms-direct
+      // step 1) and persisted through Drop Studio saves (step 2a). It must NOT
+      // fall into the broadcast matrix below: card 3 (early-access email to the
+      // whole consented customer list) and card 9 (thank-you email to everyone
+      // who ordered) both target the wrong audience for an audience of one.
+      // Return only the single-recipient-safe card. Card 7 (order-ready) is a
+      // passive per-customer transactional notification driven off the Service
+      // Board — legitimately correct for one client — so it survives. The
+      // bespoke single-recipient touchpoints (confirmation / reminder /
+      // follow-up) arrive in step 3; this step only removes the wrong
+      // broadcasts. Keyed strictly on audience_scope === 'direct', so every
+      // non-direct drop skips this and reaches the identical matrix as before.
+      if (summary.audience_scope === 'direct') return { openness, card4, card5, cards: [7], optional: [] };
+
       if (openness === 'open'   && hasHost)  return { openness, card4, card5, cards: [1,2,3,4,5,6,7,8,9], optional: [] };
       if (openness === 'open'   && !hasHost) return { openness, card4, card5, cards: [1,3,4,6,7,8,9],     optional: [] };
       if (openness === 'closed' && hasHost)  return { openness, card4, card5, cards: [2,3,5,7,9],         optional: [] };
