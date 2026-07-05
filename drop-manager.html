@@ -1046,6 +1046,35 @@
     #pane-review .qrWrap img { width: 120px; height: 120px; max-width: 100%; }
     #pane-review #shareLinkPreview { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+    /* Catering discount advisory — a quiet, optional nudge on the Review step
+       for converted catering (direct) drops with no bulk discount set.
+       Deliberately NOT styled like a blocking readiness item: amber accent
+       (#b45309, the established non-blocking tone), soft surface card, no red
+       "!" mark. Advisory only — it never affects Publish. */
+    .cateringDiscountAdvisory {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      background: var(--h-surface, #FAF8F4);
+      border: 1px solid var(--h-border);
+      border-left: 3px solid #b45309;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin: 16px 0 4px;
+    }
+    .cateringDiscountAdvisoryMark {
+      color: #b45309;
+      font-weight: 600;
+      line-height: 1.45;
+      flex-shrink: 0;
+    }
+    .cateringDiscountAdvisoryText {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.45;
+      color: var(--h-slate, #4a4a4a);
+    }
+
     .reviewBottomGrid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1738,6 +1767,12 @@
                     <div class="readinessList" id="reviewReadiness"></div>
                   </div>
                 </div>
+
+                <!-- Catering discount advisory — non-blocking, direct (converted
+                     catering) drops with no bulk discount only. Populated by
+                     renderReview(); stays empty and collapsed for every other drop.
+                     Never gates or touches the Publish button. -->
+                <div id="reviewCateringDiscountNote"></div>
 
                 <div class="stageSection">
                   <h4 class="stageSectionTitle">Publish</h4>
@@ -4314,6 +4349,7 @@
         summary.innerHTML = `<div class="emptyState">No drop selected.</div>`;
         readinessEl.innerHTML = `<div class="emptyState">No drop selected.</div>`;
         byId("reviewPromotionPlan").innerHTML = "";
+        byId("reviewCateringDiscountNote").innerHTML = "";
         share.textContent = "No drop link yet.";
         renderQrCode("");
         /* createEventWindowBtn removed — event windows now in timing pane */
@@ -4409,6 +4445,33 @@
           `).join("")}
         </div>
       `;
+
+      // Catering discount advisory — quiet, non-blocking. Shows ONLY for a
+      // converted catering drop (audience_scope === 'direct', stamped by
+      // convert-catering-enquiry) that has no bulk discount set, so a vendor
+      // can't silently hand a client an order link at list price when a rate
+      // was agreed. Reads state only; it never touches the readiness checklist
+      // or the Publish button (whose disabled state is driven solely by
+      // readiness.ready_to_publish + isStripeGated below). Non-direct drops —
+      // public, community, ordinary event — never see it. Discount presence is
+      // read from the live form state (state.discountTiers) so it won't nag a
+      // vendor mid-edit who has added a tier but not yet saved.
+      const cateringNote = byId("reviewCateringDiscountNote");
+      const isDirectCatering = state.drop.audience_scope === "direct";
+      const hasDiscountTier = Array.isArray(state.discountTiers) && state.discountTiers.length > 0;
+      if (isDirectCatering && !hasDiscountTier) {
+        cateringNote.innerHTML = `
+          <div class="cateringDiscountAdvisory">
+            <span class="cateringDiscountAdvisoryMark" aria-hidden="true">→</span>
+            <div>
+              <p class="cateringDiscountAdvisoryText">No bulk discount set for this catering order. If you agreed a rate with your client, set it in Commercials — otherwise they'll be charged list price.</p>
+              <button type="button" class="btnGhost js-goto-commercials" style="margin-top:10px;">Set it in Commercials</button>
+            </div>
+          </div>
+        `;
+      } else {
+        cateringNote.innerHTML = "";
+      }
 
       const shareUrl = getShareUrl();
       share.textContent = shareUrl || "No drop link yet.";
@@ -6283,6 +6346,14 @@
         const sep = base.includes('?') ? '&' : '?';
         const href = base + sep + 'drop=' + encodeURIComponent(state.selectedDropId);
         window.location.href = href;
+      });
+
+      // Catering discount advisory — jump to the Commercials step where the
+      // bulk-discount tiers live. Delegated on the stable container so the one
+      // listener survives renderReview() rewriting its innerHTML. Advisory-only
+      // convenience; does not affect publishing.
+      byId("reviewCateringDiscountNote").addEventListener("click", function (e) {
+        if (e.target.closest(".js-goto-commercials")) openStage("commercials");
       });
 
       byId("downloadQrBtn").addEventListener("click", () => {
