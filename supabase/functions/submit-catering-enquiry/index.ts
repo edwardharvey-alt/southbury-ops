@@ -49,6 +49,20 @@ function escapeHtml(v: string | null): string {
     .replace(/'/g, "&#39;");
 }
 
+// Format a validated ISO date (YYYY-MM-DD) as e.g. "26 July 2026" for the
+// customer acknowledgement copy. Parsed as UTC so the day never drifts
+// across timezones. eventDate is already regex-validated before this runs.
+function formatEventDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   const jsonResponse = (body: unknown, status: number) =>
@@ -301,6 +315,69 @@ Deno.serve(async (req) => {
       }
     } catch (mailErr) {
       console.error("[submit-catering-enquiry] notification email threw", mailErr);
+    }
+
+    // 7. Best-effort acknowledgement to the enquirer. Mirrors the vendor
+    //    notification above (same helper, same non-blocking handling) but
+    //    fronted AS the vendor: From presents the vendor's display name, and
+    //    reply_to is the vendor's own email so a reply reaches them, not the
+    //    platform. Only sent when the enquirer left an email; phone-only
+    //    enquiries are skipped silently. Never fails or blocks the response.
+    try {
+      const resendKey = Deno.env.get("RESEND_API_KEY");
+      if (!resendKey) {
+        console.warn("[submit-catering-enquiry] RESEND_API_KEY not set — acknowledgement skipped");
+      } else if (!contactEmail) {
+        // Phone-only enquiry — nothing to acknowledge to. Skip quietly.
+      } else {
+        const vendorDisplayName = vendor.display_name || vendor.name || "The team";
+
+        const mainPara = eventDate
+          ? `Thank you for your catering enquiry for ${escapeHtml(formatEventDate(eventDate))}. ` +
+            `We've received your details and will be in touch shortly to talk through the menu and options.`
+          : `Thank you for your catering enquiry. ` +
+            `We've received your details and will be in touch shortly to talk through the menu and options.`;
+
+        const htmlBody =
+          `<!doctype html><html><head><meta charset="utf-8">` +
+          `<meta name="viewport" content="width=device-width, initial-scale=1.0">` +
+          `<title>Thanks for your enquiry</title></head>` +
+          `<body style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:#1F2937; line-height:1.5;">` +
+          `<p>Hi ${escapeHtml(contactName)},</p>` +
+          `<p>${mainPara}</p>` +
+          `<p>${escapeHtml(vendorDisplayName)}</p>` +
+          `</body></html>`;
+
+        const ackPayload: Record<string, unknown> = {
+          from: buildFromHeader(vendorDisplayName, FROM_HELLO),
+          to: contactEmail,
+          subject: `Thanks for your enquiry — ${vendorDisplayName}`,
+          html: htmlBody,
+          ...(vendor.email ? { reply_to: vendor.email } : {}),
+        };
+
+        const ackResp = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${resendKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(ackPayload),
+        });
+
+        if (!ackResp.ok) {
+          const errBody = await ackResp.text().catch(() => "");
+          console.error(
+            "[submit-catering-enquiry] acknowledgement email failed",
+            ackResp.status,
+            errBody
+          );
+        } else {
+          console.log("[submit-catering-enquiry] acknowledgement email sent");
+        }
+      }
+    } catch (ackErr) {
+      console.error("[submit-catering-enquiry] acknowledgement email threw", ackErr);
     }
 
     return jsonResponse({ ok: true }, 200);
