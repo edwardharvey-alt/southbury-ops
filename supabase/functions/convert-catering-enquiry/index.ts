@@ -151,19 +151,14 @@ Deno.serve(async (req) => {
       slug = `${baseSlug}-${i}`;
     }
 
-    // Internal note block: who the enquiry is for, plus the placeholder-time
-    // reminder. The operator confirms the exact time in Drop Studio.
-    const noteLines: string[] = ["From catering enquiry."];
-    if (enquiry.contact_name) noteLines.push(`Contact: ${enquiry.contact_name}`);
-    if (enquiry.contact_email) noteLines.push(`Email: ${enquiry.contact_email}`);
-    if (enquiry.contact_phone) noteLines.push(`Phone: ${enquiry.contact_phone}`);
-    if (enquiry.event_type) noteLines.push(`Event type: ${enquiry.event_type}`);
-    if (enquiry.guest_count) noteLines.push(`Guests: ${enquiry.guest_count}`);
-    if (enquiry.brief) noteLines.push(`Brief: ${enquiry.brief}`);
-    if (enquiry.event_date) {
-      noteLines.push(`Event date from enquiry: ${enquiry.event_date} — confirm exact time.`);
-    }
-    const notesInternal = noteLines.join("\n");
+    // notes_internal is deliberately NOT stamped here. The converted drop's
+    // client details (contact, event type, date, guests, fulfilment, brief)
+    // are surfaced structurally in Drop Studio's "Catering enquiry" panel,
+    // read live from the linked catering_enquiries row via get-catering-context
+    // — so a free-text copy of the same details in notes_internal would be
+    // redundant and a drift risk. notes_internal stays a clean, vendor-owned
+    // Private Notes field on the new drop (its natural default — unset).
+    // (T-comms-direct-3-pre cleanup.)
 
     // Build the insert. Only set what we need; the drops table defaults handle
     // the rest (status defaults to 'draft'). drop_type MUST be set to 'event'
@@ -180,7 +175,6 @@ Deno.serve(async (req) => {
       // 'direct' event drop still resolves to the same 'closed' openness and
       // [3,7,9] profile it had when audience_scope was null.
       audience_scope: "direct",
-      notes_internal: notesInternal,
     };
     // fulfilment maps 1:1 (collection|delivery). Only 'collection'/'delivery'
     // are ever stored on an enquiry, both valid drop fulfilment modes.
