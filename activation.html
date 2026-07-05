@@ -1814,14 +1814,16 @@
       // fall into the broadcast matrix below: card 3 (early-access email to the
       // whole consented customer list) and card 9 (thank-you email to everyone
       // who ordered) both target the wrong audience for an audience of one.
-      // Return only the single-recipient-safe card. Card 7 (order-ready) is a
-      // passive per-customer transactional notification driven off the Service
-      // Board — legitimately correct for one client — so it survives. The
-      // bespoke single-recipient touchpoints (confirmation / reminder /
-      // follow-up) arrive in step 3; this step only removes the wrong
-      // broadcasts. Keyed strictly on audience_scope === 'direct', so every
-      // non-direct drop skips this and reaches the identical matrix as before.
-      if (summary.audience_scope === 'direct') return { openness, card4, card5, cards: [7], optional: [] };
+      // Card 7 (order-ready) is a passive per-customer transactional
+      // notification driven off the Service Board — legitimately correct for
+      // one client — so it survives. Card 10 (booking confirmation) is the
+      // first bespoke single-recipient touchpoint (T-comms-direct step 3a-i): a
+      // one-to-one message the vendor sends their client via their own channel,
+      // rendered BEFORE card 7. The remaining single-recipient touchpoints
+      // (reminder / follow-up) arrive in later steps. Keyed strictly on
+      // audience_scope === 'direct', so every non-direct drop skips this and
+      // reaches the identical matrix as before.
+      if (summary.audience_scope === 'direct') return { openness, card4, card5, cards: [10, 7], optional: [] };
 
       if (openness === 'open'   && hasHost)  return { openness, card4, card5, cards: [1,2,3,4,5,6,7,8,9], optional: [] };
       if (openness === 'open'   && !hasHost) return { openness, card4, card5, cards: [1,3,4,6,7,8,9],     optional: [] };
@@ -1890,7 +1892,8 @@
         6: 'capacity_signal',
         7: null,
         8: 'post_drop',
-        9: 'thank_you'
+        9: 'thank_you',
+        10: 'catering_confirm'
       };
 
       const cardTitleMap = {
@@ -1902,7 +1905,8 @@
         6: 'Share capacity signal',
         7: 'Order ready notifications',
         8: 'Post drop content',
-        9: 'Send thank-you email'
+        9: 'Send thank-you email',
+        10: 'Confirm the booking'
       };
 
       // The only host-origin event that counts toward vendor progress is the
@@ -2673,6 +2677,7 @@
     function actBuildDropContext(dropId){
       const summary = state.summaryById[dropId];
       const rawDrop = state.rawById[dropId] || {};
+      const cateringCtx = state.cateringContextById?.[dropId] || null;
 
       const deliveryDay = rawDrop.delivery_start
         ? new Date(rawDrop.delivery_start).toLocaleDateString('en-GB', {
@@ -2732,6 +2737,18 @@
         fulfilment_mode: summary?.fulfilment_mode || rawDrop.fulfilment_mode || null,
         reveal_dish:     revealDish,
         cadence,
+        // Catering-confirm signals (direct drops only) — the single named
+        // client from the linked catering enquiry, loaded into
+        // state.cateringContextById by showDropView. Inert for every other
+        // touchpoint; the EF reads them solely in the catering_confirm case.
+        // event_date is pre-formatted to a human string so the EF uses it verbatim.
+        contact_name: cateringCtx?.contact_name || null,
+        event_type:   cateringCtx?.event_type || null,
+        event_date:   cateringCtx?.event_date
+          ? new Date(cateringCtx.event_date).toLocaleDateString('en-GB', {
+              weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London'
+            })
+          : null,
       };
     }
 
@@ -2772,7 +2789,10 @@
     // PRE-OPEN: 1,2,3 · LIVE: 4,5,6,7 · CLOSED: 8,9
     function actCardPhase(cardNum){
       const n = Number(cardNum);
-      if (n === 1 || n === 2 || n === 3) return 'pre-open';
+      // Card 10 (catering booking confirmation) belongs to the pre-open phase:
+      // the vendor sends it to their client once the drop is published, ahead
+      // of ordering — so it auto-expands as the first action on a direct drop.
+      if (n === 1 || n === 2 || n === 3 || n === 10) return 'pre-open';
       if (n === 4 || n === 5 || n === 6 || n === 7) return 'live';
       return 'closed';
     }
@@ -3772,6 +3792,74 @@
       // Cards 7, 8, 9 — present in all profiles, but wrapped with
       // inProfile() for consistency with the rest of the timeline.
 
+      // Card 10 — catering booking confirmation (is-vendor, direct drops only).
+      // A single named client, so this is a one-to-one message the vendor sends
+      // via their OWN channel (email / WhatsApp) — Copy only, no platform send
+      // (that is a later step). Seeded from the linked catering enquiry (client
+      // name, event, date) + the accurate order link; AI-drafts on voice via
+      // the catering_confirm touchpoint, with regen chips + manual overwrite
+      // exactly like the other message cards. Rendered before Card 7.
+      if (inProfile(10)) {
+        const cateringCtx = state.cateringContextById?.[dropId] || null;
+        const ccName = (cateringCtx?.contact_name || '').trim() || 'there';
+        const ccEvent = (cateringCtx?.event_type || '').trim() || 'your event';
+        const ccDate = cateringCtx?.event_date
+          ? new Date(cateringCtx.event_date).toLocaleDateString('en-GB', {
+              weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London'
+            })
+          : '';
+        const ccWhen = ccDate ? ` on ${ccDate}` : '';
+        const ccBy = ccDate ? ` by ${ccDate}` : ' when you have a moment';
+        // Static seed the AI works from — also the fallback if the vendor never
+        // hits Generate. The order link is always the accurate ordering URL.
+        if (!state.messageDrafts['catering_confirm']) {
+          state.messageDrafts['catering_confirm'] =
+            `Hi ${ccName}, we're looking forward to catering ${ccEvent}${ccWhen}. Here's your link to confirm the order and pay: ${orderingLink}` +
+            `\n\nIf you could complete it${ccBy} that's everything sorted — and let me know if you'd like to change anything.`;
+        }
+        const card10Caption = state.messageDrafts['catering_confirm'];
+        const card10ActionHtml = `
+          <div class="act-message-edit">
+            <textarea
+              data-act="message-textarea"
+              data-touchpoint="catering_confirm"
+              rows="6">${escapeHtml(card10Caption)}</textarea>
+            ${state.messageGenerated?.['catering_confirm'] ? '<div class="act-ai-draft">✦ AI draft — edit freely</div>' : ''}
+            <div class="act-chip-row">
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="catering_confirm" data-instruction="Make it shorter and more concise">Shorter</button>
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="catering_confirm" data-instruction="Make it warmer and more personal">Warmer</button>
+              <button type="button" class="act-chip" data-act="adjust-chip" data-touchpoint="catering_confirm" data-instruction="Make it a little more formal and reassuring">More formal</button>
+            </div>
+            <div class="act-guidance-row">
+              <input type="text" class="act-guidance-input"
+                data-touchpoint="catering_confirm"
+                placeholder="e.g. shorter, warmer, mention the guest count, confirm the menu...">
+            </div>
+            <div class="act-message-edit-row">
+              <button
+                data-act="generate-copy"
+                data-touchpoint="catering_confirm"
+                class="act-copy-btn">
+                ${state.messageGenerated?.['catering_confirm'] ? '↺ Regenerate →' : '✦ Generate →'}
+              </button>
+              ${copyBtn('Copy message', 'catering_confirm', 'copied', true)}
+            </div>
+            <div class="act-copy-error" data-error-key="catering_confirm"
+              style="font-size:12px;color:#b91c1c;margin-top:4px;min-height:16px;"></div>
+          </div>
+        `;
+        cards.push(tpCard({
+          typeClass: 'is-vendor',
+          cardNum: 10,
+          label: 'ONCE PUBLISHED',
+          title: 'Confirm the booking with your client',
+          channel: 'Direct',
+          desc: "Send your client their confirmation and order link. This goes to them directly — edit it to sound like you, then copy it into your own email or WhatsApp and send.",
+          actionHtml: card10ActionHtml,
+          touchpointKey: 'catering_confirm'
+        }));
+      }
+
       // Card 7 — order ready (is-auto) — never enters done state
       if (inProfile(7)) {
         cards.push(tpCard({
@@ -4045,6 +4133,24 @@
       } catch (e) {
         console.error('activation-events list failed', e);
       }
+
+      // Catering client context (direct drops only): the booking-confirmation
+      // card (Card 10) seeds its message from the linked catering enquiry —
+      // client name, event, date. get-catering-context is null-safe and
+      // vendor-scoped (only returns the caller's own drop's enquiry, else
+      // { enquiry: null }); any failure just leaves the seed generic. Awaited
+      // here so the context is in place before the first render.
+      state.cateringContextById = state.cateringContextById || {};
+      const dropSummary = state.summaryById[dropId];
+      if (dropSummary && dropSummary.audience_scope === 'direct') {
+        try {
+          const { data: ctx, error: ctxErr } = await sb.functions.invoke('get-catering-context', {
+            body: { drop_id: dropId }
+          });
+          if (!ctxErr && ctx && !ctx.error) state.cateringContextById[dropId] = ctx.enquiry || null;
+        } catch (_) { /* non-fatal — seed stays generic */ }
+      }
+
       renderDropView(dropId);
       // Message and email cards stand on their static seeds on load — no
       // auto-generate on drop selection, so there is no jarring seed → AI
@@ -4407,6 +4513,7 @@
           vendor_open: 'vendor_open',
           host_link:       'host_link',
           post_drop:         'post_drop',
+          catering_confirm:  'catering_confirm',
         };
         if (!tpMap[tp]) return;
 
