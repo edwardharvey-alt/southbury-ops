@@ -14,6 +14,10 @@
   <script src="./assets/hearth-vendor.js?v=1"></script>
   <script src="./assets/vendor-nav.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- QR generation for the catering poster. qrcodejs@1.0.0 (cdnjs) — the same
+       reputable, already-vetted library activation-poster.html uses; renders
+       client-side to a canvas with configurable dark/light colours. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <style>
     :root{
@@ -884,6 +888,96 @@
       font-family: 'Cormorant Garamond', Georgia, serif;
       font-weight: 400;
     }
+
+    /* ---- Catering poster (standing, printable A5) ---- */
+
+    /* On screen: centre the real-A5 poster in a soft stage and scale it down
+       with zoom (zoom rescales the box footprint too, not just the render, so
+       the card doesn't overflow — see the zoom-vs-transform:scale learning). */
+    .cposter-stage{
+      display:flex;
+      justify-content:center;
+      background:var(--home-soft);
+      border:1px solid var(--home-border);
+      border-radius:16px;
+      padding:24px;
+      overflow:auto;
+    }
+    .cposter-scaler{ zoom:0.62; }
+
+    /* The poster itself at true A5 (148×210mm) so print is 1:1 with @page. */
+    .cposter{
+      width:148mm;
+      height:210mm;
+      box-sizing:border-box;
+      overflow:hidden;
+      background:#ffffff;
+      color:#1f1a15;
+      padding:16mm 14mm;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      text-align:center;
+      font-family:'Figtree', system-ui, sans-serif;
+      box-shadow:0 10px 30px rgba(15,23,42,.12);
+      /* Decorative accent only — set from the vendor's brand colour in JS.
+         NEVER applied to the QR, which stays high-contrast dark-on-white. */
+      --cposter-accent:#8B6B3F;
+    }
+    .cposter__logo{ max-height:22mm; max-width:60%; object-fit:contain; margin-bottom:8mm; }
+    .cposter__vendor{
+      font-family:'Cormorant Garamond', Georgia, serif;
+      font-size:30px; font-weight:500; margin:0 0 10mm; color:#1f1a15;
+    }
+    .cposter__eyebrow{
+      font-size:13px; letter-spacing:.32em; text-transform:uppercase;
+      color:var(--cposter-accent); font-weight:600; margin-bottom:6mm;
+    }
+    .cposter__headline{
+      font-family:'Cormorant Garamond', Georgia, serif;
+      font-size:44px; line-height:1.05; font-weight:600; margin:0 0 6mm; color:#1f1a15;
+    }
+    .cposter__invite{
+      font-size:16px; line-height:1.5; color:#4a423b; max-width:112mm; margin:0 0 auto;
+    }
+    .cposter__qrzone{ margin:8mm 0 5mm; display:flex; flex-direction:column; align-items:center; gap:4mm; }
+    .cposter__qr{ width:46mm; height:46mm; display:flex; align-items:center; justify-content:center; }
+    .cposter__qr canvas,
+    .cposter__qr img{ width:46mm !important; height:46mm !important; }
+    .cposter__scan{ font-size:13px; color:#4a423b; }
+    .cposter__url{ font-size:12px; color:#6b625a; word-break:break-all; max-width:112mm; }
+    .cposter__hearth{
+      margin-top:6mm; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#9a8f84;
+    }
+
+    /* Copy-link block (digital front door). */
+    .cposter-share{ margin-top:22px; }
+    .cposter-share__heading{ font-size:14px; font-weight:600; color:var(--home-text); }
+    .cposter-share__note{ font-size:13px; color:var(--home-muted); margin:4px 0 0; }
+    .cposter-share__row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .cposter-share__url{
+      flex:1; min-width:0; font-size:13px; color:var(--home-text);
+      background:var(--home-soft); border:1px solid var(--home-border); border-radius:10px;
+      padding:9px 12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .cposter-actions{ margin-top:18px; display:flex; justify-content:center; }
+
+    /* Print: show ONLY the poster at true A5, isolated from the nav and list.
+       The poster is relocated to <body> root during printing (JS beforeprint/
+       afterprint) so everything else can be display:none'd without collapsing
+       it — this avoids the blank trailing pages a visibility-only trick leaves
+       when the hidden enquiry list still occupies flow height. */
+    @page{ size:A5 portrait; margin:0; }
+    @media print{
+      html.cposter-printing body > *:not(#cateringPosterScaler){ display:none !important; }
+      html.cposter-printing #cateringPosterScaler{
+        display:block !important;
+        position:static !important;
+        zoom:1 !important;
+        margin:0 !important;
+      }
+      html.cposter-printing .cposter{ box-shadow:none !important; }
+    }
   </style>
 </head>
 
@@ -924,6 +1018,48 @@
 
         <div id="cateringContent">
           <div class="home-loading">Loading enquiries…</div>
+        </div>
+      </section>
+
+      <!-- CATERING POSTER (standing — always present, never gated on enquiry
+           count; a vendor makes the poster before the first enquiry arrives) -->
+      <section class="home-card home-pad-lg" id="cateringPosterCard">
+        <div class="home-sectionHead">
+          <div>
+            <h2 class="home-sectionTitle">Your catering poster</h2>
+            <p class="home-sectionSub">Print it for your counter, or share the link online — people can tell you about their event from anywhere.</p>
+          </div>
+        </div>
+
+        <div class="cposter-stage">
+          <div class="cposter-scaler" id="cateringPosterScaler">
+            <div class="cposter" id="cateringPoster">
+              <img class="cposter__logo" id="cposterLogo" alt="" hidden />
+              <div class="cposter__vendor" id="cposterVendor"></div>
+              <div class="cposter__eyebrow">Catering</div>
+              <h3 class="cposter__headline">Planning something?</h3>
+              <p class="cposter__invite" id="cposterInvite"></p>
+              <div class="cposter__qrzone">
+                <div class="cposter__qr" id="cposterQr"></div>
+                <div class="cposter__scan">Scan to tell us about your event</div>
+              </div>
+              <div class="cposter__url" id="cposterUrl"></div>
+              <div class="cposter__hearth">Powered by Hearth</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cposter-actions">
+          <button type="button" class="home-button" id="cposterPrintBtn">Print poster</button>
+        </div>
+
+        <div class="cposter-share">
+          <div class="cposter-share__heading">Or share your catering link</div>
+          <p class="cposter-share__note">Add it to your email signature or social profiles so people can enquire from anywhere.</p>
+          <div class="cposter-share__row">
+            <span class="cposter-share__url" id="cposterShareUrl"></span>
+            <button type="button" class="home-button-secondary" id="cposterCopyBtn" style="font-size:13px;">Copy link</button>
+          </div>
         </div>
       </section>
 
@@ -1120,8 +1256,127 @@
       });
     }
 
+    // The evergreen catering enquiry page for this vendor. catering-enquiry.html
+    // resolves the vendor from getParam("vendor"), so the link is ?vendor=<slug>.
+    function cateringEnquiryUrl(){
+      const slug = (state.vendor && state.vendor.slug) || '';
+      return `https://lovehearth.co.uk/catering-enquiry.html?vendor=${encodeURIComponent(slug)}`;
+    }
+
+    // Standing catering poster + copyable link. Reads only the already-resolved
+    // vendor (logo, name, brand colour, slug) and its own FIXED copy — it does
+    // NOT read reveal_line or any drop field (activation-poster.html's content
+    // coupling is deliberately not inherited). Always rendered.
+    function renderCateringPoster(){
+      const v = state.vendor || {};
+      const name = v.display_name || v.name || 'Us';
+      const url = cateringEnquiryUrl();
+
+      // Vendor brand colour as a tasteful decorative accent (eyebrow only).
+      const posterEl = document.getElementById('cateringPoster');
+      if (posterEl) posterEl.style.setProperty('--cposter-accent', v.brand_primary_color || '#8B6B3F');
+
+      const logo = document.getElementById('cposterLogo');
+      if (logo) {
+        if (v.logo_url) { logo.src = v.logo_url; logo.alt = name; logo.hidden = false; }
+        else { logo.hidden = true; }
+      }
+
+      const vendorEl = document.getElementById('cposterVendor');
+      if (vendorEl) vendorEl.textContent = name;
+
+      // Fixed, restrained invitation — the poster's own copy, not reveal_line.
+      const inviteEl = document.getElementById('cposterInvite');
+      if (inviteEl) inviteEl.textContent = "We'd love to cater it. Scan to tell us about your event, and we'll be in touch.";
+
+      const urlEl = document.getElementById('cposterUrl');
+      if (urlEl) urlEl.textContent = url;
+      const shareUrlEl = document.getElementById('cposterShareUrl');
+      if (shareUrlEl) shareUrlEl.textContent = url;
+
+      // QR — always high-contrast dark-on-white. Vendors may print in black and
+      // white, so a brand-tinted code could fail to scan; the accent never
+      // touches the QR.
+      const qrEl = document.getElementById('cposterQr');
+      if (qrEl && window.QRCode) {
+        qrEl.innerHTML = '';
+        new QRCode(qrEl, {
+          text: url,
+          width: 220,
+          height: 220,
+          colorDark: '#1f2937',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      }
+
+      // Copy link — with a brief "Copied ✓" confirmation.
+      const copyBtn = document.getElementById('cposterCopyBtn');
+      if (copyBtn && !copyBtn.dataset.wired) {
+        copyBtn.dataset.wired = '1';
+        copyBtn.addEventListener('click', async () => {
+          const link = cateringEnquiryUrl();
+          try {
+            await navigator.clipboard.writeText(link);
+          } catch (e) {
+            // Fallback for older browsers / non-secure contexts.
+            const ta = document.createElement('textarea');
+            ta.value = link;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch (_) {}
+            document.body.removeChild(ta);
+          }
+          const orig = copyBtn.textContent;
+          copyBtn.textContent = 'Copied ✓';
+          copyBtn.disabled = true;
+          setTimeout(() => { copyBtn.textContent = orig; copyBtn.disabled = false; }, 1800);
+        });
+      }
+    }
+
+    // Print isolation. The poster lives inside the operator shell on screen, so
+    // to print ONLY the poster at A5 we relocate it to <body> root just before
+    // printing (and restore it after), letting @media print display:none the
+    // rest without collapsing the poster. Avoids the blank trailing pages a
+    // pure visibility:hidden approach leaves behind.
+    function setupPosterPrint(){
+      const printBtn = document.getElementById('cposterPrintBtn');
+      if (printBtn && !printBtn.dataset.wired) {
+        printBtn.dataset.wired = '1';
+        printBtn.addEventListener('click', () => window.print());
+      }
+
+      const scaler = document.getElementById('cateringPosterScaler');
+      if (!scaler || scaler.dataset.printWired) return;
+      scaler.dataset.printWired = '1';
+      let placeholder = null;
+
+      window.addEventListener('beforeprint', () => {
+        if (scaler.parentNode && scaler.parentNode !== document.body) {
+          placeholder = document.createComment('cposter-home');
+          scaler.parentNode.insertBefore(placeholder, scaler);
+          document.body.appendChild(scaler);
+        }
+        document.documentElement.classList.add('cposter-printing');
+      });
+
+      window.addEventListener('afterprint', () => {
+        document.documentElement.classList.remove('cposter-printing');
+        if (placeholder && placeholder.parentNode) {
+          placeholder.parentNode.insertBefore(scaler, placeholder);
+          placeholder.parentNode.removeChild(placeholder);
+          placeholder = null;
+        }
+      });
+    }
+
     function render(){
       renderCateringEnquiries();
+      renderCateringPoster();
+      setupPosterPrint();
     }
 
     async function init(){
