@@ -607,6 +607,20 @@
       text-decoration:none;
     }
 
+    /* Catering enquiry row: convert action + inline error */
+    .home-cateringActions{
+      margin-top:12px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .home-cateringError{
+      font-size:13px;
+      color:#b45309;
+    }
+
     /* Asset snapshot */
     .home-assetGrid{
       display:grid;
@@ -2234,20 +2248,67 @@
           ? `<div style="font-size:13px; color:var(--home-muted); white-space:nowrap;">${escapeHtml(fmtDate(e.created_at))}</div>`
           : '';
 
+        const enquiryId = escapeHtml(e.id || '');
+
         return `
-          <div style="display:flex; align-items:flex-start; gap:14px;">
-            <div style="min-width:0; flex:1;">
-              <div class="home-todayLabel">${name}</div>
-              ${factsLine}
-              ${brief}
-              ${contactLine}
+          <div data-enquiry-row="${enquiryId}">
+            <div style="display:flex; align-items:flex-start; gap:14px;">
+              <div style="min-width:0; flex:1;">
+                <div class="home-todayLabel">${name}</div>
+                ${factsLine}
+                ${brief}
+                ${contactLine}
+              </div>
+              ${received}
             </div>
-            ${received}
+            <div class="home-cateringActions">
+              <button type="button" class="home-workLink primary" data-convert-enquiry="${enquiryId}">Turn into catering drop</button>
+              <span class="home-cateringError" data-convert-error="${enquiryId}" hidden></span>
+            </div>
           </div>
         `;
       }).join('<div style="height:1px; background:var(--home-border); margin:10px 0;"></div>');
 
       content.innerHTML = rows;
+
+      // Wire the convert action on each row. One confirm, then invoke the
+      // convert-catering-enquiry EF; on success open the new draft in Drop
+      // Studio (?drop=<id>), on failure show a quiet inline error and leave
+      // the enquiry in place.
+      content.querySelectorAll('button[data-convert-enquiry]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const enquiryId = btn.getAttribute('data-convert-enquiry');
+          if (!enquiryId) return;
+          const errEl = content.querySelector(`[data-convert-error="${enquiryId}"]`);
+          if (errEl) { errEl.hidden = true; errEl.textContent = ''; }
+
+          if (!window.confirm("Turn this enquiry into a catering drop? This creates a draft you'll finish in Drop Studio.")) {
+            return;
+          }
+
+          btn.disabled = true;
+          const originalLabel = btn.textContent;
+          btn.textContent = 'Creating draft…';
+
+          try {
+            const { data, error } = await sb.functions.invoke('convert-catering-enquiry', {
+              body: { enquiry_id: enquiryId }
+            });
+            if (error || !data || data.ok !== true || !data.drop_id) {
+              throw new Error((data && data.error) || 'Could not create the drop.');
+            }
+            // Success — open the new draft in Drop Studio, preserving vendor scope.
+            window.location.href = HearthNav.withVendor('./drop-manager.html?drop=' + encodeURIComponent(data.drop_id));
+          } catch (err) {
+            btn.disabled = false;
+            btn.textContent = originalLabel;
+            if (errEl) {
+              errEl.textContent = "Couldn't create the drop just now. Please try again.";
+              errEl.hidden = false;
+            }
+          }
+        });
+      });
     }
 
     function render(){
