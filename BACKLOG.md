@@ -2706,6 +2706,9 @@ asset tangible. Every drop adds to something. This surface shows what
 has been built, where it is strongest, and what it is worth — in plain
 language a vendor can act on.
 
+Design ref / governing scope: Hearth_Insights_Intelligence_Layer_Scope.md — voice,
+drop-granularity discipline, honesty gate; defers T4-29.
+
 T5-16: Organisations — shared entity for hosts and communities
 Introduce an organisations table as the parent entity for both hosts and
 communities. Fields: id, name, type (host/community/both), category,
