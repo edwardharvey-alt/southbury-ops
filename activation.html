@@ -1825,7 +1825,16 @@
       // card 7 so the timeline reads confirmation → order-ready → reminder →
       // follow-up. Keyed strictly on audience_scope === 'direct', so every
       // non-direct drop skips this and reaches the identical matrix as before.
-      if (summary.audience_scope === 'direct') return { openness, card4, card5, cards: [10, 7, 11, 12], optional: [] };
+      //
+      // Card 13 (client acknowledged) leads the timeline: a READ-ONLY,
+      // already-done fact (T-comms-direct step 4). When the client first
+      // enquired, submit-catering-enquiry fired an acknowledgement email
+      // automatically — so before the vendor sends anything, the client already
+      // knows their enquiry landed. It surfaces that as the earliest step, like
+      // card 7 (order-ready) surfaces an automatic fact — no send, no compose,
+      // no vendor action. Rendered FIRST, before card 10, so the whole thread
+      // reads acknowledged → confirm → order-ready → reminder → follow-up.
+      if (summary.audience_scope === 'direct') return { openness, card4, card5, cards: [13, 10, 7, 11, 12], optional: [] };
 
       if (openness === 'open'   && hasHost)  return { openness, card4, card5, cards: [1,2,3,4,5,6,7,8,9], optional: [] };
       if (openness === 'open'   && !hasHost) return { openness, card4, card5, cards: [1,3,4,6,7,8,9],     optional: [] };
@@ -1897,7 +1906,11 @@
         9: 'thank_you',
         10: 'catering_confirm',
         11: 'catering_reminder',
-        12: 'catering_followup'
+        12: 'catering_followup',
+        // Card 13 (client acknowledged) is a passive already-done fact — no
+        // touchpoint key, never logs, excluded from progress exactly like the
+        // passive order-ready card 7.
+        13: null
       };
 
       const cardTitleMap = {
@@ -1912,7 +1925,8 @@
         9: 'Send thank-you email',
         10: 'Confirm the booking',
         11: 'Send a pre-event reminder',
-        12: 'Send a post-event follow-up'
+        12: 'Send a post-event follow-up',
+        13: 'Client already acknowledged'
       };
 
       // The only host-origin event that counts toward vendor progress is the
@@ -2835,6 +2849,12 @@
     // PRE-OPEN: 1,2,3 · LIVE: 4,5,6,7 · CLOSED: 8,9
     function actCardPhase(cardNum){
       const n = Number(cardNum);
+      // Card 13 (client acknowledged) happened at ENQUIRY — before any drop
+      // phase. Its sentinel 'enquiry' phase never equals the current drop phase,
+      // so it always renders collapsed and never claims the single next-action
+      // auto-expand (which must stay on card 10). A manual toggle still wins via
+      // state.cardExpanded in actCardOpen.
+      if (n === 13) return 'enquiry';
       // Card 10 (catering booking confirmation) belongs to the pre-open phase:
       // the vendor sends it to their client once the drop is published, ahead
       // of ordering — so it auto-expands as the first action on a direct drop.
@@ -3840,6 +3860,38 @@
 
       // Cards 7, 8, 9 — present in all profiles, but wrapped with
       // inProfile() for consistency with the rest of the timeline.
+
+      // Card 13 — client acknowledged (is-auto, direct drops only). A READ-ONLY,
+      // already-done fact — NOT a compose/send card and NOT a vendor action.
+      // When the client first enquired, submit-catering-enquiry fired an
+      // acknowledgement email automatically (best-effort, when they left an
+      // email). There is no durable send record — no comms_log row, no
+      // acknowledged-at column — so we state the honest DESIGN FACT (that an
+      // acknowledgement is sent automatically on enquiry), never a fabricated
+      // "sent on {date}". Styled like the passive order-ready card 7 (is-auto),
+      // rendered FIRST so the thread reads acknowledged → confirm → order-ready
+      // → reminder → follow-up. Copy branches on whether the enquiry left an
+      // email: with an email we can truthfully say an acknowledgement went out;
+      // phone-only (or no linked enquiry context) never claims one.
+      if (inProfile(13)) {
+        const ackCtx = state.cateringContextById?.[dropId] || null;
+        const { firstName: ackFirst } = actCateringSeed(ackCtx);
+        // A real name greets by first name; otherwise a neutral "your client".
+        const ackClient = escapeHtml(
+          (ackCtx && (ackCtx.contact_name || '').trim()) ? ackFirst : 'your client'
+        );
+        const ackHasEmail = !!(ackCtx && (ackCtx.contact_email || '').trim());
+        const ackDesc = ackHasEmail
+          ? `When ${ackClient} enquired, an acknowledgement went out automatically — so they already know you've received it. There's nothing to send here; your conversation with them carries on below.`
+          : `${ackClient.charAt(0).toUpperCase() + ackClient.slice(1)} got in touch to enquire — this is where your conversation with them begins. There's nothing to send here; your first message to them is the confirmation below.`;
+        cards.push(tpCard({
+          typeClass: 'is-auto',
+          cardNum: 13,
+          label: 'WHEN THEY ENQUIRED',
+          title: 'They got in touch first',
+          desc: ackDesc
+        }));
+      }
 
       // Card 10 — catering booking confirmation (is-vendor, direct drops only).
       // A single named client, so this is a one-to-one message the vendor sends
