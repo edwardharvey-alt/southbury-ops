@@ -1701,6 +1701,14 @@ on top of the coding rules above.
     `git status` (clean) and `git log origin/<branch> --oneline -1`
     (matches HEAD) before the deploy command.
 
+Insights / intelligence-layer invariants:
+- The unit of intelligence is the drop, series, vendor, or geography — never the individual
+  reorder. Any signal whose purpose is to push a named customer to buy on a predicted date is
+  the aggregator reflex and is out of model.
+- Intelligence degrades honestly. Below the data threshold, say "not enough data yet". A
+  fabricated demand or scarcity signal is manufactured urgency — a brand violation, not a UX
+  gap. Honest empty states are on-brand; confident wrong ones are not.
+
 ## Edge Function secrets
 
 Required Supabase Edge Function secrets (set via `supabase secrets set
