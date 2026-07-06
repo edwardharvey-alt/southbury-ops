@@ -1818,23 +1818,27 @@
       // notification driven off the Service Board — legitimately correct for
       // one client — so it survives. Card 10 (booking confirmation) is the
       // first bespoke single-recipient touchpoint (T-comms-direct step 3a-i): a
-      // one-to-one message the vendor sends their client via their own channel,
-      // rendered BEFORE card 7. Cards 11 (pre-event reminder) and 12 (post-event
-      // follow-up) are the remaining single-recipient touchpoints (T-comms-direct
-      // step 3b) — both compose-and-copy only, no platform send — rendered AFTER
-      // card 7 so the timeline reads confirmation → order-ready → reminder →
-      // follow-up. Keyed strictly on audience_scope === 'direct', so every
-      // non-direct drop skips this and reaches the identical matrix as before.
+      // one-to-one message the vendor sends their client via their own channel.
+      // Cards 11 (pre-event reminder) and 12 (post-event follow-up) are the
+      // remaining single-recipient touchpoints (T-comms-direct step 3b) — both
+      // compose-and-copy only, no platform send. Card 13 (client acknowledged)
+      // leads the timeline: a READ-ONLY, already-done fact (T-comms-direct
+      // step 4) — when the client first enquired, submit-catering-enquiry fired
+      // an acknowledgement email automatically, so before the vendor sends
+      // anything the client already knows their enquiry landed. It surfaces that
+      // as the earliest step, like card 7 surfaces an automatic fact — no send,
+      // no compose, no vendor action.
       //
-      // Card 13 (client acknowledged) leads the timeline: a READ-ONLY,
-      // already-done fact (T-comms-direct step 4). When the client first
-      // enquired, submit-catering-enquiry fired an acknowledgement email
-      // automatically — so before the vendor sends anything, the client already
-      // knows their enquiry landed. It surfaces that as the earliest step, like
-      // card 7 (order-ready) surfaces an automatic fact — no send, no compose,
-      // no vendor action. Rendered FIRST, before card 10, so the whole thread
-      // reads acknowledged → confirm → order-ready → reminder → follow-up.
-      if (summary.audience_scope === 'direct') return { openness, card4, card5, cards: [13, 10, 7, 11, 12], optional: [] };
+      // Lifecycle order: enquired → confirm → remind (before the event) →
+      // order-ready (service day) → follow up (after). Note the reminder sits
+      // BEFORE order-ready: it is a before-the-event action; order-ready is a
+      // service-day one. This array is the declared profile order (drives
+      // membership via inProfile() and next-action via getDropProgress); the
+      // VISUAL render order is the source order of the cards.push() blocks in
+      // renderDropView, which is kept in lockstep with this array. Keyed
+      // strictly on audience_scope === 'direct', so every non-direct drop skips
+      // this and reaches the identical matrix as before.
+      if (summary.audience_scope === 'direct') return { openness, card4, card5, cards: [13, 10, 11, 7, 12], optional: [] };
 
       if (openness === 'open'   && hasHost)  return { openness, card4, card5, cards: [1,2,3,4,5,6,7,8,9], optional: [] };
       if (openness === 'open'   && !hasHost) return { openness, card4, card5, cards: [1,3,4,6,7,8,9],     optional: [] };
@@ -3899,7 +3903,8 @@
       // (that is a later step). Seeded from the linked catering enquiry (client
       // name, event, date) + the accurate order link; AI-drafts on voice via
       // the catering_confirm touchpoint, with regen chips + manual overwrite
-      // exactly like the other message cards. Rendered before Card 7.
+      // exactly like the other message cards. Rendered after Card 13 and before
+      // Card 11, as the first thing the vendor actively sends.
       if (inProfile(10)) {
         const cateringCtx = state.cateringContextById?.[dropId] || null;
         // SEED first name: the enquiry stores the full name in one field
@@ -4022,18 +4027,6 @@
         }));
       }
 
-      // Card 7 — order ready (is-auto) — never enters done state
-      if (inProfile(7)) {
-        cards.push(tpCard({
-          typeClass: 'is-auto',
-          cardNum: 7,
-          label: labels[6],
-          title: optionalTitle(7, 'Order-ready notifications are automatic'),
-          desc: "There's nothing to send from here. When you mark an order Ready on the Service Board during service, the platform notifies that customer automatically. Keep the Service Board open while you work.",
-          actionHtml: `<a class="act-copy-btn" href="${HearthNav.withVendor('./service-board.html')}">Open Service Board</a>`
-        }));
-      }
-
       // Card 11 — pre-event reminder (is-vendor, direct drops only). A day or
       // two before the event: warm reassurance that everything is in hand.
       // Compose-and-copy ONLY — NO platform send (the vendor sends it via their
@@ -4041,8 +4034,9 @@
       // (client name, event, date) + the drop's fulfilment/time; AI-drafts on
       // voice via the catering_reminder touchpoint, with regen chips + manual
       // overwrite exactly like Card 10. No ordering link — the order is already
-      // confirmed. Rendered after Card 7 so the timeline reads
-      // confirmation → order-ready → reminder → follow-up.
+      // confirmed. Rendered BEFORE Card 7 (order-ready): the reminder is a
+      // before-the-event action, order-ready is a service-day one, so the
+      // timeline reads confirm → remind → order-ready → follow-up.
       if (inProfile(11)) {
         const crCtx = state.cateringContextById?.[dropId] || null;
         const { firstName: crName, eventPhrase: crEvent, whenClause: crWhen } = actCateringSeed(crCtx);
@@ -4103,6 +4097,21 @@
           channel: 'Direct',
           desc: "A day or two before, send a warm note that everything's in hand. This goes to them directly — edit it to sound like you, then copy it into your own email or WhatsApp.",
           actionHtml: card11ActionHtml
+        }));
+      }
+
+      // Card 7 — order ready (is-auto) — never enters done state. Rendered
+      // AFTER Card 11 (pre-event reminder): order-ready is a service-day fact,
+      // the reminder is a before-the-event action, so the reminder sits above
+      // it on the timeline.
+      if (inProfile(7)) {
+        cards.push(tpCard({
+          typeClass: 'is-auto',
+          cardNum: 7,
+          label: labels[6],
+          title: optionalTitle(7, 'Order-ready notifications are automatic'),
+          desc: "There's nothing to send from here. When you mark an order Ready on the Service Board during service, the platform notifies that customer automatically. Keep the Service Board open while you work.",
+          actionHtml: `<a class="act-copy-btn" href="${HearthNav.withVendor('./service-board.html')}">Open Service Board</a>`
         }));
       }
 
