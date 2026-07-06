@@ -217,7 +217,7 @@ Deno.serve(async (req) => {
 
     // 5. Insert the enquiry. status defaults to 'open', source to
     //    'enquiry_page'. Service-role write bypasses the no-policy RLS.
-    const { error: insertErr } = await serviceClient
+    const { data: enquiryRow, error: insertErr } = await serviceClient
       .from("catering_enquiries")
       .insert({
         vendor_id: vendorId,
@@ -230,11 +230,14 @@ Deno.serve(async (req) => {
         fulfilment,
         brief,
         consent: true,
-      });
-    if (insertErr) {
-      console.error("[submit-catering-enquiry] insert failed", insertErr.message);
+      })
+      .select("id")
+      .single();
+    if (insertErr || !enquiryRow) {
+      console.error("[submit-catering-enquiry] insert failed", insertErr?.message);
       return jsonResponse({ ok: false, error: "Could not send your enquiry." }, 500);
     }
+    const enquiryId = enquiryRow.id as string;
 
     console.log(`[submit-catering-enquiry] received vendor=${vendorId}`);
 
@@ -356,6 +359,40 @@ Deno.serve(async (req) => {
           ...(vendor.email ? { reply_to: vendor.email } : {}),
         };
 
+        // Claim a durable comms_log row for this acknowledgement BEFORE the
+        // send (mirrors send-catering-confirm's claim-then-resolve pattern).
+        // Enquiry-anchored: enquiry_id set, drop_id NULL (no drop exists at
+        // enquiry time), customer_id NULL (a catering enquirer is not
+        // necessarily a customers row — same precedent as send-catering-confirm).
+        // Stable dedupe_key = one ack per enquiry, never re-sent. The claim is
+        // wrapped in its own try so a ledger hiccup can never stop the courtesy
+        // email going out — the whole block already lives inside the outer
+        // best-effort try/catch, so nothing here can break the saved enquiry.
+        let ackLogId: string | null = null;
+        try {
+          const { data: logRow, error: logErr } = await serviceClient
+            .from("comms_log")
+            .insert({
+              enquiry_id: enquiryId,
+              drop_id: null,
+              customer_id: null,
+              touchpoint: "catering_ack",
+              channel: "email",
+              recipient: contactEmail,
+              dedupe_key: `catering_ack:${enquiryId}`,
+              status: "pending",
+            })
+            .select("id")
+            .single();
+          if (logErr || !logRow) {
+            console.error("[submit-catering-enquiry] ack comms_log claim failed", logErr?.message);
+          } else {
+            ackLogId = logRow.id as string;
+          }
+        } catch (logClaimErr) {
+          console.error("[submit-catering-enquiry] ack comms_log claim threw", logClaimErr);
+        }
+
         const ackResp = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
@@ -372,8 +409,30 @@ Deno.serve(async (req) => {
             ackResp.status,
             errBody
           );
+          // Outcome-not-attempt: a failed send must never read back as 'sent'.
+          if (ackLogId) {
+            await serviceClient
+              .from("comms_log")
+              .update({ status: "failed", error: `${ackResp.status} ${errBody}`.slice(0, 2000) })
+              .eq("id", ackLogId);
+          }
         } else {
           console.log("[submit-catering-enquiry] acknowledgement email sent");
+          // Record the acknowledgement as durably 'sent' only now the send has
+          // actually succeeded.
+          if (ackLogId) {
+            let resendId: string | null = null;
+            try {
+              const json = await ackResp.json();
+              resendId = json && typeof json.id === "string" ? json.id : null;
+            } catch {
+              // Response body wasn't JSON — leave resend_id null, still 'sent'.
+            }
+            await serviceClient
+              .from("comms_log")
+              .update({ status: "sent", sent_at: new Date().toISOString(), meta: { resend_id: resendId } })
+              .eq("id", ackLogId);
+          }
         }
       }
     } catch (ackErr) {
