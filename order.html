@@ -4248,7 +4248,16 @@ async function handoffToPayment() {
   );
 
   if (error) {
-    showCheckoutNotice(error?.message || 'Could not place order \u2014 please try again.', 'error');
+    let friendlyMessage = 'Could not place order \u2014 please try again.';
+    try {
+      // supabase-js puts the raw Response on error.context for non-2xx
+      // responses; the function's JSON body carries the real message.
+      const body = await error.context?.json?.();
+      if (body?.error) friendlyMessage = body.error;
+    } catch (_parseErr) {
+      // Body wasn't JSON or couldn't be read \u2014 keep the friendly fallback.
+    }
+    showCheckoutNotice(friendlyMessage, 'error');
     isSubmitting = false;
     payBtn.disabled = false;
     payBtn.textContent = `Pay ${formatMoneyPence(getGrandTotalPence())}`;
