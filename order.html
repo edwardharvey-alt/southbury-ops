@@ -2879,7 +2879,7 @@
           showNotice("");
         } else if (orderState.state === "preopen") {
           showNotice("");
-        } else if (remaining <= 0) {
+        } else if (getCapacityRemainingRaw() <= 0) {
           showNotice("This service is fully booked.", "warn");
         } else {
           showNotice("");
@@ -2922,7 +2922,7 @@
         if (orderState.state === "preopen") return "interest";
         if (orderState.state === "closed") return "waitlist";
         const remaining = Math.max(0, getCapacityRemainingAfterBasket());
-        if (remaining <= 0) return "waitlist"; // open & full — mirrors the "fully booked" notice
+        if (getCapacityRemainingRaw() <= 0) return "waitlist"; // open & full — mirrors the "fully booked" notice
         return null; // orderable (incl. capacity-low) — no capture block
       }
 
