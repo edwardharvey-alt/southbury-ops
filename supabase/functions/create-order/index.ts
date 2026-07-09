@@ -658,38 +658,13 @@ Deno.serve(async (req) => {
         ? 1
         : serverItemCapacity.reduce((sum, n) => sum + n, 0);
 
-    // Step 8 — capacity available. Compute consumed capacity directly from
-    // the orders table so the check is server-authoritative and doesn't
-    // depend on view freshness. Mirrors v_drop_capacity_usage: only
-    // cancelled rows are excluded, so pending_payment orders DO consume
-    // capacity for their 30-minute Stripe Checkout window. This prevents
-    // two customers racing for the same last slot during checkout. The
-    // pizzas column carries the server-computed capacity units consumed.
-    // T3-13b — event drops are catering-style: expected_guests is a
-    // planning signal, not a hard slot count, so capacity enforcement
-    // is skipped entirely for drop_type === "event".
-    if (dropAreaRow?.drop_type !== "event") {
-      const { data: liveOrders, error: liveOrdersErr } = await serviceClient
-        .from("orders")
-        .select("pizzas")
-        .eq("drop_id", payload.drop_id)
-        .neq("status", "cancelled");
-      if (liveOrdersErr) {
-        console.error("live orders lookup failed", liveOrdersErr);
-        return jsonResponse({ error: "Capacity lookup failed" }, 500);
-      }
-      const alreadyConsumed = (liveOrders || []).reduce(
-        (sum, row) => sum + Number(row.pizzas ?? 0),
-        0
-      );
-      const capacityTotal = Number(dropSummary.capacity_units_total ?? 0);
-      if (alreadyConsumed + totalOrderConsumption > capacityTotal) {
-        return jsonResponse(
-          { error: "Not enough capacity remaining for this order — please refresh and try again" },
-          400
-        );
-      }
-    }
+    // Step 8 — capacity enforcement now happens atomically inside the
+    // create_order_atomic RPC (Section B below), which checks and reserves
+    // capacity under a drop-row lock. The previous in-EF pre-check read
+    // orders.pizzas non-atomically and could not prevent two customers
+    // racing for the same last slot — that race is closed by the RPC.
+    // totalOrderConsumption (Step 7.5, above) is passed into the RPC as the
+    // incoming consumption for that check.
 
     // Stripe SDK init (verify secret present before any DB writes so we
     // fail fast — no orphan orders if Stripe is misconfigured).
@@ -788,16 +763,30 @@ Deno.serve(async (req) => {
       pizzas: capacityUnitsConsumed,
     };
 
-    const { data: orderRow, error: orderErr } = await serviceClient
-      .from("orders")
-      .insert(orderInsert)
-      .select("id")
-      .single();
-    if (orderErr || !orderRow) {
-      console.error("order insert failed", orderErr);
-      return jsonResponse({ error: "Order write failed" }, 500);
+    const { data: rpcResult, error: rpcErr } = await serviceClient.rpc(
+      "create_order_atomic",
+      {
+        p_order: orderInsert,
+        p_incoming_consumption: totalOrderConsumption,
+      }
+    );
+    if (rpcErr) {
+      console.error("create_order_atomic failed", rpcErr);
+      return jsonResponse({ error: "Could not create order — please try again" }, 500);
     }
-    const orderId = orderRow.id as string;
+    if (!rpcResult?.ok) {
+      if (rpcResult?.error === "capacity") {
+        return jsonResponse(
+          { error: "Not enough capacity remaining for this order — please refresh and try again" },
+          400
+        );
+      }
+      if (rpcResult?.error === "drop_not_found") {
+        return jsonResponse({ error: "Drop not found" }, 404);
+      }
+      return jsonResponse({ error: "Could not create order — please try again" }, 400);
+    }
+    const orderId = rpcResult.order_id as string;
 
     // markCancelled — best-effort cleanup if a downstream step fails.
     // Customer sees the error and can retry; retry creates a fresh order.
