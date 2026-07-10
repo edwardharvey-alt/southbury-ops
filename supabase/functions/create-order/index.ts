@@ -318,7 +318,7 @@ Deno.serve(async (req) => {
     // publish gate already prevents going live without this.
     const { data: vendor, error: vendorErr } = await serviceClient
       .from("vendors")
-      .select("id, stripe_account_id, stripe_onboarding_complete, platform_fee_pct")
+      .select("id, stripe_account_id, stripe_onboarding_complete, platform_fee_pct, platform_fee_fixed_pence")
       .eq("id", vendorId)
       .maybeSingle();
     if (vendorErr) return jsonResponse({ error: "Vendor lookup failed" }, 500);
@@ -675,11 +675,13 @@ Deno.serve(async (req) => {
       httpClient: Stripe.createFetchHttpClient(),
     });
 
-    const platformFeePct = Number(vendor.platform_fee_pct ?? 0);
     // Hearth's take is computed from the server-derived total (which equals the
     // client total here — the Step 7 guard rejected any mismatch), never the
     // client's declared figure.
-    const platformFeePence = Math.floor((computedTotal * platformFeePct) / 100);
+    const platformFeePct   = Number(vendor.platform_fee_pct ?? 0);
+    const platformFeeFixed = Number(vendor.platform_fee_fixed_pence ?? 0);
+    const rawFee = Math.round((computedTotal * platformFeePct) / 100) + platformFeeFixed;
+    const platformFeePence = rawFee > 0 ? Math.min(rawFee, computedTotal - 1) : 0;   // Stripe requires fee < amount; 0 stays 0
     const capacityUnitsConsumed = Math.max(1, totalOrderConsumption);
 
     // Database writes — sequence with cleanup. No transactions over
