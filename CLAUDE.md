@@ -2233,7 +2233,6 @@ Reveal hook field — `#dropRevealLine` is now a `<textarea>` (4 rows, `maxlengt
 - T5-3 — Host onboarding: contact list upload — open
 - T5-4 — Marketplace evolution: host-to-vendor matching — open
 - T5-6 — Customer accounts (order history, saved addresses) — open
-- T5-8 — Interest registration: signals mechanic — open
 - T5-9 — Recommendation engine: matured intelligence — open
 - T5-11 — Comms engine V1 (transactional + demand generation email) — partial. T5-11-minimum (order_confirmed email via Resend, fired by `stripe-webhook` after Stripe success) shipped 2026-05-16 (PR #266). Slice 1 ✓ COMPLETE 2026-06-19: interest-registrant ordering-open auto-email shipped — `dispatch-interest-open` EF + `comms_log` ledger, scheduled by a GitHub Actions pinger (`.github/workflows/comms-dispatch.yml`, every 30 min). Remaining triggers — order_ready automated SMS, drop_announced, drop_reminder, drop_early_access, post_drop_thank_you — remain open per pre-launch scope decision.
 - T5-12 — Vendor customer data import: advanced (POS / email / booking integrations) — open
@@ -2245,7 +2244,6 @@ Reveal hook field — `#dropRevealLine` is now a `<textarea>` (4 rows, `maxlengt
 - T5-19 — Community-to-vendor matching and discovery — open
 - T5-20 — Community-sourced drops — open
 - T5-21 — Multi-vendor accounts — open
-- T5-22 — Catering business flow — open
 - T5-23 — Multi-vendor events — open
 - T5-24 — POS integration: full integration — partial (Part 1 complete; Part 2 deferred until live vendor friction confirms)
 - T5-25 — Drop promotion: marketing copy + print assets — open
@@ -2259,7 +2257,6 @@ Reveal hook field — `#dropRevealLine` is now a `<textarea>` (4 rows, `maxlengt
 - T-drop-anticipation-window-default — ~~Drop Studio: default opens_at to delivery_start so publish=announce and the publish→opens gap is the anticipation window. Pre-launch.~~ ✓ COMPLETE 2026-06-15. New-drop default (`opens_at = delivery − 24h`) was already live in `createNewDrop`; #369 closed the only remaining gap (the duplicate path). Both creation paths now produce the announce→open window.
 - T-comms-automation — Behaviour-triggered comms automation + plain-language insight prompts (competitor-derived, Owner.com) — open
 - T-aggregator-savings-calculator — Vendor-facing aggregator cost comparison (competitor-derived, Slerp) — open
-- T-notify-next-time — Sold-out waitlist / demand capture (competitor-derived, Hotplate) — open
 - T-cart-hold-timer — Visible cart-hold countdown (competitor-derived, Hotplate) — open
 - T-comms-order-timeline — Comms→order timeline: honest correlation view (orders after each send), NOT attribution. Joins comms_log.sent_at against orders per drop for the Insights layer — open
 
@@ -2350,7 +2347,6 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T7-12 — Moderation and intervention tooling — open
 - T7-13: SUPERSEDED by T3-13 (closed 2026-05-13). Capacity driver multi-mode now in production.
 - T7-15 — Admin write capability — open
-- T7-16 — Business partner admin access — open (unblocked by T7-14 closing 2026-05-21)
 - T7-17 — Vendor configuration inspector (post-launch) — open
 - T7-18 — Vendor impersonation / "act as vendor" (post-launch) — open
 
