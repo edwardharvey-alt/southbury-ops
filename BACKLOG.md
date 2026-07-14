@@ -1554,7 +1554,19 @@ T5-6: Customer accounts
 Order history, saved addresses, preferred drops. Builds repeat
 participation central to the Hearth model.
 
-T5-8: Interest registration — signals mechanic
+T5-8: Interest registration — signals mechanic ✓ COMPLETE 2026-07-14
+Shipped and confirmed complete via the backlog reconciliation audit
+(audit/findings-backlog-reconciliation.md); marked open in error. The pre-open
+interest-registration mechanic is live end-to-end: the `register-interest` Edge
+Function upserts the `drop_signals` table; order.html renders the pre-open
+`#registerInterestBlock` (order.html:1760) and invokes `register-interest` with
+`kind='interest'`; the vendor sees the "Signals building" count (home.html:1697,
+via `get-drop-signals`). Implementation evolved from the original spec — signals
+are stored in a dedicated `drop_signals(drop_id, customer_id, kind)` table rather
+than `customer_relationships` with `source='interest'`. Ed confirmed
+`drop_signals` exists in production via the SQL editor (2026-07-14), sealing the
+one non-repo-verifiable dependency. Original spec prose retained below for history.
+
 Pre-live state on order page before opens_at. Customer registers interest
 with name and email. Writes to customer_relationships with source =
 interest. Vendor sees interest count in Drop Studio labelled "Signals
@@ -1617,7 +1629,16 @@ flow, landing page.
 
 T-notify-next-time: Sold-out waitlist / demand capture
 
-**Status:** Open. Competitor-derived (Hotplate item waitlist).
+**Status:** ✓ COMPLETE 2026-07-14. Competitor-derived (Hotplate item waitlist).
+Shipped and confirmed complete via the backlog reconciliation audit
+(audit/findings-backlog-reconciliation.md); marked open in error. The post-fill
+demand-capture path is live end-to-end on the same `drop_signals` mechanic as
+T5-8: `register-interest` accepts `kind='waitlist'` for sold-out/closed drops,
+order.html renders the demand-capture block (order.html:1753, tagged
+`T5-8 / T-notify-next-time`), and the operator side surfaces `waitlist_count`
+(drop-manager.html). Ed confirmed the backing `drop_signals` table exists in
+production via the SQL editor (2026-07-14) — the same check that sealed T5-8.
+Original spec prose retained below for history.
 
 When a drop or item reaches capacity, let customers leave a contact to be
 notified when the vendor next runs it. Captures demand that exceeded supply
@@ -2751,7 +2772,20 @@ before entering the platform. Schema already supports this — auth_user_id
 on vendors means one user can own multiple rows. Deferred: one account =
 one vendor for now.
 
-T5-22: Catering business flow
+T5-22: Catering business flow ✓ COMPLETE 2026-07-14
+Shipped and confirmed complete via the backlog reconciliation audit
+(audit/findings-backlog-reconciliation.md); the ticket line was stale (it still
+read as spec-before-build while the full stack had shipped). The Hearth-native
+catering model — enquiries modelled as private drops — is live end-to-end: pages
+`catering-enquiry.html` and `enquiries.html`; five Edge Functions
+(`submit-catering-enquiry`, `list-catering-enquiries`, `get-catering-context`,
+`convert-catering-enquiry`, `send-catering-confirm`); two migrations
+(`20260703120000_create_catering_enquiries.sql`,
+`20260706120000_comms_log_enquiry_scope.sql`); and Activation confirm-send wiring
+(activation.html). Ed confirmed the `catering_enquiries` table exists in
+production via the SQL editor (2026-07-14), sealing that the migrations are
+applied. Original spec prose retained below for history.
+
 Explore how Hearth could support catering enquiries and jobs without
 drifting from the core drop model. The tension: catering is often bespoke,
 negotiated, and not capacity-led in the same way as a drop. The question
@@ -5937,7 +5971,15 @@ vendor → read-only view → "Edit on behalf of vendor" → confirms →
 audit log entry written → change applied via service-role Edge Function.
 Dependency: T7-7.
 
-T7-16: Business partner admin access
+T7-16: Business partner admin access ✓ COMPLETE 2026-07-14
+Shipped and confirmed complete via the backlog reconciliation audit
+(audit/findings-backlog-reconciliation.md); marked open in error. Robin was
+added as a platform admin through the sanctioned path (Supabase Auth invite +
+`INSERT INTO admins`), so multi-admin is live in production, not just supported.
+Ed confirmed via the SQL editor (2026-07-14) that `admins` contains both
+ed@lovehearth.co.uk and robin@lovehearth.co.uk with `is_active = true`. Original
+spec prose retained below for history.
+
 Specific instance of T7-14. Add business partner as platform admin
 with owner-level access. T7-14 closed 2026-05-21 so the admins table
 is in place — adding Robin is now a one-line Supabase Auth invite +
@@ -6752,7 +6794,19 @@ X previous customers" on Card 3. Currently shows generic text. Requires
 a lightweight Edge Function call or addition to get-home-dashboard
 payload.
 
-#### T-ACT-4 — Activation progress persistence
+#### T-ACT-4 — Activation progress persistence ✓ COMPLETE 2026-07-14
+
+Shipped and confirmed complete via the backlog reconciliation audit
+(audit/findings-backlog-reconciliation.md); marked open in error. Activation
+progress is now persisted to a sealed store: the `activation-events` Edge
+Function backs an `activation_events` table, and each drop's log is hydrated from
+it on load (activation.html:1864), replacing the previous in-memory-only
+`state.activationLog` that reset on reload. Ed confirmed the `activation_events`
+table exists in production via the SQL editor (2026-07-14), sealing the one
+non-repo-verifiable dependency (the table was created out-of-band via the SQL
+editor, not a committed migration — a backfill migration remains a separate
+housekeeping item under T-base-ddl-backfill). Original spec prose retained below
+for history.
 
 state.activationLog is in-memory only — resets on page reload. Persist
 log to Supabase (new table or JSONB column on drops) so progress
