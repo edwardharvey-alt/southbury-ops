@@ -682,7 +682,6 @@ Deno.serve(async (req) => {
     const platformFeeFixed = Number(vendor.platform_fee_fixed_pence ?? 0);
     const rawFee = Math.round((computedTotal * platformFeePct) / 100) + platformFeeFixed;
     const platformFeePence = rawFee > 0 ? Math.min(rawFee, computedTotal - 1) : 0;   // Stripe requires fee < amount; 0 stays 0
-    const capacityUnitsConsumed = Math.max(1, totalOrderConsumption);
 
     // Database writes — sequence with cleanup. No transactions over
     // PostgREST, so on any failure after the orders row is created we
@@ -760,9 +759,13 @@ Deno.serve(async (req) => {
             discount_value: matchedTier.discount_value,
           }
         : null,
-      // Legacy NOT NULL >= 1 column (see SCHEMA.md). Populate with
-      // capacity units consumed, minimum 1, until formally migrated away.
-      pizzas: capacityUnitsConsumed,
+      // Capacity consumption is no longer carried on this payload. The
+      // create_order_atomic RPC records it server-side in
+      // orders.capacity_units_consumed from p_incoming_consumption, and
+      // capacity is derived from live holds (drop_capacity_consumed), which
+      // honours the 30-minute hold via expires_at rather than the legacy
+      // pizzas-over-non-cancelled sum. The orders.pizzas column is removed
+      // by the paired migration.
     };
 
     const { data: rpcResult, error: rpcErr } = await serviceClient.rpc(
