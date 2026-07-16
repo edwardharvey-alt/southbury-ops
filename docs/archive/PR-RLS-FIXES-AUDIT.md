@@ -1,3 +1,5 @@
+> ARCHIVED 2026-07-15 — historical record. Not current authority. See Hearth_Strategy.md.
+
 > # ⚠️ ARCHIVED — DIAGNOSIS WAS INCORRECT — DO NOT IMPLEMENT
 >
 > **This audit document is preserved for historical reference only. Its core diagnosis is wrong and its proposed fixes have been rolled back. Do not implement anything in this document.**

@@ -1,3 +1,5 @@
+> ARCHIVED 2026-07-15 — historical record. Not current authority. See Hearth_Strategy.md.
+
 # PR 4b — Build Session Log
 
 Author: Claude Code (build session, Phase 1 — server-side)
