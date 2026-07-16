@@ -3818,6 +3818,9 @@ Specific items:
 - drop_capacity table has all-nullable columns, no FKs, and uses
   legacy pizza vocabulary. Likely a stale view that didn't get the
   v_ prefix. Confirm whether it's a relation or a view.
+  **✓ RESOLVED / verified 2026-07-15: `drop_capacity` is a view, not a
+  table.** This single sub-item is closed; the other items in T5-B5
+  remain open and the ticket stays open.
 - vendors brand columns — three overlapping generations exist. Pick
   one canonical set, migrate reads/writes, drop the others.
 - Missing FK constraints: drops.series_id should reference
@@ -5319,6 +5322,11 @@ in the order payload + `create-order` schema validation, and any
 `orders.delivery_pence` column — so no latent delivery-fee infra
 remains. Follows T-B5-delivery-not-a-line-item (which removes only the
 UI line).
+
+**Status note (2026-07-15): Schema half complete** (`orders.delivery_pence`
+dropped, verified 2026-07-15); **code retirement** (`getDeliveryChargePence()`,
+payload field, `create-order` validation) **still outstanding.** Ticket
+stays open.
 
 T-B1-landing-mockup — Marketing landing page shows fabricated static scarcity
 
