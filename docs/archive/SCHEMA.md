@@ -1,3 +1,5 @@
+> ARCHIVED 2026-07-15 — historical record. Not current authority. See Hearth_Strategy.md.
+
 # Hearth — Database Schema
 
 A reference for the Hearth Postgres database (Supabase project

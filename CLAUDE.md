@@ -10,6 +10,19 @@ food moments.
 
 Core belief: great local food should strengthen communities, not bypass them.
 
+## Documentation canon
+
+- On any conflict between strategy or reference documents,
+  `Hearth_Strategy.md` wins.
+- Anything under `docs/archive/` is historical record, never current
+  authority.
+- Live canon:
+  - `Hearth_Strategy.md` — master strategy
+  - `Hearth_Brand_Playbook.md` — brand + vocabulary
+  - `Hearth_Drop_Communications_Architecture.md` — comms
+  - `Hearth_Repetition_Layer_Voice_Spec.md` — repetition/coaching voice
+  - `audit/Hearth_Build_Coherence_Audit.md` — coherence invariants
+
 ## The model — non-negotiables
 
 - Drops are always: time-bound, capacity-limited, pre-order only
@@ -1604,11 +1617,13 @@ on top of the coding rules above.
     fallback (the neutral default when a vendor has set no colour). It
     must NEVER be swapped to Hearthfire in that fallback role — doing so
     would render a colourless vendor's customer-facing surface/poster in
-    Hearth's own accent (brand-bleed — the D5 concern). The external brand
-    playbook still names `#8B6B3F` as primary and needs updating to record
-    Hearthfire as canonical. Finishing the Activation rgba-tint
-    convergence is tracked as T-E4-activation-rgba-tints. (Pass E / E4,
-    2026-06-16.)
+    Hearth's own accent (brand-bleed — the D5 concern). The brand
+    playbook is now committed at `Hearth_Brand_Playbook.md` with the
+    accent corrected to `#C4511A` / `--h-fire` as canonical (the earlier
+    external playbook that still named `#8B6B3F` primary is superseded).
+    Finishing the Activation rgba-tint convergence is tracked as
+    T-E4-activation-rgba-tints. (Pass E / E4, 2026-06-16; playbook
+    committed 2026-07-15.)
 
 86. **Build Coherence Audit COMPLETE — all five passes (A–E) run,
     triaged, and fixed or logged.** Net: one real structural gap found —

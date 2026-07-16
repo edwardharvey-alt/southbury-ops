@@ -1,3 +1,5 @@
+> ARCHIVED 2026-07-15 — historical record. Not current authority. See Hearth_Strategy.md.
+
 # PR 4b — Audit
 
 Author: Claude Code (audit-only session)
