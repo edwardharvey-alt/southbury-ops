@@ -207,12 +207,26 @@ every touch... This cannot be retro-fitted. The data is captured from the first
 order, or it never exists"). `customer_relationships.source_drop_id` already
 exists (also added incidentally by T5-C2's schema block — verify before
 re-adding); extend capture-origin to every new capture door and add a
-**`source_type`** field valued `'drop' | 'presence' | 'window' | 'follow' |
-'import' | 'host'`. **Audit note:** `customer_relationships` already carries a
-`source` column (used today with `'import'`, e.g. `source === 'import'` in
-home/customers state) — reconcile whether `source_type` reuses/renames `source`
-or is added alongside it, before building. **Cross-reference:** T-CAP-3/4/5/7
-(each writes a distinct origin), T5-C2 (also touches `source_drop_id`), T-CAP-9.
+capture-origin values `'drop' | 'presence' | 'window' | 'follow' | 'import' |
+'host'`.
+
+**HARD CONSTRAINT — do NOT add a fourth overlapping field.** Two origin-bearing
+columns already exist on `customer_relationships`: **`source`** (used today with
+`'import'`, e.g. `source === 'import'` in home/customers state) and
+**`source_drop_id`** (added by T5-C2's schema block). This ticket must
+**reconcile against both** — it must not introduce a third/fourth overlapping
+origin column that partially duplicates them.
+
+**Open design question (resolve at build time, not now):** either **extend the
+existing `source` column's value set** to cover all six capture origins, or add a
+single `source_type` enum and migrate `source`/`source_drop_id` onto a coherent
+model — but land on **one** canonical origin representation, not several.
+**Cautionary precedent:** tonight's legacy-pizzas cleanup (PR #467 — dropping
+`orders.pizzas` / `capacity_pizzas` after overlapping capacity columns
+accumulated across generations) is exactly the mess overlapping columns create;
+do not repeat it on the source side. **Cross-reference:** T-CAP-3/4/5/7 (each
+writes a distinct origin), T5-C2 (`source_drop_id`), T-CAP-9, PR #467 (overlapping
+-column precedent).
 
 **Not created — close equivalent already exists (reported, not duplicated):**
 - **T-CAP-6 · Sold-out capture** → shipped as **T-notify-next-time** (✓ COMPLETE
@@ -286,14 +300,13 @@ partner-facing operational support, not the match).
 outreach), T5-C2 (early-access comms), §6.4.
 
 **Not created — close equivalent already exists (reported, not duplicated):**
-- **T-MOAT-1 · Geographic clustering** → already specced **inside T5-9**
-  (Recommendation engine — matured intelligence): "Customer clustering by outward
-  postcode with recency and frequency weighting... ranked list of postcode areas
-  with customer count, order history, and a confidence score (Strong / Building /
-  New territory)" — the confidence score IS the graceful-degradation / "not enough
-  data yet" requirement (§11 Phase 5). Rather than duplicate, flagged for Ed's
-  decision: **extract the clustering primitive out of T5-9 into a standalone
-  T-MOAT-1**, or keep it folded in T5-9. Not created pending that call.
+- **T-MOAT-1 · Geographic clustering** → **DECISION: kept folded inside T5-9, not
+  a standalone ticket.** T5-9's "Geographic demand scoring" section has been
+  reframed (this PR) as the moat primitive behind the *"N of your customers live
+  in X"* recommendation, with its Strong / Building / New-territory confidence
+  tiers explicitly called out as the §11 Phase 5 graceful-degradation requirement
+  (a fabricated signal is a brand violation). No standalone T-MOAT-1 ticket or
+  pointer exists — build it as part of T5-9.
 
 ---
 
@@ -2182,7 +2195,17 @@ Three decisions must be confirmed at the start of the T5-9 build session rather 
 
 (3) SQL owns signals, LLM owns framing. The SQL layer computes scores, gaps, fill rates, and trends. Those structured outputs are passed to Haiku 4.5 via the Anthropic API to generate the plain-English recommendation card copy. See GenAI shared principles above for hard rules.
 
-**Geographic demand scoring**
+**Geographic demand scoring — the moat primitive (Hearth_Strategy.md §11 Phase 5)**
+
+This is the **foundational moat primitive** behind the geographic-clustering
+recommendation — the single most important sentence Hearth can say: *"N of your
+customers live in X."* It lives here (folded into T5-9), not as a standalone
+ticket. Per §11 Phase 5 it must **degrade gracefully**, and the confidence tiers
+below (Strong / Building / New territory) ARE that graceful-degradation
+requirement in practice: below the data threshold the surface says *"not enough
+data yet"* / *"Signals are building"* rather than inventing a number. **A
+fabricated demand signal is a brand violation, not a UX gap** — honest empty
+states are on-brand; confident wrong ones are not.
 
 Customer clustering by outward postcode with recency and frequency weighting. Identifies the vendor's strongest demand areas from customer_relationships and order history. Output: ranked list of postcode areas with customer count, order history, and a confidence score (Strong / Building / New territory).
 

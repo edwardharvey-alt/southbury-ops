@@ -2175,7 +2175,7 @@ stop.
 - T-CAP-5 — Ordering windows, ring-fenced slotted capacity: §6.2 design — default closed, real declared capacity (no rejection), slotted, planned variation only, never dynamic, never "always on." Distinct from the event multi-window feature. — open
 - T-CAP-7 — Follow / notify-me (vendor-scoped): capture when NO drop is live. Explicitly distinct from T5-8 (drop-scoped, ✓ COMPLETE); `drop_signals` is currently drop-scoped, so vendor-scoped signals must be added. §11 Phase 2. — open
 - T-CAP-9 — Identity resolution: one customer across counter/window/drop; without it the repeat-customer signal and the intelligence layer silently fail. §11 Phase 3. — open
-- T-CAP-10 — Capture-origin extension: `customer_relationships.source_drop_id` already exists; extend to new capture doors and add a `source_type` (`'drop'|'presence'|'window'|'follow'|'import'|'host'`); reconcile with the existing `source` column. Cannot be retro-fitted. §11 Phase 3. — open
+- T-CAP-10 — Capture-origin extension: capture origin (`'drop'|'presence'|'window'|'follow'|'import'|'host'`) on every touch; cannot be retro-fitted. **Must reconcile against the existing `customer_relationships.source` column AND the `source_drop_id` added by T5-C2 — must NOT add a fourth overlapping field.** Open design question (extend `source` values vs add `source_type`) resolved at build time; PR #467 legacy-pizzas cleanup is the overlapping-column cautionary precedent. §11 Phase 3. — open
 - *(T-CAP-6 sold-out capture NOT created — shipped as T-notify-next-time ✓ COMPLETE; T-CAP-8 BYO import NOT created — shipped as customer-import.html + bulk-create-customers.)*
 
 ### The moat (T-MOAT) — ⬇️ BELOW the stop line
@@ -2183,7 +2183,7 @@ See the T-MOAT cluster at the top of BACKLOG.md. Hearth_Strategy.md §8 Tier 3, 
 - T-MOAT-2 — Recommendation surface (sentences, not charts): **folded into the reframed T5-15** — build T5-15, not a second ticket; pointer only. §11 Phase 5, §12.3 Engine 3, §9.3. — open
 - T-MOAT-3 — Referral mechanic (§12.3 Engine 4, the only compounding channel): absent from every document; reward = status + early access, never a discount; needs a mechanic that does not yet exist. — open
 - T-MOAT-4 — Affinity partnership support (gym/office/nursery): early-access currency not margin; curated menu = a relabelled subset, not a second kitchen; ask the cannibalisation question first. Distinct from affinity matching (T5-9/T5-26). §6.4. — open
-- *(T-MOAT-1 geographic clustering NOT created — already specced inside T5-9; flagged for Ed's decision to extract as a standalone primitive vs keep folded.)*
+- *(T-MOAT-1 geographic clustering — DECISION: kept folded inside T5-9, whose "Geographic demand scoring" framing is reframed as the moat primitive behind "N of your customers live in X" (Strong/Building/New-territory = the §11 Phase 5 graceful-degradation requirement). No standalone ticket.)*
 
 ### Tier 2 — Must work before showing anyone
 - T2-2 — Service Board: remove need to scroll to reach Kanban — open
