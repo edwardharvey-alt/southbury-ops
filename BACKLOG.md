@@ -74,6 +74,229 @@ majority of our vendors in year three, we have a job, not a company.
 
 ---
 
+## ⬆️ ABOVE THE STOP LINE — Capture layer (T-CAP-, table stakes)
+
+The capture-first entry points (Hearth_Strategy.md §11 Phases 1–3). These are
+**table stakes** — build them cheap, build them fast, then stop (§11 Phase 4).
+They exist to turn the capture → own → read loop (§5), not to win on ordering.
+Grouped here as the capture-door cluster; classified above the stop line by the
+banner above (a classifier, not a physical reordering of the tiers).
+
+**T-CAP-1 · Permanent vendor page — THE UNLOCK (highest priority in the capture layer)**
+
+**Status:** Open. Above the stop line. Source: Hearth_Strategy.md §11 Phase 1
+("the unlock — and it is not currently in the backlog"). Healthy Habits has
+already asked, unprompted, for a permanent QR — the customer telling us what to
+build.
+
+A durable address — `lovehearth.co.uk/{vendor}` — that always resolves to
+whatever is true now: ordering open, drop announced, drop live, or **nothing
+on**. Everything in Hearth today is drop-scoped and drop links expire; a QR
+sticker on a table or a van cannot point at a drop URL (stickers last months,
+drops last days). **The "nothing on" state is NOT an empty state — it IS a
+capture surface** (follow/notify-me, T-CAP-7), and it is the state the page will
+be in most of the time. When a drop is live/open the page must show **real,
+honest capacity** (§6.2, and the Trust & Governance constraint in §8).
+
+**EF-read constraint (hard):** the page's public capacity read MUST go through a
+JWT/token-scoped Edge Function (the `v_drop_public` / `host-view-summary`
+pattern), **never direct anon PostgREST** against `v_drop_summary` /
+`drop_capacity`. See T-drop-capacity-anon-grants (reframed as this page's public
+read-path prerequisite).
+
+**Cross-reference:** T-CAP-2 (the durable QR points here), T-CAP-7 (the "nothing
+on" capture surface), T-drop-capacity-anon-grants (public read path).
+
+**T-CAP-2 · Vendor QR vs drop QR — two distinct artefacts**
+
+**Status:** Open. Above the stop line. Source: §11 Phase 1. Two clearly-labelled
+artefacts: the **durable vendor QR** points at the permanent vendor page
+(T-CAP-1) and lasts months on a sticker/van/counter; the **drop QR** points at a
+specific drop and is short-lived by design. Never conflate them — a durable
+sticker must never carry an expiring drop URL. **Cross-reference:** T-CAP-1,
+T-CAP-3 (till QR is a vendor QR variant).
+
+**T-CAP-3 · Till QR — capture only (no ordering, no payment)**
+
+**Status:** Open. Above the stop line. Source: §11 Phase 2; §9.2 (payments).
+*"Scan to hear what's next."* Capture a named, consented, contactable local
+person at the counter with **no ordering and no payment** on this door. This is
+a **principled boundary, not a Stripe compromise:** §9.2 establishes there is no
+payment-cost win available to offset routing counter sales through Hearth (Stripe
+1.5% + 20p is dearer than the vendor's card machine on every basket below ~£105),
+so the till QR must be capture-only — which also keeps the fee model clean (we
+earn only on demand we created, §9.1). **Cross-reference:** T-CAP-2, T-CAP-7,
+T-CAP-10 (capture origin = 'presence').
+
+**T-CAP-4 · Table QR / order-ahead — order + pay**
+
+**Status:** Open. Above the stop line. Source: §11 Phase 2. Order and pay from
+the table, justified specifically where the vendor **saves staff time** or the
+customer **skips a queue** (not as a general always-on channel). Distinct from
+the till QR (T-CAP-3, capture-only) precisely because a table order clears one of
+those two bars. Still bounded by presence (the vendor is there). **Cross-reference:**
+T-CAP-3, T-CAP-10 (capture origin = 'presence').
+
+**T-CAP-5 · Ordering windows — ring-fenced, slotted capacity**
+
+**Status:** Open. Above the stop line. Source: §6.2, §11 Phase 2. A vendor-set
+ordering window (Saturday collection, Thursday pre-order, weekday lunch),
+implemented as a drop with a long window, large capacity and recurrence. The §6.2
+design is non-negotiable and is what separates us from Square/Flipdish "hours":
+
+- **Default is closed.** Closed is the dignified resting state ("here's when
+  we'll be back", capturing you while it waits), open is the event. Not a
+  greyed-out failure state.
+- **Real declared capacity, so nobody is ever rejected.** Capacity is committed
+  up front; ordering closes when reached. You never accept more than you said you
+  could make. (Early close — "we've run out" — is a binary pause with clean
+  refunds, not a rejection.)
+- **Slotted.** e.g. four orders per fifteen-minute collection slot, pacing online
+  orders to a rate the kitchen absorbs alongside walk-ins.
+- **Ring-fenced, never dynamic.** A declared block genuinely committed, not
+  competing with the counter. **No live "how busy am I" capacity dial** — it
+  breaks the promise, corrupts honest scarcity, won't be used when needed, and is
+  dangerous on the money path (§6.2). Planned variation only (Saturdays 20 / bank
+  holiday 10), set before ordering opens so the customer never sees it change.
+- **Never "always on."** Every ordering surface stays bounded — by presence, or
+  by time + capacity. ("How busy am I" belongs in the intelligence layer as an
+  input, not a control — see T-MOAT tickets / §6.2.)
+
+**Note:** distinct from the existing event multi-window feature
+(`window_group_id`, T4-34/35/36, T5-B29) — those are sibling time-windows within
+one event drop; this is the recurring, default-closed, ring-fenced collection
+window. **Cross-reference:** T5-8 (interest registration), T-drop-capacity-anon-grants.
+
+**T-CAP-7 · Follow / notify-me — vendor-scoped capture (no live drop required)**
+
+**Status:** Open. Above the stop line. Source: §11 Phase 2 ("probably the
+highest-leverage door we have, and the one we have most under-rated"). Let a
+person follow a vendor and be captured **when NO drop is live** — the "nothing
+on" state of the permanent vendor page (T-CAP-1). Capture without a sale.
+
+**Explicitly distinct from T5-8** (interest registration, ✓ COMPLETE) and
+T-notify-next-time (sold-out waitlist, ✓ COMPLETE): both of those are
+**drop-scoped** — they attach to a specific `drop_id` in `drop_signals`. A
+vendor-scoped follow has no drop to attach to.
+
+**Requires vendor-scoped signals:** `drop_signals` is currently **drop-scoped**
+(`drop_signals(drop_id, customer_id, kind)`) — note this. A follow needs a
+vendor-scoped signal (e.g. a `vendor_id`-keyed signal, or a nullable `drop_id`
+with a `vendor_id` column), so the mechanic must be extended, not reused as-is.
+**Cross-reference:** T-CAP-1 (the "nothing on" surface), T5-8 / T-notify-next-time
+(drop-scoped siblings), T-CAP-10 (capture origin = 'follow').
+
+**T-CAP-9 · Identity resolution — one customer across counter / window / drop**
+
+**Status:** Open. Above the stop line. Source: §11 Phase 3 (Asset integrity —
+"ships *with* Phase 2, not after"). A customer who orders at the counter, then at
+a drop, then through a window must become **one** customer, not three. Without
+it, *"every way you sell builds one customer base"* is a claim we cannot honour,
+the repeat-customer signal silently fails, and the intelligence layer reads three
+strangers where there is one regular — which quietly corrupts every T-MOAT
+signal downstream. Broader than the import-time dedup already shipped in
+`bulk-create-customers` (email-then-phone, four-way, import-scoped) — this is
+cross-door resolution across all capture surfaces. **Cross-reference:** T-CAP-10
+(capture origin), T-MOAT-1-equivalent clustering in T5-9 (depends on this being
+correct).
+
+**T-CAP-10 · Capture-origin extension — source per touch, cannot be retro-fitted**
+
+**Status:** Open. Above the stop line. Source: §11 Phase 3 ("capture origin on
+every touch... This cannot be retro-fitted. The data is captured from the first
+order, or it never exists"). `customer_relationships.source_drop_id` already
+exists (also added incidentally by T5-C2's schema block — verify before
+re-adding); extend capture-origin to every new capture door and add a
+**`source_type`** field valued `'drop' | 'presence' | 'window' | 'follow' |
+'import' | 'host'`. **Audit note:** `customer_relationships` already carries a
+`source` column (used today with `'import'`, e.g. `source === 'import'` in
+home/customers state) — reconcile whether `source_type` reuses/renames `source`
+or is added alongside it, before building. **Cross-reference:** T-CAP-3/4/5/7
+(each writes a distinct origin), T5-C2 (also touches `source_drop_id`), T-CAP-9.
+
+**Not created — close equivalent already exists (reported, not duplicated):**
+- **T-CAP-6 · Sold-out capture** → shipped as **T-notify-next-time** (✓ COMPLETE
+  2026-07-14): `register-interest` accepts `kind='waitlist'` for sold-out/closed
+  drops; order.html renders the demand-capture block; drop-manager surfaces
+  `waitlist_count`. The full-drop dead end is already a capture moment.
+- **T-CAP-8 · Bring-your-own-list import** → shipped as `customer-import.html` +
+  the `bulk-create-customers` Edge Function (WORKING since 2026-05-15; closed
+  T-ops-rls-customer-import). CSV import with four-way dedup is live. (Advanced
+  POS/email/booking import remains open under T5-12.)
+
+---
+
+## ⬇️ BELOW THE STOP LINE — The moat (T-MOAT-)
+
+The moat (Hearth_Strategy.md §8 Tier 3, §11 Phases 5–7, §12.3 engines). No
+competitor has this; Hearth lives or dies here. Every hour beyond the stop line
+belongs here. Classified below the stop line by the banner above.
+
+**T-MOAT-2 · Recommendation surface — sentences, not charts (cross-reference)**
+
+**Status:** Open — **folded into the reframed T5-15**, cross-referenced here so
+the moat cluster is complete. Source: §11 Phase 5, §12.3 Engine 3, §9.3. T5-15
+was reframed (PR #470) to BE the recommendation surface: plain-English signals
+(*"140 of your customers live in Broadstone. That's a Friday drop."*), **not** a
+dashboard or charts — closing the "a dashboard reports what happened; the vendor
+still has to work out what to do" gap is the differentiation. It is also the
+free-tier graduation mechanism (§9.3). **Do not build a second ticket — build
+T5-15.** This entry exists only as the moat-cluster pointer. **Cross-reference:**
+T5-15 (the actual ticket), T-MOAT-1-equivalent (geographic clustering in T5-9,
+the primitive it reads), Hearth_Insights_Intelligence_Layer_Scope.md.
+
+**T-MOAT-3 · Referral mechanic — Engine 4, the only compounding channel**
+
+**Status:** Open. Below the stop line. Source: §12.3 Engine 4. Currently **absent
+from every document** — self-serve, operators and partnerships each add a *fixed*
+number of vendors a year, but **referral scales with the base we already have**
+(independents know each other; a warm peer introduction beats any cold approach
+and costs nothing). Above ~0.8 referrals per vendor per year with churn
+contained, it begins to run on its own. **The reward must be status and early
+access — NEVER a discount** (discounting is off-brand, §9.1/Appendix, and erodes
+the vendor's margin to buy growth we should earn). *"You brought someone in — you
+get first look at what we build next."* **This needs a mechanic and one does not
+yet exist — it should be designed** (design-reference-first, like the other voice
+work). **Cross-reference:** §13 item 7 (referral is unproven AND unbuilt).
+
+**T-MOAT-4 · Affinity partnership support — gym / office / nursery**
+
+**Status:** Open. Below the stop line. Source: §6.4, §11 Phase 6, §10.3. Support
+for running an affinity drop with an audience-and-shared-context partner (gym,
+workplace, nursery, co-working) — distinct from a host (no venue, no occasion, no
+service window; §6.4) and distinct from affinity *matching/discovery* (already
+specced inside T5-9 cross-category matching and T5-26 outreach — this is the
+partner-facing operational support, not the match).
+
+- **Pay partners in early access, not margin.** *"Gym members get first choice on
+  Wednesday's menu, 24 hours before anyone else."* No discount, no margin erosion,
+  no payout infrastructure — the insider mechanic already in the Drop
+  Communications Architecture.
+- **Curated menu = a relabelled subset, not a second kitchen.** A separate line
+  means separate prep and SKUs (real cost to a small cafe); it must be a
+  relabelled selection of what the vendor already makes.
+- **Ask the cannibalisation question first (§6.4):** many gyms already run a café
+  / shake bar — establish whether we'd be *adding* revenue or cannibalising theirs
+  before anything else.
+- Concierge/by-hand first (§11 Phase 6) — no platform build; line up one affinity
+  partner for Healthy Habits by hand (§13 what-happens-next item 3, "the
+  highest-value experiment available to us").
+
+**Cross-reference:** T5-9 (cross-category affinity matching), T5-26 (host/partner
+outreach), T5-C2 (early-access comms), §6.4.
+
+**Not created — close equivalent already exists (reported, not duplicated):**
+- **T-MOAT-1 · Geographic clustering** → already specced **inside T5-9**
+  (Recommendation engine — matured intelligence): "Customer clustering by outward
+  postcode with recency and frequency weighting... ranked list of postcode areas
+  with customer count, order history, and a confidence score (Strong / Building /
+  New territory)" — the confidence score IS the graceful-degradation / "not enough
+  data yet" requirement (§11 Phase 5). Rather than duplicate, flagged for Ed's
+  decision: **extract the clustering primitive out of T5-9 into a standalone
+  T-MOAT-1**, or keep it folded in T5-9. Not created pending that call.
+
+---
+
 ### Service Board (T-sb) — ✓ COMPLETE
 
 Service Board hardening workstream, all four tickets shipped and merged

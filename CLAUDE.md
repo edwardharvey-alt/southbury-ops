@@ -2164,6 +2164,27 @@ index of currently open tickets only — not started, partial, or in progress. W
 a ticket closes, mark it ✓ COMPLETE in BACKLOG.md and remove its line from this
 index.
 
+### Capture layer (T-CAP) — ⬆️ ABOVE the stop line (table stakes)
+See the STOP LINE banner + T-CAP cluster at the top of BACKLOG.md. Capture-first
+entry points per Hearth_Strategy.md §11 Phases 1–3; build cheap, build fast, then
+stop.
+- T-CAP-1 — Permanent vendor page: durable `lovehearth.co.uk/{vendor}` resolving to ordering / drop announced / drop live / nothing on; the "nothing on" state IS a capture surface; live state shows real capacity via an Edge Function (never anon PostgREST — see T-drop-capacity-anon-grants). **THE UNLOCK / highest capture-layer priority.** §11 Phase 1. — open
+- T-CAP-2 — Vendor QR vs drop QR: two artefacts — durable vendor QR → vendor page; drop QR → a drop, short-lived. §11 Phase 1. — open
+- T-CAP-3 — Till QR (capture only): no ordering, no payment; "scan to hear what's next." Capture-only is principled, not a Stripe compromise (§9.2). — open
+- T-CAP-4 — Table QR / order-ahead: order + pay; justified by staff-time / queue saving. §11 Phase 2. — open
+- T-CAP-5 — Ordering windows, ring-fenced slotted capacity: §6.2 design — default closed, real declared capacity (no rejection), slotted, planned variation only, never dynamic, never "always on." Distinct from the event multi-window feature. — open
+- T-CAP-7 — Follow / notify-me (vendor-scoped): capture when NO drop is live. Explicitly distinct from T5-8 (drop-scoped, ✓ COMPLETE); `drop_signals` is currently drop-scoped, so vendor-scoped signals must be added. §11 Phase 2. — open
+- T-CAP-9 — Identity resolution: one customer across counter/window/drop; without it the repeat-customer signal and the intelligence layer silently fail. §11 Phase 3. — open
+- T-CAP-10 — Capture-origin extension: `customer_relationships.source_drop_id` already exists; extend to new capture doors and add a `source_type` (`'drop'|'presence'|'window'|'follow'|'import'|'host'`); reconcile with the existing `source` column. Cannot be retro-fitted. §11 Phase 3. — open
+- *(T-CAP-6 sold-out capture NOT created — shipped as T-notify-next-time ✓ COMPLETE; T-CAP-8 BYO import NOT created — shipped as customer-import.html + bulk-create-customers.)*
+
+### The moat (T-MOAT) — ⬇️ BELOW the stop line
+See the T-MOAT cluster at the top of BACKLOG.md. Hearth_Strategy.md §8 Tier 3, §11 Phases 5–7, §12.3 engines.
+- T-MOAT-2 — Recommendation surface (sentences, not charts): **folded into the reframed T5-15** — build T5-15, not a second ticket; pointer only. §11 Phase 5, §12.3 Engine 3, §9.3. — open
+- T-MOAT-3 — Referral mechanic (§12.3 Engine 4, the only compounding channel): absent from every document; reward = status + early access, never a discount; needs a mechanic that does not yet exist. — open
+- T-MOAT-4 — Affinity partnership support (gym/office/nursery): early-access currency not margin; curated menu = a relabelled subset, not a second kitchen; ask the cannibalisation question first. Distinct from affinity matching (T5-9/T5-26). §6.4. — open
+- *(T-MOAT-1 geographic clustering NOT created — already specced inside T5-9; flagged for Ed's decision to extract as a standalone primitive vs keep folded.)*
+
 ### Tier 2 — Must work before showing anyone
 - T2-2 — Service Board: remove need to scroll to reach Kanban — open
 
