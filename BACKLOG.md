@@ -23,6 +23,57 @@ Caveats:
 
 ## Development backlog
 
+---
+
+## ⛔ THE STOP LINE — table stakes above, the moat below
+
+> **Per Hearth_Strategy.md §11 Phase 4 (the stop line).** This banner is a
+> **classifier**, not a physical ordering — the tickets below are grouped by
+> Tier (T2–T9), which cuts across the capture→moat axis. Read every ticket
+> through this line.
+
+**At this point Hearth is "a competent ordering platform with a good customer
+list." So is Flipdish. So is Slerp. So is Square. One of them is free.**
+Everything **above the line** is *table stakes* — the price of entry, not the
+business. Build it cheap, build it fast, then stop. Every hour **below the
+line** belongs to the moat. No new capture surfaces; no feature-parity chasing.
+If a vendor asks for something Flipdish already does well, the answer is *"not
+yet"* — unless it feeds the customer asset or the intelligence layer.
+
+**ABOVE THE LINE — table stakes (be competent, never distinctive; §8 Tier 1 +
+§11 Phases 1–3).** The capture layer and everything at or below it: Identity &
+Offer, demand capture doors (permanent vendor page, table/till QR, ordering
+windows, follow/notify-me, sold-out capture, import), moment design &
+fulfilment, the Service Board, Drop Studio, the Offer catalogue, Stripe/payments,
+and asset integrity (identity resolution, capture origin). In backlog terms:
+most of Tier 2–4, the ordering/capacity/fulfilment work in Tier 5-B, and Tier 6
+production readiness.
+
+**BELOW THE LINE — the moat (Hearth lives or dies here; §8 Tier 3 + §11 Phases
+5–7 + §12.3 engines).** No competitor has this:
+
+- **Intelligence & coaching (§11 Phase 5 — the primary moat investment).** The
+  recommendation surface (sentences, not charts), geographic clustering, cadence
+  monitoring / scorecard coaching, menu intelligence (occasion/shape/audience —
+  never the food), the neighbourhood recommendation. Tickets: T5-15, T5-C5,
+  T4-29, the intelligence-engine work.
+- **Host, affinity & community network (§11 Phases 6–7).** Recruited by hand per
+  vendor first (a motion, not a platform), then directory/discovery/matching
+  once catchment density exists. Tickets: T5-16 → T5-20, T5-26, T5-27,
+  T5-C2/C3/C4.
+- **Vendor referral (§12.3 Engine 4 — the only compounding channel).** Currently
+  **absent from every document** — status and early access, never a discount. It
+  needs a mechanic and one does not yet exist; it should be designed.
+
+**The convergence that makes the line non-negotiable (§12.3):** the intelligence
+layer is simultaneously our moat, our salesperson (Engine 3 — it sells the drop
+so vendor #20 converts with no founder in the room), our coach (Engine 1 —
+productise the cadence coaching), and our retention mechanism. **Building the
+moat *is* the scaling solution.** If founder-led acquisition is still the
+majority of our vendors in year three, we have a job, not a company.
+
+---
+
 ### Service Board (T-sb) — ✓ COMPLETE
 
 Service Board hardening workstream, all four tickets shipped and merged
@@ -2420,6 +2471,22 @@ weekly rhythm table.
 
 T5-C5: Cadence visibility and consistency mechanics
 
+**Strategic reframe — Engine 1 · Productise the coach (Hearth_Strategy.md
+§12.3).** This is the ticket that operationalises the "Repetition Layer"
+coaching, and it is **the first throughput unlock.** Human coaching through
+the first ten drops is currently what stops vendors churning; encoding it
+removes our largest recurring human cost. The copy is **already written** in
+Hearth_Repetition_Layer_Voice_Spec.md — the scorecard variants, the
+cadence-drift line, the "what's normal at drop three" reassurance — so this
+is an encoding job, not an authoring one. **Hard dependency: this must land
+before self-serve onboarding (§12.3 Engine 2).** Onboard vendors at volume
+before the coach is encoded and they churn in the fragile weeks with nobody
+holding them — the one sequencing error that would actively hurt us. Sits
+**below the stop line** (§11 Phase 5, the primary moat investment); building
+this coach *is* part of the scaling solution, not a nice-to-have. (Named
+"Cadence visibility and consistency mechanics" historically; that is the
+same work as Engine 1.)
+
 **Status:** Open. Tier 5. Part 1 can ship early (Home dashboard and
 scorecard enhancements — no new Edge Functions). Part 2 (gap alert
 notifications) depends on T5-11 comms engine.
@@ -2722,10 +2789,25 @@ cluster analysis, strongest areas, host performance, vendor vs host
 sourced demand, recommended next actions surfaced across all three
 consumer pages. Dependency: T4-28, T4-27, T4-16.
 
-Strategic framing: the goal of this layer is to make the compounding
-asset tangible. Every drop adds to something. This surface shows what
-has been built, where it is strongest, and what it is worth — in plain
-language a vendor can act on.
+Strategic framing (reframed per Hearth_Strategy.md §12.3 Engine 3 and
+§9.3): Insights is **not a dashboard or a reporting layer.** A dashboard
+reports what happened and leaves the vendor to work out what to do —
+closing that gap is our differentiation. Two things this surface actually
+is:
+
+1. **The recommendation surface (§12.3 Engine 3 — "the intelligence layer
+   sells the drop").** Plain-English signals, not charts: *"140 of your
+   customers live in Broadstone. That's a Friday drop."* Sentences a vendor
+   can act on, derived honestly from their own data and degrading gracefully
+   ("not enough data yet") below the threshold. This is the only mechanism
+   that lets vendor number twenty convert with no founder in the room — and
+   it is the same build as the moat.
+2. **The mechanism that converts the free tier (§9.3 — "graduation becomes
+   the intelligence layer's explicit job").** Not passive reporting — active
+   pressure: *"You now have 140 customers in Broadstone. That's a drop."*
+   Repeated, patiently, until they run one. This is how a capture-only /
+   window vendor graduates to drops (the moment Hearth actually earns), so
+   the surface is a revenue mechanism, not a read-only report.
 
 Design ref / governing scope: Hearth_Insights_Intelligence_Layer_Scope.md — voice,
 drop-granularity discipline, honesty gate; defers T4-29.
@@ -3736,6 +3818,9 @@ Specific items:
 - drop_capacity table has all-nullable columns, no FKs, and uses
   legacy pizza vocabulary. Likely a stale view that didn't get the
   v_ prefix. Confirm whether it's a relation or a view.
+  **✓ RESOLVED / verified 2026-07-15: `drop_capacity` is a view, not a
+  table.** This single sub-item is closed; the other items in T5-B5
+  remain open and the ticket stays open.
 - vendors brand columns — three overlapping generations exist. Pick
   one canonical set, migrate reads/writes, drop the others.
 - Missing FK constraints: drops.series_id should reference
@@ -4248,7 +4333,14 @@ Discovered alongside T5-B30 during the same Phase 3 session.
 Distinct enough to track separately because the fix lives in
 order.html state-machine logic rather than in CORS configuration.
 
-T5-B32: Duplicate anon SELECT policies on products.
+T5-B32: Duplicate anon SELECT policies on products. ✓ COMPLETE 2026-07-15.
+
+**Closure note (2026-07-15):** Products RLS confirmed clean — a single
+anon SELECT policy active plus authenticated owner-scoped access, verified.
+The overlapping/duplicate anon SELECT policies this ticket tracked are gone,
+so the policy set is now unambiguous. Closed per this session's verification.
+
+Original context —
 Surfaced during the 2 May 2026 audit while reviewing categories /
 products / bundles RLS in support of T5-B16. The products table has
 multiple anon SELECT policies that overlap (same pattern as the
@@ -4908,6 +5000,22 @@ T-dead-centre-postcode-cleanup — remove dead centrePostcode input from drop-ma
 
 T-drop-capacity-anon-grants — revoke residual non-SELECT anon privileges on v_drop_summary / drop_capacity
 
+**Reframe (2026-07-15) — a documented prerequisite for the permanent vendor
+page's public read path, not standalone housekeeping.** Hearth_Strategy.md
+§11 Phase 1 makes the permanent vendor page (`lovehearth.co.uk/{vendor}`) the
+anchor of the whole capture model: a durable address that always resolves to
+whatever is true now — ordering open, drop live, or the "nothing on" capture
+state — and when a drop is live/open it must show **real, honest capacity**
+(§6.2, the Trust & Governance constraint in §8). That public read path is
+where `drop_capacity` / capacity data gets exposed to anonymous callers, so
+its grants must be settled before that page ships. **Two things to hold:**
+(1) the permanent vendor page must read capacity via a JWT/token-scoped Edge
+Function (the `v_drop_public` / `host-view-summary` pattern), **never direct
+anon PostgREST** against `v_drop_summary` / `drop_capacity`; (2) the residual
+non-SELECT grants below are **defence-in-depth** — inert on the aggregating
+(non-auto-updatable) view, but they should be revoked so the anon role holds
+nothing on these objects once the public capacity read is EF-mediated.
+
 **Status:** Open. Tier 5-B. Post-launch, low priority — write-side hygiene, not a read exposure. Carried forward from the operator-read-auth capstone (✓ COMPLETE 2026-06-27), which revoked anon SELECT but did not address the remaining grants.
 
 **Problem:** After the operator-read-auth capstone revoked anon `SELECT` on `v_drop_summary` and `drop_capacity`, the anon role still retains the other six table privileges on both objects — `INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`, `REFERENCES`, `TRIGGER`. On `v_drop_summary` these are inert: it is a non-updatable aggregating view, so the write privileges cannot do anything. On `drop_capacity` they may be a live write exposure **if** `drop_capacity` is a base table rather than a view — an aggregating/derived view would make them inert there too, but a base table would let the anon role mutate capacity rows.
@@ -5215,6 +5323,11 @@ in the order payload + `create-order` schema validation, and any
 remains. Follows T-B5-delivery-not-a-line-item (which removes only the
 UI line).
 
+**Status note (2026-07-15): Schema half complete** (`orders.delivery_pence`
+dropped, verified 2026-07-15); **code retirement** (`getDeliveryChargePence()`,
+payload field, `create-order` validation) **still outstanding.** Ticket
+stays open.
+
 T-B1-landing-mockup — Marketing landing page shows fabricated static scarcity
 
 **Status:** Open. Post-launch (low priority). Source: Pass B / B1.
@@ -5279,6 +5392,15 @@ spillover. `v_drop_summary` re-derives `'closed'` in-view via a CASE
 can diverge from the stored status because it only knows `'closed'` (not
 `'completed'`) and ignores `delivery_end`, and it leads the engine by up
 to 15 minutes (the cron interval).
+
+**Evidence confirmed this session (2026-07-15):** `v_drop_summary` derives
+`'closed'` in-view via a CASE (`status = 'live' AND closes_at < now()` →
+`'closed'`) **while `pg_cron` (`advance_drop_lifecycle()`, every 15 min) also
+writes the closed state to the stored `status`** — two independent writers of
+the same fact. A view reader and a stored-status reader can therefore disagree
+by up to the 15-minute cron interval (the window between `closes_at` passing
+and the next cron tick). This is the concrete divergence the collapse-to-
+`d.status` fix removes.
 
 **Fix shape (not built):** collapse the view to project `d.status`
 directly. Audit-first — grep every surface that reads `v_drop_summary`
@@ -5445,11 +5567,14 @@ migration (#380) to avoid guessing tint/shade values, so the surface is
 partially converted. Migrate them to Hearthfire-derived equivalents so
 Activation fully converges on one accent.
 
-**Platform convergence note:** the canonical primary is now Hearthfire;
-the remaining `#8B6B3F` across the codebase is scoped to the
-vendor-fallback role. The brand playbook doc (outside the repo) still
-names `#8B6B3F` as primary and must be updated by Ed to record Hearthfire
-as canonical — flagged here so it isn't lost.
+**Platform convergence note:** the canonical primary is now Hearthfire
+(`#C4511A` / `--h-fire`); the remaining `#8B6B3F` across the codebase is
+scoped to the vendor-fallback role. The brand playbook is now **committed in
+the repo** at `Hearth_Brand_Playbook.md` (§8), which records `#C4511A` as the
+platform accent and `#8B6B3F` only as the `--vendor-brand-primary` fallback —
+so the earlier "external playbook still names #8B6B3F as primary" flag is
+**resolved.** The only work remaining under this ticket is the CSS tint
+convergence described above.
 
 ### Tier 6 — Production readiness
 

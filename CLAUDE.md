@@ -50,7 +50,8 @@ Core belief: great local food should strengthen communities, not bypass them.
 - service-board.html — Service Board (live operational view for active
   drops). Formerly index.html; renamed on 2026-04-20.
 - drop-manager.html — Drop Studio (create and configure drops)
-- drop-menu.html — Menu Library (products, bundles, categories)
+- drop-menu.html — Offer (products, bundles, categories; nav canon is
+  "Offer" per Hearth_Brand_Playbook.md §7 — formerly labelled "Menu Library")
 - brand-hearth.html — Brand Hearth (vendor identity editor)
 - insights.html — Insights (analytics dashboard)
 - customers.html — Customers workspace (owned-customer asset view)
@@ -1909,7 +1910,8 @@ the control surface for the platform itself.
 - Never: marketplace language, fake urgency, discount/promotion framing,
   algorithmic language
 - Vocabulary: Drop, Capacity, Host, Planned moment, Service Board,
-  Drop Studio, Menu Library, Brand Hearth, Insights
+  Drop Studio, Offer, Brand Hearth, Insights
+  (nav canon is "Offer", not "Menu Library" — Hearth_Brand_Playbook.md §7)
 - Avoid: Campaign, Listing, Inventory, SKU, Funnel, Promotion, Deal
 - **Outbound, customer-facing copy never names "Hearth".** Any text a
   host or vendor sends to people outside the platform (shareable
@@ -2252,7 +2254,7 @@ Reveal hook field — `#dropRevealLine` is now a `<textarea>` (4 rows, `maxlengt
 - T5-11 — Comms engine V1 (transactional + demand generation email) — partial. T5-11-minimum (order_confirmed email via Resend, fired by `stripe-webhook` after Stripe success) shipped 2026-05-16 (PR #266). Slice 1 ✓ COMPLETE 2026-06-19: interest-registrant ordering-open auto-email shipped — `dispatch-interest-open` EF + `comms_log` ledger, scheduled by a GitHub Actions pinger (`.github/workflows/comms-dispatch.yml`, every 30 min). Remaining triggers — order_ready automated SMS, drop_announced, drop_reminder, drop_early_access, post_drop_thank_you — remain open per pre-launch scope decision.
 - T5-12 — Vendor customer data import: advanced (POS / email / booking integrations) — open
 - T5-14 — Home page: demand orchestration dashboard — open
-- T5-15 — Insights: demand and audience intelligence layer — open
+- T5-15 — Insights: the recommendation surface (plain-English signals, not charts) AND the mechanism that converts the free tier by driving graduation (capture → drop). Reframed per Hearth_Strategy.md §12.3 Engine 3 (the intelligence layer sells the drop) and §9.3 (graduation is the intelligence layer's explicit job — not a dashboard). — open
 - T5-16 — Organisations: shared entity for hosts and communities — open
 - T5-17 — Communities: first-class entity — open
 - T5-18 — Community consent and permissions model — open
@@ -2267,7 +2269,7 @@ Reveal hook field — `#dropRevealLine` is now a `<textarea>` (4 rows, `maxlengt
 - T5-C2 — WhatsApp activation system — templates, segmentation, phone consent, broadcast management — open
 - T5-C3 — WhatsApp Business API / Meta Tech Provider integration (Phase 2 — gated on UK Coexistence) — open
 - T5-C4 — Drop activation guide — vendor-facing communication playbook (Part 1: Drop Studio; Part 2: guide page) — open
-- T5-C5 — Cadence visibility and consistency mechanics (Part 1: dashboard/scorecard; Part 2: gap alerts via T5-11) — open
+- T5-C5 — Engine 1 · Productise the coach (Hearth_Strategy.md §12.3): encode the cadence coaching through the first ten drops — scorecard variants, cadence-drift line, "what's normal at drop three" — whose copy is already written in Hearth_Repetition_Layer_Voice_Spec.md. The first throughput unlock; **must land before self-serve onboarding** (§12.3 Engine 2), else vendors churn in the fragile weeks with nobody holding them. Part 1: dashboard/scorecard; Part 2: gap alerts via T5-11. — open
 - T5-C6 — AI-powered vendor activation plan — post-onboarding personalised first-8-drops strategy — open
 - T-drop-anticipation-window-default — ~~Drop Studio: default opens_at to delivery_start so publish=announce and the publish→opens gap is the anticipation window. Pre-launch.~~ ✓ COMPLETE 2026-06-15. New-drop default (`opens_at = delivery − 24h`) was already live in `createNewDrop`; #369 closed the only remaining gap (the duplicate path). Both creation paths now produce the announce→open window.
 - T-comms-automation — Behaviour-triggered comms automation + plain-language insight prompts (competitor-derived, Owner.com) — open
@@ -2284,7 +2286,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 
 ### Tier 5-B — Platform improvements
 - T5-B5 — Schema cleanup: legacy artefacts and missing constraints — open
-- T-drop-capacity-anon-grants — revoke residual non-SELECT anon privileges (INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER) on `v_drop_summary` / `drop_capacity` left after the operator-read-auth SELECT revoke; inert on the aggregating view, possibly a live write exposure on `drop_capacity` if it's a base table (determine relation-vs-view first — overlaps T5-B5). Post-launch, low priority. — open
+- T-drop-capacity-anon-grants — documented prerequisite for the permanent vendor page's public read path (Hearth_Strategy.md §11 Phase 1 — the durable `lovehearth.co.uk/{vendor}` anchor whose "nothing on" state is a capture surface, and whose live/open state must show real capacity). The permanent vendor page MUST read capacity via a JWT/token-scoped Edge Function, never direct anon PostgREST. Revoke residual non-SELECT anon privileges (INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER) on `v_drop_summary` / `drop_capacity` left after the operator-read-auth SELECT revoke; inert on the aggregating (non-auto-updatable) view, so this is defence-in-depth there, but possibly a live write exposure on `drop_capacity` if it's a base table (determine relation-vs-view first — overlaps T5-B5). Post-launch, low priority. — open
 - T5-B6 — invite-vendor: hardcoded production redirect URL — open
 - T5-B7 — Edge Functions missing top-level try/catch — partial (create-host remaining)
 - T5-B8 — invite-vendor: doesn't use jsonResponse helper — open
@@ -2302,7 +2304,6 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B31 — Legacy capacity columns cleanup — open. `orders.pizzas` (NOT NULL CHECK >= 1), `drops.capacity_pizzas`, `drops.max_orders` are still being populated as `Math.max(1, capacity_units)`. Audit all read sites for these columns; remove those reads; then drop the columns. Currently written-only by the create-order Edge Function (line marked with `// LEGACY: see SCHEMA.md — orders.pizzas column slated for removal`). Bounded one-session piece of work.
 - T5-B24 — Password reset page: button stuck on "Sending..." — open (cosmetic)
 - T5-B25 — admin.html: vendor creation is not atomic — open
-- T5-B32 — Duplicate anon SELECT policies on products — open
 - T5-B36 — duplicate-bundle rollback verification — open
 - T5-B37 — save-bundle-line update-path partial-failure note — open
 - T5-B40 — Audit v_*_enriched views for missing columns — open
@@ -2320,7 +2321,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T-B1-deadcode-capacityleft — remove the dead `formatCapacityLeft` helper in `order.html` (~2110, defined, never called). Trivial, post-launch. Source: Pass B / B1. — open
 - T-B3-orders-pizzas-rename — rename the legacy capacity column `orders.pizzas` (and `capacity_pizzas`) to a generic units name; touches `create-order`, `v_drop_capacity_usage`, and the order insert (logic is correct — clarity only; overlaps T5-B31). Post-launch. Source: Pass B / B3. — open
 - T-C4-host-poster-session-isolation — `host-poster.html` createClient now passes `{ auth: { persistSession: false, autoRefreshToken: false } }` like `host-view.html`, so host-facing surfaces can't inherit a vendor session. ✓ COMPLETE 2026-06-15 (#376). Source: Pass C / C4.
-- T-A6-vsummary-status-single-source — `v_drop_summary` re-derives `'closed'` in-view via a CASE on `closes_at`; now redundant with the stored `pg_cron` lifecycle engine and able to diverge (only knows `'closed'` not `'completed'`, ignores `delivery_end`, leads the engine by up to 15 min). Collapse to project `d.status` directly after grep-confirming no surface relies on the instant live→closed flip (ordering closure is server-side, not off this label). Audit-first; small view migration; not pre-launch-blocking. Post-launch. Source: Pass C / C3 spillover. — open
+- T-A6-vsummary-status-single-source — `v_drop_summary` re-derives `'closed'` in-view via a CASE on `closes_at`; now redundant with the stored `pg_cron` lifecycle engine and able to diverge (only knows `'closed'` not `'completed'`, ignores `delivery_end`, leads the engine by up to 15 min). Confirmed this session (2026-07-15): the view's CASE derivation and the `pg_cron` engine BOTH write the closed state, so a view reader and a stored-status reader can disagree by up to the 15-min cron interval. Collapse to project `d.status` directly after grep-confirming no surface relies on the instant live→closed flip (ordering closure is server-side, not off this label). Audit-first; small view migration; not pre-launch-blocking. Post-launch. Source: Pass C / C3 spillover. — open
 - T-C-inline-createClient-host-pages — `host-profile.html`, `hosts.html`, `host-terms.html` instantiate `supabase.createClient()` inline rather than via the `_getHearthClient()` singleton; no mutation risk (writes go through `functions.invoke`); `host-terms.html` also creates an unused dead client to drop. Pattern-consistency cleanup (root cause T5-B17). Post-launch, low priority. Source: Pass C / C1 spillover. — open
 - T-C-rm-onboarding-backup — delete `onboarding_backup.html` (untracked + gitignored, can't deploy) — the sole remaining copy of the deprecated direct-PostgREST-write onboarding pattern. Housekeeping. Source: Pass C / C1. — open
 - T-D4-reveal-line-semantics — `reveal_line` is now the Activation poster-hook field (written by Card 4's `#act-posterHookInput` in activation.html, rendered as the hero by activation-poster.html); the T5-25 docs that described it as the deferred caption-generator seed are corrected in this PR. No functional bug (poster reads what Activation writes), but before T5-25 Part 1 (caption generator) is built the caption seed must get its OWN column rather than reusing reveal_line. Post-launch, low priority. Source: Pass D / D4. — open
@@ -2332,7 +2333,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T-E1-promotion-plan-rename — PARTIAL. Rendered heading fixed ("Promotion plan"→"Help fill this drop", #379); still OPEN: internal rename of the `reviewPromotionPlan` element id + the drop-manager.html ~:4192 "Promotion plan" code comment. Post-launch, code only. Source: Pass E / E1. — open
 - T-E3-stale-nav-labels — PARTIAL. Dry-run-visible labels fixed (#379: home.html card titles, three drop-manager.html "Menu Library"→"Offer", brand-hearth.html error). Still OPEN, folded into T8-3-sub1: vendor-terms.html legal copy, order-entry.html legacy dev tool, home.html card icon glyphs 'ML'/'BH'. Source: Pass E / E3. — open
 - T-E4-activation-accent — ✓ DONE 2026-06-16 (#380). Hearthfire (`var(--h-fire)`/`#c4511a`) is the canonical Hearth accent; `#8B6B3F` retired as a Hearth primary but RETAINED as the `--vendor-brand-primary` fallback (must NOT migrate there — brand-bleed). Activation operator-chrome refs migrated; vendor-colour slots held. Source: Pass E / E4.
-- T-E4-activation-rgba-tints — finish the Activation Hearthfire convergence: `.act-channel-badge` (~:390) and `.act-social-toggle.is-on` (~:509) couple `#8B6B3F` with `rgba(139,107,63,…)` tints; `.actod-cta:hover` (~:125) uses `#75592f`. Held during #380 to avoid guessing tints. Also: the external brand playbook still names `#8B6B3F` primary and needs updating to Hearthfire. Post-launch, low priority. Source: #380. — open
+- T-E4-activation-rgba-tints — finish the Activation Hearthfire convergence: `.act-channel-badge` (~:390) and `.act-social-toggle.is-on` (~:509) couple `#8B6B3F` with `rgba(139,107,63,…)` tints; `.actod-cta:hover` (~:125) uses `#75592f`. Held during #380 to avoid guessing tints. The brand playbook is now committed at `Hearth_Brand_Playbook.md` (§8) with the accent corrected to `#C4511A` / `--h-fire` as the platform accent and `#8B6B3F` recorded only as the vendor-brand fallback — so the "external playbook still names #8B6B3F primary" flag is resolved; the remaining work here is the CSS tint convergence only. Post-launch, low priority. Source: #380. — open
 - Product options (menu modifiers) — feature ✓ COMPLETE (PRs #429–#434); see `docs/features/product-options.md` + operational learning #93. Deferred v1 scope (schema supports, UI does not yet write), all open post-launch: **T-opt-per-option-stock** (per-option stock limits); **T-opt-per-drop-override** (per-drop override of an option's `price_delta_pence`); **T-opt-on-bundles** (options on bundle lines — v1 is products-only, `create-order` rejects options on non-product lines); **T-opt-multiselect-groups** (multi-select / min-max groups — v1 writes fixed `1/1/required`). Full spec in BACKLOG.md. — open
 - T-sb-bundle-selection-aggregates — bundle *choice selections* render on the Service Board kanban card (Stage 5) but the aggregate views still show bundles parent-only: the "All items" prep sheet and "All orders" compact table have no per-selection breakdown (Stage 6 added *option* counts to the prep sheet, not bundle selection counts). NOT T-sb-3 (the prep-sheet build itself, ✓ COMPLETE #277) — a distinct, previously-untracked gap. Low priority, display-only. See BACKLOG.md. — open
 
