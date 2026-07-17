@@ -6378,6 +6378,37 @@ log of impersonation sessions (into T7-7), scoped read-only mode by
 default. Do not begin until the audit and security shape is agreed in
 Claude Chat. Not for launch.
 
+T-vendor-deactivation — Vendor lifecycle status + admin-list filter
+Status: Open. Not pre-launch-blocking; needed at first real vendor churn.
+
+The problem: vendors has no status column (confirmed by grep — no migration
+defines it, no code reads/writes it; CLAUDE.md schema lists status on every
+table except vendors). No way to deactivate, archive or hide a vendor. So the
+admin vendor list (admin-list-vendors → v_admin_vendor_list, rendered in
+platform-admin.html) shows all rows including test clutter with no filter
+available; and a churned vendor could not be retired (their public page would
+still resolve).
+
+Fix shape (not built): mirror the existing hosts.status pattern (values
+active/inactive/archived; list-hosts filters .neq("status","archived")).
+Add vendors.status (text, NOT NULL, default 'active') via migration; filter
+v_admin_vendor_list / admin-list-vendors to exclude archived; decide whether
+customer-facing reads (get-vendor-page, v_vendor_public) honour status so an
+archived vendor's page stops resolving (design decision); permit status writes
+via update-vendor ALLOWED_FIELDS, admin only. Then archive the inert test rows
+reversibly: robs-nutz, teddys-pies, teddys-tea, test-14, test-activation,
+test-vendor-1, jigsaw-sausages, nathalies-novelties, test-12. Explicitly NOT
+healthy-habits (live row, 0 orders but real), NOT test-11 (dry-run vendor),
+NOT anything with order history.
+
+Guardrails: soft-delete only — never hard-DELETE test vendors; they have
+FK-linked child rows (drops, activation records, customer_relationships, offer
+rows) that a delete would block on or cascade through irreversibly. Archiving
+via status is reversible; deletion is not.
+
+Relations: hosts.status pattern (proven shape to copy), pre-go-live test-data
+tidy-up (this is the safe mechanism for it).
+
 #### Monitoring track
 
 **Phase 1 — build soon; the platform currently has no observability,
@@ -6715,6 +6746,40 @@ current scrim colour source per card before editing.
 T-E4-activation-rgba-tints (the operator-chrome rgba convergence — sibling
 brand-colour cleanup), T5-25 (generated-asset export hard rules), operational
 learnings #63 and #85.
+
+T-vendor-fee-copy — Reconcile vendor-facing fee copy with live cost-recovery
+Status: Open. Commercial-decision gate before any copy is written. Near-term
+(fee is live on all vendors) but not blocking.
+
+The problem: Cost-recovery (1.5% + 20p) is now applied to every vendor via
+platform_fee_pct / platform_fee_fixed_pence (all rows backfilled; new-vendor
+default set in merged PR #474). No vendor-facing surface names or explains the
+Hearth application fee. The only fee figure shown is the onboarding FAQ
+(onboarding.html:1466), which attributes 1.5% + 20p to Stripe alone and does
+not mention that Hearth's application fee is the recovery mechanism. Conflict
+risks: vendor-terms.html:152 ("passed through at cost … no markup") must stay
+literally true; vendor-terms.html:150 (three-month-free promise) is now stale
+since cost-recovery is live for all vendors; why-hearth.html / index.html
+"no commission" copy is fine under pass-through framing, conflicts under a fee
+framing.
+
+Decision required first (Ed): (1) pass-through vs fee — is the vendor covering
+Stripe's cost (Hearth nets ~£0) or is Hearth charging on top? (2) is the
+three-month free trial over (making terms:150 stale)?
+
+Fix shape (not built, assumes pass-through confirmed): reword onboarding FAQ so
+~1.5% + 20p reads as the card-processing cost the vendor bears (recovered via
+Hearth, no markup); reconcile vendor-terms.html (no-markup line + stale
+free-trial line); confirm "no commission" marketing still reads true. Word the
+figure as "approximately/up to" since a flat 1.5% + 20p under-recovers on
+premium/international cards (Hearth is safe on no-markup, but the wording should
+never make it technically a markup on a cheap-card transaction).
+
+Guardrails: copy only, not money-path. Must ship consistently across FAQ, terms
+and marketing in one pass. Low severity — risk is under-explanation, not
+overcharge.
+
+Relations: PR #474 (fee default), repetition-layer voice spec, vendor-terms.html.
 
 ### Tier 9 — Agentic AI workstream
 
