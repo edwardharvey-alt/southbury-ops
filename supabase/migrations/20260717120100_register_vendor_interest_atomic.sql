@@ -13,6 +13,19 @@
 -- at all, per the task's explicit "only populate those columns when the
 -- customer is newly created" and the additive/no-mutation safety gate.)
 
+-- DROP before CREATE is REQUIRED, not housekeeping. This function's output column
+-- was renamed (customer_id -> out_customer_id, see below). For a RETURNS TABLE
+-- function prorettype is RECORD, and CREATE OR REPLACE compares the row type
+-- defined by the OUT parameters — attribute NAMES included — against the existing
+-- function. Renaming an output column therefore fails on any database that already
+-- has the previous definition with:
+--   ERROR: cannot change return type of existing function
+--   DETAIL: Row type defined by OUT parameters is different.
+--   HINT: Use DROP FUNCTION ... first.
+-- The GRANT/REVOKE block at the foot of this file re-establishes privileges, which
+-- the DROP discards.
+DROP FUNCTION IF EXISTS public.register_vendor_interest_atomic(uuid, text, text, text, text, boolean);
+
 CREATE OR REPLACE FUNCTION public.register_vendor_interest_atomic(
   p_vendor_id uuid,
   p_name      text,
@@ -21,7 +34,15 @@ CREATE OR REPLACE FUNCTION public.register_vendor_interest_atomic(
   p_phone     text,
   p_consent   boolean
 )
-RETURNS TABLE (customer_id uuid, newly_following boolean)
+-- The output column is deliberately named out_customer_id, NOT customer_id. A
+-- RETURNS TABLE column is a PL/pgSQL variable in scope for the whole body, so an
+-- output named customer_id collides with the customer_id COLUMN referenced in the
+-- INSERT column lists and ON CONFLICT (customer_id, owner_id) targets below —
+-- Postgres cannot disambiguate and raises "column reference customer_id is
+-- ambiguous" at runtime. The out_ prefix keeps the output name out of the
+-- column namespace. Callers read this field by name (see
+-- supabase/functions/register-vendor-interest/index.ts).
+RETURNS TABLE (out_customer_id uuid, newly_following boolean)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public

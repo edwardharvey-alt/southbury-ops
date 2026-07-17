@@ -146,7 +146,11 @@ Deno.serve(async (req) => {
     }
 
     // 2. All data work happens atomically inside the RPC — one call, one
-    //    transaction. Returns one row: { customer_id, newly_following }.
+    //    transaction. Returns one row: { out_customer_id, newly_following }.
+    //    The id field is out_customer_id, not customer_id: a RETURNS TABLE
+    //    column named customer_id would collide with the customer_id column
+    //    referenced inside the function body. Keep this read in step with the
+    //    output name in the migration.
     const { data: rpcData, error: rpcErr } = await serviceClient.rpc(
       "register_vendor_interest_atomic",
       {
@@ -171,7 +175,7 @@ Deno.serve(async (req) => {
     }
 
     const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-    if (!row || !row.customer_id) {
+    if (!row || !row.out_customer_id) {
       console.error("register_vendor_interest_atomic returned no row", rpcData);
       return jsonResponse({ error: "Follow could not be recorded" }, 500);
     }
