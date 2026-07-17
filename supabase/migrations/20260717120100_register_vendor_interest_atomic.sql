@@ -38,6 +38,12 @@ BEGIN
   IF p_consent IS NOT TRUE THEN
     RAISE EXCEPTION 'consent is required' USING ERRCODE = 'check_violation';
   END IF;
+  -- customers.name is NOT NULL, but the INSERT below passes nullif(trim(p_name),'')
+  -- which is NULL for an empty/blank name. Reject cleanly here rather than let a
+  -- nameless follow throw a raw not-null constraint error.
+  IF nullif(trim(p_name), '') IS NULL THEN
+    RAISE EXCEPTION 'name is required' USING ERRCODE = 'check_violation';
+  END IF;
 
   -- 2. Find-or-create the customer on the UNIQUE(email) constraint. The
   --    ON CONFLICT DO UPDATE is a deliberate no-op (email = its own value):
@@ -57,7 +63,7 @@ BEGIN
 
   -- 3. Upsert the vendor relationship on UNIQUE(customer_id, owner_id). An
   --    explicit tick is fresh consent, so UPGRADE consent_status to 'granted'
-  --    on conflict (including re-granting after a prior 'revoked'). The original
+  --    on conflict (including re-granting after a prior 'withdrawn'). The original
   --    origin is preserved — source and source_drop_id are NOT touched on
   --    conflict.
   INSERT INTO public.customer_relationships (
