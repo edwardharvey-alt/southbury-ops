@@ -8,6 +8,16 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 // The "nothing on" state (resting) is NOT an empty state — it is the capture
 // surface, which is why follow.enabled is true in every non-error state.
 //
+// State resolution is by PRIORITY, never by a single cross-state sort:
+//   1. anything orderable now  -> live_drop (capacity left) | full_drop (full)
+//   2. else anything announced -> announced_drop
+//   3. else                    -> resting
+// A live moment must never be hidden behind a future one, so an orderable drop
+// outranks an announced drop however soon the announced one closes; a sold-out
+// drop still outranks it and leads with capture, which is more honest than
+// concealing that a drop happened today. closes_at / opens_at are tiebreaks
+// WITHIN a state only (soonest to close; soonest to open).
+//
 // verify_jwt = false. This is a public, anonymous read: there is no user to
 // authenticate. The only authorisation is "this vendor exists and is not
 // explicitly inactive", checked server-side.
@@ -92,7 +102,18 @@ function parseTime(v: unknown): number | null {
   return Number.isNaN(t) ? null : t;
 }
 
+// Soonest-first, nulls last: a drop with no close date is never the "soonest to
+// close", so it must not sort ahead of one that does close.
+function compareSoonest(a: number | null, b: number | null): number {
+  if (a === null && b === null) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return a - b;
+}
+
 type VendorRow = Record<string, unknown>;
+// deno-lint-ignore no-explicit-any
+type DropRow = Record<string, any>;
 
 function buildVendorBlock(vendor: VendorRow) {
   return {
@@ -209,6 +230,9 @@ Deno.serve(async (req) => {
       .is("audience_scope", null)
       .neq("drop_type", "community")
       .is("host_id", null)
+      // Not authoritative — only a deterministic base order so that drops
+      // sharing a timestamp resolve consistently under the stable sorts below.
+      // State priority and the within-state tiebreaks are applied in code.
       .order("closes_at", { ascending: true, nullsFirst: false });
 
     if (dropsErr) {
@@ -219,8 +243,18 @@ Deno.serve(async (req) => {
     const now = Date.now();
     const candidates = Array.isArray(drops) ? drops : [];
 
-    // 3. Soonest-closing wins; first match wins.
-    for (const drop of candidates) {
+    // 3. Resolve by STATE PRIORITY, not by a single cross-state sort.
+    //
+    //    A live moment must never be hidden behind a future one: an orderable
+    //    drop (even a sold-out one) always outranks an announced drop, however
+    //    soon the announced one closes. A full drop leads with capture, which is
+    //    more honest than concealing that a drop happened today.
+    //
+    //    opens_at / closes_at are tiebreaks WITHIN a state only.
+    const orderableNow: Array<{ drop: DropRow; closesAt: number | null }> = [];
+    const announced: Array<{ drop: DropRow; opensAt: number }> = [];
+
+    for (const drop of candidates as DropRow[]) {
       const opensAt = parseTime(drop.opens_at);
       const closesAt = parseTime(drop.closes_at);
 
@@ -229,95 +263,112 @@ Deno.serve(async (req) => {
       const notClosed = closesAt === null || closesAt > now;
 
       if (hasOpened && notClosed) {
-        const { data: consumedRaw, error: rpcErr } = await serviceClient.rpc(
-          "drop_capacity_consumed",
-          { p_drop_id: drop.id },
-        );
-        if (rpcErr) {
-          // Never guess capacity. A drop whose real capacity can't be read is
-          // not rendered as open — showing a fabricated number here would be
-          // manufactured scarcity in either direction.
-          console.error("drop_capacity_consumed failed", { drop_id: drop.id, rpcErr });
-          return jsonResponse({ error: "Capacity lookup failed" }, 500, NO_STORE);
-        }
+        orderableNow.push({ drop, closesAt });
+      } else if (opensAt !== null && opensAt > now) {
+        announced.push({ drop, opensAt });
+      }
+      // else: live-status but already past its close — not a public state.
+    }
 
-        const consumed = Number(consumedRaw ?? 0);
-        const total = Number(drop.capacity_units_total);
-        const hasRealTotal = Number.isFinite(total) && total > 0;
+    // Priority 1 — orderable now. Soonest to close wins; a drop with no close
+    // date isn't "soonest", so nulls sort last.
+    if (orderableNow.length > 0) {
+      orderableNow.sort((a, b) => compareSoonest(a.closesAt, b.closesAt));
+      const drop = orderableNow[0].drop;
 
-        // No declared capacity => nothing honest to show. Render the drop as
-        // orderable with a null capacity block; the page hides the chip rather
-        // than inventing a number.
-        if (!hasRealTotal) {
-          return jsonResponse({
-            state: "live_drop",
-            vendor: vendorBlock,
-            drop: {
-              slug: drop.slug,
-              name: drop.name,
-              drop_intro: drop.drop_intro ?? null,
-              closes_at: drop.closes_at ?? null,
-              delivery_start: drop.delivery_start ?? null,
-              fulfilment_mode: drop.fulfilment_mode ?? null,
-            },
-            capacity: { total: null, remaining: null },
-            follow: { enabled: true },
-          }, 200, NO_STORE);
-        }
-
-        const remaining = Math.max(total - consumed, 0);
-
-        if (consumed < total) {
-          return jsonResponse({
-            state: "live_drop",
-            vendor: vendorBlock,
-            drop: {
-              slug: drop.slug,
-              name: drop.name,
-              drop_intro: drop.drop_intro ?? null,
-              closes_at: drop.closes_at ?? null,
-              delivery_start: drop.delivery_start ?? null,
-              fulfilment_mode: drop.fulfilment_mode ?? null,
-            },
-            capacity: { total, remaining },
-            follow: { enabled: true },
-          }, 200, NO_STORE);
-        }
-
-        return jsonResponse({
-          state: "full_drop",
-          vendor: vendorBlock,
-          drop: {
-            slug: drop.slug,
-            name: drop.name,
-            closes_at: drop.closes_at ?? null,
-            delivery_start: drop.delivery_start ?? null,
-          },
-          capacity: { total, remaining: 0 },
-          follow: { enabled: true },
-        }, 200, NO_STORE);
+      const { data: consumedRaw, error: rpcErr } = await serviceClient.rpc(
+        "drop_capacity_consumed",
+        { p_drop_id: drop.id },
+      );
+      if (rpcErr) {
+        // Never guess capacity. A drop whose real capacity can't be read is
+        // not rendered as open — showing a fabricated number here would be
+        // manufactured scarcity in either direction.
+        console.error("drop_capacity_consumed failed", { drop_id: drop.id, rpcErr });
+        return jsonResponse({ error: "Capacity lookup failed" }, 500, NO_STORE);
       }
 
-      if (opensAt !== null && opensAt > now) {
+      const consumed = Number(consumedRaw ?? 0);
+      const total = Number(drop.capacity_units_total);
+      const hasRealTotal = Number.isFinite(total) && total > 0;
+
+      // No declared capacity => nothing honest to show. Render the drop as
+      // orderable with a null capacity block; the page hides the chip rather
+      // than inventing a number.
+      if (!hasRealTotal) {
         return jsonResponse({
-          state: "announced_drop",
+          state: "live_drop",
           vendor: vendorBlock,
           drop: {
             slug: drop.slug,
             name: drop.name,
             drop_intro: drop.drop_intro ?? null,
-            opens_at: drop.opens_at,
+            closes_at: drop.closes_at ?? null,
             delivery_start: drop.delivery_start ?? null,
+            fulfilment_mode: drop.fulfilment_mode ?? null,
           },
+          capacity: { total: null, remaining: null },
           follow: { enabled: true },
-        }, 200, SHORT_CACHE);
+        }, 200, NO_STORE);
       }
 
-      // Otherwise: live-status but already past its close. Not a public state —
-      // keep looking.
+      const remaining = Math.max(total - consumed, 0);
+
+      if (consumed < total) {
+        return jsonResponse({
+          state: "live_drop",
+          vendor: vendorBlock,
+          drop: {
+            slug: drop.slug,
+            name: drop.name,
+            drop_intro: drop.drop_intro ?? null,
+            closes_at: drop.closes_at ?? null,
+            delivery_start: drop.delivery_start ?? null,
+            fulfilment_mode: drop.fulfilment_mode ?? null,
+          },
+          capacity: { total, remaining },
+          follow: { enabled: true },
+        }, 200, NO_STORE);
+      }
+
+      // Full, but still within its window — capture leads on the page. Hiding a
+      // sold-out drop behind a future one would conceal that a drop happened.
+      return jsonResponse({
+        state: "full_drop",
+        vendor: vendorBlock,
+        drop: {
+          slug: drop.slug,
+          name: drop.name,
+          closes_at: drop.closes_at ?? null,
+          delivery_start: drop.delivery_start ?? null,
+        },
+        capacity: { total, remaining: 0 },
+        follow: { enabled: true },
+      }, 200, NO_STORE);
     }
 
-    // 4. Nothing on. This is the resting capture surface, not an empty state.
+    // Priority 2 — nothing orderable, but something is announced. Soonest to
+    // OPEN wins: the next drop to go live is the one worth anticipating.
+    // (opensAt is non-null by construction here.)
+    if (announced.length > 0) {
+      announced.sort((a, b) => a.opensAt - b.opensAt);
+      const drop = announced[0].drop;
+
+      return jsonResponse({
+        state: "announced_drop",
+        vendor: vendorBlock,
+        drop: {
+          slug: drop.slug,
+          name: drop.name,
+          drop_intro: drop.drop_intro ?? null,
+          opens_at: drop.opens_at,
+          delivery_start: drop.delivery_start ?? null,
+        },
+        follow: { enabled: true },
+      }, 200, SHORT_CACHE);
+    }
+
+    // Priority 3 — nothing on. The resting capture surface, not an empty state.
     return jsonResponse({
       state: "resting",
       vendor: vendorBlock,
