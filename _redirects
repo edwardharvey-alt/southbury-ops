@@ -1,2 +1,14 @@
 # Catch stale bookmarks to the old landing page URL
 /landing.html    /    301
+
+# Clean vendor URLs — lovehearth.co.uk/{slug} serves the permanent vendor page.
+# MUST stay the last rule in this file.
+#
+# Non-forced 200 rewrite: Netlify only reaches it when no real file and no
+# earlier rule has matched, so every root .html page, every asset and the rule
+# above continue to win. The address bar is unchanged, so vendor.html reads the
+# slug from location.pathname.
+#
+# Do not add a bang (!) and do not make this a 301/302. A forced rewrite would
+# shadow real files; a redirect would rewrite the vendor's printed URL.
+/*    /vendor.html   200
