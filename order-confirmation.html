@@ -411,11 +411,21 @@
         return;
       }
 
-      let supabase;
+      /* T-session-isolation-remaining-surfaces — session-less by construction,
+         matching order.html's publicClient and host-view.html / host-poster.html.
+         This page shares an origin with the vendor tools, so a default client
+         would inherit an operator's stored session and send their JWT on the
+         customer path. There is no branch here that legitimately needs a
+         session: fetch-order authorises on the matched (order_id, session_id)
+         pair and reconcile-pending-orders on order_id, both verify_jwt = false.
+         The customer this page is built for is always anon; the vendor
+         test-purchasing their own drop must be treated identically. */
+      let publicClient;
       try {
-        supabase = window.supabase.createClient(
+        publicClient = window.supabase.createClient(
           window.HEARTH_CONFIG.SUPABASE_URL,
-          window.HEARTH_CONFIG.SUPABASE_ANON_KEY
+          window.HEARTH_CONFIG.SUPABASE_ANON_KEY,
+          { auth: { persistSession: false, autoRefreshToken: false } }
         );
       } catch (initErr) {
         renderEmpty(
@@ -425,7 +435,7 @@
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('fetch-order', {
+      const { data, error } = await publicClient.functions.invoke('fetch-order', {
         body: { order_id: orderId, session_id: sessionId }
       });
 
@@ -466,7 +476,7 @@
 
       if (status === 'pending_payment') {
         renderPending(data);
-        setupPendingWatch(supabase, orderId, sessionId);
+        setupPendingWatch(publicClient, orderId, sessionId);
         return;
       }
 
@@ -693,7 +703,7 @@
       `;
     }
 
-    function setupPendingWatch(supabase, orderId, sessionId) {
+    function setupPendingWatch(publicClient, orderId, sessionId) {
       let channel = null;
       let pollInterval = null;
       let timeoutHandle = null;
@@ -705,7 +715,7 @@
         if (cleaned) return;
         cleaned = true;
         if (channel) {
-          try { supabase.removeChannel(channel); } catch (e) { /* ignore */ }
+          try { publicClient.removeChannel(channel); } catch (e) { /* ignore */ }
           channel = null;
         }
         if (pollInterval !== null) {
@@ -745,7 +755,7 @@
 
       async function refetch() {
         try {
-          const { data, error } = await supabase.functions.invoke('fetch-order', {
+          const { data, error } = await publicClient.functions.invoke('fetch-order', {
             body: { order_id: orderId, session_id: sessionId }
           });
           if (error) return;
@@ -763,7 +773,7 @@
       // UPDATE trips the realtime handler above, so no extra status handling.
       async function triggerReconcile() {
         try {
-          await supabase.functions.invoke('reconcile-pending-orders', {
+          await publicClient.functions.invoke('reconcile-pending-orders', {
             body: { order_id: orderId }
           });
         } catch (err) {
@@ -775,7 +785,7 @@
       // have lagged or been missed.
       triggerReconcile();
 
-      channel = supabase
+      channel = publicClient
         .channel('order-' + orderId)
         .on(
           'postgres_changes',

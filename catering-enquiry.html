@@ -383,7 +383,15 @@
       };
 
       var state = { vendor: null, fulfilment: null, submitting: false };
-      var supabase = null;
+
+      /* T-session-isolation-remaining-surfaces — session-less by construction,
+         matching order.html's publicClient and host-view.html / host-poster.html.
+         This page shares an origin with the vendor tools, so a default client
+         would inherit an operator's stored session and send their JWT on the
+         customer path. There is no branch here that legitimately needs a
+         session: the vendor read goes to v_vendor_public (a definer view) and
+         submit-catering-enquiry is verify_jwt = false with no auth signal. */
+      var publicClient = null;
 
       function showState(msg) {
         byId("ceState").textContent = msg;
@@ -505,7 +513,7 @@
 
         var result;
         try {
-          result = await supabase.functions.invoke("submit-catering-enquiry", { body: payload });
+          result = await publicClient.functions.invoke("submit-catering-enquiry", { body: payload });
         } catch (err) {
           result = { error: err };
         }
@@ -541,7 +549,9 @@
           showState("Something went wrong loading this page. Please refresh.");
           return;
         }
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        publicClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: { persistSession: false, autoRefreshToken: false }
+        });
 
         var slug = getParam("vendor");
         if (!slug) {
@@ -551,7 +561,7 @@
 
         var res;
         try {
-          res = await supabase
+          res = await publicClient
             .from("v_vendor_public")
             .select("id, slug, display_name, name, logo_url, website_url, brand_primary_color, brand_secondary_color, brand_text_on_primary, powered_by_hearth_visible")
             .eq("slug", slug)
