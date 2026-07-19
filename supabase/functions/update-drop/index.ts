@@ -55,6 +55,8 @@ const ALLOWED_FIELDS = new Set([
   "fundraising_percentage",
   "fundraising_per_order_pence",
   "fundraising_display_text",
+  "fundraising_cause_name",
+  "fundraising_cause_reference",
   "host_share_enabled",
   "host_share_model",
   "host_share_percentage",
@@ -421,8 +423,12 @@ Deno.serve(async (req) => {
           return jsonResponse({ error: "fundraising_per_order_pence must be > 0" }, 400);
         }
       }
-      if (typeof update.fundraising_display_text !== "string" || !update.fundraising_display_text) {
-        return jsonResponse({ error: "fundraising_display_text is required when fundraising is enabled" }, 400);
+      // The cause is what fundraising requires: a contribution has to say who it
+      // supports. fundraising_display_text is now an OPTIONAL override of the line
+      // composed from these fields, so it is deliberately no longer required here.
+      // fundraising_cause_reference stays optional — it is a private remittance note.
+      if (typeof update.fundraising_cause_name !== "string" || !update.fundraising_cause_name.trim()) {
+        return jsonResponse({ error: "fundraising_cause_name is required when fundraising is enabled" }, 400);
       }
     }
 

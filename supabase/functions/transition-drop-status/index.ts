@@ -49,6 +49,7 @@ type Drop = Record<string, unknown> & {
   fundraising_percentage: number | null;
   fundraising_per_order_pence: number | null;
   fundraising_display_text: string | null;
+  fundraising_cause_name: string | null;
   host_share_enabled: boolean | null;
   host_share_model: string | null;
   host_share_percentage: number | null;
@@ -175,8 +176,11 @@ async function evaluateLiveReadiness(
     if (model === "per_order" && !(isFiniteNumber(drop.fundraising_per_order_pence) && drop.fundraising_per_order_pence > 0)) {
       return { ready: false, reason: "Fundraising per-order amount must be greater than zero" };
     }
-    if (typeof drop.fundraising_display_text !== "string" || !drop.fundraising_display_text) {
-      return { ready: false, reason: "Fundraising display text is required when fundraising is enabled" };
+    // A fundraising drop must not go live without naming the cause. The customer
+    // message (fundraising_display_text) is now an OPTIONAL override of the line
+    // composed from these fields, so it is no longer a publish condition.
+    if (typeof drop.fundraising_cause_name !== "string" || !drop.fundraising_cause_name.trim()) {
+      return { ready: false, reason: "A cause name is required when fundraising is enabled" };
     }
   }
 
