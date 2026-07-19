@@ -289,11 +289,57 @@
           .replace(/'/g, "&#39;");
       }
 
+      /* Slug resolution.
+
+         Two sources, in order:
+           1. ?slug= — preserves every link written before clean URLs shipped,
+              and stays the testing handle.
+           2. location.pathname — the clean URL (/gather), served here by the
+              catch-all rewrite in _redirects.
+
+         Only a SINGLE path segment resolves. /gather/menu is not a vendor;
+         guessing at its first segment would silently serve the wrong thing for
+         any future nested route. Multi-segment paths fall through to
+         not-found, which is also what every unknown URL on the site now does —
+         this page is the de-facto 404 handler. */
       function readSlug() {
-        // PR2a/PR3: query param only. A later PR moves this to the path.
         var params = new URLSearchParams(window.location.search);
-        var slug = params.get("slug");
-        return slug && slug.trim() ? slug.trim() : null;
+        var q = params.get("slug");
+        if (q && q.trim()) return q.trim();
+        return slugFromPath(window.location.pathname);
+      }
+
+      function slugFromPath(pathname) {
+        var raw = String(pathname == null ? "" : pathname);
+
+        // Strip the leading slash and a single trailing slash, so /gather and
+        // /gather/ are the same address.
+        if (raw.charAt(0) === "/") raw = raw.slice(1);
+        if (raw.charAt(raw.length - 1) === "/") raw = raw.slice(0, -1);
+
+        // "" is the site root, which is index.html, never a vendor.
+        if (!raw) return null;
+
+        // Exactly one segment, or nothing.
+        if (raw.indexOf("/") !== -1) return null;
+
+        // A malformed escape sequence must resolve to not-found, never throw.
+        var decoded;
+        try {
+          decoded = decodeURIComponent(raw);
+        } catch (_) {
+          return null;
+        }
+
+        decoded = decoded.trim();
+        if (!decoded) return null;
+
+        // Decoding can reveal a separator that was hidden as %2F.
+        if (decoded.indexOf("/") !== -1) return null;
+
+        // Slugs are stored lowercase (enforced at creation in create-vendor),
+        // so /Gather and /gather are the same vendor.
+        return decoded.toLowerCase();
       }
 
       function firstLetter(name) {
@@ -392,13 +438,17 @@
          renders one vendor per load and a stray noindex would silently
          de-index a real vendor's storefront — the expensive direction of this
          mistake. The idempotence guard is for repeat calls within one load. */
-      function applyIndexingPolicy(vendor) {
-        if (!vendor || vendor.is_internal !== true) return;
+      function noIndex() {
         if (document.querySelector('meta[name="robots"]')) return;
         var meta = document.createElement("meta");
         meta.setAttribute("name", "robots");
         meta.setAttribute("content", "noindex, nofollow");
         document.head.appendChild(meta);
+      }
+
+      function applyIndexingPolicy(vendor) {
+        if (!vendor || vendor.is_internal !== true) return;
+        noIndex();
       }
 
       function vendorName() {
@@ -659,13 +709,20 @@
         wireFollow();
       }
 
+      /* This is now the whole site's not-found state, not just a wrong vendor
+         name — every unmatched path lands here via the catch-all rewrite. The
+         copy has to sit comfortably over both, so it names neither: no "we
+         couldn't find that vendor", and nothing that implies the visitor
+         mistyped. Soft 404s should never be indexed, hence the noindex. */
       function renderNotFound() {
         document.title = "Not found";
+        noIndex();
         root.className = "";
         root.innerHTML = topbarHtml(null) +
           '<main><div class="wrap"><div class="hero plain">' +
-            "<h1>We couldn’t find that.</h1>" +
-            "<p class=\"lede\">The link may be out of date, or the address may have a small typo in it.</p>" +
+            "<h1>There’s nothing at this address.</h1>" +
+            "<p class=\"lede\">The link may be out of date, or it may have picked up a change along the way. " +
+            'You can <a href="https://lovehearth.co.uk">start from the beginning</a>.</p>' +
           "</div></div></main>" +
           footerHtml(null);
       }
