@@ -12,6 +12,7 @@
         href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Figtree:wght@400;500;700&display=swap" />
   <script src="./assets/config.js"></script>
   <script src="./assets/hearth-vendor.js?v=1"></script>
+  <script src="./assets/hearth-fundraising.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -379,6 +380,24 @@
       .dropStoryBody{
         font-size:14px;
         line-height:1.5;
+      }
+    }
+
+    /* The community-contribution line. Deliberately understated — a quiet
+       statement of fact beneath the drop story, not a badge and not a selling
+       point. Hidden entirely when the drop raises nothing. */
+    .fundraisingLine{
+      font-family:'Figtree', system-ui, -apple-system, sans-serif;
+      font-size:13px;
+      line-height:1.5;
+      color:var(--h-muted, #6b7280);
+      margin:0;
+      padding:0 4px;
+    }
+
+    @media (max-width:720px){
+      .fundraisingLine{
+        font-size:12.5px;
       }
     }
 
@@ -1749,6 +1768,13 @@
       <div class="dropStoryCard hidden" id="dropStoryCard">
         <p class="dropStoryBody" id="dropStoryBody"></p>
       </div>
+
+      <!-- Community contribution. Sits beneath the drop story, OUTSIDE the menu
+           card so the wholesale menuCard.innerHTML rebuilds never orphan it, and
+           independent of dropStoryCard so a drop with no story still shows it.
+           Rendered in every order-window state — what a drop supports is true
+           before it opens and after it closes, not only while orderable. -->
+      <p class="fundraisingLine hidden" id="fundraisingLine"></p>
 
       <!-- T5-8 / T-notify-next-time — demand capture. Standalone card between
            the hero and the menu card. Rendered by renderRegisterInterest()
@@ -4340,6 +4366,7 @@ async function handoffToPayment() {
       function renderAll() {
         renderHero();
         renderDropStory();
+        renderFundraisingLine();
         renderMenu();
         renderBasketBar();
         renderBasketSheet();
@@ -4360,6 +4387,42 @@ async function handoffToPayment() {
 
         body.textContent = intro;
         card.classList.remove("hidden");
+      }
+
+      /* Community contribution line.
+         The whole rule set — enabled, the optional fundraising_display_text
+         override, the model branches, the guards — lives in
+         assets/hearth-fundraising.js so this page and the Drop Studio preview
+         cannot drift.
+
+         READS state.dropSummary, NOT state.drop. state.drop is a narrowed
+         `drops` row whose column list carries no fundraising fields at all;
+         state.dropSummary is the `select('*')` from v_drop_public, which is
+         where step 1 exposed them. Passing state.drop here would silently
+         resolve to null on every drop — the exact silent-undefined failure
+         mode of operational learning #26.
+
+         fundraising_cause_reference is operator-only and is deliberately not on
+         v_drop_public, so there is nothing to guard against here.
+
+         formatMoneyPence is passed in so the amount reads identically to every
+         other price on this page. */
+      function renderFundraisingLine() {
+        const el = byId("fundraisingLine");
+        if (!el) return;
+
+        const line = window.HearthFundraising
+          ? window.HearthFundraising.resolve(state.dropSummary, { audience: "customer", formatMoneyPence })
+          : null;
+
+        if (!line) {
+          el.textContent = "";
+          el.classList.add("hidden");
+          return;
+        }
+
+        el.textContent = line;
+        el.classList.remove("hidden");
       }
 
       async function refreshCapacity() {

@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
   <script src="./assets/config.js"></script>
   <script src="./assets/hearth-vendor.js?v=1"></script>
+  <script src="./assets/hearth-fundraising.js?v=1"></script>
   <script src="./assets/vendor-nav.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -4068,27 +4069,23 @@
 
     /* Compose the contribution line from the structured fundraising fields.
        This is the line a customer sees when the vendor has NOT written their own
-       fundraising_display_text. Returns "" when there isn't yet enough to say
-       something true — an incomplete line is worse than none (honest degradation,
-       per the intelligence-layer invariants in CLAUDE.md). */
+       fundraising_display_text.
+
+       Delegates to assets/hearth-fundraising.js — the SAME function order.html
+       runs — so the "Customers will see: …" preview below is the customer's
+       actual sentence rather than an approximation of it. It previously composed
+       its own ("£3 from every order goes to …"), which diverged from the
+       customer page on wording, audience and money format. Do not reintroduce a
+       local copy; change the shared module instead.
+
+       Returns "" when there isn't yet enough to say something true — an
+       incomplete line is worse than none (honest degradation, per the
+       intelligence-layer invariants in CLAUDE.md). */
     function composeFundraisingLine(model, percentage, perOrderPence, causeName) {
-      const cause = String(causeName || "").trim();
-      if (!cause) return "";
-      if (model === "percentage") {
-        const pct = Number(percentage);
-        if (!(pct > 0)) return "";
-        // Trim a trailing .00 / .50 → "5", "2.5"
-        const pctText = String(Number(pct.toFixed(2)));
-        return `${pctText}% of every order goes to ${cause}`;
-      }
-      if (model === "per_order") {
-        const pence = Number(perOrderPence);
-        if (!(pence > 0)) return "";
-        const pounds = pence / 100;
-        const amountText = Number.isInteger(pounds) ? `£${pounds}` : `£${pounds.toFixed(2)}`;
-        return `${amountText} from every order goes to ${cause}`;
-      }
-      return "";
+      return window.HearthFundraising.compose(
+        { model, percentage, perOrderPence, causeName },
+        { audience: "customer" }
+      ) || "";
     }
 
     /* Live preview under the customer-message field. Shows the composed line when the
