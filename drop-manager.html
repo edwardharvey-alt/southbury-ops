@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
   <script src="./assets/config.js"></script>
   <script src="./assets/hearth-vendor.js?v=1"></script>
+  <script src="./assets/hearth-fundraising.js?v=1"></script>
   <script src="./assets/vendor-nav.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -1075,6 +1076,34 @@
       color: var(--h-slate, #4a4a4a);
     }
 
+    /* Fixed-amount fundraising advisory (Commercials step). Same amber,
+       same soft-card shape as .cateringDiscountAdvisory above — one established
+       non-blocking tone on this page, not a second warning language. Advisory:
+       it never disables Publish and never affects validity. */
+    .fundraisingAmountWarning {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: var(--h-surface, #FAF8F4);
+      border: 1px solid var(--h-border);
+      border-left: 3px solid #b45309;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-top: 4px;
+    }
+    .fundraisingAmountWarningMark {
+      color: #b45309;
+      font-weight: 800;
+      line-height: 1.45;
+      flex-shrink: 0;
+    }
+    .fundraisingAmountWarningText {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--h-slate, #4a4a4a);
+    }
+
     .reviewBottomGrid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1688,6 +1717,16 @@
                         <input id="fundraisingDisplayText" type="text" placeholder="£1 from every order goes to Southbury Food Bank" />
                         <div class="helperText">Leave this blank and the line below is written for you. Fill it in only if you want to say it differently.</div>
                         <div class="helperText" id="fundraisingLinePreview" aria-live="polite"></div>
+                      </div>
+
+                      <!-- Fixed-amount sanity check. A flat per-order pledge can
+                           exceed a small order, so the vendor would be giving
+                           away more than the order earns. Advisory only — never a
+                           publish gate. See renderFundraisingAmountWarning(). -->
+                      <div class="fundraisingAmountWarning hidden" id="fundraisingAmountWarning"
+                           style="grid-column:1 / -1;" role="status" aria-live="polite">
+                        <span class="fundraisingAmountWarningMark" aria-hidden="true">!</span>
+                        <p class="fundraisingAmountWarningText" id="fundraisingAmountWarningText"></p>
                       </div>
                     </div>
                   </div>
@@ -4068,27 +4107,23 @@
 
     /* Compose the contribution line from the structured fundraising fields.
        This is the line a customer sees when the vendor has NOT written their own
-       fundraising_display_text. Returns "" when there isn't yet enough to say
-       something true — an incomplete line is worse than none (honest degradation,
-       per the intelligence-layer invariants in CLAUDE.md). */
+       fundraising_display_text.
+
+       Delegates to assets/hearth-fundraising.js — the SAME function order.html
+       runs — so the "Customers will see: …" preview below is the customer's
+       actual sentence rather than an approximation of it. It previously composed
+       its own ("£3 from every order goes to …"), which diverged from the
+       customer page on wording, audience and money format. Do not reintroduce a
+       local copy; change the shared module instead.
+
+       Returns "" when there isn't yet enough to say something true — an
+       incomplete line is worse than none (honest degradation, per the
+       intelligence-layer invariants in CLAUDE.md). */
     function composeFundraisingLine(model, percentage, perOrderPence, causeName) {
-      const cause = String(causeName || "").trim();
-      if (!cause) return "";
-      if (model === "percentage") {
-        const pct = Number(percentage);
-        if (!(pct > 0)) return "";
-        // Trim a trailing .00 / .50 → "5", "2.5"
-        const pctText = String(Number(pct.toFixed(2)));
-        return `${pctText}% of every order goes to ${cause}`;
-      }
-      if (model === "per_order") {
-        const pence = Number(perOrderPence);
-        if (!(pence > 0)) return "";
-        const pounds = pence / 100;
-        const amountText = Number.isInteger(pounds) ? `£${pounds}` : `£${pounds.toFixed(2)}`;
-        return `${amountText} from every order goes to ${cause}`;
-      }
-      return "";
+      return window.HearthFundraising.compose(
+        { model, percentage, perOrderPence, causeName },
+        { audience: "customer" }
+      ) || "";
     }
 
     /* Live preview under the customer-message field. Shows the composed line when the
@@ -4119,6 +4154,77 @@
       el.textContent = auto
         ? `Customers will see: “${auto}”`
         : "Add a model, an amount and a cause name to see the line customers will read.";
+    }
+
+    /* Cheapest price a customer could actually pay on this drop, in pence, or
+       null when the drop has nothing enabled yet.
+
+       Reads the SAME resolution create-order uses for the charged price —
+       price_override_pence ?? base_price_pence (the drop's override wins, else
+       the catalogue price; operational learning #93) — so the figure quoted in
+       the warning is the figure a customer would really be charged, not the
+       catalogue list price.
+
+       Only `enabled` rows count: an item the vendor has switched off cannot be
+       ordered, so it cannot produce a small order. */
+    function getCheapestEnabledPricePence() {
+      const prices = (state.menuAssignments || [])
+        .filter((row) => row.enabled)
+        .map((row) => (row.price_override_pence == null ? row.base_price_pence : row.price_override_pence))
+        .map(Number)
+        .filter((pence) => Number.isFinite(pence) && pence > 0);
+
+      return prices.length ? Math.min(...prices) : null;
+    }
+
+    /* Non-blocking advisory for the fixed (per_order) fundraising model.
+
+       A flat per-order contribution is the only model that can exceed the order
+       it is taken from — "£3.00 from your order" is incoherent on a £1 order,
+       and the vendor would be pledging more than they earn. The percentage model
+       needs no guard: a fraction of an order is always less than the order.
+
+       Deliberately a WARNING, not a block. There are legitimate reasons a vendor
+       might accept it (a token cheap item alongside a main range, an evening
+       where they intend to absorb the difference). The job here is to make sure
+       they chose it rather than missed it.
+
+       Silent when there is nothing true to say — fundraising off, wrong model,
+       no amount, or no enabled items to compare against. An advisory built on a
+       half-known basket is worse than none. */
+    function renderFundraisingAmountWarning() {
+      const wrap = byId("fundraisingAmountWarning");
+      const text = byId("fundraisingAmountWarningText");
+      if (!wrap || !text) return;
+
+      const hide = () => {
+        text.textContent = "";
+        wrap.classList.add("hidden");
+      };
+
+      if (!byId("fundraisingEnabled").checked) return hide();
+      if (byId("fundraisingModel").value !== "per_order") return hide();
+
+      const rawAmount = byId("fundraisingPerOrderPence").value;
+      if (rawAmount === "") return hide();
+
+      const amountPence = Math.round(Number(rawAmount) * 100);
+      if (!Number.isFinite(amountPence) || amountPence <= 0) return hide();
+
+      const cheapestPence = getCheapestEnabledPricePence();
+      if (cheapestPence == null) return hide();
+
+      if (amountPence < cheapestPence) return hide();
+
+      /* Equal and greater are different facts, and the greater-than wording is
+         plainly false at equality ("£3.00 is more than … £3.00"). Say each one
+         accurately. */
+      text.textContent = amountPence === cheapestPence
+        ? `${formatMoneyPence(amountPence)} matches your cheapest item ` +
+          `(${formatMoneyPence(cheapestPence)}); an order of just that item would go entirely to the cause.`
+        : `${formatMoneyPence(amountPence)} is more than your cheapest item ` +
+          `(${formatMoneyPence(cheapestPence)}); on small orders this would exceed the order value.`;
+      wrap.classList.remove("hidden");
     }
 
     function renderConditionalFields() {
@@ -4156,6 +4262,9 @@
       byId("fundraisingPercentageField").classList.toggle("hidden", fundraisingModel !== "percentage");
       byId("fundraisingPerOrderField").classList.toggle("hidden", fundraisingModel !== "per_order");
       renderFundraisingLinePreview();
+      /* Live as the vendor types — renderConditionalFields() is already bound to
+         input+change on every fundraising field. */
+      renderFundraisingAmountWarning();
 
       const hostShareEnabled = byId("hostShareEnabled").checked;
       const hostShareModel = byId("hostShareModel").value;
@@ -5719,6 +5828,10 @@
       renderContextBar();
       renderStageBar();
       renderReview();
+      /* The fundraising advisory compares against the cheapest ENABLED item, so
+         enabling an item or editing a price override can start or stop it —
+         even though the vendor is on the Menu step, not Commercials. */
+      renderFundraisingAmountWarning();
     }
 
     function syncScheduleRow(tr) {

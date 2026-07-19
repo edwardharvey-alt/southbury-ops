@@ -1123,7 +1123,13 @@
       const hostShareDescriptor = drop.host_share_descriptor || null;
       const fundraisingEnabled = drop.fundraising_enabled === true;
       const fundraisingPence = Number(drop.fundraising_total_pence || 0);
-      const fundraisingText = drop.fundraising_display_text || null;
+      // Composed server-side by host-view-summary (buildFundraisingDescriptor),
+      // mirroring host_share_descriptor above. It already folds in the vendor's
+      // optional fundraising_display_text override, so this page renders one
+      // field and holds no fundraising copy of its own. Previously this read
+      // fundraising_display_text directly, which left the card silent — a figure
+      // with no explanation — on any drop saved without a written message.
+      const fundraisingDescriptor = drop.fundraising_descriptor || null;
 
       let noteHTML = "";
       if (isPreOpen){
@@ -1192,7 +1198,7 @@
             <div class="hvShareCard">
               <p class="hvShareLabel">Fundraising</p>
               <p class="hvShareValue" id="hvFundraisingValue">${formatMoneyPence(fundraisingPence)}</p>
-              ${fundraisingText ? `<p class="hvShareHint">${escapeHtml(fundraisingText)}</p>` : ""}
+              ${fundraisingDescriptor ? `<p class="hvShareHint">${escapeHtml(fundraisingDescriptor)}</p>` : ""}
             </div>
             ` : ""}
           </div>
