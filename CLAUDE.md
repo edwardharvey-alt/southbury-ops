@@ -2375,6 +2375,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T7-6 — Aggregate customer base view — open
 - T7-7 — Admin event log / audit trail — open
 - T7-followup-1 — Service Board order Details tab missing order date/time — open. Small UX gap.
+- T-vendor-deactivation — Vendor lifecycle status + admin-list filter: add `vendors.status` (active/inactive/archived, mirroring hosts.status), filter `v_admin_vendor_list` / `admin-list-vendors` to hide archived, decide whether customer-facing reads honour it, then reversibly archive the inert test-vendor rows. Not pre-launch-blocking; needed at first real churn. — open
 
 ### Tier 7 — Platform oversight (Phase 2, approaching ~100 vendors)
 - T7-8 — At-risk vendor detection queue — open
@@ -2415,6 +2416,7 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T8-3-sub1 — Operator pages: "menu" vs "offer" language consistency audit — open
 - T8-4 — Design system consolidation — open (depends on T8-1 → T8-3)
 - T8-5 — Per-vendor brand colour on generated social card scrims (reveal + capacity cards hardcode the warm-brown fallback instead of var(--vendor-brand-primary); keep html2canvas export faithful; #8B6B3F stays as the no-colour fallback per learning #85) — open
+- T-vendor-fee-copy — Reconcile vendor-facing fee copy with live cost-recovery (1.5% + 20p now applied to all vendors via PR #474; onboarding FAQ attributes it to Stripe alone, vendor-terms "no-markup" + three-month-free lines and "no commission" marketing need reconciling). Commercial-decision gate first (pass-through vs fee; is the free trial over). Copy only, not money-path. — open
 
 ### Tier 9 — Agentic AI workstream
 - T9-1 — Auto-draft drops from demand signals — open
