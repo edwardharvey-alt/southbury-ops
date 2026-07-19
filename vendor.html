@@ -1,303 +1,252 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Vendor</title>
 
-  <link rel="stylesheet" href="./assets/hearth.css?v=31" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Figtree:wght@400;500;700&display=swap" />
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Figtree:wght@400;500;600&display=swap" />
   <script src="./assets/config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!--
-    T-CAP-1 (PR2a) — the permanent vendor page.
+    T-CAP-1 (PR3) — the permanent vendor page.
 
     The durable anchor for a vendor: whatever is on right now, or — when nothing
     is on — a calm surface that still lets someone ask to hear what's next. The
     resting state is the point of this page, not a fallback.
 
-    PR2a reads the slug from ?slug= so it is testable without routing. PR2b
-    switches it to the path (/{vendor}) and adds _redirects. Nothing here
-    depends on the query param beyond readSlug().
+    Design: the vendor is the foreground (colour-block header, vendor primary as
+    the accent everywhere), Hearth is the quiet frame (Hearthfire #c4511a appears
+    ONLY in the footer attribution). Cormorant Garamond display + Figtree UI.
+    All five states share one system; the STATE is the headline.
 
-    Customer-facing surface: no vendor-nav.js, no hearth-vendor.js. The vendor
-    slug is the URL, but no operator context is carried. All reads go through
-    the anonymous get-vendor-page Edge Function — capacity in particular can
-    never be read over anon PostgREST (it would return a silent, wrong zero).
+    Customer-facing surface: no vendor-nav.js, no hearth-vendor.js, no operator
+    context. Every read goes through the anonymous get-vendor-page Edge Function
+    — capacity in particular can never be read over anon PostgREST (it would
+    return a silent, wrong zero).
   -->
   <style>
     :root{
-      /* Vendor colours are the foreground and are overwritten at runtime from
-         the EF's vendor.brand block. The defaults here are the neutral
-         vendor-brand fallbacks (NOT Hearthfire) — a vendor who has set no
-         colour must never render in Hearth's own accent (learning #85). */
-      --v-primary: #8B6B3F;
-      --v-secondary: #CBB89D;
-      --v-text-on-primary: #ffffff;
+      /* Vendor layer — overwritten at runtime from the EF's vendor.brand block.
+         Defaults are the NEUTRAL vendor-brand fallbacks, deliberately NOT
+         Hearthfire — a colourless vendor must never render in Hearth's own
+         accent (learning #85). */
+      --v-primary:#8B6B3F;
+      --v-secondary:#CBB89D;
+      --v-on-primary:#FFFFFF;
+
+      /* Hearth frame */
+      --h-bg:#faf8f4;
+      --h-surface:#ffffff;
+      --h-ink:#1f2937;
+      --h-ink-soft:#6b6660;
+      --h-hair:#e7e1d8;
+      --h-fire:#c4511a;
+
+      --display:"Cormorant Garamond",Georgia,serif;
+      --ui:"Figtree",-apple-system,BlinkMacSystemFont,sans-serif;
+
+      --col:820px;
+      --gutter:24px;
     }
 
-    html{ max-width:100%; overflow-x:hidden; }
-
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    html{max-width:100%;overflow-x:hidden}
     body{
-      font-family:'Figtree', system-ui, sans-serif;
-      background: var(--h-bg-page, #faf8f5);
-      color: var(--h-text-primary, #4a3f37);
-      margin:0;
-      max-width:100%;
-    }
-
-    h1, h2, .vp-display{
-      font-family:'Cormorant Garamond', Georgia, serif;
-      font-weight:600;
-      color: var(--h-ember, #2a1f17);
-      letter-spacing:-0.01em;
-    }
-
-    #vpShell{
-      max-width: 640px;
-      margin: 0 auto;
-      padding: 0 1.25rem 4rem;
-    }
-
-    /* ---------- Vendor identity ---------- */
-
-    .vp-hero{
-      position:relative;
-      margin: 0 -1.25rem 0;
-      min-height: 200px;
-      background-position:center;
-      background-size:cover;
-      background-repeat:no-repeat;
-      display:flex;
-      align-items:flex-end;
-    }
-    .vp-hero.is-fallback{
-      background-image: linear-gradient(135deg, var(--v-primary), var(--v-secondary));
-    }
-    .vp-hero::after{
-      content:"";
-      position:absolute; inset:0;
-      background: linear-gradient(180deg, rgba(15,11,8,0.05), rgba(15,11,8,0.45));
-    }
-    .vp-heroInner{
-      position:relative;
-      z-index:1;
-      padding: 2.5rem 1.25rem 1.5rem;
-      width:100%;
-    }
-    .vp-logo{
-      width:64px; height:64px;
-      border-radius: 50%;
-      object-fit:cover;
-      background:#fff;
-      border:2px solid rgba(255,255,255,0.85);
-      margin-bottom:0.75rem;
-      display:block;
-    }
-    .vp-vendorName{
-      font-size: 2.15rem;
-      line-height:1.1;
-      margin:0;
-      color:#fff;
-      text-shadow: 0 1px 12px rgba(15,11,8,0.45);
-    }
-    .vp-tagline{
-      margin:0.4rem 0 0;
-      color: rgba(255,255,255,0.92);
-      font-size:1rem;
-      text-shadow: 0 1px 10px rgba(15,11,8,0.4);
-    }
-
-    /* ---------- Cards ---------- */
-
-    .vp-card{
-      background:#fff;
-      border: var(--h-border-default, 1px solid #e8ddd5);
-      border-radius: var(--h-radius-lg, 1rem);
-      box-shadow: var(--h-shadow-sm, 0 1px 3px rgba(15,11,8,0.08));
-      padding: 1.75rem;
-      margin-top: 1.5rem;
-    }
-
-    .vp-eyebrow{
-      font-size:0.72rem;
-      font-weight:700;
-      letter-spacing:0.12em;
-      text-transform:uppercase;
-      color: var(--v-primary);
-      margin:0 0 0.6rem;
-    }
-    .vp-dropName{
-      font-size:1.85rem;
-      line-height:1.15;
-      margin:0 0 0.75rem;
-    }
-    .vp-intro{
-      margin:0 0 1.25rem;
+      background:var(--h-bg);
+      color:var(--h-ink);
+      font-family:var(--ui);
+      font-size:17px;
       line-height:1.65;
-      color: var(--h-text-primary, #4a3f37);
+      max-width:100%;
+      -webkit-font-smoothing:antialiased;
     }
+    .wrap{max-width:var(--col);margin:0 auto;padding:0 var(--gutter)}
 
-    .vp-facts{
-      list-style:none;
-      margin:0 0 1.5rem;
-      padding:0;
-      border-top: 1px solid var(--h-cinder, #e8ddd5);
-    }
-    .vp-facts li{
-      display:flex;
-      justify-content:space-between;
-      gap:1rem;
-      padding:0.7rem 0;
-      border-bottom: 1px solid var(--h-cinder, #e8ddd5);
-      font-size:0.94rem;
-    }
-    .vp-factLabel{ color: var(--h-text-secondary, #8c7b6e); }
-    .vp-factValue{ color: var(--h-ember, #2a1f17); font-weight:500; text-align:right; }
+    .vp-loading{text-align:center;padding:80px 24px;color:var(--h-ink-soft)}
 
-    /* Capacity is only ever a real, server-derived number. */
-    .vp-capacity{
-      display:inline-block;
-      padding:0.35rem 0.75rem;
-      border-radius:999px;
-      background: rgba(0,0,0,0.04);
-      border:1px solid var(--h-cinder, #e8ddd5);
-      font-size:0.85rem;
-      font-weight:500;
-      color: var(--h-slate, #4a3f37);
-      margin-bottom:1.25rem;
+    /* ---------- Colour-block header ---------- */
+    .topbar{background:var(--v-primary);color:var(--v-on-primary);padding:18px 0}
+    .topbar .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .mark{display:flex;align-items:center;gap:12px;min-width:0}
+    .mark img{width:44px;height:44px;border-radius:10px;background:#fff;object-fit:contain;flex:none}
+    .mark span{
+      font-family:var(--display);font-size:22px;letter-spacing:.01em;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
+    .share{
+      font-family:var(--ui);font-size:14px;font-weight:500;
+      color:var(--v-on-primary);text-decoration:none;background:transparent;
+      border:1px solid rgba(255,255,255,.45);border-radius:999px;
+      padding:8px 16px;white-space:nowrap;cursor:pointer;
+    }
+    .share:hover{background:rgba(255,255,255,.14)}
+    .share:focus-visible{outline:2px solid var(--v-on-primary);outline-offset:2px}
 
-    .vp-btn{
-      display:block;
-      width:100%;
-      box-sizing:border-box;
-      text-align:center;
-      padding:0.95rem 1.25rem;
-      border-radius: var(--h-radius-md, 0.75rem);
-      border:1px solid transparent;
-      font-family:'Figtree', system-ui, sans-serif;
-      font-size:1rem;
-      font-weight:600;
-      cursor:pointer;
-      text-decoration:none;
-      transition: opacity 0.15s ease;
+    /* ---------- Hero: the state IS the headline ---------- */
+    .hero{padding:72px 0 0}
+    .hero.resting,.hero.plain{padding:72px 0 8px}
+    .eyebrow{
+      display:inline-flex;align-items:center;gap:9px;
+      font-family:var(--ui);font-size:12px;font-weight:600;
+      letter-spacing:.14em;text-transform:uppercase;
+      color:var(--v-primary);margin:0 0 18px;
     }
-    .vp-btn:hover{ opacity:0.9; }
-    .vp-btnPrimary{
-      background: var(--v-primary);
-      color: var(--v-text-on-primary);
+    .dot{
+      width:8px;height:8px;border-radius:50%;background:var(--v-primary);
+      box-shadow:0 0 0 4px color-mix(in srgb,var(--v-primary) 18%,transparent);
     }
-    .vp-btnQuiet{
-      background:transparent;
-      border:1px solid var(--h-cinder, #e8ddd5);
-      color: var(--h-slate, #4a3f37);
+    h1{
+      font-family:var(--display);font-weight:500;
+      font-size:clamp(48px,8.2vw,80px);line-height:1;
+      letter-spacing:-.015em;margin:0 0 22px;
     }
-    .vp-btn[disabled]{ opacity:0.55; cursor:default; }
+    .hero.resting h1,.hero.plain h1{font-size:clamp(52px,9vw,86px);line-height:.98}
+    .lede{font-size:20px;line-height:1.6;color:var(--h-ink-soft);max-width:34em;margin:0}
+    .vendorline{
+      display:flex;align-items:center;gap:14px;
+      margin:34px 0 0;padding-top:26px;border-top:1px solid var(--h-hair);
+      font-size:15px;color:var(--h-ink-soft);
+    }
+    .vendorline strong{color:var(--h-ink);font-weight:600}
 
-    /* ---------- Follow ---------- */
+    /* ---------- Facts strip ---------- */
+    .facts{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+      margin:40px 0 0;padding:26px 0;
+      border-top:1px solid var(--h-hair);border-bottom:1px solid var(--h-hair);
+    }
+    .fact b{
+      display:block;font-family:var(--ui);font-size:11.5px;font-weight:600;
+      letter-spacing:.12em;text-transform:uppercase;color:var(--h-ink-soft);
+      margin-bottom:7px;
+    }
+    .fact span{font-family:var(--display);font-size:23px;line-height:1.25;display:block}
+    .fact.places span{color:var(--v-primary)}
 
-    .vp-followTitle{ font-size:1.45rem; margin:0 0 0.5rem; }
-    .vp-followSub{
-      margin:0 0 1.35rem;
-      color: var(--h-text-secondary, #8c7b6e);
-      line-height:1.6;
-      font-size:0.95rem;
+    /* ---------- Order CTA ---------- */
+    .order{padding:34px 0 8px}
+    .undercta{margin:14px 0 0;font-size:14.5px;color:var(--h-ink-soft);text-align:center}
+
+    /* ---------- Buttons ---------- */
+    .btn{
+      display:block;width:100%;text-align:center;text-decoration:none;
+      font-family:var(--ui);font-size:16px;font-weight:600;
+      color:var(--v-on-primary);background:var(--v-primary);
+      border:0;border-radius:10px;padding:15px 20px;cursor:pointer;
     }
-    .vp-field{ margin-bottom:1rem; }
-    .vp-label{
-      display:block;
-      font-size:0.85rem;
-      font-weight:600;
-      margin-bottom:0.35rem;
-      color: var(--h-slate, #4a3f37);
+    .order .btn{font-size:17px;padding:18px 22px;border-radius:11px}
+    .btn:hover{filter:brightness(1.07)}
+    .btn:focus-visible{outline:2px solid var(--h-ink);outline-offset:2px}
+    .btn.ghost{background:transparent;color:var(--v-primary);border:1.5px solid var(--v-primary)}
+    .btn.ghost:hover{background:color-mix(in srgb,var(--v-primary) 8%,transparent);filter:none}
+
+    /* ---------- Sections ---------- */
+    section{padding:56px 0}
+    .sechead{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:0 0 26px}
+    h2{font-family:var(--display);font-weight:500;font-size:34px;line-height:1.15;letter-spacing:-.01em;margin:0}
+    .sechead .note{font-size:14px;color:var(--h-ink-soft)}
+
+    /* ---------- Recent drops: the rhythm list ----------
+       Past drops as a dated sequence, not a card grid. The dates ARE the
+       content — they show a vendor with a cadence, which is the whole model. */
+    .rhythm{border-top:1px solid var(--h-hair)}
+    .drop{
+      display:grid;grid-template-columns:96px 1fr 64px;
+      align-items:center;gap:20px;
+      padding:20px 0;border-bottom:1px solid var(--h-hair);
     }
-    .vp-optional{ font-weight:400; color: var(--h-text-secondary, #8c7b6e); }
-    .vp-input{
-      width:100%;
-      box-sizing:border-box;
-      padding:0.7rem 0.85rem;
-      border:1px solid var(--h-cinder, #e8ddd5);
-      border-radius: var(--h-radius-sm, 0.375rem);
-      font-family:'Figtree', system-ui, sans-serif;
-      font-size:1rem;
-      color: var(--h-ember, #2a1f17);
-      background:#fff;
-    }
-    .vp-input:focus{
-      outline:none;
-      border-color: var(--v-primary);
-      box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
-    }
-    .vp-consent{
-      display:flex;
-      gap:0.7rem;
-      align-items:flex-start;
-      margin:1.25rem 0;
-      font-size:0.9rem;
-      line-height:1.55;
-      color: var(--h-slate, #4a3f37);
-    }
-    .vp-consent input{
-      margin-top:0.2rem;
-      width:1.05rem; height:1.05rem;
-      flex-shrink:0;
-      accent-color: var(--v-primary);
-    }
-    .vp-notice{
-      margin-top:1rem;
-      padding:0.75rem 0.9rem;
-      border-radius: var(--h-radius-sm, 0.375rem);
-      font-size:0.9rem;
+    .when{
+      font-family:var(--ui);font-size:12px;font-weight:600;
+      letter-spacing:.1em;text-transform:uppercase;color:var(--v-primary);
       line-height:1.5;
     }
-    .vp-notice.is-error{
-      background:#fdf2f0;
-      border:1px solid #f3d3cc;
-      color:#8c3a25;
-    }
-    .vp-hidden{ display:none !important; }
-
-    /* ---------- Frame ---------- */
-
-    .vp-footer{
-      text-align:center;
-      margin-top:2.5rem;
-      font-size:0.8rem;
-      color: var(--h-text-secondary, #8c7b6e);
-    }
-    /* Hearthfire appears ONLY here — the Hearth frame around the vendor. */
-    .vp-footer strong{ color: var(--h-fire, #c4511a); font-weight:600; }
-
-    .vp-plain{
-      text-align:center;
-      padding: 4rem 1.25rem;
-    }
-    .vp-plain h1{ font-size:1.9rem; margin:0 0 0.6rem; }
-    .vp-plain p{ color: var(--h-text-secondary, #8c7b6e); margin:0; line-height:1.6; }
-
-    .vp-loading{
-      text-align:center;
-      padding:4rem 1.25rem;
-      color: var(--h-text-secondary, #8c7b6e);
-      font-size:0.95rem;
+    .when em{display:block;font-style:normal;color:var(--h-ink-soft);font-weight:400;letter-spacing:.06em}
+    .what{min-width:0}
+    .what h3{font-family:var(--display);font-weight:500;font-size:26px;line-height:1.2;margin:0 0 4px}
+    .what p{margin:0;font-size:14.5px;color:var(--h-ink-soft)}
+    .thumb{
+      width:64px;height:64px;border-radius:8px;flex:none;
+      background:var(--v-secondary);
+      background-size:cover;background-position:center;
+      display:flex;align-items:center;justify-content:center;
+      font-family:var(--display);font-size:24px;color:var(--v-primary);
     }
 
-    @media (max-width: 480px){
-      .vp-card{ padding:1.35rem; }
-      .vp-vendorName{ font-size:1.8rem; }
-      .vp-dropName{ font-size:1.55rem; }
+    /* ---------- Explainer: Hearth's model, stated plainly ---------- */
+    .explain{
+      background:var(--h-surface);
+      border:1px solid var(--h-hair);border-radius:14px;
+      padding:34px 34px 30px;
     }
+    .explain h2{margin-bottom:14px}
+    .explain p{margin:0 0 18px;color:var(--h-ink-soft);max-width:46em}
+    .rules{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:26px}
+    .rule{border-top:2px solid var(--v-primary);padding-top:14px}
+    .rule b{display:block;font-family:var(--ui);font-size:14px;font-weight:600;margin-bottom:4px}
+    .rule span{font-size:14px;color:var(--h-ink-soft);line-height:1.5}
+
+    /* ---------- Follow ---------- */
+    .follow{
+      background:var(--h-surface);
+      border:1px solid var(--h-hair);border-radius:14px;padding:34px;
+    }
+    .follow h2{margin-bottom:8px}
+    .follow > p{margin:0 0 24px;color:var(--h-ink-soft)}
+    .field{margin-bottom:16px}
+    .field label{display:block;font-size:14px;font-weight:500;margin-bottom:6px}
+    .field label i{font-style:normal;font-weight:400;color:var(--h-ink-soft)}
+    .field input{
+      width:100%;font-family:var(--ui);font-size:16px;color:var(--h-ink);
+      padding:12px 14px;background:var(--h-bg);
+      border:1px solid var(--h-hair);border-radius:9px;
+    }
+    .field input:focus{outline:2px solid var(--v-primary);outline-offset:1px;border-color:transparent}
+    .consent{display:flex;gap:12px;align-items:flex-start;margin:20px 0 22px}
+    .consent input{margin-top:4px;accent-color:var(--v-primary);width:17px;height:17px;flex:none}
+    .consent label{font-size:14.5px;color:var(--h-ink-soft);line-height:1.5}
+
+    /* Follow validation / error notice. Class names are load-bearing — wireFollow
+       toggles exactly these (.vp-notice / .is-error / .vp-hidden). */
+    .vp-notice{
+      margin-top:16px;padding:12px 14px;border-radius:9px;
+      font-size:14.5px;line-height:1.5;
+      background:#fdf2f0;border:1px solid #f3d3cc;color:#8c3a25;
+    }
+    .vp-hidden{display:none !important}
+
+    /* ---------- Footer: Hearth, quietly ---------- */
+    footer{
+      margin-top:36px;padding:34px 0 56px;
+      border-top:1px solid var(--h-hair);
+      font-size:14px;color:var(--h-ink-soft);
+    }
+    footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+    footer a{color:var(--h-fire);text-decoration:none;font-weight:500}
+    footer a:hover{text-decoration:underline}
+
+    @media (max-width:640px){
+      .hero{padding:48px 0 0}
+      .hero.resting,.hero.plain{padding:48px 0 4px}
+      section{padding:40px 0}
+      .facts{grid-template-columns:1fr;gap:20px;padding:22px 0}
+      .drop{grid-template-columns:1fr 56px;gap:14px}
+      .when{grid-column:1/-1;margin-bottom:-8px}
+      .thumb{width:56px;height:56px}
+      .rules{grid-template-columns:1fr;gap:18px}
+      .explain,.follow{padding:26px 22px}
+      h2{font-size:29px}
+    }
+    @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
   </style>
 </head>
 <body>
-  <div id="vpShell">
-    <div id="vpContent" class="vp-loading">Loading…</div>
-  </div>
+  <div id="vpRoot" class="vp-loading">Loading…</div>
 
   <script>
     (function () {
@@ -307,9 +256,9 @@
       var SUPABASE_ANON_KEY = (window.HEARTH_CONFIG || {}).SUPABASE_ANON_KEY;
 
       var supabase = null;
-      var state = { vendor: null, page: null, followDone: false };
+      var state = { vendor: null, page: null, slug: null, followDone: false };
 
-      var content = document.getElementById("vpContent");
+      var root = document.getElementById("vpRoot");
 
       /* ---------- helpers ---------- */
 
@@ -323,30 +272,47 @@
       }
 
       function readSlug() {
-        // PR2a: query param only. PR2b moves this to the path.
+        // PR2a/PR3: query param only. A later PR moves this to the path.
         var params = new URLSearchParams(window.location.search);
         var slug = params.get("slug");
         return slug && slug.trim() ? slug.trim() : null;
       }
 
-      function formatDate(iso) {
-        if (!iso) return null;
-        var d = new Date(iso);
-        if (isNaN(d.getTime())) return null;
-        return d.toLocaleDateString("en-GB", {
-          weekday: "long", day: "numeric", month: "long"
-        });
+      function firstLetter(name) {
+        var s = (name == null ? "" : String(name)).trim();
+        return s ? s.charAt(0).toUpperCase() : "";
       }
 
-      function formatDateTime(iso) {
+      // Fulfilment wording; an absent/mixed mode degrades to the neutral "Ready".
+      function fulfilmentLabel(mode) {
+        if (mode === "delivery") return "Delivery";
+        if (mode === "collection") return "Collection";
+        return "Ready";
+      }
+
+      // All customer-facing dates render in UK time — Hearth is UK-only (GBP,
+      // UK postcodes, Stripe GB) — so a drop shows its real UK window regardless
+      // of the viewer's timezone.
+      function londonParts(iso) {
         if (!iso) return null;
         var d = new Date(iso);
         if (isNaN(d.getTime())) return null;
-        return d.toLocaleString("en-GB", {
-          weekday: "long", day: "numeric", month: "long",
-          hour: "2-digit", minute: "2-digit"
-        });
+        function grab(opts) {
+          var m = {};
+          try {
+            new Intl.DateTimeFormat("en-GB", Object.assign({ timeZone: "Europe/London" }, opts))
+              .formatToParts(d).forEach(function (p) { m[p.type] = p.value; });
+          } catch (e) { return null; }
+          return m;
+        }
+        var L = grab({ weekday: "long", day: "numeric", month: "long" });
+        var S = grab({ weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+        if (!L || !S) return null;
+        return { wkLong: L.weekday, monLong: L.month, wkShort: S.weekday, monShort: S.month, day: L.day, hh: S.hour, mm: S.minute };
       }
+      function fmtLongDate(iso) { var p = londonParts(iso); return p ? (p.wkLong + " " + p.day + " " + p.monLong) : null; }
+      function fmtShortDate(iso) { var p = londonParts(iso); return p ? (p.wkShort + " " + p.day + " " + p.monShort) : null; }
+      function fmtShortDateTime(iso) { var p = londonParts(iso); return p ? (p.wkShort + " " + p.day + " " + p.monShort + ", " + p.hh + ":" + p.mm) : null; }
 
       function orderUrl(slug) {
         // Mirrors drop-manager.html getShareUrl() / host-view.html buildOrderLink().
@@ -388,236 +354,293 @@
 
       function applyBrand(vendor) {
         var brand = (vendor && vendor.brand) || {};
-        var root = document.documentElement;
-        if (brand.primary) root.style.setProperty("--v-primary", brand.primary);
-        if (brand.secondary) root.style.setProperty("--v-secondary", brand.secondary);
-        if (brand.text_on_primary) root.style.setProperty("--v-text-on-primary", brand.text_on_primary);
+        var rootEl = document.documentElement;
+        if (brand.primary) rootEl.style.setProperty("--v-primary", brand.primary);
+        if (brand.secondary) rootEl.style.setProperty("--v-secondary", brand.secondary);
+        if (brand.text_on_primary) rootEl.style.setProperty("--v-on-primary", brand.text_on_primary);
         var name = vendor && vendor.display_name;
         if (name) document.title = name;
       }
 
       function vendorName() {
-        return (state.vendor && state.vendor.display_name) || "This vendor";
+        return (state.vendor && (state.vendor.display_name || state.vendor.name)) || "This vendor";
       }
 
-      /* ---------- fragments ---------- */
+      /* ---------- frame ---------- */
 
-      /* The hero URL is carried in a data- attribute and applied as a style
-         property after insertion (see applyHeroImage). Interpolating a URL into
-         a style="" attribute would break on the first quote it contains. */
-      function heroHtml(vendor) {
-        var hero = vendor.hero_image_url;
-        var cls = hero ? "vp-hero" : "vp-hero is-fallback";
-        var heroAttr = hero ? ' data-hero="' + escapeHtml(hero) + '"' : "";
-        var logo = vendor.logo_url
-          ? '<img class="vp-logo" src="' + escapeHtml(vendor.logo_url) + '" alt="" />'
+      function topbarHtml(vendor) {
+        var logo = (vendor && vendor.logo_url)
+          ? '<img src="' + escapeHtml(vendor.logo_url) + '" alt="" />'
           : "";
-        var tagline = vendor.tagline
-          ? '<p class="vp-tagline">' + escapeHtml(vendor.tagline) + "</p>"
+        var name = vendor ? escapeHtml(vendor.display_name || vendor.name || "") : "";
+        var share = vendor
+          ? '<button class="share" id="vpShare" type="button">Share</button>'
           : "";
-        return '<div class="' + cls + '" id="vpHero"' + heroAttr + ">" +
-          '<div class="vp-heroInner">' +
-            logo +
-            '<h1 class="vp-vendorName">' + escapeHtml(vendor.display_name || "") + "</h1>" +
-            tagline +
-          "</div></div>";
+        return '<header class="topbar"><div class="wrap">' +
+          '<div class="mark">' + logo + "<span>" + name + "</span></div>" +
+          share +
+        "</div></header>";
       }
 
-      function applyHeroImage() {
-        var el = document.getElementById("vpHero");
-        if (!el) return;
-        var hero = el.getAttribute("data-hero");
-        if (!hero) return;
-        // Escape quotes/backslashes so the URL can't terminate the CSS url().
-        el.style.backgroundImage = 'url("' + hero.replace(/["\\]/g, "\\$&") + '")';
+      function footerHtml(vendor) {
+        var left = vendor ? escapeHtml(vendor.display_name || vendor.name || "") : "";
+        // Nullable-boolean convention: only an explicit false hides it.
+        var showPowered = !vendor || vendor.powered_by_hearth_visible !== false;
+        var powered = showPowered
+          ? '<span>Powered by <a href="https://lovehearth.co.uk">Hearth</a></span>'
+          : "";
+        return '<footer><div class="wrap"><span>' + left + "</span>" + powered + "</div></footer>";
       }
 
-      function factsHtml(rows) {
-        var items = rows.filter(function (r) { return r && r.value; }).map(function (r) {
-          return '<li><span class="vp-factLabel">' + escapeHtml(r.label) + "</span>" +
-            '<span class="vp-factValue">' + escapeHtml(r.value) + "</span></li>";
+      /* ---------- hero ---------- */
+
+      function heroRestingHtml(vendor) {
+        var lede = escapeHtml(vendorName()) +
+          " cooks to a plan — a set menu, a fixed window to order, and a set number of places. There’s nothing open at the moment, but there will be.";
+        var vline = (vendor && vendor.tagline)
+          ? '<div class="vendorline"><span>' + escapeHtml(vendor.tagline) + "</span></div>"
+          : "";
+        return '<div class="wrap"><div class="hero resting">' +
+          '<p class="eyebrow">Nothing on right now</p>' +
+          "<h1>Between drops</h1>" +
+          '<p class="lede">' + lede + "</p>" +
+          vline +
+        "</div></div>";
+      }
+
+      function factsStripHtml(st, drop, capacity) {
+        var facts = [];
+        var hasCap = capacity && typeof capacity.total === "number" && typeof capacity.remaining === "number";
+        if (st === "live_drop") {
+          facts.push({ label: fulfilmentLabel(drop.fulfilment_mode), value: fmtLongDate(drop.delivery_start) });
+          facts.push({ label: "Ordering closes", value: fmtShortDateTime(drop.closes_at) });
+          if (hasCap) facts.push({ label: "Places left", value: capacity.remaining + " of " + capacity.total, places: true });
+        } else if (st === "full_drop") {
+          facts.push({ label: "Ready", value: fmtLongDate(drop.delivery_start) });
+          facts.push({ label: "Ordering closes", value: fmtShortDateTime(drop.closes_at) });
+          facts.push({ label: "Places", value: "Full", places: true });
+        } else { // announced_drop
+          facts.push({ label: "Ready", value: fmtLongDate(drop.delivery_start) });
+          facts.push({ label: "Ordering opens", value: fmtShortDateTime(drop.opens_at) });
+        }
+        var cells = facts.filter(function (f) { return f.value; }).map(function (f) {
+          return '<div class="fact' + (f.places ? " places" : "") + '"><b>' +
+            escapeHtml(f.label) + "</b><span>" + escapeHtml(f.value) + "</span></div>";
         });
-        return items.length ? '<ul class="vp-facts">' + items.join("") + "</ul>" : "";
+        return cells.length ? '<div class="facts">' + cells.join("") + "</div>" : "";
       }
 
-      // Wording follows fulfilment_mode where the drop declares one; a mixed or
-      // absent mode degrades to the neutral "Ready".
-      function readyLabel(mode) {
-        if (mode === "delivery") return "Delivered";
-        if (mode === "collection") return "Collection";
-        return "Ready";
+      function orderCtaHtml(drop, capacity) {
+        var under = (capacity && typeof capacity.total === "number")
+          ? "Pre-order only. When the " + capacity.total + " places are gone, they’re gone."
+          : "Pre-order only.";
+        return '<div class="order">' +
+          '<a class="btn" href="' + escapeHtml(orderUrl(drop.slug)) + '">See the menu and order</a>' +
+          '<p class="undercta">' + escapeHtml(under) + "</p>" +
+        "</div>";
       }
+
+      function heroDropHtml(st, drop, capacity) {
+        var eyebrow, lede = "";
+        if (st === "live_drop") {
+          eyebrow = '<p class="eyebrow"><span class="dot"></span>Ordering is open</p>';
+          if (drop.drop_intro) lede = '<p class="lede">' + escapeHtml(drop.drop_intro) + "</p>";
+        } else if (st === "full_drop") {
+          eyebrow = '<p class="eyebrow">This drop is full</p>';
+          var taken = (capacity && typeof capacity.total === "number")
+            ? "All " + capacity.total + " places have been taken."
+            : "Every place has been taken.";
+          lede = '<p class="lede">' + escapeHtml(taken) + "</p>";
+        } else { // announced_drop
+          eyebrow = '<p class="eyebrow">Coming up</p>';
+          if (drop.drop_intro) lede = '<p class="lede">' + escapeHtml(drop.drop_intro) + "</p>";
+        }
+        return '<div class="wrap"><div class="hero">' +
+          eyebrow +
+          "<h1>" + escapeHtml(drop.name || "") + "</h1>" +
+          lede +
+          factsStripHtml(st, drop, capacity) +
+          (st === "live_drop" ? orderCtaHtml(drop, capacity) : "") +
+        "</div></div>";
+      }
+
+      /* ---------- recent drops ---------- */
+
+      /* The dated rhythm list. Thumbnail uses social_image_url when present;
+         when null (the default for this vendor), it falls back to a typographic
+         tile — the drop's first letter on the vendor's secondary colour. The
+         whole section is omitted when there are no recent drops. */
+      function recentDropsHtml(recent) {
+        if (!Array.isArray(recent) || recent.length === 0) return "";
+        var rows = recent.map(function (d) {
+          var when = fmtShortDate(d.delivery_start || d.closes_at) || "";
+          var em = fulfilmentLabel(d.fulfilment_mode);
+          var intro = d.drop_intro ? "<p>" + escapeHtml(d.drop_intro) + "</p>" : "";
+          var thumb = d.social_image_url
+            ? '<div class="thumb" data-thumb="' + escapeHtml(d.social_image_url) + '"></div>'
+            : '<div class="thumb">' + escapeHtml(firstLetter(d.name)) + "</div>";
+          return '<article class="drop">' +
+            '<div class="when">' + escapeHtml(when) + "<em>" + escapeHtml(em) + "</em></div>" +
+            '<div class="what"><h3>' + escapeHtml(d.name || "") + "</h3>" + intro + "</div>" +
+            thumb +
+          "</article>";
+        }).join("");
+        return '<div class="wrap"><section>' +
+          '<div class="sechead"><h2>Recent drops</h2><span class="note">What they’ve been cooking</span></div>' +
+          '<div class="rhythm">' + rows + "</div>" +
+        "</section></div>";
+      }
+
+      /* ---------- explainer (static Hearth copy) ---------- */
+
+      function explainHtml() {
+        return '<div class="wrap"><section>' +
+          '<div class="explain">' +
+            "<h2>What’s a drop?</h2>" +
+            "<p>A drop is a planned moment rather than an always-open menu. The kitchen decides what it’s making, when it can make it, and how many it can make well — then opens ordering for a set window.</p>" +
+            '<div class="rules">' +
+              "<div class=\"rule\"><b>A set menu</b><span>Chosen for that day, not a standing list.</span></div>" +
+              "<div class=\"rule\"><b>A fixed window</b><span>Ordering opens, then closes. You plan around it.</span></div>" +
+              "<div class=\"rule\"><b>Real places</b><span>When they’re gone, they’re gone. No overselling.</span></div>" +
+            "</div>" +
+          "</div>" +
+        "</section></div>";
+      }
+
+      /* ---------- follow ---------- */
 
       function followHtml(opts) {
-        var title = opts.title;
-        var sub = opts.sub;
-        return '<section class="vp-card" id="vpFollowCard">' +
-          '<h2 class="vp-followTitle">' + escapeHtml(title) + "</h2>" +
-          '<p class="vp-followSub">' + escapeHtml(sub) + "</p>" +
-          '<form id="vpFollowForm" novalidate>' +
-            '<div class="vp-field">' +
-              '<label class="vp-label" for="vpName">Your name</label>' +
-              '<input class="vp-input" id="vpName" name="name" type="text" autocomplete="name" required />' +
-            "</div>" +
-            '<div class="vp-field">' +
-              '<label class="vp-label" for="vpEmail">Email</label>' +
-              '<input class="vp-input" id="vpEmail" name="email" type="email" autocomplete="email" required />' +
-            "</div>" +
-            '<div class="vp-field">' +
-              '<label class="vp-label" for="vpPostcode">Postcode <span class="vp-optional">— optional</span></label>' +
-              '<input class="vp-input" id="vpPostcode" name="postcode" type="text" autocomplete="postal-code" />' +
-            "</div>" +
-            '<div class="vp-field">' +
-              '<label class="vp-label" for="vpPhone">Mobile <span class="vp-optional">— optional</span></label>' +
-              '<input class="vp-input" id="vpPhone" name="phone" type="tel" autocomplete="tel" />' +
-            "</div>" +
-            '<label class="vp-consent">' +
-              '<input type="checkbox" id="vpConsent" />' +
-              "<span>Yes, " + escapeHtml(vendorName()) +
-                " can email me about what's coming next. You can ask to stop at any time.</span>" +
-            "</label>" +
-            '<button class="vp-btn vp-btnPrimary" id="vpFollowSubmit" type="submit">' +
-              escapeHtml(opts.cta) +
-            "</button>" +
-            '<div class="vp-notice vp-hidden" id="vpFollowNotice" role="status"></div>' +
-          "</form>" +
-        "</section>";
+        var btnClass = opts.ghost ? "btn ghost" : "btn";
+        return '<div class="wrap"><section>' +
+          '<div class="follow" id="vpFollowCard">' +
+            "<h2>" + escapeHtml(opts.title) + "</h2>" +
+            "<p>" + escapeHtml(opts.sub) + "</p>" +
+            '<form id="vpFollowForm" novalidate>' +
+              '<div class="field"><label for="vpName">Your name</label>' +
+                '<input id="vpName" name="name" type="text" autocomplete="name" required /></div>' +
+              '<div class="field"><label for="vpEmail">Email</label>' +
+                '<input id="vpEmail" name="email" type="email" autocomplete="email" required /></div>' +
+              '<div class="field"><label for="vpPostcode">Postcode <i>— optional</i></label>' +
+                '<input id="vpPostcode" name="postcode" type="text" autocomplete="postal-code" /></div>' +
+              '<div class="field"><label for="vpPhone">Mobile <i>— optional</i></label>' +
+                '<input id="vpPhone" name="phone" type="tel" autocomplete="tel" /></div>' +
+              '<div class="consent"><input id="vpConsent" type="checkbox" />' +
+                '<label for="vpConsent">Yes, ' + escapeHtml(vendorName()) +
+                  " can email me about what’s coming next. You can ask to stop at any time.</label></div>" +
+              '<button class="' + btnClass + '" id="vpFollowSubmit" type="submit">' + escapeHtml(opts.cta) + "</button>" +
+              '<div class="vp-notice vp-hidden" id="vpFollowNotice" role="status"></div>' +
+            "</form>" +
+          "</div>" +
+        "</section></div>";
       }
 
-      /* ---------- states ---------- */
-
-      function renderNotFound() {
-        document.title = "Not found";
-        content.className = "";
-        content.innerHTML =
-          '<div class="vp-plain">' +
-            "<h1>We couldn't find that vendor.</h1>" +
-            "<p>The link may be out of date, or the address may have a typo in it.</p>" +
-          "</div>";
-      }
-
-      function renderError() {
-        content.className = "";
-        content.innerHTML =
-          '<div class="vp-plain">' +
-            "<h1>This page didn't load.</h1>" +
-            "<p>Something went wrong at our end. Please try again in a moment.</p>" +
-          "</div>";
-      }
+      /* ---------- render ---------- */
 
       function renderPage(page) {
         var vendor = page.vendor;
+        var st = page.state;
         var drop = page.drop;
         var capacity = page.capacity;
-        var body = "";
+        var recent = page.recent_drops;
 
-        if (page.state === "live_drop") {
-          // Capacity is rendered only when the server sent a real number.
-          var capChip = "";
-          if (capacity && typeof capacity.remaining === "number" && typeof capacity.total === "number") {
-            capChip = '<div class="vp-capacity">' +
-              escapeHtml(capacity.remaining + " of " + capacity.total + " places left") +
-              "</div>";
-          }
-          body =
-            '<section class="vp-card">' +
-              '<p class="vp-eyebrow">Ordering is open</p>' +
-              '<h2 class="vp-dropName">' + escapeHtml(drop.name || "") + "</h2>" +
-              (drop.drop_intro ? '<p class="vp-intro">' + escapeHtml(drop.drop_intro) + "</p>" : "") +
-              capChip +
-              factsHtml([
-                { label: readyLabel(drop.fulfilment_mode), value: formatDate(drop.delivery_start) },
-                { label: "Ordering closes", value: formatDateTime(drop.closes_at) }
-              ]) +
-              '<a class="vp-btn vp-btnPrimary" href="' + escapeHtml(orderUrl(drop.slug)) + '">' +
-                "See the menu and order" +
-              "</a>" +
-            "</section>";
-
-          if (page.follow && page.follow.enabled) {
-            body += followHtml({
-              title: "Hear about the next one",
-              sub: "Not this time? Leave your details and " + vendorName() +
-                   " will let you know when the next drop is planned.",
-              cta: "Keep me posted"
-            });
-          }
-        } else if (page.state === "full_drop") {
-          // Follow leads. There is deliberately no order affordance here.
-          var takenLine = (capacity && typeof capacity.total === "number")
-            ? "All " + capacity.total + " places have been taken."
-            : "Every place has been taken.";
-          body =
-            '<section class="vp-card">' +
-              '<p class="vp-eyebrow">This drop is full</p>' +
-              '<h2 class="vp-dropName">' + escapeHtml(drop.name || "") + "</h2>" +
-              '<p class="vp-intro">' + escapeHtml(takenLine) + "</p>" +
-              // full_drop is only reached while the window is still open, so
-              // closes_at is in the future — "closed" would be inaccurate.
-              factsHtml([
-                { label: "Ready", value: formatDate(drop.delivery_start) },
-                { label: "Ordering closes", value: formatDateTime(drop.closes_at) }
-              ]) +
-            "</section>";
-
-          if (page.follow && page.follow.enabled) {
-            body += followHtml({
-              title: "Hear about the next one",
-              sub: "This drop is fully booked. Leave your details and " + vendorName() +
-                   " will let you know when the next one is planned.",
-              cta: "Keep me posted"
-            });
-          }
-        } else if (page.state === "announced_drop") {
-          body =
-            '<section class="vp-card">' +
-              '<p class="vp-eyebrow">Coming up</p>' +
-              '<h2 class="vp-dropName">' + escapeHtml(drop.name || "") + "</h2>" +
-              (drop.drop_intro ? '<p class="vp-intro">' + escapeHtml(drop.drop_intro) + "</p>" : "") +
-              factsHtml([
-                { label: "Ordering opens", value: formatDateTime(drop.opens_at) },
-                { label: "Ready", value: formatDate(drop.delivery_start) }
-              ]) +
-            "</section>";
-
-          if (page.follow && page.follow.enabled) {
-            body += followHtml({
-              title: "Be there when it opens",
-              sub: "Ordering isn't open yet. Leave your details and " + vendorName() +
-                   " will let you know the moment it is.",
-              cta: "Let me know"
-            });
-          }
-        } else {
-          // resting — the capture surface. Not an empty state.
-          body =
-            '<section class="vp-card">' +
-              '<p class="vp-eyebrow">Nothing on right now</p>' +
-              '<h2 class="vp-dropName">Between drops</h2>' +
-              '<p class="vp-intro">' +
-                escapeHtml(vendorName()) + " cooks to a plan — a set menu, a set window, " +
-                "a set number of places. There's no drop open at the moment." +
-              "</p>" +
-            "</section>";
-
-          if (page.follow && page.follow.enabled) {
-            body += followHtml({
-              title: "See what's coming next",
-              sub: "Leave your details and " + vendorName() +
-                   " will let you know when the next drop is planned.",
-              cta: "Keep me posted"
-            });
-          }
+        var hero, sections;
+        if (st === "live_drop") {
+          hero = heroDropHtml("live_drop", drop, capacity);
+          // Explainer ABOVE recent drops: a stranger arriving mid-order needs
+          // the model explained before the CTA makes sense.
+          sections = explainHtml() + recentDropsHtml(recent) + followHtml({
+            title: "Can’t make this one?",
+            sub: "Leave your details and " + vendorName() + " will let you know when the next drop is planned.",
+            cta: "Keep me posted",
+            ghost: true
+          });
+        } else if (st === "full_drop") {
+          hero = heroDropHtml("full_drop", drop, capacity);
+          sections = explainHtml() + recentDropsHtml(recent) + followHtml({
+            title: "This drop is full",
+            sub: "It’s fully booked — leave your details and " + vendorName() + " will let you know when the next one is planned.",
+            cta: "Keep me posted",
+            ghost: false
+          });
+        } else if (st === "announced_drop") {
+          hero = heroDropHtml("announced_drop", drop, capacity);
+          sections = explainHtml() + recentDropsHtml(recent) + followHtml({
+            title: "Be there when it opens",
+            sub: "Ordering isn’t open yet. Leave your details and " + vendorName() + " will let you know the moment it is.",
+            cta: "Keep me posted",
+            ghost: false
+          });
+        } else { // resting
+          hero = heroRestingHtml(vendor);
+          sections = recentDropsHtml(recent) + explainHtml() + followHtml({
+            title: "See what’s coming next",
+            sub: "Leave your details and " + vendorName() + " will let you know when the next drop is planned.",
+            cta: "Keep me posted",
+            ghost: false
+          });
         }
 
-        var footer = vendor.powered_by_hearth_visible
-          ? '<p class="vp-footer">Powered by <strong>Hearth</strong></p>'
-          : "";
-
-        content.className = "";
-        content.innerHTML = heroHtml(vendor) + body + footer;
-        applyHeroImage();
+        root.className = "";
+        root.innerHTML = topbarHtml(vendor) + "<main>" + hero + sections + "</main>" + footerHtml(vendor);
+        applyDeferredBackgrounds();
+        wireShare();
         wireFollow();
+      }
+
+      function renderNotFound() {
+        document.title = "Not found";
+        root.className = "";
+        root.innerHTML = topbarHtml(null) +
+          '<main><div class="wrap"><div class="hero plain">' +
+            "<h1>We couldn’t find that.</h1>" +
+            "<p class=\"lede\">The link may be out of date, or the address may have a small typo in it.</p>" +
+          "</div></div></main>" +
+          footerHtml(null);
+      }
+
+      function renderError() {
+        root.className = "";
+        root.innerHTML = topbarHtml(null) +
+          '<main><div class="wrap"><div class="hero plain">' +
+            "<h1>This page didn’t load.</h1>" +
+            "<p class=\"lede\">Something went wrong at our end. Please try again in a moment.</p>" +
+          "</div></div></main>" +
+          footerHtml(null);
+      }
+
+      /* The thumbnail URL is carried in a data- attribute and applied as a style
+         property after insertion — interpolating a URL into a style="" attribute
+         would break on the first quote it contains. */
+      function applyDeferredBackgrounds() {
+        var els = document.querySelectorAll("[data-thumb]");
+        for (var i = 0; i < els.length; i++) {
+          var url = els[i].getAttribute("data-thumb");
+          if (url) els[i].style.backgroundImage = 'url("' + url.replace(/["\\]/g, "\\$&") + '")';
+        }
+      }
+
+      /* ---------- share ---------- */
+
+      function wireShare() {
+        var btn = document.getElementById("vpShare");
+        if (!btn) return;
+        btn.addEventListener("click", async function () {
+          var url = window.location.href;
+          var title = (state.vendor && (state.vendor.display_name || state.vendor.name)) || document.title;
+          if (navigator.share) {
+            try { await navigator.share({ title: title, url: url }); }
+            catch (e) { /* user cancelled / share unavailable — ignore */ }
+            return;
+          }
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            try {
+              await navigator.clipboard.writeText(url);
+              var original = btn.textContent;
+              btn.textContent = "Link copied";
+              setTimeout(function () { btn.textContent = original; }, 1800);
+            } catch (e) { /* ignore */ }
+          }
+        });
       }
 
       /* ---------- follow ---------- */
@@ -683,12 +706,8 @@
           var card = document.getElementById("vpFollowCard");
           var already = result.data && result.data.already_following;
           card.innerHTML =
-            '<h2 class="vp-followTitle">' +
-              (already ? "You're already on the list." : "You're on the list.") +
-            "</h2>" +
-            '<p class="vp-followSub">' +
-              escapeHtml(vendorName()) + " will let you know when the next drop is planned." +
-            "</p>";
+            "<h2>" + (already ? "You’re already on the list." : "You’re on the list.") + "</h2>" +
+            "<p>" + escapeHtml(vendorName()) + " will let you know when the next drop is planned.</p>";
         });
       }
 
