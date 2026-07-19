@@ -1672,8 +1672,22 @@
                       </div>
 
                       <div class="field" style="grid-column:1 / -1;">
-                        <label for="fundraisingDisplayText">Customer-facing Text</label>
-                        <input id="fundraisingDisplayText" type="text" placeholder="£1 from every order supports a local cause" />
+                        <label for="fundraisingCauseName">Cause name</label>
+                        <input id="fundraisingCauseName" type="text" placeholder="e.g. Southbury Food Bank – Winter Appeal" />
+                        <div class="helperText">Who the money supports, as customers should see it. Shown on the drop.</div>
+                      </div>
+
+                      <div class="field" style="grid-column:1 / -1;">
+                        <label for="fundraisingCauseReference">Where the money goes (private — optional)</label>
+                        <input id="fundraisingCauseReference" type="text" placeholder="e.g. registered charity 1234567, or a link for remittance" />
+                        <div class="helperText">For your own records — a charity number, link, or note on how funds reach the cause. Never shown to customers.</div>
+                      </div>
+
+                      <div class="field" style="grid-column:1 / -1;">
+                        <label for="fundraisingDisplayText">Customer message (optional — overrides the automatic line)</label>
+                        <input id="fundraisingDisplayText" type="text" placeholder="£1 from every order goes to Southbury Food Bank" />
+                        <div class="helperText">Leave this blank and the line below is written for you. Fill it in only if you want to say it differently.</div>
+                        <div class="helperText" id="fundraisingLinePreview" aria-live="polite"></div>
                       </div>
                     </div>
                   </div>
@@ -2548,7 +2562,11 @@
         if (!dropData.fundraising_model) fundraisingValid = false;
         if (dropData.fundraising_model === "percentage" && !(Number(dropData.fundraising_percentage) > 0)) fundraisingValid = false;
         if (dropData.fundraising_model === "per_order" && !(Number(dropData.fundraising_per_order_pence) > 0)) fundraisingValid = false;
-        if (!dropData.fundraising_display_text) fundraisingValid = false;
+        /* The cause is what fundraising now requires. fundraising_display_text became an
+           OPTIONAL override of the automatically composed line, so it is deliberately no
+           longer a readiness condition — mirrored server-side in update-drop and in
+           transition-drop-status's evaluateLiveReadiness (the publish gate). */
+        if (!String(dropData.fundraising_cause_name || "").trim()) fundraisingValid = false;
       }
 
       let hostShareValid = true;
@@ -3771,6 +3789,8 @@
       byId("fundraisingModel").value = d.fundraising_model || "";
       byId("fundraisingPercentage").value = d.fundraising_percentage ?? "";
       byId("fundraisingPerOrderPence").value = d.fundraising_per_order_pence == null ? "" : (d.fundraising_per_order_pence / 100).toFixed(2);
+      byId("fundraisingCauseName").value = d.fundraising_cause_name || "";
+      byId("fundraisingCauseReference").value = d.fundraising_cause_reference || "";
       byId("fundraisingDisplayText").value = d.fundraising_display_text || "";
 
       byId("hostShareEnabled").checked = Boolean(d.host_share_enabled);
@@ -4046,6 +4066,61 @@
       event: "Private link for one organiser to order and pay for a group. One-off only."
     };
 
+    /* Compose the contribution line from the structured fundraising fields.
+       This is the line a customer sees when the vendor has NOT written their own
+       fundraising_display_text. Returns "" when there isn't yet enough to say
+       something true — an incomplete line is worse than none (honest degradation,
+       per the intelligence-layer invariants in CLAUDE.md). */
+    function composeFundraisingLine(model, percentage, perOrderPence, causeName) {
+      const cause = String(causeName || "").trim();
+      if (!cause) return "";
+      if (model === "percentage") {
+        const pct = Number(percentage);
+        if (!(pct > 0)) return "";
+        // Trim a trailing .00 / .50 → "5", "2.5"
+        const pctText = String(Number(pct.toFixed(2)));
+        return `${pctText}% of every order goes to ${cause}`;
+      }
+      if (model === "per_order") {
+        const pence = Number(perOrderPence);
+        if (!(pence > 0)) return "";
+        const pounds = pence / 100;
+        const amountText = Number.isInteger(pounds) ? `£${pounds}` : `£${pounds.toFixed(2)}`;
+        return `${amountText} from every order goes to ${cause}`;
+      }
+      return "";
+    }
+
+    /* Live preview under the customer-message field. Shows the composed line when the
+       vendor has left the override blank, and confirms the override is in use when they
+       haven't. Display-only — never writes to the payload. */
+    function renderFundraisingLinePreview() {
+      const el = byId("fundraisingLinePreview");
+      if (!el) return;
+
+      if (!byId("fundraisingEnabled").checked) {
+        el.textContent = "";
+        return;
+      }
+
+      const override = byId("fundraisingDisplayText").value.trim();
+      if (override) {
+        el.textContent = `Customers will see: “${override}”`;
+        return;
+      }
+
+      const auto = composeFundraisingLine(
+        byId("fundraisingModel").value,
+        byId("fundraisingPercentage").value,
+        byId("fundraisingPerOrderPence").value === "" ? null : Math.round(Number(byId("fundraisingPerOrderPence").value) * 100),
+        byId("fundraisingCauseName").value
+      );
+
+      el.textContent = auto
+        ? `Customers will see: “${auto}”`
+        : "Add a model, an amount and a cause name to see the line customers will read.";
+    }
+
     function renderConditionalFields() {
       const dropType = byId("dropType").value || "neighbourhood";
       const dropTypeHelper = byId("dropTypeHelper");
@@ -4080,6 +4155,7 @@
       byId("fundraisingFields").classList.toggle("hidden", !fundraisingEnabled);
       byId("fundraisingPercentageField").classList.toggle("hidden", fundraisingModel !== "percentage");
       byId("fundraisingPerOrderField").classList.toggle("hidden", fundraisingModel !== "per_order");
+      renderFundraisingLinePreview();
 
       const hostShareEnabled = byId("hostShareEnabled").checked;
       const hostShareModel = byId("hostShareModel").value;
@@ -4595,6 +4671,8 @@
         fundraising_per_order_pence: byId("fundraisingEnabled").checked && byId("fundraisingModel").value === "per_order"
           ? (byId("fundraisingPerOrderPence").value === "" ? null : Math.round(Number(byId("fundraisingPerOrderPence").value) * 100))
           : null,
+        fundraising_cause_name: byId("fundraisingEnabled").checked ? (byId("fundraisingCauseName").value.trim() || null) : null,
+        fundraising_cause_reference: byId("fundraisingEnabled").checked ? (byId("fundraisingCauseReference").value.trim() || null) : null,
         fundraising_display_text: byId("fundraisingEnabled").checked ? (byId("fundraisingDisplayText").value.trim() || null) : null,
 
         host_share_enabled: byId("hostShareEnabled").checked,
@@ -4646,6 +4724,8 @@
         fundraising_model: dropData.fundraising_model,
         fundraising_percentage: dropData.fundraising_percentage,
         fundraising_per_order_pence: dropData.fundraising_per_order_pence,
+        fundraising_cause_name: dropData.fundraising_cause_name,
+        fundraising_cause_reference: dropData.fundraising_cause_reference,
         fundraising_display_text: dropData.fundraising_display_text,
 
         host_share_enabled: dropData.host_share_enabled,
@@ -5970,7 +6050,8 @@
         "centrePostcode", "radiusKm", "capacityTotal", "expectedGuests",
         "deliveryStartTime", "deliveryEndTime",
         "opensAtDate", "opensAtTime", "closesAtDate", "closesAtTime",
-        "fundraisingEnabled", "fundraisingModel", "fundraisingPercentage", "fundraisingPerOrderPence", "fundraisingDisplayText",
+        "fundraisingEnabled", "fundraisingModel", "fundraisingPercentage", "fundraisingPerOrderPence",
+        "fundraisingCauseName", "fundraisingCauseReference", "fundraisingDisplayText",
         "hostShareEnabled", "hostShareModel", "hostSharePercentage", "hostSharePerOrderPence", "hostShareFixedPence", "hostShareCustomerVisible",
         "seriesStartDate", "seriesEndMode", "seriesEndDate", "seriesDropCount"
       ].forEach((id) => {

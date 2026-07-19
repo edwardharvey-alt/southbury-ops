@@ -5362,6 +5362,34 @@ Dropping a column is irreversible without PITR (T6-5), so a non-zero count chang
 
 **Cross-reference:** `20260719140000_drop_fundraising_cause.sql` (the migration that surfaced it), T5-B5 (schema cleanup — legacy artefacts, same family), T-CAP-10 (overlapping-column precedent), T6-5 (PITR, prerequisite for any irreversible drop).
 
+---
+
+T-fundraising-composed-line-consumers — teach the customer- and host-facing surfaces to compose the fundraising line
+
+**Status:** Open. Tier 5-B. Surfaced by the Drop Studio cause-capture PR (2026-07-19). Do before the first real fundraising drop with a blank customer message.
+
+**What changed upstream.** The cause-capture PR made `fundraising_display_text` an **optional override** of a line composed from the structured fields (`fundraising_model` + `fundraising_percentage` / `fundraising_per_order_pence` + `fundraising_cause_name`). It is no longer required by Drop Studio readiness, by `update-drop`, or by the `transition-drop-status` publish gate — `fundraising_cause_name` took over that role.
+
+**The gap.** Drop Studio composes and previews the line client-side (`composeFundraisingLine` in `drop-manager.html`), but that helper is **the only implementation**. Every downstream reader still renders `fundraising_display_text` verbatim, so a fundraising drop saved with a blank override now renders **nothing** where it previously always had text:
+
+- `host-view.html` (~:1126) — `const fundraisingText = drop.fundraising_display_text || null;`
+- `host-view-summary/index.ts` — projects `fundraising_display_text` (~:103 select list, ~:148 response) and does **not** currently project `fundraising_cause_name`
+
+This is a silent-empty failure, not an error — the same shape as operational learning #26 (a schema change has a read side and a write side, and either alone is silently broken). The write side shipped; this is the read side.
+
+**The fix, and the pattern to follow.** Build the line **server-side** in `host-view-summary` and return a single composed descriptor, exactly as `host_share_descriptor` is already built there rather than shipping raw mechanics to the client. Precedent is in the same function. Then:
+
+- widen the `v_drop_summary` select list in `host-view-summary` to include `fundraising_cause_name` (validate against `information_schema.columns` first — operational learning #54: a single unknown column hard-400s the whole query)
+- return `fundraising_descriptor = fundraising_display_text?.trim() || composed`
+- re-point `host-view.html` onto the descriptor
+- **never** project `fundraising_cause_reference` — it is operator-only by design and explicitly barred from customer- and host-facing projections (see the column comment and `20260719140000_drop_fundraising_cause.sql`)
+
+**Also outstanding:** `order.html` does not render a fundraising line at all today. Composing one there is the customer-facing half of what the cause column was added for (see the migration header: "so the order page can compose an accurate contribution line instead of relying on the vendor to restate it in display text"). Worth doing in the same pass.
+
+**Watch for divergence.** Once the line is composed in two places (client preview + server descriptor), the two can drift and show a vendor one line in Drop Studio and customers another. Prefer making the server the single authority and having Drop Studio's preview mirror its wording exactly; if they must stay separate, keep the phrasing in one documented place. Same family as T-fundraising-order-count-single-source (two independent derivations of one number that agree today).
+
+**Cross-reference:** `20260719140000_drop_fundraising_cause.sql` and `20260719150000_drop_fundraising_cause_views.sql` (the data layer), operational learning #26 (read side / write side), #54 (select-narrowing validation), the `host_share_descriptor` pattern in `host-view-summary/index.ts`.
+
 ### Build Coherence Audit — Pass A (drop lifecycle, timing & type)
 
 Tickets surfaced by Build Coherence Audit Pass A
