@@ -1980,7 +1980,30 @@
       const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
       const STRIPE_CHECKOUT_FUNCTION = CONFIG.STRIPE_CHECKOUT_FUNCTION || "create-stripe-checkout";
 
-      let supabase = null;
+      /* T-order-session-isolation — two deliberately separate clients.
+
+         publicClient — created with { persistSession: false, autoRefreshToken:
+         false } so it can never pick up an operator's stored session from the
+         shared origin. EVERY customer-path read runs through it and therefore
+         always executes as the `anon` role, so the anon RLS policy applies.
+
+         Why this matters: without the isolation, a logged-in vendor opening any
+         order page executes as `authenticated`. PostgREST then applies the
+         vendor-owner policy instead of the anon one, and every drop that user
+         does not own returns an empty set — data:null, error:null — which the
+         page reports as "This drop isn't available". The queries were always
+         correct; only the identity executing them was wrong. This is coherence
+         audit finding C4 (host-facing clients must not inherit vendor sessions)
+         applied to the customer surface, matching host-view.html and
+         host-poster.html.
+
+         previewClient — the ordinary session-bearing client, created lazily and
+         used ONLY by the ?preview= branch, which is the single place on this
+         page where a vendor session is required and correct. Lazy creation
+         keeps the normal customer path to exactly one client and avoids the
+         "Multiple GoTrueClient instances" warning. */
+      let publicClient = null;
+      let previewClient = null;
       let countdownTimer = null;
       let realtimeChannel = null;
       let isSubmitting = false;
@@ -2007,6 +2030,12 @@
         deliveryAreaBlocked: false /* T3-12a */,
         expandedMenuItems: new Set()
       };
+
+      /* Single piece of copy for every "we could not load this drop" outcome.
+         Calm, factual, no blame — it does not guess which of the two likely
+         causes applies, because we cannot know. */
+      const DROP_UNAVAILABLE_MESSAGE =
+        "This drop isn’t available. It may have finished, or the link may be out of date.";
 
       function byId(id) {
         return document.getElementById(id);
@@ -2046,6 +2075,31 @@
         el.className = `statusNotice ${type || ""}`;
         el.textContent = message;
         syncHeroBodyCard();
+      }
+
+      /* A failed load must RESOLVE, not hang. loadDropContext throwing skips
+         renderAll entirely, so without this the hero keeps its hardcoded
+         "Loading vendor…" / "Loading…" / "Please wait" placeholders on screen
+         forever and the customer is left watching a page that is not loading.
+         Clear every placeholder to a neutral state and show the reason exactly
+         once, in the error box. No retry, no redirect, no vendor link — when
+         the drop lookup fails we do not know the vendor. */
+      function resolveToUnavailableState(message) {
+        byId("heroVendorName").textContent = "";
+        byId("heroTagline").textContent = "";
+        byId("heroDropTitle").textContent = "";
+        byId("heroDropSub").textContent = "";
+        byId("vendorLogoHero").classList.add("hidden");
+        byId("heroChips").classList.add("hidden");
+        byId("heroVisitWrap").innerHTML = "";
+
+        /* Hide the menu card rather than filling it with a second copy of the
+           same sentence — the message belongs in one surface only. */
+        const menuCard = byId("menuSections")?.closest(".sectionCard");
+        if (menuCard) menuCard.classList.add("hidden");
+
+        showNotice("");
+        showError(message);
       }
 
       function showCheckoutNotice(message, type = "") {
@@ -2435,9 +2489,16 @@
            anon customer path below, leaving the real customer experience unchanged. */
         if (previewId) {
           try {
-            const { data: sessData } = await supabase.auth.getSession();
+            /* The ONLY session-bearing client on this page. Created lazily here
+               so the ordinary customer path never instantiates it. Any failure
+               below leaves state.drop null and falls through to the public
+               path, exactly as before. */
+            if (!previewClient) {
+              previewClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+            const { data: sessData } = await previewClient.auth.getSession();
             if (sessData && sessData.session) {
-              const { data: inv, error: invErr } = await supabase.functions.invoke("get-drop", { body: { drop_id: previewId } });
+              const { data: inv, error: invErr } = await previewClient.functions.invoke("get-drop", { body: { drop_id: previewId } });
               if (!invErr && inv && !inv.error && inv.id) {
                 state.drop = {
                   id: inv.id, slug: inv.slug, name: inv.name, status: inv.status,
@@ -2460,7 +2521,7 @@
           if (!state.dropSlug) {
             throw new Error("Missing drop slug in URL. Expected format: order.html?drop=your-drop-slug");
           }
-          const dropRes = await supabase
+          const dropRes = await publicClient
             .from("drops")
             .select("id, slug, name, status, drop_type, drop_intro, vendor_id, host_id, window_group_id, opens_at, closes_at, delivery_start, delivery_end, fulfilment_mode, capacity_units_total, capacity_category, capacity_category_id, delivery_area_type, allowed_postcode_prefixes, discount_tiers")
             .eq("slug", state.dropSlug)
@@ -2471,10 +2532,10 @@
         }
 
         if (!state.drop) {
-          throw new Error("This drop isn’t available — it may be unpublished or no longer running.");
+          throw new Error(DROP_UNAVAILABLE_MESSAGE);
         }
 
-        const summaryRes = await supabase
+        const summaryRes = await publicClient
           .from("v_drop_public")
           .select("*")
           .eq("drop_id", state.drop.id)
@@ -2483,7 +2544,7 @@
         if (summaryRes.error) throw summaryRes.error;
         state.dropSummary = summaryRes.data || null;
 
-        const vendorRes = await supabase
+        const vendorRes = await publicClient
           .from("v_vendor_public")
           .select("id, display_name, name, tagline, logo_url, hero_image_url, website_url, brand_primary_color, brand_secondary_color, brand_text_on_primary, powered_by_hearth_visible")
           .eq("id", state.drop.vendor_id)
@@ -2492,11 +2553,11 @@
         if (vendorRes.error) throw vendorRes.error;
         state.vendor = vendorRes.data;
         if (!state.vendor) {
-          throw new Error("This drop isn’t available — it may be unpublished or no longer running.");
+          throw new Error(DROP_UNAVAILABLE_MESSAGE);
         }
 
         if (state.drop.host_id) {
-          const hostRes = await supabase
+          const hostRes = await publicClient
             .from("v_host_public")
             .select("id, name, host_type")
             .eq("id", state.drop.host_id)
@@ -2507,7 +2568,7 @@
           }
         }
 
-        const categoriesRes = await supabase
+        const categoriesRes = await publicClient
           .from("categories")
           .select("*")
           .eq("vendor_id", state.drop.vendor_id)
@@ -2517,7 +2578,7 @@
         if (categoriesRes.error) throw categoriesRes.error;
         state.categories = categoriesRes.data || [];
 
-        const menuRes = await supabase
+        const menuRes = await publicClient
           .from("drop_menu_items")
           .select("*")
           .eq("drop_id", state.drop.id)
@@ -2532,7 +2593,7 @@
         const bundleIds = [...new Set(state.rawMenuRows.filter((x) => x.menu_item_type === "bundle" && x.bundle_id).map((x) => x.bundle_id))];
 
         if (productIds.length) {
-          const productsRes = await supabase
+          const productsRes = await publicClient
             .from("products")
             .select("*")
             .in("id", productIds);
@@ -2544,7 +2605,7 @@
         }
 
         if (bundleIds.length) {
-          const bundlesRes = await supabase
+          const bundlesRes = await publicClient
             .from("bundles")
             .select("*")
             .in("id", bundleIds);
@@ -2552,7 +2613,7 @@
           if (bundlesRes.error) throw bundlesRes.error;
           state.bundles = bundlesRes.data || [];
 
-          const bundleLinesRes = await supabase
+          const bundleLinesRes = await publicClient
             .from("bundle_lines")
             .select("*")
             .in("bundle_id", bundleIds)
@@ -2564,7 +2625,7 @@
 
           const lineIds = state.bundleLines.map((x) => x.id);
           if (lineIds.length) {
-            const choiceRes = await supabase
+            const choiceRes = await publicClient
               .from("bundle_line_choice_products")
               .select("*")
               .in("bundle_line_id", lineIds)
@@ -2578,7 +2639,7 @@
             const missingIds = extraProductIds.filter((id) => !state.products.some((p) => p.id === id));
 
             if (missingIds.length) {
-              const missingProductsRes = await supabase
+              const missingProductsRes = await publicClient
                 .from("products")
                 .select("*")
                 .in("id", missingIds);
@@ -2613,7 +2674,7 @@
         state.selectedFulfilmentMode = getDefaultSelectedFulfilmentMode();
 
         if (getOrderWindowState().state === "closed" && state.drop?.vendor_id) {
-          const nextRes = await supabase
+          const nextRes = await publicClient
             .from("drops")
             .select("id, slug, name, opens_at, delivery_start")
             .eq("vendor_id", state.drop.vendor_id)
@@ -2650,7 +2711,7 @@
         state.productOptionGroups = {};
         if (!state.drop?.id) return;
         try {
-          const { data, error } = await supabase.functions.invoke(
+          const { data, error } = await publicClient.functions.invoke(
             "get-drop-product-options",
             { body: { drop_id: state.drop.id } }
           );
@@ -3036,7 +3097,7 @@
 
           let data, error;
           try {
-            ({ data, error } = await supabase.functions.invoke("register-interest", {
+            ({ data, error } = await publicClient.functions.invoke("register-interest", {
               body: {
                 drop_id: state.drop?.id || null,
                 kind,
@@ -4242,7 +4303,7 @@ async function handoffToPayment() {
     return;
   }
 
-  const { data, error } = await supabase.functions.invoke(
+  const { data, error } = await publicClient.functions.invoke(
     'create-order',
     { body: payload }
   );
@@ -4304,7 +4365,7 @@ async function handoffToPayment() {
       async function refreshCapacity() {
         if (!state.drop?.id) return;
         try {
-          const summaryRes = await supabase
+          const summaryRes = await publicClient
             .from("v_drop_public")
             .select("*")
             .eq("drop_id", state.drop.id)
@@ -4334,7 +4395,7 @@ async function handoffToPayment() {
       function subscribeToCapacityUpdates() {
         if (!state.drop?.id) return;
 
-        realtimeChannel = supabase
+        realtimeChannel = publicClient
           .channel(`capacity-watch-${state.drop.id}`)
           .on(
             "postgres_changes",
@@ -4546,7 +4607,10 @@ async function handoffToPayment() {
             throw new Error("Missing Supabase config. Check /assets/config.js.");
           }
 
-          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+          /* Session-isolated: never inherits an operator's session, always anon. */
+          publicClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: { persistSession: false, autoRefreshToken: false }
+          });
 
           bindDynamicEvents();
           await loadDropContext();
@@ -4557,7 +4621,7 @@ async function handoffToPayment() {
           const returnedSessionId = urlParams.get('session_id');
           if (cancelled === '1' && returnedOrderId && returnedSessionId) {
             try {
-              await supabase.functions.invoke('cancel-order', {
+              await publicClient.functions.invoke('cancel-order', {
                 body: {
                   order_id: returnedOrderId,
                   session_id: returnedSessionId
@@ -4594,15 +4658,14 @@ async function handoffToPayment() {
           subscribeToCapacityUpdates();
 
           window.addEventListener("beforeunload", () => {
-            if (realtimeChannel && supabase) {
-              supabase.removeChannel(realtimeChannel);
+            if (realtimeChannel && publicClient) {
+              publicClient.removeChannel(realtimeChannel);
             }
           });
         } catch (err) {
+          /* Diagnostics stay in the console; the customer sees one calm line. */
           console.error(err);
-          showError(err.message || "Unable to load this ordering page.");
-          showNotice(err.message || "We couldn’t load this service.", "error");
-          byId("menuSections").innerHTML = `<div class="emptyState">We couldn’t load this service.</div>`;
+          resolveToUnavailableState(err.message || DROP_UNAVAILABLE_MESSAGE);
         }
       }
 
@@ -4615,7 +4678,7 @@ async function handoffToPayment() {
         const groupId = state.drop.window_group_id;
 
         /* Fetch all siblings sharing the same window_group_id */
-        const { data: siblings, error: sibErr } = await supabase
+        const { data: siblings, error: sibErr } = await publicClient
           .from("drops")
           .select("id, slug, name, delivery_start, delivery_end, status")
           .eq("window_group_id", groupId)
@@ -4636,7 +4699,7 @@ async function handoffToPayment() {
 
         /* Fetch capacity data for each sibling from v_drop_public */
         const siblingIds = sittings.map((s) => s.id);
-        const { data: summaries, error: sumErr } = await supabase
+        const { data: summaries, error: sumErr } = await publicClient
           .from("v_drop_public")
           .select("drop_id, capacity_units_remaining")
           .in("drop_id", siblingIds);
