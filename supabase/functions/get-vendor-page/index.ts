@@ -68,6 +68,7 @@ const VENDOR_COLUMNS = [
   "brand_secondary_color",
   "brand_text_on_primary",
   "powered_by_hearth_visible",
+  "faq",
   "status",
 ].join(", ");
 
@@ -146,6 +147,13 @@ function buildVendorBlock(vendor: VendorRow) {
     // Nullable boolean; null means visible, matching the platform-wide
     // `!== false` convention used by order.html / send-order-confirmation.
     powered_by_hearth_visible: vendor.powered_by_hearth_visible !== false,
+    // Vendor-authored FAQ (T-CAP-1 PR4). Returned AS STORED — update-vendor is
+    // the sole write path and has already trimmed, capped and dropped
+    // half-filled entries, so there is nothing to re-derive here. Defaults to
+    // [] for any unexpected shape, which the page reads as "no FAQ" and hides
+    // the whole section. Present on every successful state because
+    // buildVendorBlock backs all four.
+    faq: Array.isArray(vendor.faq) ? vendor.faq : [],
   };
 }
 

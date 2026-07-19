@@ -178,6 +178,24 @@
       font-family:var(--display);font-size:24px;color:var(--v-primary);
     }
 
+    /* ---------- FAQ: the vendor's own answers ----------
+       A details/summary accordion — native disclosure, so it is keyboard
+       operable and screen-reader announced without any JS. The whole section is
+       omitted when the vendor has written nothing; a bare "Questions" heading
+       over an empty list is worse than no FAQ at all. */
+    .faq details{border-bottom:1px solid var(--h-hair)}
+    .faq details:first-of-type{border-top:1px solid var(--h-hair)}
+    .faq summary{
+      cursor:pointer;list-style:none;padding:20px 0;
+      font-family:var(--display);font-size:22px;font-weight:500;
+      display:flex;justify-content:space-between;align-items:center;gap:16px;
+    }
+    .faq summary::-webkit-details-marker{display:none}
+    .faq summary::after{content:"+";color:var(--v-primary);font-size:24px;flex:none}
+    .faq details[open] summary::after{content:"–"}
+    .faq summary:focus-visible{outline:2px solid var(--v-primary);outline-offset:3px}
+    .faq p{margin:0 0 20px;color:var(--h-ink-soft);max-width:46em;white-space:pre-line}
+
     /* ---------- Explainer: Hearth's model, stated plainly ---------- */
     .explain{
       background:var(--h-surface);
@@ -491,6 +509,33 @@
         "</section></div>";
       }
 
+      /* ---------- FAQ (vendor-authored) ----------
+         The only vendor-written free text on this page, so every value goes
+         through escapeHtml before it reaches innerHTML. Entries missing either
+         half are skipped here as well as in update-vendor — this render must
+         stand on its own, not on the write path having behaved. If nothing
+         survives, the section returns "" and the heading never appears. */
+      function faqHtml(vendor) {
+        var entries = vendor && Array.isArray(vendor.faq) ? vendor.faq : [];
+        var rows = entries.map(function (item) {
+          if (!item || typeof item !== "object") return "";
+          var q = typeof item.q === "string" ? item.q.trim() : "";
+          var a = typeof item.a === "string" ? item.a.trim() : "";
+          if (!q || !a) return "";
+          return "<details>" +
+            "<summary>" + escapeHtml(q) + "</summary>" +
+            "<p>" + escapeHtml(a) + "</p>" +
+          "</details>";
+        }).filter(Boolean).join("");
+
+        if (!rows) return "";
+
+        return '<div class="wrap"><section class="faq">' +
+          '<div class="sechead"><h2>Questions</h2></div>' +
+          rows +
+        "</section></div>";
+      }
+
       /* ---------- explainer (static Hearth copy) ---------- */
 
       function explainHtml() {
@@ -579,6 +624,12 @@
             ghost: false
           });
         }
+
+        // The FAQ sits last in every state, below the follow card — the same
+        // position for all four, because "questions I still have" is where a
+        // reader lands after the ask, whatever brought them here. Renders
+        // nothing at all when the vendor has written no FAQ.
+        sections += faqHtml(vendor);
 
         root.className = "";
         root.innerHTML = topbarHtml(vendor) + "<main>" + hero + sections + "</main>" + footerHtml(vendor);

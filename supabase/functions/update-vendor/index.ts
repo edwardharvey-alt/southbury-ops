@@ -48,9 +48,75 @@ const ALLOWED_FIELDS = new Set([
   "pos_platform",
   "pos_platform_other",
 
+  // Public vendor page
+  "faq",
+
   // UI dismissals
   "head_start_dismissed",
 ]);
+
+// T-CAP-1 (PR4) — vendor-authored FAQ.
+//
+// `faq` is the ONLY whitelisted field that is validated rather than passed
+// through, because it is free text the vendor writes here and Hearth renders on
+// a public page. The whitelist alone would let any jsonb shape through, and the
+// column CHECK only guarantees "is an array" — so the entry shape, the caps,
+// and the empty-row rule are enforced here.
+const FAQ_MAX_ENTRIES = 8;
+const FAQ_MAX_Q = 200;
+const FAQ_MAX_A = 1000;
+
+// Returns the cleaned array on success, or an error string for the 400 body.
+// Entries where q or a is empty after trimming are DROPPED, not rejected: the
+// Brand page seeds three prompt questions with blank answers, and a vendor who
+// answers one of three must be able to save without the other two reaching the
+// public page. Over-length is rejected rather than truncated — silently cutting
+// a vendor's own words mid-sentence and publishing the remainder is worse than
+// telling them.
+function validateFaq(
+  value: unknown,
+): { ok: true; value: Array<{ q: string; a: string }> } | { ok: false; error: string } {
+  if (!Array.isArray(value)) {
+    return { ok: false, error: "faq must be an array" };
+  }
+  if (value.length > FAQ_MAX_ENTRIES) {
+    return { ok: false, error: `faq cannot have more than ${FAQ_MAX_ENTRIES} entries` };
+  }
+
+  const cleaned: Array<{ q: string; a: string }> = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      return { ok: false, error: "each faq entry must be an object" };
+    }
+    const e = entry as Record<string, unknown>;
+
+    // Reject anything beyond q and a, so an unexpected key can never be
+    // persisted and surface later on the public page.
+    const extra = Object.keys(e).filter((k) => k !== "q" && k !== "a");
+    if (extra.length > 0) {
+      return { ok: false, error: `faq entries may only contain q and a (found: ${extra.join(", ")})` };
+    }
+    if (typeof e.q !== "string" || typeof e.a !== "string") {
+      return { ok: false, error: "each faq entry must have a string q and a string a" };
+    }
+
+    const q = e.q.trim();
+    const a = e.a.trim();
+    if (q.length > FAQ_MAX_Q) {
+      return { ok: false, error: `faq questions cannot be longer than ${FAQ_MAX_Q} characters` };
+    }
+    if (a.length > FAQ_MAX_A) {
+      return { ok: false, error: `faq answers cannot be longer than ${FAQ_MAX_A} characters` };
+    }
+
+    // A half-filled row is a prompt the vendor hasn't answered yet. Drop it.
+    if (!q || !a) continue;
+
+    cleaned.push({ q, a });
+  }
+
+  return { ok: true, value: cleaned };
+}
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -114,9 +180,16 @@ Deno.serve(async (req) => {
   // 4. Filter the payload through the whitelist.
   const update: Record<string, unknown> = {};
   for (const key of Object.keys(fields)) {
-    if (ALLOWED_FIELDS.has(key)) {
-      update[key] = fields[key];
+    if (!ALLOWED_FIELDS.has(key)) continue;
+
+    if (key === "faq") {
+      const result = validateFaq(fields[key]);
+      if (!result.ok) return jsonResponse({ error: result.error }, 400);
+      update[key] = result.value;
+      continue;
     }
+
+    update[key] = fields[key];
   }
 
   if (Object.keys(update).length === 0) {

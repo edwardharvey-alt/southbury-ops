@@ -766,6 +766,74 @@
       justify-content: center;
       flex-wrap: wrap;
     }
+
+    /* ── T-CAP-1 (PR4): vendor-authored FAQ editor ── */
+    .faqRows {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .faqRow {
+      border: 1px solid var(--h-cinder);
+      border-radius: 14px;
+      padding: 14px;
+      background: #fff;
+    }
+    .faqRowHead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 8px;
+    }
+    .faqRowLabel {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--h-stone);
+    }
+    .faqRowRemove {
+      background: none;
+      border: 0;
+      padding: 6px 8px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--h-stone);
+      cursor: pointer;
+      border-radius: 8px;
+    }
+    .faqRowRemove:hover { color: var(--h-slate); background: color-mix(in srgb, var(--h-slate) 7%, transparent); }
+    .faqRowRemove:focus-visible { outline: 2px solid var(--h-fire); outline-offset: 2px; }
+    /* 16px minimum so iOS Safari never zooms the viewport on focus. */
+    .faqRow input[type="text"],
+    .faqRow textarea {
+      width: 100%;
+      font-family: inherit;
+      font-size: 16px;
+      min-height: 44px;
+    }
+    .faqRow textarea { min-height: 84px; resize: vertical; }
+    .faqRow .field + .field { margin-top: 10px; }
+    .faqFooter {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .faqCount { font-size: 12px; font-weight: 600; color: var(--h-stone); }
+
+    @media (max-width: 720px) {
+      .faqFooter { flex-direction: column; align-items: stretch; }
+      .faqFooter .btnGhost { width: 100%; min-height: 44px; }
+      .faqCount { text-align: center; }
+      /* Overrides the mobile .field rule above — 14px would trigger iOS zoom. */
+      .faqRow input[type="text"],
+      .faqRow textarea { font-size: 16px; }
+    }
   </style>
 </head>
 <body>
@@ -1034,6 +1102,23 @@
             </div>
           </div>
 
+          <!-- T-CAP-1 (PR4): vendor-authored FAQ -->
+          <div class="brandSection">
+            <div class="brandSectionHead">
+              <div>
+                <h4 class="brandSectionTitle">Questions people ask</h4>
+                <p class="brandSectionSub">These appear on your public page. Answer in your own words — leave any blank and it won’t show.</p>
+              </div>
+            </div>
+
+            <div class="faqRows" id="faqRows"></div>
+
+            <div class="faqFooter">
+              <button class="btnGhost" id="faqAddBtn" type="button">Add a question</button>
+              <span class="faqCount" id="faqCount"></span>
+            </div>
+          </div>
+
           <div class="brandActions">
             <button class="btnGhost" id="resetDefaultsBtn" type="button">Reset to defaults</button>
             <button class="btnAccent" id="saveBrandBtnBottom" type="button">Save Brand</button>
@@ -1248,6 +1333,94 @@
       return parts.filter(Boolean).join(" • ");
     }
 
+    /* ── T-CAP-1 (PR4): vendor-authored FAQ editor ──
+       Repeatable question/answer rows, up to FAQ_MAX. A vendor who has written
+       nothing sees three PROMPT questions with blank answers — the questions
+       are Hearth's suggestion of what people actually ask; the answers are
+       never pre-filled, because the words on the public page have to be the
+       vendor's own. Rows with an empty question or an empty answer are simply
+       not saved, mirroring update-vendor's rule exactly. */
+    const FAQ_MAX = 8;
+    const FAQ_STARTER_QUESTIONS = [
+      "Where do I collect?",
+      "What if I can’t make it?",
+      "Can you cater for allergies or dietary requirements?"
+    ];
+
+    function faqRowHtml(entry, index) {
+      const qId = "faqQ" + index;
+      const aId = "faqA" + index;
+      return `
+        <div class="faqRow" data-faq-row>
+          <div class="faqRowHead">
+            <span class="faqRowLabel">Question ${index + 1}</span>
+            <button class="faqRowRemove" type="button" data-faq-remove="${index}"
+                    aria-label="Remove question ${index + 1}">Remove</button>
+          </div>
+          <div class="field">
+            <label for="${qId}">Question</label>
+            <input id="${qId}" type="text" data-faq-q maxlength="200"
+                   placeholder="Where do I collect?" value="${escapeHtml(entry.q)}" />
+          </div>
+          <div class="field">
+            <label for="${aId}">Answer</label>
+            <textarea id="${aId}" rows="3" data-faq-a maxlength="1000"
+                      placeholder="Answer in your own words.">${escapeHtml(entry.a)}</textarea>
+          </div>
+        </div>`;
+    }
+
+    // Reads what is currently typed, so a re-render (add / remove) never
+    // discards edits the vendor hasn't saved yet.
+    function readFaqRows() {
+      return Array.from(document.querySelectorAll("[data-faq-row]")).map((row) => ({
+        q: row.querySelector("[data-faq-q]")?.value ?? "",
+        a: row.querySelector("[data-faq-a]")?.value ?? ""
+      }));
+    }
+
+    function renderFaqRows(entries) {
+      const container = byId("faqRows");
+      if (!container) return;
+      state.faqEntries = entries.slice(0, FAQ_MAX);
+      container.innerHTML = state.faqEntries.map(faqRowHtml).join("");
+
+      const countEl = byId("faqCount");
+      if (countEl) {
+        countEl.textContent = state.faqEntries.length >= FAQ_MAX
+          ? `${FAQ_MAX} of ${FAQ_MAX} — that’s the most you can add.`
+          : `${state.faqEntries.length} of ${FAQ_MAX}`;
+      }
+      const addBtn = byId("faqAddBtn");
+      if (addBtn) addBtn.disabled = state.faqEntries.length >= FAQ_MAX;
+    }
+
+    function populateFaq(vendor) {
+      const stored = Array.isArray(vendor?.faq) ? vendor.faq : [];
+      const entries = stored
+        .filter((e) => e && typeof e === "object")
+        .map((e) => ({
+          q: typeof e.q === "string" ? e.q : "",
+          a: typeof e.a === "string" ? e.a : ""
+        }));
+
+      renderFaqRows(
+        entries.length > 0
+          ? entries
+          : FAQ_STARTER_QUESTIONS.map((q) => ({ q, a: "" }))
+      );
+    }
+
+    // The payload sent to update-vendor. Trimming and the drop-if-incomplete
+    // rule are applied server-side too — this is the same rule stated on the
+    // client so the vendor's saved state matches what they see.
+    function getFaqPayload() {
+      return readFaqRows()
+        .map((e) => ({ q: e.q.trim(), a: e.a.trim() }))
+        .filter((e) => e.q && e.a)
+        .slice(0, FAQ_MAX);
+    }
+
     function getFormData() {
       const socialInputs = {
         instagram: byId("vendorSocialInstagram").value.trim(),
@@ -1273,7 +1446,8 @@
         hero_image_url: byId("vendorHeroImageUrl").value.trim(),
         brand_primary_color: byId("brandPrimaryColor").value || "#8B6B3F",
         brand_secondary_color: byId("brandSecondaryColor").value || "#CBB89D",
-        brand_text_on_primary: byId("brandTextOnPrimary").value || "#FFFFFF"
+        brand_text_on_primary: byId("brandTextOnPrimary").value || "#FFFFFF",
+        faq: getFaqPayload()
       };
     }
 
@@ -1308,6 +1482,7 @@
       byId("brandSecondaryColor").value = vendor.brand_secondary_color || "#CBB89D";
       byId("brandTextOnPrimary").value = vendor.brand_text_on_primary || "#FFFFFF";
       syncColourLabels();
+      populateFaq(vendor);
       updateAssetPreview("logoPreview", vendor.logo_url || "");
       mountHeroUploadIfNeeded(vendor);
     }
@@ -1684,7 +1859,8 @@
         hero_image_url: form.hero_image_url || null,
         brand_primary_color: form.brand_primary_color || "#8B6B3F",
         brand_secondary_color: form.brand_secondary_color || "#CBB89D",
-        brand_text_on_primary: form.brand_text_on_primary || "#FFFFFF"
+        brand_text_on_primary: form.brand_text_on_primary || "#FFFFFF",
+        faq: form.faq
       };
 
       setSaveState("saving");
@@ -1803,6 +1979,36 @@
         el.addEventListener("input", markDirty);
         el.addEventListener("change", markDirty);
       });
+
+      // FAQ editor. Add and remove re-render from what is currently typed, so
+      // unsaved edits in the other rows survive. Delegated listeners because
+      // the rows are replaced wholesale on every render.
+      const faqAddBtn = byId("faqAddBtn");
+      if (faqAddBtn) {
+        faqAddBtn.addEventListener("click", () => {
+          const rows = readFaqRows();
+          if (rows.length >= FAQ_MAX) return;
+          renderFaqRows(rows.concat([{ q: "", a: "" }]));
+          markDirty();
+        });
+      }
+
+      const faqRowsEl = byId("faqRows");
+      if (faqRowsEl) {
+        faqRowsEl.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-faq-remove]");
+          if (!btn) return;
+          const index = Number(btn.getAttribute("data-faq-remove"));
+          const rows = readFaqRows();
+          rows.splice(index, 1);
+          // Never leave the vendor with no way back in — an empty list would
+          // remove the Add button's context. One blank row keeps the section
+          // usable, and a blank row is never saved.
+          renderFaqRows(rows.length > 0 ? rows : [{ q: "", a: "" }]);
+          markDirty();
+        });
+        faqRowsEl.addEventListener("input", markDirty);
+      }
 
       byId("logoUploadBtn").addEventListener("click", () => {
         byId("logoFileInput").click();
