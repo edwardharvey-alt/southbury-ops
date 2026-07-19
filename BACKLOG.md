@@ -5306,6 +5306,62 @@ T-order-confirmation-realtime-dead-code — inert realtime subscription on `orde
 
 **Cross-reference:** PR #478 (session isolation), operational learning #95, operational learning #53 (`orders` carries no anon policy).
 
+---
+
+T-fundraising-order-count-single-source — `order_count` is computed twice, independently
+
+**Status:** Open. Tier 5-B. Post-launch, low priority. **Not a live bug** — the two computations agree today, verified 2026-07-19. This is drift prevention.
+
+**What's doubled.** `v_drop_summary` and `v_drop_fundraising_summary` each derive `order_count` from `orders` by their own route, and then `v_drop_summary` joins the other view in and takes `drop_gmv_pence` / `fundraising_total_pence` / `host_share_total_pence` from it:
+
+- `v_drop_summary` — `count(DISTINCT o.id)` over a `LEFT JOIN orders o ON o.drop_id = d.id AND o.status <> ALL (ARRAY['pending_payment','cancelled'])`
+- `v_drop_fundraising_summary` — `count(DISTINCT o.id)` inside a `paid_order_rollup` CTE with `WHERE o.status <> ALL (ARRAY['pending_payment','cancelled'])`
+
+The predicates are character-identical and both aggregate the same way, including on the edge cases (a NULL status is excluded by both; a drop with no qualifying orders yields 0 from both). So `fundraising_total_pence` genuinely equals `order_count × fundraising_per_order_pence` for the per_order model, and the displayed pair is consistent.
+
+**The risk is a future edit, not the current state.** Because `fundraising_total_pence` is computed *from the fundraising view's* `order_count` but displayed *next to `v_drop_summary`'s*, changing one exclusion list without the other makes a drop's order count and its fundraising total silently disagree. Add `'refunded'` to one and not the other and the host page shows, say, 12 orders raising £39 — wrong in a way that looks like a fundraising bug rather than a filter mismatch, and on a surface a community host reads as a promise about money owed to their cause.
+
+**Fix shape (not built):** have `v_drop_summary` take `order_count` from the joined view — `COALESCE(fs.order_count, 0)` — the same way it already takes `drop_gmv_pence` and the two share totals, so one predicate feeds every number in the row. `CREATE OR REPLACE VIEW` permits changing a column's source expression as long as name, position and type are unchanged, and `fs.order_count` is already `bigint`, so this is an in-place replace with no dependent breakage. Verify against a drop carrying a `pending_payment` and a `cancelled` order — the state where a mismatch would actually show, and which the single-order Gather Cafe fixture cannot exercise.
+
+**Cross-reference:** operational learning #55/#56 (revenue correctness — this view is otherwise a *correct* implementation of both: the CTE pre-aggregates before joining, so no Cartesian fan-out, and the percentage model derives from `sum(orders.total_pence)`, so it is net-of-discount and bundle-inclusive), `20260719150000_drop_fundraising_cause_views.sql` (the PR that surfaced it).
+
+---
+
+T-fundraising-notes-overlap — decide the fate of `fundraising_notes` and `host_share_notes`
+
+**Status:** Open. Tier 5-B. Post-launch, low priority. Surfaced by the fundraising-cause data-layer work (2026-07-19).
+
+**This is a decision ticket, not a delete ticket.** Do not open it expecting to drop two columns.
+
+**What exists.** `drops.fundraising_notes` and `drops.host_share_notes` are both nullable text, and both are completely dormant:
+
+- zero references in any `.html`, `.ts` or `.js` file in the repo — the only mention anywhere is a passing line in `docs/archive/SCHEMA.md`, which is archived and therefore not authority
+- absent from `update-drop`'s and `create-drop`'s `ALLOWED_FIELDS`, so **nothing can write them** — a value sent for either is silently stripped
+- null on every drop readable via the anon path
+
+They are almost certainly scaffolding from an earlier fundraising/host-share design that was never wired up. Their original intent is **not recoverable from code** — which is exactly why this is a decision rather than a cleanup.
+
+**Why it surfaced.** `20260719140000_drop_fundraising_cause.sql` added `fundraising_cause_name` (public) and `fundraising_cause_reference` (private, operator-only: URL / charity number / remittance note). `fundraising_cause_reference` overlaps `fundraising_notes` in spirit. The decision taken at the time was deliberate: add the structured column, leave the dormant one untouched, and record the overlap rather than compound it — per critical rule #11, logged in the same commit as the PR that surfaced it. CLAUDE.md's T-CAP-10 entry and the PR #467 legacy-`pizzas` cleanup are the cautionary precedents for letting overlapping columns accumulate unexamined.
+
+**The actual question.** Do the structured fields fully replace free-form notes, or is a free-form notes field still wanted alongside them?
+
+- **If structured replaces free-form:** `fundraising_notes` is redundant against `fundraising_cause_reference`, and `host_share_notes` should get a structured equivalent (a `host_share_reference`, mirroring the fundraising pair) rather than being kept as prose. Then both `*_notes` columns can go.
+- **If free-form is still wanted:** the two columns stay, but they need a defined purpose distinct from the structured fields, a name that states it, and an `ALLOWED_FIELDS` entry — a column nothing can write is not a feature, it is a trap for whoever finds it next and assumes it works.
+
+The honest third answer is that vendors have not yet used structured fundraising in anger, so there is no evidence either way. Deferring until the first few real fundraising drops have run is legitimate — but leaving it *undecided and unrecorded* is what this ticket prevents.
+
+**Before acting either way,** confirm the columns are genuinely empty across all rows (the anon path only sees `live` / `closed` / `completed` drops, so it is not proof):
+
+```sql
+SELECT count(*) FILTER (WHERE fundraising_notes IS NOT NULL) AS fundraising_notes_used,
+       count(*) FILTER (WHERE host_share_notes  IS NOT NULL) AS host_share_notes_used
+FROM drops;
+```
+
+Dropping a column is irreversible without PITR (T6-5), so a non-zero count changes the shape of this entirely.
+
+**Cross-reference:** `20260719140000_drop_fundraising_cause.sql` (the migration that surfaced it), T5-B5 (schema cleanup — legacy artefacts, same family), T-CAP-10 (overlapping-column precedent), T6-5 (PITR, prerequisite for any irreversible drop).
+
 ### Build Coherence Audit — Pass A (drop lifecycle, timing & type)
 
 Tickets surfaced by Build Coherence Audit Pass A
