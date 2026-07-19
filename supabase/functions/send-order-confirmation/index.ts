@@ -111,7 +111,65 @@ type Drop = {
   delivery_start: string | null;
   delivery_end: string | null;
   collection_point_description: string | null;
+  // Structured fundraising config. Deliberately NOT fundraising_display_text
+  // (a pre-purchase override, never used post-purchase) and NEVER
+  // fundraising_cause_reference (operator-only). See buildContributionLine.
+  fundraising_enabled: boolean | null;
+  fundraising_model: string | null;
+  fundraising_percentage: number | null;
+  fundraising_per_order_pence: number | null;
+  fundraising_cause_name: string | null;
 };
+
+/* Past-tense contribution line for the confirmation email.
+ *
+ * MIRROR OF: assets/hearth-fundraising.js -> composeContribution() /
+ * resolveContribution(). Deno cannot import from assets/, so the rules are
+ * restated here against the same strings. CHANGE ONE, CHANGE THE OTHER.
+ * (Same arrangement as buildFundraisingDescriptor in host-view-summary, which
+ * mirrors the PRE-purchase compose()/resolve() pair.)
+ *
+ * The rules, identical to the module:
+ *   - fundraising must be enabled
+ *   - a cause name is required — no cause, no line
+ *   - per_order  -> the flat fundraising_per_order_pence
+ *   - percentage -> round(pct / 100 * netTotalPence), where netTotalPence is
+ *     orders.total_pence, the post-discount amount actually charged
+ *     (operational learning #55). Unlike the pre-purchase line, which shows the
+ *     RATE, the confirmation shows real pounds: the total is known and settled.
+ *   - the amount must come out positive, else null (a "£0.00" contribution is
+ *     worse than silence)
+ *   - fundraising_display_text is ignored: it is the vendor's PRE-purchase
+ *     message, and post-purchase we always want "Your order contributed …"
+ *   - fundraising_cause_reference is never rendered — operator-only
+ *
+ * formatMoney() here and the module's default formatter both emit two decimals,
+ * so the email and the confirmation page produce a byte-identical sentence.
+ */
+function buildContributionLine(drop: Drop, netTotalPence: number): string | null {
+  if (drop.fundraising_enabled !== true) return null;
+
+  const cause = String(drop.fundraising_cause_name ?? "").trim();
+  if (!cause) return null;
+
+  const model = String(drop.fundraising_model ?? "");
+  let pence: number;
+
+  if (model === "per_order") {
+    pence = Number(drop.fundraising_per_order_pence);
+  } else if (model === "percentage") {
+    const pct = Number(drop.fundraising_percentage);
+    const total = Number(netTotalPence);
+    if (!(pct > 0) || !(total > 0)) return null;
+    pence = Math.round((pct / 100) * total);
+  } else {
+    return null;
+  }
+
+  if (!(pence > 0)) return null;
+
+  return `Your order contributed ${formatMoney(pence)} to ${cause}.`;
+}
 
 type Order = {
   id: string;
@@ -203,12 +261,27 @@ function renderHtml(order: Order, items: Item[], drop: Drop, vendor: Vendor): st
     `<td style="padding:12px 0 0 0;font-family:${bodyStack};font-size:18px;color:${bodyText};text-align:right;font-weight:bold;white-space:nowrap;">${formatMoney(order.total_pence)}</td>` +
     `</tr>`;
 
+  /* Past-tense contribution note, directly under the total — a quiet statement
+     about the amount just paid, not a second appeal. Omitted entirely when the
+     drop raised nothing. Composed against orders.total_pence (net of discount).
+     escapeHtml on the cause name: it is vendor-authored free text landing in an
+     HTML email. */
+  const contributionLine = buildContributionLine(drop, order.total_pence);
+  const contributionRow = contributionLine
+    ? `<tr>` +
+      `<td colspan="3" style="padding:10px 0 0 0;font-family:${bodyStack};font-size:13px;line-height:1.45;color:${muted};">` +
+      escapeHtml(contributionLine) +
+      `</td>` +
+      `</tr>`
+    : "";
+
   const orderBlock =
     `<tr><td style="padding:20px 24px 0 24px;">` +
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;border-collapse:collapse;">` +
     lineRows.join("") +
     discountRow +
     totalRow +
+    contributionRow +
     `</table>` +
     `</td></tr>`;
 
@@ -295,6 +368,10 @@ function renderText(order: Order, items: Item[], drop: Drop, vendor: Vendor): st
     lines.push(`Discount  −${formatMoney(order.discount_pence)}`);
   }
   lines.push(`Total  ${formatMoney(order.total_pence)}`);
+  // Same past-tense line as the HTML part, same composer — the two parts of a
+  // multipart email must not disagree.
+  const contributionText = buildContributionLine(drop, order.total_pence);
+  if (contributionText) lines.push(contributionText);
   lines.push("----");
 
   lines.push("Your drop");
@@ -381,7 +458,10 @@ Deno.serve(async (req) => {
     const { data: orderRow, error: orderErr } = await serviceClient
       .from("orders")
       .select(
-        "id, drop_id, customer_name, customer_email, customer_notes, delivery_address, fulfilment_mode, total_pence, discount_pence, drop:drop_id ( name, delivery_start, delivery_end, collection_point_description, vendor:vendor_id ( display_name, name, email, tagline, brand_primary_color, brand_text_on_primary, powered_by_hearth_visible ) )"
+        // drop.fundraising_* backs the past-tense contribution line. Structured
+        // fields only: no fundraising_display_text (pre-purchase override) and
+        // never fundraising_cause_reference (operator-only).
+        "id, drop_id, customer_name, customer_email, customer_notes, delivery_address, fulfilment_mode, total_pence, discount_pence, drop:drop_id ( name, delivery_start, delivery_end, collection_point_description, fundraising_enabled, fundraising_model, fundraising_percentage, fundraising_per_order_pence, fundraising_cause_name, vendor:vendor_id ( display_name, name, email, tagline, brand_primary_color, brand_text_on_primary, powered_by_hearth_visible ) )"
       )
       .eq("id", order_id)
       .maybeSingle();
@@ -419,6 +499,13 @@ Deno.serve(async (req) => {
       delivery_start: (dropRow.delivery_start as string | null) ?? null,
       delivery_end: (dropRow.delivery_end as string | null) ?? null,
       collection_point_description: (dropRow.collection_point_description as string | null) ?? null,
+      fundraising_enabled: (dropRow.fundraising_enabled as boolean | null) ?? null,
+      fundraising_model: (dropRow.fundraising_model as string | null) ?? null,
+      fundraising_percentage:
+        dropRow.fundraising_percentage != null ? Number(dropRow.fundraising_percentage) : null,
+      fundraising_per_order_pence:
+        dropRow.fundraising_per_order_pence != null ? Number(dropRow.fundraising_per_order_pence) : null,
+      fundraising_cause_name: (dropRow.fundraising_cause_name as string | null) ?? null,
     };
     const vendor: Vendor = {
       display_name: (vendorRow.display_name as string | null) ?? null,

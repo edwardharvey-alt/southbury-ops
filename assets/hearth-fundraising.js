@@ -33,10 +33,13 @@
  * NEVER render fundraising_cause_reference. It is operator-only (charity number
  * or remittance note) and is absent from v_drop_public by design.
  *
- * MIRRORED IN: supabase/functions/host-view-summary/index.ts
- * (buildFundraisingDescriptor). Deno cannot import this file, so the host
- * descriptor is composed there against the same rules and the same strings.
- * Change one, change the other — the host phrasings above are the diff target.
+ * MIRRORED IN (Deno cannot import this file, so each restates the rules against
+ * the same strings — change one, change the other):
+ *   - supabase/functions/host-view-summary/index.ts (buildFundraisingDescriptor)
+ *     mirrors compose()/resolve(); the host phrasings above are the diff target.
+ *   - supabase/functions/send-order-confirmation/index.ts (buildContributionLine)
+ *     mirrors composeContribution()/resolveContribution() — the PAST-TENSE line,
+ *     see the post-purchase block at the foot of this file.
  */
 (function (global) {
   "use strict";
@@ -114,8 +117,93 @@
     }, opts);
   }
 
+  /* ── Post-purchase ────────────────────────────────────────────────────────
+     The confirmation line, past tense: "Your order contributed £3.00 to X."
+
+     A SEPARATE sentence from compose(), not an audience variant of it, for three
+     reasons that all point the same way:
+
+     1. TENSE. Before the order it is a standing fact about the drop ("£3.00 from
+        your order supports X"); after it, it is a fact about one order that has
+        happened. Different sentence, not different phrasing of one sentence.
+
+     2. PERCENTAGE RESOLVES TO POUNDS. compose() deliberately shows the RATE and
+        never a pound figure, because mid-basket the final total is unknown and
+        settles net-of-discount server-side (operational learning #55). At
+        confirmation the total is known and charged, so the real amount is not
+        only safe to show but is the more useful thing to say.
+
+     3. THE OVERRIDE DOES NOT APPLY. fundraising_display_text is the vendor's own
+        PRE-purchase message. Post-purchase we always want the specific
+        "your order contributed" line, so resolveContribution() ignores the
+        override where resolve() honours it. This asymmetry is intentional --
+        do not "fix" it by routing the override through here.
+
+     Unchanged from compose(): a cause name is required, the amount must be
+     positive, and anything short of that returns null rather than a half-formed
+     sentence about someone else's money. fundraising_cause_reference is never
+     rendered -- it is operator-only.
+
+     MIRRORED IN: supabase/functions/send-order-confirmation/index.ts
+     (buildContributionLine). Deno cannot import this file, so the email restates
+     these rules against the same strings. Change one, change the other. */
+
+  /* opts.orderTotalPence -- the order's NET, post-discount total, i.e.
+     orders.total_pence. Required for the percentage model, ignored by per_order.
+     Passing a gross or pre-discount figure here would overstate the
+     contribution, so read it from orders.total_pence and nowhere else. */
+  function composeContribution(fields, opts) {
+    var options = opts || {};
+    var formatMoney = typeof options.formatMoneyPence === "function"
+      ? options.formatMoneyPence
+      : defaultFormatMoneyPence;
+
+    var cause = String((fields && fields.causeName) || "").trim();
+    if (!cause) return null;
+
+    var model = String((fields && fields.model) || "");
+    var pence = null;
+
+    if (model === "per_order") {
+      pence = Number(fields.perOrderPence);
+    } else if (model === "percentage") {
+      var pct = Number(fields.percentage);
+      var total = Number(fields.orderTotalPence);
+      /* No total means we cannot say what this order gave. Silence beats a
+         guess. */
+      if (!(pct > 0) || !(total > 0)) return null;
+      pence = Math.round((pct / 100) * total);
+    } else {
+      return null;
+    }
+
+    /* Covers NaN, null, zero and a percentage of a tiny order that rounds down
+       to nothing -- "contributed £0.00" is worse than saying nothing. */
+    if (!(pence > 0)) return null;
+
+    return "Your order contributed " + formatMoney(pence) + " to " + cause + ".";
+  }
+
+  /* The whole post-purchase decision for a drop row plus one order's net total.
+     `drop` takes the same column names as resolve(). */
+  function resolveContribution(drop, opts) {
+    if (!drop || drop.fundraising_enabled !== true) return null;
+
+    /* NOTE: fundraising_display_text is deliberately NOT consulted here. See
+       reason 3 in the block comment above. */
+    return composeContribution({
+      model: drop.fundraising_model,
+      percentage: drop.fundraising_percentage,
+      perOrderPence: drop.fundraising_per_order_pence,
+      causeName: drop.fundraising_cause_name,
+      orderTotalPence: (opts || {}).orderTotalPence
+    }, opts);
+  }
+
   global.HearthFundraising = {
     compose: compose,
-    resolve: resolve
+    resolve: resolve,
+    composeContribution: composeContribution,
+    resolveContribution: resolveContribution
   };
 })(window);
