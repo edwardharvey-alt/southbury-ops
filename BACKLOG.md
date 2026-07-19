@@ -5282,6 +5282,30 @@ T-hearth-intelligence-revenue-field-audit — audit hearth-intelligence.js for s
 
 **Cross-reference:** operational learning #56 (the consolidated revenue/scope-source correctness rule).
 
+T-order-error-state-polish — order.html failed-load state reads as a rendering failure
+
+**Status:** Open. Tier 5-B. Post-launch, cosmetic. Surfaced during the session-isolation work (2026-07-19).
+
+**Problem:** When a drop fails to load, `order.html` now resolves to a single calm message instead of hanging on "Loading vendor…" (PR #477). But the hero placeholders are cleared in place, so the hero collapses to an empty full-width colour block sitting above the message. The page reads as a rendering failure rather than a deliberate state — the opposite of the calm resolution the fix was meant to produce.
+
+**Fix shape (not built):** collapse the hero entirely on the error path (hide `.heroMedia`, keep the `.heroBodyCard`) so the page resolves to one centred message in a single frame, rather than a message beneath an empty band. Cosmetic only — no change to the message, the copy, or the load logic.
+
+**Why it matters more than "cosmetic" suggests:** this is the first thing a customer sees when a shared drop link goes stale, which will be common once drop links circulate in WhatsApp groups and outlive their drop. The state is rare per-customer but high-volume in aggregate, and it is the only Hearth surface some recipients will ever see.
+
+**Cross-reference:** PR #477 (the fix that produced this state).
+
+T-order-confirmation-realtime-dead-code — inert realtime subscription on `orders`
+
+**Status:** Open. Tier 5-B. Post-launch. Surfaced during the session-isolation work (2026-07-19).
+
+**Problem:** The `postgres_changes` realtime subscription on `orders` in `order-confirmation.html`'s `setupPendingWatch` delivers no events. `orders` has no anon policy — verified by read-only curl, which returns `[]` to the anon role — so realtime filters every event out for anonymous callers. Before PR #478 a logged-in vendor inherited an operator session and DID receive events, meaning a vendor testing the flow was exercising a code path no customer has ever had. What actually carries every customer through pending→placed is the 3-second poll (`setInterval(refetch, 3000)`) plus the `reconcile-pending-orders` backstop. Post-#478 the subscription is inert for all callers, including vendors.
+
+**Fix shape (not built):** decide between removing the subscription (and its `removeChannel` cleanup) or documenting it as inert with a comment. **Recommendation: remove.** Working-looking code that does nothing is a trap for whoever next debugs the pending→placed flow at speed during a live drop — the obvious first hypothesis ("realtime isn't firing") is both true and irrelevant, and costs time in exactly the moment there is none.
+
+**Do NOT** add an anon policy to `orders` to make the subscription work. That is unnecessary exposure on the money path, against a table carrying customer PII and order contents, to restore a path the poll already covers.
+
+**Cross-reference:** PR #478 (session isolation), operational learning #95, operational learning #53 (`orders` carries no anon policy).
+
 ### Build Coherence Audit — Pass A (drop lifecycle, timing & type)
 
 Tickets surfaced by Build Coherence Audit Pass A

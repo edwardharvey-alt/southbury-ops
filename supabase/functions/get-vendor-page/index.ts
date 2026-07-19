@@ -401,8 +401,15 @@ Deno.serve(async (req) => {
         drop: {
           slug: drop.slug,
           name: drop.name,
+          // Carried for shape parity with live_drop / announced_drop. NOTE:
+          // vendor.html deliberately does NOT render it in this state — the
+          // full_drop hero substitutes the capacity sentence ("All N places
+          // have been taken") as its lede, because being full outranks the
+          // drop's intro copy. Present for completeness, not for that reader.
+          drop_intro: drop.drop_intro ?? null,
           closes_at: drop.closes_at ?? null,
           delivery_start: drop.delivery_start ?? null,
+          fulfilment_mode: drop.fulfilment_mode ?? null,
         },
         capacity: { total, remaining: 0 },
         follow: { enabled: true },
@@ -426,6 +433,7 @@ Deno.serve(async (req) => {
           drop_intro: drop.drop_intro ?? null,
           opens_at: drop.opens_at,
           delivery_start: drop.delivery_start ?? null,
+          fulfilment_mode: drop.fulfilment_mode ?? null,
         },
         follow: { enabled: true },
         recent_drops: await fetchRecentDrops(serviceClient, vendor.id as string, drop.slug ?? null),

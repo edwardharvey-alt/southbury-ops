@@ -416,11 +416,11 @@
           facts.push({ label: "Ordering closes", value: fmtShortDateTime(drop.closes_at) });
           if (hasCap) facts.push({ label: "Places left", value: capacity.remaining + " of " + capacity.total, places: true });
         } else if (st === "full_drop") {
-          facts.push({ label: "Ready", value: fmtLongDate(drop.delivery_start) });
+          facts.push({ label: fulfilmentLabel(drop.fulfilment_mode), value: fmtLongDate(drop.delivery_start) });
           facts.push({ label: "Ordering closes", value: fmtShortDateTime(drop.closes_at) });
           facts.push({ label: "Places", value: "Full", places: true });
         } else { // announced_drop
-          facts.push({ label: "Ready", value: fmtLongDate(drop.delivery_start) });
+          facts.push({ label: fulfilmentLabel(drop.fulfilment_mode), value: fmtLongDate(drop.delivery_start) });
           facts.push({ label: "Ordering opens", value: fmtShortDateTime(drop.opens_at) });
         }
         var cells = facts.filter(function (f) { return f.value; }).map(function (f) {

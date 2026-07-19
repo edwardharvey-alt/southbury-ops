@@ -1717,6 +1717,31 @@ on top of the coding rules above.
     `git status` (clean) and `git log origin/<branch> --oneline -1`
     (matches HEAD) before the deploy command.
 
+95. **LOAD-BEARING — any client-side Supabase client on a CUSTOMER-FACING
+    surface must be created with `{ auth: { persistSession: false,
+    autoRefreshToken: false } }`.** Customer pages share an origin with the
+    vendor tools, so a default client silently inherits the operator's
+    session and executes reads as `authenticated` rather than `anon`.
+    PostgREST then applies vendor-owner RLS instead of the anon policy and
+    returns an empty set with NO error (`data: null, error: null`) for any
+    row the logged-in user does not own. This took down every order page
+    for logged-in operators while customers were unaffected — and made the
+    platform untestable from a logged-in browser, because the person
+    testing was the only person who could not see the bug's absence.
+    **Corollary: verify every customer-facing change in an incognito
+    window; a logged-in browser is not evidence.** Where a surface has a
+    legitimately authenticated branch (e.g. `order.html`'s `?preview=`),
+    split into TWO clients — a session-less `publicClient` for every
+    customer-path read and a separate session-bearing client confined to
+    that branch — rather than sharing one. Canonical implementations:
+    `order.html` (two-client split), `order-confirmation.html`,
+    `catering-enquiry.html`, `vendor.html`, `host-view.html`,
+    `host-poster.html` (single session-less client). Fixed in PR #477
+    (order.html) and #478 (order-confirmation.html, catering-enquiry.html).
+    Related: coherence-audit finding C4 (host-facing clients must not
+    inherit vendor sessions) — this is the same defect class on the
+    customer surface, where C4 had never been applied.
+
 Insights / intelligence-layer invariants:
 - The unit of intelligence is the drop, series, vendor, or geography — never the individual
   reorder. Any signal whose purpose is to push a named customer to buy on a predicted date is
@@ -2323,6 +2348,8 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T5-B29 — Multi-window parent drop fulfilment.mode bug — open. When ordering against a drop with `window_group_id` set and `fulfilment_mode = null` (the multi-window parent pattern), `buildCheckoutPayload()` in order.html sends `fulfilment.mode: null` and create-order rejects with 400. Either: (a) order.html's window-selection step in init() should route customers to a child drop before allowing basket entry, or (b) `buildCheckoutPayload` should read `fulfilment_mode` from the selected child window rather than `state.drop`. Also: `validateCheckout()` should refuse to submit when `fulfilment.mode` is null, surfacing a user-friendly error instead of relying on the server's 400. Discovered during Phase 3 manual testing on 2026-05-01.
 - T5-B30 — Edge Function CORS allow-list excludes Netlify deploy previews — open. All current Edge Functions hardcode `ALLOWED_ORIGIN = 'https://lovehearth.co.uk'`, which means deploy previews on `*.netlify.app` cannot exercise the customer flow. Phase 3 testing had to be completed against production after merge rather than against the deploy preview. Widen the allow-list to include the Netlify preview domain pattern, or accept the limitation and document it in the PR template (deploy preview testing requires merge-to-prod for final visual confirmation).
 - T5-B31 — Legacy capacity columns cleanup — open. `orders.pizzas` (NOT NULL CHECK >= 1), `drops.capacity_pizzas`, `drops.max_orders` are still being populated as `Math.max(1, capacity_units)`. Audit all read sites for these columns; remove those reads; then drop the columns. Currently written-only by the create-order Edge Function (line marked with `// LEGACY: see SCHEMA.md — orders.pizzas column slated for removal`). Bounded one-session piece of work.
+- T-order-error-state-polish — order.html's failed-load state collapses the hero to an empty full-width colour block above the message, reading as a rendering failure rather than a deliberate state. Collapse the hero so the page resolves to one centred message in a single frame. Cosmetic, but it is the first thing a customer sees when a shared drop link goes stale — common once drop links circulate in WhatsApp groups. Post-launch. Source: PR #477. — open
+- T-order-confirmation-realtime-dead-code — the `postgres_changes` subscription on `orders` in order-confirmation.html's `setupPendingWatch` is inert (`orders` has no anon policy; verified by read-only curl). The 3s poll + reconcile backstop carry every customer. Remove it or document it as inert — recommendation is remove. Do NOT add an anon policy to `orders`. Post-launch. Source: PR #478. — open
 - T5-B24 — Password reset page: button stuck on "Sending..." — open (cosmetic)
 - T5-B25 — admin.html: vendor creation is not atomic — open
 - T5-B36 — duplicate-bundle rollback verification — open
