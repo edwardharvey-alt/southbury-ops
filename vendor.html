@@ -380,6 +380,27 @@
         if (name) document.title = name;
       }
 
+      /* ---------- crawler signal ---------- */
+
+      /* T-vendor-is-internal. Hearth's own test vendor records serve a fully
+         normal page — they exist to keep the live path testable — but they are
+         real public URLs under lovehearth.co.uk/{slug} and must never enter
+         search results. This is the ONLY effect of the flag on this page: no
+         badge, no banner, no altered copy. A visitor cannot tell.
+
+         Only ever ADDS the tag. There is no removal branch, because the page
+         renders one vendor per load and a stray noindex would silently
+         de-index a real vendor's storefront — the expensive direction of this
+         mistake. The idempotence guard is for repeat calls within one load. */
+      function applyIndexingPolicy(vendor) {
+        if (!vendor || vendor.is_internal !== true) return;
+        if (document.querySelector('meta[name="robots"]')) return;
+        var meta = document.createElement("meta");
+        meta.setAttribute("name", "robots");
+        meta.setAttribute("content", "noindex, nofollow");
+        document.head.appendChild(meta);
+      }
+
       function vendorName() {
         return (state.vendor && (state.vendor.display_name || state.vendor.name)) || "This vendor";
       }
@@ -799,6 +820,7 @@
         state.page = result.data;
         state.vendor = result.data.vendor;
         applyBrand(state.vendor);
+        applyIndexingPolicy(state.vendor);
         renderPage(result.data);
       }
 

@@ -70,6 +70,7 @@ const VENDOR_COLUMNS = [
   "powered_by_hearth_visible",
   "faq",
   "status",
+  "is_internal",
 ].join(", ");
 
 const DROP_COLUMNS = [
@@ -154,6 +155,14 @@ function buildVendorBlock(vendor: VendorRow) {
     // the whole section. Present on every successful state because
     // buildVendorBlock backs all four.
     faq: Array.isArray(vendor.faq) ? vendor.faq : [],
+    // T-vendor-is-internal. A SIGNAL TO THE PAGE, NOT A GATE: an internal
+    // vendor serves its normal state exactly like a real one (never a 404),
+    // because these records exist to keep the live path testable. The page's
+    // only response is a noindex/nofollow crawler hint — nothing visible.
+    // Strict `=== true` so an unexpected null/absent value reads as "real",
+    // matching the column's NOT NULL DEFAULT false: the safe failure is
+    // indexing a test page, not de-indexing a real vendor's storefront.
+    is_internal: vendor.is_internal === true,
   };
 }
 
