@@ -87,6 +87,22 @@ const DROP_COLUMNS = [
   "capacity_units_total",
 ].join(", ");
 
+// Recent-drops projection. DELIBERATELY separate from DROP_COLUMNS: it carries
+// social_image_url (the thumbnail source), which is NOT on DROP_COLUMNS, and a
+// single unknown column hard-400s the ENTIRE query (operational learning #54).
+// Keeping this list distinct means the state-resolution query can never be
+// widened by accident. Every column below is written by create-drop /
+// update-drop (their ALLOWED_FIELDS), so all are confirmed on the live schema.
+const RECENT_DROP_COLUMNS = [
+  "slug",
+  "name",
+  "drop_intro",
+  "closes_at",
+  "delivery_start",
+  "fulfilment_mode",
+  "social_image_url",
+].join(", ");
+
 function isUuid(v: unknown): v is string {
   return typeof v === "string" &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
@@ -131,6 +147,50 @@ function buildVendorBlock(vendor: VendorRow) {
     // `!== false` convention used by order.html / send-order-confirmation.
     powered_by_hearth_visible: vendor.powered_by_hearth_visible !== false,
   };
+}
+
+// Recently-completed public drops for the vendor — the page's "Recent drops"
+// rhythm list. Uses the SAME strict public filter as state resolution
+// (audience_scope IS NULL, drop_type <> 'community', host_id IS NULL) but with
+// status = 'completed', newest-first, at most three. The currently-featured
+// drop is excluded so it can't appear both as the headline and in the list
+// (belt-and-braces: a featured drop is 'live'/announced, not 'completed', so an
+// overlap is already structurally unlikely). A read error is non-fatal: the
+// recent-drops strip is decoration, so it degrades to an empty array (the page
+// hides the section) rather than failing the whole page.
+async function fetchRecentDrops(
+  // deno-lint-ignore no-explicit-any
+  serviceClient: any,
+  vendorId: string,
+  excludeSlug: string | null,
+): Promise<Array<Record<string, unknown>>> {
+  let query = serviceClient
+    .from("drops")
+    .select(RECENT_DROP_COLUMNS)
+    .eq("vendor_id", vendorId)
+    .eq("status", "completed")
+    .is("audience_scope", null)
+    .neq("drop_type", "community")
+    .is("host_id", null)
+    .order("closes_at", { ascending: false, nullsFirst: false })
+    .limit(3);
+  if (excludeSlug) query = query.neq("slug", excludeSlug);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("recent drops lookup failed", error);
+    return [];
+  }
+  const rows: DropRow[] = Array.isArray(data) ? data : [];
+  return rows.map((d) => ({
+    slug: d.slug ?? null,
+    name: d.name ?? null,
+    drop_intro: d.drop_intro ?? null,
+    closes_at: d.closes_at ?? null,
+    delivery_start: d.delivery_start ?? null,
+    fulfilment_mode: d.fulfilment_mode ?? null,
+    social_image_url: d.social_image_url ?? null,
+  }));
 }
 
 Deno.serve(async (req) => {
@@ -309,6 +369,7 @@ Deno.serve(async (req) => {
           },
           capacity: { total: null, remaining: null },
           follow: { enabled: true },
+          recent_drops: await fetchRecentDrops(serviceClient, vendor.id as string, drop.slug ?? null),
         }, 200, NO_STORE);
       }
 
@@ -328,6 +389,7 @@ Deno.serve(async (req) => {
           },
           capacity: { total, remaining },
           follow: { enabled: true },
+          recent_drops: await fetchRecentDrops(serviceClient, vendor.id as string, drop.slug ?? null),
         }, 200, NO_STORE);
       }
 
@@ -344,6 +406,7 @@ Deno.serve(async (req) => {
         },
         capacity: { total, remaining: 0 },
         follow: { enabled: true },
+        recent_drops: await fetchRecentDrops(serviceClient, vendor.id as string, drop.slug ?? null),
       }, 200, NO_STORE);
     }
 
@@ -365,6 +428,7 @@ Deno.serve(async (req) => {
           delivery_start: drop.delivery_start ?? null,
         },
         follow: { enabled: true },
+        recent_drops: await fetchRecentDrops(serviceClient, vendor.id as string, drop.slug ?? null),
       }, 200, SHORT_CACHE);
     }
 
@@ -373,6 +437,7 @@ Deno.serve(async (req) => {
       state: "resting",
       vendor: vendorBlock,
       follow: { enabled: true },
+      recent_drops: await fetchRecentDrops(serviceClient, vendor.id as string, null),
     }, 200, SHORT_CACHE);
   } catch (err) {
     console.error("get-vendor-page unhandled error", err);
