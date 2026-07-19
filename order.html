@@ -383,21 +383,56 @@
       }
     }
 
-    /* The community-contribution line. Deliberately understated — a quiet
-       statement of fact beneath the drop story, not a badge and not a selling
-       point. Hidden entirely when the drop raises nothing. */
+    /* The community-contribution line. A slim inset band in a soft wash of the
+       vendor's own colour — enough presence to be noticed between the hero and
+       the menu, not enough to compete with either.
+
+       The tint recipe is deliberately the same one .dropStoryCard uses
+       (color-mix against --order-brand-primary), so the two read as siblings in
+       one vendor palette rather than as two separate visual ideas.
+
+       Restraint is the point: one line, one glyph, no goal bar, no progress
+       figure, no "help us reach" framing. It states a fact about where money
+       goes. Anything that turns it into a target turns the customer's order into
+       a campaign, which is the aggregator reflex this platform exists to avoid.
+       Hidden entirely when the drop raises nothing. */
     .fundraisingLine{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:12px 16px;
+      border-radius:12px;
+      background:color-mix(in srgb, var(--order-brand-primary) 7%, #fff);
+      border:1px solid color-mix(in srgb, var(--order-brand-primary) 16%, transparent);
+    }
+
+    .fundraisingLineGlyph{
+      flex-shrink:0;
+      display:flex;
+      align-items:center;
+      color:var(--order-brand-primary);
+    }
+
+    /* Full contrast, not muted. The line was previously grey caption text and
+       read as boilerplate; it is a statement about the customer's money and
+       should sit at body weight. */
+    .fundraisingLineText{
       font-family:'Figtree', system-ui, -apple-system, sans-serif;
-      font-size:13px;
-      line-height:1.5;
-      color:var(--h-muted, #6b7280);
+      font-size:14px;
+      line-height:1.45;
+      font-weight:500;
+      color:var(--h-text);
       margin:0;
-      padding:0 4px;
     }
 
     @media (max-width:720px){
       .fundraisingLine{
-        font-size:12.5px;
+        padding:11px 14px;
+        gap:9px;
+      }
+
+      .fundraisingLineText{
+        font-size:13.5px;
       }
     }
 
@@ -1188,6 +1223,18 @@
       color:var(--h-good);
     }
 
+    /* Contribution echo under the total. Quiet by design — a hairline off the
+       total, one size down, no tint and no glyph. The band above the menu does
+       the noticing; this only confirms it at the moment of paying. */
+    .basketFundraisingLine{
+      margin:0;
+      padding-top:8px;
+      border-top:1px solid var(--h-border-2);
+      font-size:12.5px;
+      line-height:1.45;
+      color:var(--h-slate, #4a4a4a);
+    }
+
     .checkoutBlock{
       display:grid;
       gap:10px;
@@ -1774,7 +1821,16 @@
            independent of dropStoryCard so a drop with no story still shows it.
            Rendered in every order-window state — what a drop supports is true
            before it opens and after it closes, not only while orderable. -->
-      <p class="fundraisingLine hidden" id="fundraisingLine"></p>
+      <div class="fundraisingLine hidden" id="fundraisingLine">
+        <span class="fundraisingLineGlyph" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.2l7.7-7.7 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"/>
+          </svg>
+        </span>
+        <p class="fundraisingLineText" id="fundraisingLineText"></p>
+      </div>
 
       <!-- T5-8 / T-notify-next-time — demand capture. Standalone card between
            the hero and the menu card. Rendered by renderRegisterInterest()
@@ -1846,6 +1902,16 @@
           <strong>Total</strong>
           <strong id="basketGrandTotal">£0.00</strong>
         </div>
+
+        <!-- Community contribution, echoed at the pay moment. Sits INSIDE the
+             totals card, below the total, so it reads as a fact about the amount
+             being paid rather than as a second appeal. Carries the identical
+             composed string as the band above the menu — same resolve() call,
+             one render function — so the two can never word it differently.
+             Percentage drops show the rate, never a live pound figure: the exact
+             amount settles net-of-discount server-side and is shown at
+             confirmation. Hidden when the drop raises nothing. -->
+        <p class="basketFundraisingLine hidden" id="basketFundraisingLine"></p>
       </div>
 
       <div class="sectionCard checkoutBlock" style="padding:0; border:none; box-shadow:none;">
@@ -4406,23 +4472,33 @@ async function handoffToPayment() {
          v_drop_public, so there is nothing to guard against here.
 
          formatMoneyPence is passed in so the amount reads identically to every
-         other price on this page. */
+         other price on this page.
+
+         Renders BOTH surfaces from ONE resolve() call: the band between the hero
+         and the menu, and the echo under the basket total. They are deliberately
+         the same sentence — no second phrasing, no basket-specific variant — so
+         there is no second string to keep in step when the shared composer
+         changes. The echo needs no re-render on basket changes because neither
+         model quotes a live figure: fixed states its flat amount, percentage
+         states its rate. */
       function renderFundraisingLine() {
-        const el = byId("fundraisingLine");
-        if (!el) return;
+        const band = byId("fundraisingLine");
+        const bandText = byId("fundraisingLineText");
+        const basketEl = byId("basketFundraisingLine");
 
         const line = window.HearthFundraising
           ? window.HearthFundraising.resolve(state.dropSummary, { audience: "customer", formatMoneyPence })
           : null;
 
-        if (!line) {
-          el.textContent = "";
-          el.classList.add("hidden");
-          return;
+        if (band && bandText) {
+          bandText.textContent = line || "";
+          band.classList.toggle("hidden", !line);
         }
 
-        el.textContent = line;
-        el.classList.remove("hidden");
+        if (basketEl) {
+          basketEl.textContent = line || "";
+          basketEl.classList.toggle("hidden", !line);
+        }
       }
 
       async function refreshCapacity() {
