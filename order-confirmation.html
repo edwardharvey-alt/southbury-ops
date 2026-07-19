@@ -10,6 +10,7 @@
 
   <link rel="stylesheet" href="./assets/hearth.css?v=31" />
   <script src="./assets/config.js"></script>
+  <script src="./assets/hearth-fundraising.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -236,6 +237,20 @@
       font-weight:950;
       color:#1f2937;
       letter-spacing:-0.03em;
+    }
+
+    /* Past-tense contribution note. Sits directly under the total, in the same
+       tinted strip, because it is a statement about the amount just paid. Quiet
+       by design: this is a receipt, and the moment for the vendor to make
+       something of the cause has passed. Hidden entirely when the drop raised
+       nothing. */
+    .confContribution{
+      margin:0;
+      padding:0 18px 14px 18px;
+      background:rgba(15,23,42,0.015);
+      font-size:13px;
+      line-height:1.45;
+      color:#4b5563;
     }
 
     /* Fulfilment badge */
@@ -568,6 +583,28 @@
         </div>`;
       }).join("");
 
+      /* Past-tense contribution note. Composed by the SHARED module
+         (assets/hearth-fundraising.js) so this page, the customer order page and
+         the confirmation email cannot drift in wording.
+
+         resolveContribution() deliberately ignores fundraising_display_text —
+         that override is the vendor's PRE-purchase message; here we always want
+         the specific "your order contributed" line.
+
+         totalPence is order.total_pence, the NET post-discount amount actually
+         charged (operational learning #55), which is what the percentage model
+         must be applied to. Returns null — and renders nothing — whenever the
+         drop had no fundraising, no cause name, or nothing positive to report. */
+      const contributionLine = window.HearthFundraising
+        ? window.HearthFundraising.resolveContribution(drop, {
+            orderTotalPence: totalPence,
+            formatMoneyPence
+          })
+        : null;
+      const contributionBlock = contributionLine
+        ? `<p class="confContribution">${escapeHtml(contributionLine)}</p>`
+        : "";
+
       // Footer brand text
       const footerParts = [];
       if (vendor.website_url) {
@@ -633,6 +670,7 @@
             <span class="confTotalLabel">Total</span>
             <span class="confTotalValue">${formatMoneyPence(totalPence)}</span>
           </div>
+          ${contributionBlock}
         </div>
 
         <div class="confFooter">

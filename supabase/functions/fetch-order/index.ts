@@ -172,8 +172,15 @@ Deno.serve(async (req) => {
     // Step 4 — drop.
     const { data: drop, error: dropErr } = await serviceClient
       .from("drops")
+      // fundraising_* fields back the past-tense contribution line on
+      // order-confirmation.html. fundraising_cause_reference is NOT selected and
+      // must never be: it is operator-only (charity number / remittance note)
+      // and this response reaches an unauthenticated customer.
+      // fundraising_display_text is not selected either — the post-purchase line
+      // is always composed from the structured fields, never the vendor's
+      // pre-purchase override. See assets/hearth-fundraising.js.
       .select(
-        "id, slug, name, opens_at, closes_at, fulfilment_mode, collection_point_description, delivery_area_description, vendor_id, host_id"
+        "id, slug, name, opens_at, closes_at, fulfilment_mode, collection_point_description, delivery_area_description, vendor_id, host_id, fundraising_enabled, fundraising_model, fundraising_percentage, fundraising_per_order_pence, fundraising_cause_name"
       )
       .eq("id", order.drop_id)
       .maybeSingle();
@@ -242,6 +249,11 @@ Deno.serve(async (req) => {
           fulfilment_mode: drop.fulfilment_mode,
           collection_point_description: drop.collection_point_description,
           delivery_area_description: drop.delivery_area_description,
+          fundraising_enabled: drop.fundraising_enabled,
+          fundraising_model: drop.fundraising_model,
+          fundraising_percentage: drop.fundraising_percentage,
+          fundraising_per_order_pence: drop.fundraising_per_order_pence,
+          fundraising_cause_name: drop.fundraising_cause_name,
         },
         vendor: {
           id: vendor.id,
