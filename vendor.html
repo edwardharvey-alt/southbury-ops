@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendor</title>
+
+  <link rel="stylesheet" href="./assets/hearth.css?v=31" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Figtree:wght@400;500;700&display=swap" />
+  <script src="./assets/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!--
+    T-CAP-1 (PR2a) — the permanent vendor page.
+
+    The durable anchor for a vendor: whatever is on right now, or — when nothing
+    is on — a calm surface that still lets someone ask to hear what's next. The
+    resting state is the point of this page, not a fallback.
+
+    PR2a reads the slug from ?slug= so it is testable without routing. PR2b
+    switches it to the path (/{vendor}) and adds _redirects. Nothing here
+    depends on the query param beyond readSlug().
+
+    Customer-facing surface: no vendor-nav.js, no hearth-vendor.js. The vendor
+    slug is the URL, but no operator context is carried. All reads go through
+    the anonymous get-vendor-page Edge Function — capacity in particular can
+    never be read over anon PostgREST (it would return a silent, wrong zero).
+  -->
+  <style>
+    :root{
+      /* Vendor colours are the foreground and are overwritten at runtime from
+         the EF's vendor.brand block. The defaults here are the neutral
+         vendor-brand fallbacks (NOT Hearthfire) — a vendor who has set no
+         colour must never render in Hearth's own accent (learning #85). */
+      --v-primary: #8B6B3F;
+      --v-secondary: #CBB89D;
+      --v-text-on-primary: #ffffff;
+    }
+
+    html{ max-width:100%; overflow-x:hidden; }
+
+    body{
+      font-family:'Figtree', system-ui, sans-serif;
+      background: var(--h-bg-page, #faf8f5);
+      color: var(--h-text-primary, #4a3f37);
+      margin:0;
+      max-width:100%;
+    }
+
+    h1, h2, .vp-display{
+      font-family:'Cormorant Garamond', Georgia, serif;
+      font-weight:600;
+      color: var(--h-ember, #2a1f17);
+      letter-spacing:-0.01em;
+    }
+
+    #vpShell{
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 0 1.25rem 4rem;
+    }
+
+    /* ---------- Vendor identity ---------- */
+
+    .vp-hero{
+      position:relative;
+      margin: 0 -1.25rem 0;
+      min-height: 200px;
+      background-position:center;
+      background-size:cover;
+      background-repeat:no-repeat;
+      display:flex;
+      align-items:flex-end;
+    }
+    .vp-hero.is-fallback{
+      background-image: linear-gradient(135deg, var(--v-primary), var(--v-secondary));
+    }
+    .vp-hero::after{
+      content:"";
+      position:absolute; inset:0;
+      background: linear-gradient(180deg, rgba(15,11,8,0.05), rgba(15,11,8,0.45));
+    }
+    .vp-heroInner{
+      position:relative;
+      z-index:1;
+      padding: 2.5rem 1.25rem 1.5rem;
+      width:100%;
+    }
+    .vp-logo{
+      width:64px; height:64px;
+      border-radius: 50%;
+      object-fit:cover;
+      background:#fff;
+      border:2px solid rgba(255,255,255,0.85);
+      margin-bottom:0.75rem;
+      display:block;
+    }
+    .vp-vendorName{
+      font-size: 2.15rem;
+      line-height:1.1;
+      margin:0;
+      color:#fff;
+      text-shadow: 0 1px 12px rgba(15,11,8,0.45);
+    }
+    .vp-tagline{
+      margin:0.4rem 0 0;
+      color: rgba(255,255,255,0.92);
+      font-size:1rem;
+      text-shadow: 0 1px 10px rgba(15,11,8,0.4);
+    }
+
+    /* ---------- Cards ---------- */
+
+    .vp-card{
+      background:#fff;
+      border: var(--h-border-default, 1px solid #e8ddd5);
+      border-radius: var(--h-radius-lg, 1rem);
+      box-shadow: var(--h-shadow-sm, 0 1px 3px rgba(15,11,8,0.08));
+      padding: 1.75rem;
+      margin-top: 1.5rem;
+    }
+
+    .vp-eyebrow{
+      font-size:0.72rem;
+      font-weight:700;
+      letter-spacing:0.12em;
+      text-transform:uppercase;
+      color: var(--v-primary);
+      margin:0 0 0.6rem;
+    }
+    .vp-dropName{
+      font-size:1.85rem;
+      line-height:1.15;
+      margin:0 0 0.75rem;
+    }
+    .vp-intro{
+      margin:0 0 1.25rem;
+      line-height:1.65;
+      color: var(--h-text-primary, #4a3f37);
+    }
+
+    .vp-facts{
+      list-style:none;
+      margin:0 0 1.5rem;
+      padding:0;
+      border-top: 1px solid var(--h-cinder, #e8ddd5);
+    }
+    .vp-facts li{
+      display:flex;
+      justify-content:space-between;
+      gap:1rem;
+      padding:0.7rem 0;
+      border-bottom: 1px solid var(--h-cinder, #e8ddd5);
+      font-size:0.94rem;
+    }
+    .vp-factLabel{ color: var(--h-text-secondary, #8c7b6e); }
+    .vp-factValue{ color: var(--h-ember, #2a1f17); font-weight:500; text-align:right; }
+
+    /* Capacity is only ever a real, server-derived number. */
+    .vp-capacity{
+      display:inline-block;
+      padding:0.35rem 0.75rem;
+      border-radius:999px;
+      background: rgba(0,0,0,0.04);
+      border:1px solid var(--h-cinder, #e8ddd5);
+      font-size:0.85rem;
+      font-weight:500;
+      color: var(--h-slate, #4a3f37);
+      margin-bottom:1.25rem;
+    }
+
+    .vp-btn{
+      display:block;
+      width:100%;
+      box-sizing:border-box;
+      text-align:center;
+      padding:0.95rem 1.25rem;
+      border-radius: var(--h-radius-md, 0.75rem);
+      border:1px solid transparent;
+      font-family:'Figtree', system-ui, sans-serif;
+      font-size:1rem;
+      font-weight:600;
+      cursor:pointer;
+      text-decoration:none;
+      transition: opacity 0.15s ease;
+    }
+    .vp-btn:hover{ opacity:0.9; }
+    .vp-btnPrimary{
+      background: var(--v-primary);
+      color: var(--v-text-on-primary);
+    }
+    .vp-btnQuiet{
+      background:transparent;
+      border:1px solid var(--h-cinder, #e8ddd5);
+      color: var(--h-slate, #4a3f37);
+    }
+    .vp-btn[disabled]{ opacity:0.55; cursor:default; }
+
+    /* ---------- Follow ---------- */
+
+    .vp-followTitle{ font-size:1.45rem; margin:0 0 0.5rem; }
+    .vp-followSub{
+      margin:0 0 1.35rem;
+      color: var(--h-text-secondary, #8c7b6e);
+      line-height:1.6;
+      font-size:0.95rem;
+    }
+    .vp-field{ margin-bottom:1rem; }
+    .vp-label{
+      display:block;
+      font-size:0.85rem;
+      font-weight:600;
+      margin-bottom:0.35rem;
+      color: var(--h-slate, #4a3f37);
+    }
+    .vp-optional{ font-weight:400; color: var(--h-text-secondary, #8c7b6e); }
+    .vp-input{
+      width:100%;
+      box-sizing:border-box;
+      padding:0.7rem 0.85rem;
+      border:1px solid var(--h-cinder, #e8ddd5);
+      border-radius: var(--h-radius-sm, 0.375rem);
+      font-family:'Figtree', system-ui, sans-serif;
+      font-size:1rem;
+      color: var(--h-ember, #2a1f17);
+      background:#fff;
+    }
+    .vp-input:focus{
+      outline:none;
+      border-color: var(--v-primary);
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+    }
+    .vp-consent{
+      display:flex;
+      gap:0.7rem;
+      align-items:flex-start;
+      margin:1.25rem 0;
+      font-size:0.9rem;
+      line-height:1.55;
+      color: var(--h-slate, #4a3f37);
+    }
+    .vp-consent input{
+      margin-top:0.2rem;
+      width:1.05rem; height:1.05rem;
+      flex-shrink:0;
+      accent-color: var(--v-primary);
+    }
+    .vp-notice{
+      margin-top:1rem;
+      padding:0.75rem 0.9rem;
+      border-radius: var(--h-radius-sm, 0.375rem);
+      font-size:0.9rem;
+      line-height:1.5;
+    }
+    .vp-notice.is-error{
+      background:#fdf2f0;
+      border:1px solid #f3d3cc;
+      color:#8c3a25;
+    }
+    .vp-hidden{ display:none !important; }
+
+    /* ---------- Frame ---------- */
+
+    .vp-footer{
+      text-align:center;
+      margin-top:2.5rem;
+      font-size:0.8rem;
+      color: var(--h-text-secondary, #8c7b6e);
+    }
+    /* Hearthfire appears ONLY here — the Hearth frame around the vendor. */
+    .vp-footer strong{ color: var(--h-fire, #c4511a); font-weight:600; }
+
+    .vp-plain{
+      text-align:center;
+      padding: 4rem 1.25rem;
+    }
+    .vp-plain h1{ font-size:1.9rem; margin:0 0 0.6rem; }
+    .vp-plain p{ color: var(--h-text-secondary, #8c7b6e); margin:0; line-height:1.6; }
+
+    .vp-loading{
+      text-align:center;
+      padding:4rem 1.25rem;
+      color: var(--h-text-secondary, #8c7b6e);
+      font-size:0.95rem;
+    }
+
+    @media (max-width: 480px){
+      .vp-card{ padding:1.35rem; }
+      .vp-vendorName{ font-size:1.8rem; }
+      .vp-dropName{ font-size:1.55rem; }
+    }
+  </style>
+</head>
+<body>
+  <div id="vpShell">
+    <div id="vpContent" class="vp-loading">Loading…</div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var SUPABASE_URL = (window.HEARTH_CONFIG || {}).SUPABASE_URL;
+      var SUPABASE_ANON_KEY = (window.HEARTH_CONFIG || {}).SUPABASE_ANON_KEY;
+
+      var supabase = null;
+      var state = { vendor: null, page: null, followDone: false };
+
+      var content = document.getElementById("vpContent");
+
+      /* ---------- helpers ---------- */
+
+      function escapeHtml(v) {
+        return String(v == null ? "" : v)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function readSlug() {
+        // PR2a: query param only. PR2b moves this to the path.
+        var params = new URLSearchParams(window.location.search);
+        var slug = params.get("slug");
+        return slug && slug.trim() ? slug.trim() : null;
+      }
+
+      function formatDate(iso) {
+        if (!iso) return null;
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return null;
+        return d.toLocaleDateString("en-GB", {
+          weekday: "long", day: "numeric", month: "long"
+        });
+      }
+
+      function formatDateTime(iso) {
+        if (!iso) return null;
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return null;
+        return d.toLocaleString("en-GB", {
+          weekday: "long", day: "numeric", month: "long",
+          hour: "2-digit", minute: "2-digit"
+        });
+      }
+
+      function orderUrl(slug) {
+        // Mirrors drop-manager.html getShareUrl() / host-view.html buildOrderLink().
+        return "/order.html?drop=" + encodeURIComponent(slug);
+      }
+
+      /* Normalises supabase-js's two failure shapes into one result. On a
+         non-2xx the library raises FunctionsHttpError and leaves `data` null —
+         the function's own JSON body is only reachable via error.context. */
+      async function callFunction(name, body) {
+        var data, error;
+        try {
+          var res = await supabase.functions.invoke(name, { body: body });
+          data = res.data;
+          error = res.error;
+        } catch (e) {
+          error = e;
+        }
+
+        if (!error) {
+          if (data && data.error) return { ok: false, message: data.error, status: 200 };
+          return { ok: true, data: data };
+        }
+
+        var message = null;
+        var status = null;
+        var ctx = error && error.context;
+        if (ctx) {
+          status = typeof ctx.status === "number" ? ctx.status : null;
+          try {
+            var parsed = await ctx.json();
+            if (parsed && parsed.error) message = parsed.error;
+          } catch (e2) { /* body wasn't JSON — fall back to a generic message */ }
+        }
+        return { ok: false, message: message, status: status };
+      }
+
+      /* ---------- brand ---------- */
+
+      function applyBrand(vendor) {
+        var brand = (vendor && vendor.brand) || {};
+        var root = document.documentElement;
+        if (brand.primary) root.style.setProperty("--v-primary", brand.primary);
+        if (brand.secondary) root.style.setProperty("--v-secondary", brand.secondary);
+        if (brand.text_on_primary) root.style.setProperty("--v-text-on-primary", brand.text_on_primary);
+        var name = vendor && vendor.display_name;
+        if (name) document.title = name;
+      }
+
+      function vendorName() {
+        return (state.vendor && state.vendor.display_name) || "This vendor";
+      }
+
+      /* ---------- fragments ---------- */
+
+      /* The hero URL is carried in a data- attribute and applied as a style
+         property after insertion (see applyHeroImage). Interpolating a URL into
+         a style="" attribute would break on the first quote it contains. */
+      function heroHtml(vendor) {
+        var hero = vendor.hero_image_url;
+        var cls = hero ? "vp-hero" : "vp-hero is-fallback";
+        var heroAttr = hero ? ' data-hero="' + escapeHtml(hero) + '"' : "";
+        var logo = vendor.logo_url
+          ? '<img class="vp-logo" src="' + escapeHtml(vendor.logo_url) + '" alt="" />'
+          : "";
+        var tagline = vendor.tagline
+          ? '<p class="vp-tagline">' + escapeHtml(vendor.tagline) + "</p>"
+          : "";
+        return '<div class="' + cls + '" id="vpHero"' + heroAttr + ">" +
+          '<div class="vp-heroInner">' +
+            logo +
+            '<h1 class="vp-vendorName">' + escapeHtml(vendor.display_name || "") + "</h1>" +
+            tagline +
+          "</div></div>";
+      }
+
+      function applyHeroImage() {
+        var el = document.getElementById("vpHero");
+        if (!el) return;
+        var hero = el.getAttribute("data-hero");
+        if (!hero) return;
+        // Escape quotes/backslashes so the URL can't terminate the CSS url().
+        el.style.backgroundImage = 'url("' + hero.replace(/["\\]/g, "\\$&") + '")';
+      }
+
+      function factsHtml(rows) {
+        var items = rows.filter(function (r) { return r && r.value; }).map(function (r) {
+          return '<li><span class="vp-factLabel">' + escapeHtml(r.label) + "</span>" +
+            '<span class="vp-factValue">' + escapeHtml(r.value) + "</span></li>";
+        });
+        return items.length ? '<ul class="vp-facts">' + items.join("") + "</ul>" : "";
+      }
+
+      // Wording follows fulfilment_mode where the drop declares one; a mixed or
+      // absent mode degrades to the neutral "Ready".
+      function readyLabel(mode) {
+        if (mode === "delivery") return "Delivered";
+        if (mode === "collection") return "Collection";
+        return "Ready";
+      }
+
+      function followHtml(opts) {
+        var title = opts.title;
+        var sub = opts.sub;
+        return '<section class="vp-card" id="vpFollowCard">' +
+          '<h2 class="vp-followTitle">' + escapeHtml(title) + "</h2>" +
+          '<p class="vp-followSub">' + escapeHtml(sub) + "</p>" +
+          '<form id="vpFollowForm" novalidate>' +
+            '<div class="vp-field">' +
+              '<label class="vp-label" for="vpName">Your name</label>' +
+              '<input class="vp-input" id="vpName" name="name" type="text" autocomplete="name" required />' +
+            "</div>" +
+            '<div class="vp-field">' +
+              '<label class="vp-label" for="vpEmail">Email</label>' +
+              '<input class="vp-input" id="vpEmail" name="email" type="email" autocomplete="email" required />' +
+            "</div>" +
+            '<div class="vp-field">' +
+              '<label class="vp-label" for="vpPostcode">Postcode <span class="vp-optional">— optional</span></label>' +
+              '<input class="vp-input" id="vpPostcode" name="postcode" type="text" autocomplete="postal-code" />' +
+            "</div>" +
+            '<div class="vp-field">' +
+              '<label class="vp-label" for="vpPhone">Mobile <span class="vp-optional">— optional</span></label>' +
+              '<input class="vp-input" id="vpPhone" name="phone" type="tel" autocomplete="tel" />' +
+            "</div>" +
+            '<label class="vp-consent">' +
+              '<input type="checkbox" id="vpConsent" />' +
+              "<span>Yes, " + escapeHtml(vendorName()) +
+                " can email me about what's coming next. You can ask to stop at any time.</span>" +
+            "</label>" +
+            '<button class="vp-btn vp-btnPrimary" id="vpFollowSubmit" type="submit">' +
+              escapeHtml(opts.cta) +
+            "</button>" +
+            '<div class="vp-notice vp-hidden" id="vpFollowNotice" role="status"></div>' +
+          "</form>" +
+        "</section>";
+      }
+
+      /* ---------- states ---------- */
+
+      function renderNotFound() {
+        document.title = "Not found";
+        content.className = "";
+        content.innerHTML =
+          '<div class="vp-plain">' +
+            "<h1>We couldn't find that vendor.</h1>" +
+            "<p>The link may be out of date, or the address may have a typo in it.</p>" +
+          "</div>";
+      }
+
+      function renderError() {
+        content.className = "";
+        content.innerHTML =
+          '<div class="vp-plain">' +
+            "<h1>This page didn't load.</h1>" +
+            "<p>Something went wrong at our end. Please try again in a moment.</p>" +
+          "</div>";
+      }
+
+      function renderPage(page) {
+        var vendor = page.vendor;
+        var drop = page.drop;
+        var capacity = page.capacity;
+        var body = "";
+
+        if (page.state === "live_drop") {
+          // Capacity is rendered only when the server sent a real number.
+          var capChip = "";
+          if (capacity && typeof capacity.remaining === "number" && typeof capacity.total === "number") {
+            capChip = '<div class="vp-capacity">' +
+              escapeHtml(capacity.remaining + " of " + capacity.total + " places left") +
+              "</div>";
+          }
+          body =
+            '<section class="vp-card">' +
+              '<p class="vp-eyebrow">Ordering is open</p>' +
+              '<h2 class="vp-dropName">' + escapeHtml(drop.name || "") + "</h2>" +
+              (drop.drop_intro ? '<p class="vp-intro">' + escapeHtml(drop.drop_intro) + "</p>" : "") +
+              capChip +
+              factsHtml([
+                { label: readyLabel(drop.fulfilment_mode), value: formatDate(drop.delivery_start) },
+                { label: "Ordering closes", value: formatDateTime(drop.closes_at) }
+              ]) +
+              '<a class="vp-btn vp-btnPrimary" href="' + escapeHtml(orderUrl(drop.slug)) + '">' +
+                "See the menu and order" +
+              "</a>" +
+            "</section>";
+
+          if (page.follow && page.follow.enabled) {
+            body += followHtml({
+              title: "Hear about the next one",
+              sub: "Not this time? Leave your details and " + vendorName() +
+                   " will let you know when the next drop is planned.",
+              cta: "Keep me posted"
+            });
+          }
+        } else if (page.state === "full_drop") {
+          // Follow leads. There is deliberately no order affordance here.
+          var takenLine = (capacity && typeof capacity.total === "number")
+            ? "All " + capacity.total + " places have been taken."
+            : "Every place has been taken.";
+          body =
+            '<section class="vp-card">' +
+              '<p class="vp-eyebrow">This drop is full</p>' +
+              '<h2 class="vp-dropName">' + escapeHtml(drop.name || "") + "</h2>" +
+              '<p class="vp-intro">' + escapeHtml(takenLine) + "</p>" +
+              // full_drop is only reached while the window is still open, so
+              // closes_at is in the future — "closed" would be inaccurate.
+              factsHtml([
+                { label: "Ready", value: formatDate(drop.delivery_start) },
+                { label: "Ordering closes", value: formatDateTime(drop.closes_at) }
+              ]) +
+            "</section>";
+
+          if (page.follow && page.follow.enabled) {
+            body += followHtml({
+              title: "Hear about the next one",
+              sub: "This drop is fully booked. Leave your details and " + vendorName() +
+                   " will let you know when the next one is planned.",
+              cta: "Keep me posted"
+            });
+          }
+        } else if (page.state === "announced_drop") {
+          body =
+            '<section class="vp-card">' +
+              '<p class="vp-eyebrow">Coming up</p>' +
+              '<h2 class="vp-dropName">' + escapeHtml(drop.name || "") + "</h2>" +
+              (drop.drop_intro ? '<p class="vp-intro">' + escapeHtml(drop.drop_intro) + "</p>" : "") +
+              factsHtml([
+                { label: "Ordering opens", value: formatDateTime(drop.opens_at) },
+                { label: "Ready", value: formatDate(drop.delivery_start) }
+              ]) +
+            "</section>";
+
+          if (page.follow && page.follow.enabled) {
+            body += followHtml({
+              title: "Be there when it opens",
+              sub: "Ordering isn't open yet. Leave your details and " + vendorName() +
+                   " will let you know the moment it is.",
+              cta: "Let me know"
+            });
+          }
+        } else {
+          // resting — the capture surface. Not an empty state.
+          body =
+            '<section class="vp-card">' +
+              '<p class="vp-eyebrow">Nothing on right now</p>' +
+              '<h2 class="vp-dropName">Between drops</h2>' +
+              '<p class="vp-intro">' +
+                escapeHtml(vendorName()) + " cooks to a plan — a set menu, a set window, " +
+                "a set number of places. There's no drop open at the moment." +
+              "</p>" +
+            "</section>";
+
+          if (page.follow && page.follow.enabled) {
+            body += followHtml({
+              title: "See what's coming next",
+              sub: "Leave your details and " + vendorName() +
+                   " will let you know when the next drop is planned.",
+              cta: "Keep me posted"
+            });
+          }
+        }
+
+        var footer = vendor.powered_by_hearth_visible
+          ? '<p class="vp-footer">Powered by <strong>Hearth</strong></p>'
+          : "";
+
+        content.className = "";
+        content.innerHTML = heroHtml(vendor) + body + footer;
+        applyHeroImage();
+        wireFollow();
+      }
+
+      /* ---------- follow ---------- */
+
+      function wireFollow() {
+        var form = document.getElementById("vpFollowForm");
+        if (!form) return;
+
+        var notice = document.getElementById("vpFollowNotice");
+        var submit = document.getElementById("vpFollowSubmit");
+
+        function showNotice(msg) {
+          notice.textContent = msg;
+          notice.className = "vp-notice is-error";
+        }
+        function clearNotice() {
+          notice.textContent = "";
+          notice.className = "vp-notice vp-hidden";
+        }
+
+        form.addEventListener("submit", async function (ev) {
+          ev.preventDefault();
+          if (state.followDone) return;
+          clearNotice();
+
+          var name = document.getElementById("vpName").value.trim();
+          var email = document.getElementById("vpEmail").value.trim();
+          var postcode = document.getElementById("vpPostcode").value.trim();
+          var phone = document.getElementById("vpPhone").value.trim();
+          var consent = document.getElementById("vpConsent").checked;
+
+          if (!name) return showNotice("Please add your name.");
+          if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return showNotice("Please add an email address we can reach you on.");
+          }
+          if (!consent) {
+            return showNotice("Please tick the box so we know it's okay to email you.");
+          }
+
+          var original = submit.textContent;
+          submit.disabled = true;
+          submit.textContent = "Sending…";
+
+          var result = await callFunction("register-vendor-interest", {
+            vendor_slug: state.slug,
+            name: name,
+            email: email,
+            postcode: postcode || null,
+            phone: phone || null,
+            consent: true
+          });
+
+          if (!result.ok) {
+            submit.disabled = false;
+            submit.textContent = original;
+            // Surface the function's own wording where it gave us one (consent
+            // and validation refusals are meaningful); fall back otherwise.
+            showNotice(result.message || "Sorry — that didn't go through. Please try again.");
+            return;
+          }
+
+          state.followDone = true;
+          var card = document.getElementById("vpFollowCard");
+          var already = result.data && result.data.already_following;
+          card.innerHTML =
+            '<h2 class="vp-followTitle">' +
+              (already ? "You're already on the list." : "You're on the list.") +
+            "</h2>" +
+            '<p class="vp-followSub">' +
+              escapeHtml(vendorName()) + " will let you know when the next drop is planned." +
+            "</p>";
+        });
+      }
+
+      /* ---------- boot ---------- */
+
+      async function init() {
+        var slug = readSlug();
+        state.slug = slug;
+
+        if (!slug) {
+          renderNotFound();
+          return;
+        }
+
+        if (!window.supabase || !window.supabase.createClient || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+          renderError();
+          return;
+        }
+
+        // Isolated client. This is a public surface on the same origin as the
+        // operator pages, so a logged-in vendor's persisted session must never
+        // leak into it (learning #79).
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: { persistSession: false, autoRefreshToken: false }
+        });
+
+        var result = await callFunction("get-vendor-page", { slug: slug });
+
+        if (!result.ok) {
+          if (result.status === 404 || result.message === "vendor_not_found") {
+            renderNotFound();
+          } else {
+            renderError();
+          }
+          return;
+        }
+
+        state.page = result.data;
+        state.vendor = result.data.vendor;
+        applyBrand(state.vendor);
+        renderPage(result.data);
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
