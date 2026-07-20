@@ -5366,11 +5366,17 @@ Dropping a column is irreversible without PITR (T6-5), so a non-zero count chang
 
 T-fundraising-composed-line-consumers — teach the customer- and host-facing surfaces to compose the fundraising line
 
-**Status:** Open. Tier 5-B. Surfaced by the Drop Studio cause-capture PR (2026-07-19). Do before the first real fundraising drop with a blank customer message.
+**Status:** ✓ COMPLETE 2026-07-19 (#485). Tier 5-B. Surfaced by the Drop Studio cause-capture PR (2026-07-19) and closed the same day.
+
+**What shipped.** Exactly the fix shape described below. `host-view-summary` now builds `fundraising_descriptor` server-side (`buildFundraisingDescriptor`, mirroring the existing `host_share_descriptor` precedent in the same function), widened its named `v_drop_summary` projection to include `fundraising_cause_name`, and returns the composed descriptor alongside the retained raw field so the deploy was a no-op for the then-current page. `host-view.html:1132` reads `drop.fundraising_descriptor` and renders one field, holding no fundraising copy of its own. The customer-facing half landed in the same PR: `order.html` composes its line through the shared `assets/hearth-fundraising.js` module.
+
+`fundraising_cause_reference` was never projected — the host projection stays a named column list precisely so it cannot leak, and `v_drop_public` continues to exclude it.
+
+The **vendor-facing** half of the loop — surfacing the raised total on the Scorecard and Home, where the vendor who actually owes the cause can see it — was a separate concern and shipped later as its own PR.
 
 **What changed upstream.** The cause-capture PR made `fundraising_display_text` an **optional override** of a line composed from the structured fields (`fundraising_model` + `fundraising_percentage` / `fundraising_per_order_pence` + `fundraising_cause_name`). It is no longer required by Drop Studio readiness, by `update-drop`, or by the `transition-drop-status` publish gate — `fundraising_cause_name` took over that role.
 
-**The gap.** Drop Studio composes and previews the line client-side (`composeFundraisingLine` in `drop-manager.html`), but that helper is **the only implementation**. Every downstream reader still renders `fundraising_display_text` verbatim, so a fundraising drop saved with a blank override now renders **nothing** where it previously always had text:
+**The gap (as found — all of the following is now fixed).** Drop Studio composed and previewed the line client-side (`composeFundraisingLine` in `drop-manager.html`), but that helper was **the only implementation**. Every downstream reader still rendered `fundraising_display_text` verbatim, so a fundraising drop saved with a blank override rendered **nothing** where it previously always had text:
 
 - `host-view.html` (~:1126) — `const fundraisingText = drop.fundraising_display_text || null;`
 - `host-view-summary/index.ts` — projects `fundraising_display_text` (~:103 select list, ~:148 response) and does **not** currently project `fundraising_cause_name`
@@ -5384,7 +5390,7 @@ This is a silent-empty failure, not an error — the same shape as operational l
 - re-point `host-view.html` onto the descriptor
 - **never** project `fundraising_cause_reference` — it is operator-only by design and explicitly barred from customer- and host-facing projections (see the column comment and `20260719140000_drop_fundraising_cause.sql`)
 
-**Also outstanding:** `order.html` does not render a fundraising line at all today. Composing one there is the customer-facing half of what the cause column was added for (see the migration header: "so the order page can compose an accurate contribution line instead of relying on the vendor to restate it in display text"). Worth doing in the same pass.
+**Also outstanding (done — shipped in the same PR):** `order.html` rendered no fundraising line at all. Composing one there is the customer-facing half of what the cause column was added for (see the migration header: "so the order page can compose an accurate contribution line instead of relying on the vendor to restate it in display text"). Worth doing in the same pass.
 
 **Watch for divergence.** Once the line is composed in two places (client preview + server descriptor), the two can drift and show a vendor one line in Drop Studio and customers another. Prefer making the server the single authority and having Drop Studio's preview mirror its wording exactly; if they must stay separate, keep the phrasing in one documented place. Same family as T-fundraising-order-count-single-source (two independent derivations of one number that agree today).
 
