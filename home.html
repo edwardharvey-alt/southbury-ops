@@ -1025,6 +1025,10 @@
     const state = {
       vendor: null,
       drops: [],
+      /* v_drop_summary rows from list-drops, keyed by drop_id. The raw
+         `drops` rows above carry the fundraising cause but NOT the
+         computed fundraising_total_pence, which is derived from orders. */
+      dropSummaries: [],
       products: [],
       bundles: [],
       summary: null,
@@ -1048,6 +1052,22 @@
         style:'currency',
         currency:'GBP',
         maximumFractionDigits: n % 1 === 0 ? 0 : 2
+      }).format(n);
+    }
+
+    /* Always two decimals. fmtGBP above drops the pence on round
+       amounts, which reads well for a headline revenue figure but wrong
+       for a settlement one — the fundraising total must read exactly as
+       the Host View renders it (toFixed(2)), so a vendor and their host
+       are never looking at differently-rounded versions of the same
+       obligation. */
+    function fmtGBPExact(pence){
+      const n = Number(pence || 0) / 100;
+      return new Intl.NumberFormat('en-GB', {
+        style:'currency',
+        currency:'GBP',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
       }).format(n);
     }
 
@@ -1113,7 +1133,7 @@
         homeRes,
         cateringRes
       ] = await Promise.all([
-        (async () => { try { const { data, error } = await sb.functions.invoke('list-drops', { body: {} }); if (error || (data && data.error)) return { data: [] }; return { data: Array.isArray(data?.drops) ? data.drops : [] }; } catch(e) { return { data: [] }; } })(),
+        (async () => { try { const { data, error } = await sb.functions.invoke('list-drops', { body: {} }); if (error || (data && data.error)) return { data: [], summaries: [] }; return { data: Array.isArray(data?.drops) ? data.drops : [], summaries: Array.isArray(data?.drop_summaries) ? data.drop_summaries : [] }; } catch(e) { return { data: [], summaries: [] }; } })(),
         sb.from('products').select('*').eq('vendor_id', vendorId),
         sb.from('bundles').select('*').eq('vendor_id', vendorId),
         (async () => { try { const { data, error } = await sb.functions.invoke('get-home-dashboard', { body: {} }); if (error || (data && data.error)) return {}; return data || {}; } catch(e) { return {}; } })(),
@@ -1121,6 +1141,7 @@
       ]);
 
       state.drops = dropsRes.data || [];
+      state.dropSummaries = dropsRes.summaries || [];
       state.products = productsRes.data || [];
       state.bundles = bundlesRes.data || [];
       state.cateringEnquiries = cateringRes.failed ? null : (cateringRes.enquiries || []);
@@ -1242,6 +1263,38 @@
       document.getElementById('signalText').textContent = signalText;
     }
 
+    /* The running fundraising line for the "Live now" strip.
+       Joins across two payloads deliberately: state.drops holds the raw
+       `drops` rows (keyed `id`), while the computed running total lives
+       only on the v_drop_summary rows list-drops returns alongside them
+       (keyed `drop_id`). Reading the total off the raw drop row would
+       silently render £0.00 on every drop, because the column simply
+       is not there.
+
+       Returns '' for any drop without fundraising, so the strip is
+       untouched for everyone else.
+
+       Note this shows the cause NAME only. fundraising_cause_reference
+       is operator-only and belongs on the Scorecard alone. */
+    function fundraisingNote(drop){
+      if (!drop) return '';
+
+      const summary = state.dropSummaries.find(s => s.drop_id === drop.id);
+      if (!summary || summary.fundraising_enabled !== true) return '';
+
+      /* Same fundraising_total_pence, same view, as the Host View — and
+         formatted to the same two decimals. Shown from £0.00 rather
+         than hidden until it moves, so a vendor watching a live drop can
+         see the tracking is working instead of wondering whether it is. */
+      const raised = fmtGBPExact(summary.fundraising_total_pence);
+      const cause = String(summary.fundraising_cause_name ?? '').trim();
+      const line = cause
+        ? `${raised} raised for ${cause} so far`
+        : `${raised} raised so far`;
+
+      return `<div class="home-todayMeta">${escapeHtml(line)}</div>`;
+    }
+
     function renderToday(){
       const strip = document.getElementById('todayStrip');
       const content = document.getElementById('todayContent');
@@ -1267,6 +1320,7 @@
             <div>
               <div class="home-todayLabel">Live now — ${name}</div>
               <div class="home-todayMeta">Orders are coming in.</div>
+              ${fundraisingNote(liveDrop)}
             </div>
           </div>
           <a class="home-button" href="${HearthNav.withVendor('./service-board.html')}">Open Service Board</a>

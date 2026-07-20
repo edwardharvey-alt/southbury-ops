@@ -176,6 +176,47 @@
       margin: 0;
     }
 
+    /* ── Fundraising settle-up ── */
+    .sc-fund-figure {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--sc-text);
+    }
+
+    .sc-fund-line {
+      margin: 2px 0 0;
+      font-size: 15px;
+      color: var(--sc-text);
+    }
+
+    /* Operator-only remittance note. Deliberately subordinate to the
+       figure — it is reference detail the vendor needs when paying, not
+       something to compete with the amount raised. */
+    .sc-fund-ref {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--sc-border);
+    }
+
+    .sc-fund-ref-label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--sc-muted);
+      margin-bottom: 6px;
+    }
+
+    .sc-fund-ref-value {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--sc-muted);
+      /* Bank details / charity numbers are often entered multi-line. */
+      white-space: pre-wrap;
+    }
+
     /* ── Top items ── */
     .sc-items-list {
       list-style: none;
@@ -533,34 +574,50 @@
           </div>
         </div>
 
-        <!-- 3. Capacity signal panel -->
+        <!-- 3. Fundraising settle-up.
+             Hidden entirely unless this drop ran fundraising — see
+             renderFundraising(). This is the figure the vendor settles
+             with the cause, and it is the same fundraising_total_pence
+             the Host View shows. -->
+        <section class="sc-section" id="fundraisingSection" style="display:none;">
+          <h2>Fundraising</h2>
+          <p class="sc-section-sub">What this drop raised, and who it goes to</p>
+          <div class="sc-fund-figure" id="fundFigure">—</div>
+          <p class="sc-fund-line" id="fundLine"></p>
+          <div class="sc-fund-ref" id="fundRef" style="display:none;">
+            <div class="sc-fund-ref-label">For your records — how to pay the cause</div>
+            <p class="sc-fund-ref-value" id="fundRefValue"></p>
+          </div>
+        </section>
+
+        <!-- 4. Capacity signal panel -->
         <section class="sc-section" id="capacitySection">
           <h2>Capacity signal</h2>
           <p class="sc-narrative" id="capacityNarrative">—</p>
         </section>
 
-        <!-- 4. Top items -->
+        <!-- 5. Top items -->
         <section class="sc-section" id="itemsSection">
           <h2>What sold</h2>
           <p class="sc-section-sub" id="itemsSub">Top items by quantity</p>
           <ol class="sc-items-list" id="itemsList"></ol>
         </section>
 
-        <!-- 5. Customer breakdown -->
+        <!-- 6. Customer breakdown -->
         <section class="sc-section" id="customerSection">
           <h2>Your audience tonight</h2>
           <p class="sc-section-sub" id="customerSub">New vs returning customers</p>
           <div class="sc-customer-grid" id="customerGrid"></div>
         </section>
 
-        <!-- 6. Recommendations -->
+        <!-- 7. Recommendations -->
         <section class="sc-section" id="recsSection">
           <h2>For your next drop</h2>
           <p class="sc-section-sub">Actions based on this drop's signals</p>
           <div class="sc-recs-grid" id="recsGrid"></div>
         </section>
 
-        <!-- 7. Action row -->
+        <!-- 8. Action row -->
         <div class="sc-actions">
           <a class="sc-btn sc-btn-primary" id="duplicateBtn" href="./drop-manager.html">Duplicate this drop</a>
           <a class="sc-btn sc-btn-secondary" href="./insights.html">View all insights</a>
@@ -768,6 +825,9 @@
       document.getElementById('statNewCustomers').textContent = fmtNum(state.newCustomers);
       document.getElementById('statNewCustomersMeta').textContent = 'First time with you';
 
+      /* Fundraising settle-up */
+      renderFundraising();
+
       /* Capacity narrative */
       renderCapacityNarrative();
 
@@ -781,6 +841,56 @@
       renderRecommendations();
 
       showContent();
+    }
+
+    /* The settle-up figure: what this drop raised, and how to pay it.
+       Everything here is already on state.drop — get-drop returns the
+       whole v_drop_summary row under `summary` — so this reads what the
+       page has always had rather than fetching anything new. */
+    function renderFundraising() {
+      const section = document.getElementById('fundraisingSection');
+      const drop = state.drop;
+
+      /* Hidden entirely when the drop had no fundraising. */
+      if (!drop || drop.fundraising_enabled !== true) {
+        section.style.display = 'none';
+        return;
+      }
+
+      section.style.display = '';
+
+      /* fundraising_total_pence off v_drop_summary — the same column,
+         from the same row, that host-view-summary projects to the Host
+         View. Penny-identical by construction rather than by
+         coincidence, which matters because a host reads their figure as
+         a promise about money owed to their cause. */
+      const raisedPence = Number(drop.fundraising_total_pence || 0);
+      const cause = String(drop.fundraising_cause_name ?? '').trim();
+
+      document.getElementById('fundFigure').textContent = fmtCurrency(raisedPence);
+      /* Drops created before the cause column existed can be fundraising
+         drops with no cause name — still show the figure, just without a
+         name we do not have. */
+      document.getElementById('fundLine').textContent = cause
+        ? `raised for ${cause}`
+        : 'raised by this drop';
+
+      /* Operator-only. fundraising_cause_reference reaches this page
+         solely because get-drop verifies the JWT and scopes to the
+         caller's own vendor — it is the vendor's own remittance note.
+         It is deliberately absent from v_drop_public and from
+         host-view-summary's named projection, and must never be added
+         to either (see 20260719150000_drop_fundraising_cause_views.sql).
+         Do not surface it on Home, which is fed by list-drops. */
+      const refEl = document.getElementById('fundRef');
+      const reference = String(drop.fundraising_cause_reference ?? '').trim();
+
+      if (reference) {
+        document.getElementById('fundRefValue').textContent = reference;
+        refEl.style.display = '';
+      } else {
+        refEl.style.display = 'none';
+      }
     }
 
     function renderCapacityNarrative() {
