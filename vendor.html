@@ -228,6 +228,12 @@
     .consent{display:flex;gap:12px;align-items:flex-start;margin:20px 0 22px}
     .consent input{margin-top:4px;accent-color:var(--v-primary);width:17px;height:17px;flex:none}
     .consent label{font-size:14.5px;color:var(--h-ink-soft);line-height:1.5}
+    /* Quiet, muted helper text under a field (reuses the existing muted token —
+       no new colour). Generic so any field needing a hint can reuse it. */
+    .field-hint{margin-top:6px;font-size:13.5px;color:var(--h-ink-soft);line-height:1.45}
+    /* The frequency-promise line under the follow sub-heading. Specificity beats
+       .follow > p (0,1,1) so the tightened spacing/size actually applies. */
+    .follow p.follow-note{margin:-16px 0 24px;font-size:14px;color:var(--h-ink-soft);line-height:1.5}
 
     /* Follow validation / error notice. Class names are load-bearing — wireFollow
        toggles exactly these (.vp-notice / .is-error / .vp-hidden). */
@@ -631,13 +637,15 @@
           '<div class="follow" id="vpFollowCard">' +
             "<h2>" + escapeHtml(opts.title) + "</h2>" +
             "<p>" + escapeHtml(opts.sub) + "</p>" +
+            '<p class="follow-note">Only when there’s a drop planned — nothing else.</p>' +
             '<form id="vpFollowForm" novalidate>' +
               '<div class="field"><label for="vpName">Your name</label>' +
                 '<input id="vpName" name="name" type="text" autocomplete="name" required /></div>' +
               '<div class="field"><label for="vpEmail">Email</label>' +
                 '<input id="vpEmail" name="email" type="email" autocomplete="email" required /></div>' +
-              '<div class="field"><label for="vpPostcode">Postcode <i>— optional</i></label>' +
-                '<input id="vpPostcode" name="postcode" type="text" autocomplete="postal-code" /></div>' +
+              '<div class="field"><label for="vpPostcode">First part of your postcode</label>' +
+                '<input id="vpPostcode" name="postcode" type="text" autocomplete="postal-code" placeholder="BH18" required />' +
+                '<div class="field-hint">So you only hear about drops near you.</div></div>' +
               '<div class="field"><label for="vpPhone">Mobile <i>— optional</i></label>' +
                 '<input id="vpPhone" name="phone" type="tel" autocomplete="tel" /></div>' +
               '<div class="consent"><input id="vpConsent" type="checkbox" />' +
@@ -690,7 +698,7 @@
           hero = heroRestingHtml(vendor);
           sections = recentDropsHtml(recent) + explainHtml() + followHtml({
             title: "See what’s coming next",
-            sub: "Leave your details and " + vendorName() + " will let you know when the next drop is planned.",
+            sub: "Hear first when the next drop opens.",
             cta: "Keep me posted",
             ghost: false
           });
@@ -797,7 +805,6 @@
 
           var name = document.getElementById("vpName").value.trim();
           var email = document.getElementById("vpEmail").value.trim();
-          var postcode = document.getElementById("vpPostcode").value.trim();
           var phone = document.getElementById("vpPhone").value.trim();
           var consent = document.getElementById("vpConsent").checked;
 
@@ -805,6 +812,21 @@
           if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             return showNotice("Please add an email address we can reach you on.");
           }
+
+          // Postcode: outward code only (e.g. BH18, SW1A, M1). Uppercased and
+          // stripped of spaces on save; a full postcode is rejected, never
+          // silently truncated. Mirrored server-side in register-vendor-interest.
+          var postcode = document.getElementById("vpPostcode").value.trim().toUpperCase().replace(/\s+/g, "");
+          var outwardRe = /^[A-Z]{1,2}[0-9]{1,2}[A-Z]?$/;
+          var fullPostcodeRe = /^[A-Z]{1,2}[0-9]{1,2}[A-Z]?[0-9][A-Z]{2}$/;
+          if (!postcode) return showNotice("Please add the first part of your postcode.");
+          if (fullPostcodeRe.test(postcode)) {
+            return showNotice("Just the first part is enough — e.g. BH18");
+          }
+          if (!outwardRe.test(postcode)) {
+            return showNotice("That doesn’t look like a UK postcode.");
+          }
+
           if (!consent) {
             return showNotice("Please tick the box so we know it's okay to email you.");
           }
@@ -817,7 +839,7 @@
             vendor_slug: state.slug,
             name: name,
             email: email,
-            postcode: postcode || null,
+            postcode: postcode,
             phone: phone || null,
             consent: true
           });
@@ -833,10 +855,13 @@
 
           state.followDone = true;
           var card = document.getElementById("vpFollowCard");
-          var already = result.data && result.data.already_following;
+          // Success sentence always names the vendor; it leads with the person's
+          // name when we have one, and falls back cleanly when we somehow don't —
+          // it must never render an empty slot or a literal token.
+          var heading = name ? "Thanks, " + escapeHtml(name) + "." : "Thanks.";
           card.innerHTML =
-            "<h2>" + (already ? "You’re already on the list." : "You’re on the list.") + "</h2>" +
-            "<p>" + escapeHtml(vendorName()) + " will let you know when the next drop is planned.</p>";
+            "<h2>" + heading + "</h2>" +
+            "<p>" + escapeHtml(vendorName()) + " will let you know when the next drop opens.</p>";
         });
       }
 
