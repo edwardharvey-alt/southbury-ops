@@ -36,13 +36,39 @@ function nonEmptyString(v: unknown): v is string {
   return typeof v === "string" && v.trim().length > 0;
 }
 
+// Postcode: the UK outward code ONLY (e.g. BH18, SW1A, M1). Uppercased and
+// stripped of spaces on save; a full postcode is rejected (not truncated) and
+// anything else unrecognised. This is the ENFORCEMENT point — the matching
+// client-side check in vendor.html exists only for immediate feedback and is
+// never trusted (operational learning #95: the client is never the boundary).
+// Deliberately NOT mirrored into register_vendor_interest_atomic, which still
+// treats postcode as optional — accepted asymmetry, tracked post-launch as
+// T-follow-validation-rpc-parity.
+function normaliseOutwardPostcode(
+  v: unknown
+): { ok: true; value: string } | { ok: false; reason: string } {
+  if (!nonEmptyString(v)) {
+    return { ok: false, reason: "the first part of your postcode is required" };
+  }
+  const compact = (v as string).trim().toUpperCase().replace(/\s+/g, "");
+  const outward = /^[A-Z]{1,2}[0-9]{1,2}[A-Z]?$/;
+  const full = /^[A-Z]{1,2}[0-9]{1,2}[A-Z]?[0-9][A-Z]{2}$/;
+  if (full.test(compact)) {
+    return { ok: false, reason: "Just the first part is enough — e.g. BH18" };
+  }
+  if (!outward.test(compact)) {
+    return { ok: false, reason: "That doesn’t look like a UK postcode." };
+  }
+  return { ok: true, value: compact };
+}
+
 type ParsedBody = {
   vendor_id?: string;
   vendor_slug?: string;
   name: string;
   email: string;
   phone: string | null;
-  postcode: string | null;
+  postcode: string;
   consent: boolean;
 };
 
@@ -64,8 +90,10 @@ function validateBody(body: unknown): { ok: true; data: ParsedBody } | { ok: fal
   if (!isEmailShape(b.email)) return { ok: false, reason: "a valid email is required" };
   if (b.consent !== true) return { ok: false, reason: "consent is required to follow a vendor" };
 
+  const postcodeResult = normaliseOutwardPostcode(b.postcode);
+  if (!postcodeResult.ok) return { ok: false, reason: postcodeResult.reason };
+
   const phone = nonEmptyString(b.phone) ? (b.phone as string).trim() : null;
-  const postcode = nonEmptyString(b.postcode) ? (b.postcode as string).trim() : null;
 
   return {
     ok: true,
@@ -75,7 +103,7 @@ function validateBody(body: unknown): { ok: true; data: ParsedBody } | { ok: fal
       name: (b.name as string).trim(),
       email: (b.email as string).trim().toLowerCase(),
       phone,
-      postcode,
+      postcode: postcodeResult.value,
       consent: true,
     },
   };
