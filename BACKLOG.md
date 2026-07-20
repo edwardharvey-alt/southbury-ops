@@ -5310,7 +5310,7 @@ T-order-confirmation-realtime-dead-code — inert realtime subscription on `orde
 
 T-fundraising-order-count-single-source — `order_count` is computed twice, independently
 
-**Status:** Open. Tier 5-B. Post-launch, low priority. **Not a live bug** — the two computations agree today, verified 2026-07-19. This is drift prevention.
+**Status:** Open. Tier 5-B. Post-launch, low priority. **Not a live bug** — the two computations agree today, verified 2026-07-19. This is drift prevention. **Parked pending a test fixture** carrying both a `pending_payment` and a `cancelled` order: the two predicates differ only on the rows their exclusion lists touch, so a drop without those statuses cannot demonstrate either the current agreement or a future divergence. Noted during the per_item live verification (2026-07-20), where every order under test was `placed`.
 
 **What's doubled.** `v_drop_summary` and `v_drop_fundraising_summary` each derive `order_count` from `orders` by their own route, and then `v_drop_summary` joins the other view in and takes `drop_gmv_pence` / `fundraising_total_pence` / `host_share_total_pence` from it:
 
@@ -5400,7 +5400,12 @@ This is a silent-empty failure, not an error — the same shape as operational l
 
 T-fundraising-per-item-model — a third fundraising model: a fixed amount per ITEM
 
-**Status:** ✓ COMPLETE 2026-07-20 (#488 data layer, PR 2 write path + surfaces). Tier 5-B.
+**Status:** ✓ COMPLETE 2026-07-20 (#488 data layer, #490 write path + surfaces). Tier 5-B.
+Verified end-to-end on live before closure: all three models — `per_order`, `percentage`,
+`per_item` — compute correctly across Drop Studio, the order page, checkout, the
+confirmation page and email, the host view, and the vendor Scorecard / Home; penny-verified
+against `SUM(qty) × amount` on a real order; `fundraising_cause_reference` confirmed absent
+from every customer- and host-facing payload.
 
 **What shipped.** `per_item` alongside `percentage` and `per_order`: the vendor pledges a
 flat amount for every item unit sold, so a drop's contribution scales with basket size
@@ -5456,7 +5461,89 @@ projection.
 `20260720120100_drop_fundraising_per_item_views.sql` (data layer), operational learning #55
 (fan-out, net-of-discount, `orders.total_pence` as sole revenue truth), #26 (read side /
 write side), #54 (select-narrowing validation), T-fundraising-composed-line-consumers (the
-shared-module pattern this extends).
+shared-module pattern this extends), T-fundraising-fixed-contribution-guard (the MOV / cap
+guard, which the per-model advisory shipped here deliberately stops short of).
+
+---
+
+T-fundraising-fixed-contribution-guard — a fixed contribution can exceed the vendor's NET proceeds
+
+**Status:** Open. Tier 5-B. Post-launch, low priority. **Not a go-live blocker** — real
+vendors at real order sizes never approach the boundary. Surfaced as prose during the
+per_item build (2026-07-20) and given its own ticket, with the net-proceeds correction,
+after live end-to-end verification the same day.
+
+**The risk.** The two FIXED fundraising models — `per_order`
+(`fundraising_per_order_pence`) and `per_item` (`fundraising_per_item_pence`) — pledge an
+absolute amount that is not derived from the order, so nothing stops it exceeding what the
+order is worth. `percentage` needs no guard and is out of scope: a fraction of an order is
+always less than the order, so it is self-limiting by construction.
+
+The two fixed models are not the same shape of risk. `per_order` is **bounded** — it only
+bites on a small basket, and a £3 pledge on a £20 order is fine. `per_item` is
+**structural** — the pledge is charged against every unit, so if it exceeds the cheapest
+item, that item loses money on every single one sold, at any basket size.
+
+**THE FINDING (from live verification, and the reason this is not merely a restatement).**
+The ceiling is **not the order total.** It is the vendor's **net proceeds** — what actually
+lands in their Stripe account — because two deductions come out first:
+
+- **Hearth's platform fee**, taken as Stripe `application_fee_amount` on the destination
+  charge (`create-order` ~:966), computed from the vendor's `platform_fee_pct` +
+  `platform_fee_fixed_pence` — currently **1.5% + 20p** for all vendors (PR #474).
+- **Stripe's own processing fee** — UK standard **1.4% + 20p** — which Stripe deducts
+  independently and which no Hearth code sees.
+
+Worked case, the one to reason from: a **£1.00** order on a `per_item` pledge of **£1.00
+per item** incurs **£1.00** fundraising + **~22p** platform fee (1.5% + 20p) + **~21p**
+Stripe fee (1.4% + 20p) ≈ **£1.43 of obligations against a £1.00 charge.** The vendor is
+underwater by ~43p before the fundraising pledge is even the problem — and note that the
+fixed 20p components mean the gap is *proportionally worst at exactly the small order sizes
+where a flat pledge already bites hardest.*
+
+So a guard that clamps the contribution at the order total would still let the vendor lose
+money. **Any guard built here must reckon with fees — net proceeds, not order value.**
+
+**What exists today (and what it does not do).** `renderFundraisingAmountWarning()` in
+`drop-manager.html` (~:4193) is a **non-blocking, per-model advisory**, deliberately a
+warning rather than a block: there are legitimate reasons a vendor accepts the trade (a
+token cheap item alongside a main range, an evening where they intend to absorb the
+difference), and the job is to ensure they *chose* it rather than *missed* it. That framing
+stands and should survive into any guard.
+
+Two limits to close if this is built:
+- It compares the pledge against the **cheapest enabled item price**, not against any
+  actual order total, and now — per the finding above — not against net proceeds either.
+- `getCheapestEnabledPricePence()` (~:4183) returns `null` when no items are enabled, and
+  the advisory then goes **silent entirely**. An advisory built on a half-known basket was
+  judged worse than none, which is correct for an advisory but is a real blind spot for a
+  guard.
+
+There is **no server-side guard at all**: `update-drop` and `transition-drop-status`
+validate only `> 0` and membership in `VALID_FUNDRAISING_MODELS`; `create-order` does not
+reference fundraising in any form. Fundraising is purely reporting, computed in views after
+the fact (`audit/findings-hosted-lifecycle.md:208`) — it never touches the money path, which
+is why this cannot currently overcharge a customer or mis-split a payment. The exposure is
+entirely to the **vendor's** margin.
+
+**Open design questions for the build session** (do not pre-decide):
+- Advisory-with-better-maths, or an actual publish-time block? The existing
+  chose-it-not-missed-it rationale argues for staying advisory.
+- Where does the fee knowledge live? The vendor's `platform_fee_pct` /
+  `platform_fee_fixed_pence` are readable, but Stripe's rate is not in the schema — hardcoding
+  1.4% + 20p introduces a constant that silently rots if Stripe repricing or a non-UK vendor
+  ever lands. Consider whether an approximate, clearly-labelled estimate is more honest than a
+  precise-looking figure.
+- Is a minimum-order-value the better instrument than a contribution cap? MOV is a concept
+  customers already understand and it addresses the small-basket case directly, but Hearth has
+  no MOV primitive today and adding one is a larger change than a guard.
+
+**Cross-reference:** T-fundraising-per-item-model (where this risk was first written down,
+as advisory prose), T-vendor-fee-copy (the same 1.5% + 20p cost-recovery, on the copy side —
+worth resolving the commercial question there first, since a change to the fee changes the
+arithmetic here), operational learning #55 (`orders.total_pence` is what was charged — note
+that it is *gross* of both fees, which is precisely the trap this ticket exists to name),
+`create-order/index.ts` ~:681 and ~:966 (fee computation and `application_fee_amount`).
 
 ### Build Coherence Audit — Pass A (drop lifecycle, timing & type)
 
