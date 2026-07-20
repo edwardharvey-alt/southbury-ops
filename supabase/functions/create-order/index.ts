@@ -154,6 +154,15 @@ function validatePayload(body: unknown): { ok: true; data: Payload } | { ok: fal
   if (typeof c.phone !== "string" || !c.phone.trim()) return { ok: false, reason: "customer.phone is required" };
   if (typeof c.postcode !== "string" || !c.postcode.trim()) return { ok: false, reason: "customer.postcode is required" };
   if (c.email !== null && typeof c.email !== "string") return { ok: false, reason: "customer.email must be string or null" };
+  // Normalise at the parse boundary so every downstream consumer — the customers
+  // upsert, the orders row, and the Stripe Checkout Session — reads one value from
+  // one place. This was the last write path storing customers.email raw; every
+  // other path (register-interest, bulk-create-customers,
+  // register_vendor_interest_atomic) already lowercases, and register-interest's
+  // dedupe does .eq("email", <lowercased>), so a case-variant checkout previously
+  // created a customer row no other path could find. The ON CONFLICT target below
+  // is deliberately left as the bare (email) column — unchanged by this fix.
+  if (typeof c.email === "string") c.email = c.email.trim().toLowerCase();
   if (c.notes !== null && typeof c.notes !== "string") return { ok: false, reason: "customer.notes must be string or null" };
   if (typeof c.contact_opt_in !== "boolean") return { ok: false, reason: "customer.contact_opt_in must be boolean" };
   if (c.contact_opt_in_scope !== null && c.contact_opt_in_scope !== "both") {
