@@ -651,6 +651,14 @@
               '<div class="consent"><input id="vpConsent" type="checkbox" />' +
                 '<label for="vpConsent">Yes, ' + escapeHtml(vendorName()) +
                   " can email me about what’s coming next. You can ask to stop at any time.</label></div>" +
+              // Messaging consent is a separate, per-vendor permission and is
+              // meaningless without a number, so it stays hidden until the mobile
+              // field has content (revealed/cleared by wireFollow). Reuses the
+              // .consent block verbatim — no new class, colour or token.
+              '<div class="consent vp-hidden" id="vpMessagingConsentRow">' +
+                '<input id="vpMessagingConsent" type="checkbox" />' +
+                '<label for="vpMessagingConsent">Yes, ' + escapeHtml(vendorName()) +
+                  " can message me about drops.</label></div>" +
               '<button class="' + btnClass + '" id="vpFollowSubmit" type="submit">' + escapeHtml(opts.cta) + "</button>" +
               '<div class="vp-notice vp-hidden" id="vpFollowNotice" role="status"></div>' +
             "</form>" +
@@ -789,6 +797,27 @@
         var notice = document.getElementById("vpFollowNotice");
         var submit = document.getElementById("vpFollowSubmit");
 
+        // Messaging consent follows the mobile field. Clearing the number must
+        // both hide AND untick the box: a consent that outlives the number it was
+        // given for is a permission we could not honour and should not hold.
+        var phoneInput = document.getElementById("vpPhone");
+        var messagingRow = document.getElementById("vpMessagingConsentRow");
+        var messagingBox = document.getElementById("vpMessagingConsent");
+
+        function syncMessagingConsent() {
+          if (phoneInput.value.trim()) {
+            messagingRow.classList.remove("vp-hidden");
+          } else {
+            messagingRow.classList.add("vp-hidden");
+            messagingBox.checked = false;
+          }
+        }
+        // "input" covers typing, paste and most autofill; "change" catches the
+        // autofill paths that don't emit input.
+        phoneInput.addEventListener("input", syncMessagingConsent);
+        phoneInput.addEventListener("change", syncMessagingConsent);
+        syncMessagingConsent();
+
         function showNotice(msg) {
           notice.textContent = msg;
           notice.className = "vp-notice is-error";
@@ -841,7 +870,10 @@
             email: email,
             postcode: postcode,
             phone: phone || null,
-            consent: true
+            consent: true,
+            // Belt-and-braces &&: the sync above already unticks on an empty
+            // field, and the server refuses the pair outright.
+            messaging_consent: messagingBox.checked && !!phone
           });
 
           if (!result.ok) {

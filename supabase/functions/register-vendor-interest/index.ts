@@ -20,6 +20,7 @@ type Payload = {
   phone: string | null;
   postcode: string | null;
   consent: boolean;
+  messaging_consent: boolean;
 };
 
 function isUuid(v: unknown): v is string {
@@ -41,9 +42,11 @@ function nonEmptyString(v: unknown): v is string {
 // anything else unrecognised. This is the ENFORCEMENT point — the matching
 // client-side check in vendor.html exists only for immediate feedback and is
 // never trusted (operational learning #95: the client is never the boundary).
-// Deliberately NOT mirrored into register_vendor_interest_atomic, which still
-// treats postcode as optional — accepted asymmetry, tracked post-launch as
-// T-follow-validation-rpc-parity.
+// This check is now ALSO mirrored inside register_vendor_interest_atomic, which
+// requires an outward postcode and raises check_violation otherwise — closing
+// T-follow-validation-rpc-parity. The EF check is kept because it owns the
+// user-facing wording; the RPC guard is belt-and-braces for any future caller
+// that bypasses this function, matching how name / email / consent already work.
 function normaliseOutwardPostcode(
   v: unknown
 ): { ok: true; value: string } | { ok: false; reason: string } {
@@ -70,6 +73,7 @@ type ParsedBody = {
   phone: string | null;
   postcode: string;
   consent: boolean;
+  messaging_consent: boolean;
 };
 
 function validateBody(body: unknown): { ok: true; data: ParsedBody } | { ok: false; reason: string } {
@@ -95,6 +99,14 @@ function validateBody(body: unknown): { ok: true; data: ParsedBody } | { ok: fal
 
   const phone = nonEmptyString(b.phone) ? (b.phone as string).trim() : null;
 
+  // Messaging consent is a SEPARATE, per-vendor tick from the email consent
+  // above, and it is meaningless without a number to message. Absent/omitted is
+  // false — an older client that doesn't send the field simply never grants it.
+  const messaging_consent = b.messaging_consent === true;
+  if (messaging_consent && !phone) {
+    return { ok: false, reason: "a mobile number is required to receive messages" };
+  }
+
   return {
     ok: true,
     data: {
@@ -105,6 +117,7 @@ function validateBody(body: unknown): { ok: true; data: ParsedBody } | { ok: fal
       phone,
       postcode: postcodeResult.value,
       consent: true,
+      messaging_consent,
     },
   };
 }
@@ -188,16 +201,21 @@ Deno.serve(async (req) => {
         p_postcode: body.postcode,
         p_phone: body.phone,
         p_consent: body.consent,
+        // The RPC only records the phone number, and only stamps messaging
+        // consent, when this is true. Passing the number without the tick
+        // deliberately discards it.
+        p_messaging_consent: body.messaging_consent,
       }
     );
 
     if (rpcErr) {
-      // The RPC's own guards (empty email / consent not true) raise
-      // check_violation; the EF already validates those, so this is a
-      // belt-and-braces 400. Anything else is a genuine 500.
+      // The RPC's own guards (name / email / outward postcode / consent not
+      // true) raise check_violation; the EF already validates all of those with
+      // better wording, so reaching here is a belt-and-braces 400. Anything else
+      // is a genuine 500.
       console.error("register_vendor_interest_atomic failed", rpcErr);
       if (rpcErr.code === "23514") {
-        return jsonResponse({ error: "email and an explicit consent tick are required" }, 400);
+        return jsonResponse({ error: "Please check your details and try again." }, 400);
       }
       return jsonResponse({ error: "Follow could not be recorded" }, 500);
     }
