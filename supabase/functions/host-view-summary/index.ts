@@ -21,7 +21,8 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 // host_share_fixed_pence, drop_gmv_pence) are read solely to build the
 // human-readable host_share_descriptor server-side and are intentionally
 // not returned. The fundraising mechanics
-// (fundraising_model, fundraising_per_order_pence, fundraising_percentage)
+// (fundraising_model, fundraising_per_order_pence, fundraising_per_item_pence,
+// fundraising_percentage)
 // are read on the same terms, to build fundraising_descriptor.
 //
 // fundraising_cause_reference is OPERATOR-ONLY (charity number or
@@ -100,6 +101,7 @@ function buildFundraisingDescriptor(row: {
   fundraising_model: unknown;
   fundraising_percentage: unknown;
   fundraising_per_order_pence: unknown;
+  fundraising_per_item_pence: unknown;
   fundraising_cause_name: unknown;
 }): string | null {
   if (row.fundraising_enabled !== true) return null;
@@ -124,6 +126,18 @@ function buildFundraisingDescriptor(row: {
     // Trim a trailing .00 / .50 -> "5", "2.5"
     const pctText = String(Number(pct.toFixed(2)));
     return `${pctText}% of every order supports ${cause}`;
+  }
+
+  // per_item is AUDIENCE-NEUTRAL: "£1.00 per item" is equally true of one
+  // basket and of every order, so unlike the two branches above there is no
+  // "your order" -> "every order" swap. The customer wording in
+  // assets/hearth-fundraising.js is these same words plus a full stop (this is
+  // a host-audience descriptor, which takes no terminal punctuation, matching
+  // its host_share_descriptor sibling). Do not invent a host variant.
+  if (model === "per_item") {
+    const pence = Number(row.fundraising_per_item_pence ?? 0);
+    if (!(pence > 0)) return null;
+    return `£${(pence / 100).toFixed(2)} per item supports ${cause}`;
   }
 
   return null;
@@ -165,7 +179,7 @@ Deno.serve(async (req) => {
     const { data: summary, error: summaryErr } = await serviceClient
       .from("v_drop_summary")
       .select(
-        "drop_id, drop_name, vendor_name, host_name, status, opens_at, closes_at, delivery_start, delivery_end, capacity_units_total, capacity_units_used, capacity_units_remaining, order_count, host_share_enabled, host_share_total_pence, host_share_model, host_share_percentage, host_share_per_order_pence, host_share_fixed_pence, fundraising_enabled, fundraising_total_pence, fundraising_display_text, fundraising_model, fundraising_percentage, fundraising_per_order_pence, fundraising_cause_name"
+        "drop_id, drop_name, vendor_name, host_name, status, opens_at, closes_at, delivery_start, delivery_end, capacity_units_total, capacity_units_used, capacity_units_remaining, order_count, host_share_enabled, host_share_total_pence, host_share_model, host_share_percentage, host_share_per_order_pence, host_share_fixed_pence, fundraising_enabled, fundraising_total_pence, fundraising_display_text, fundraising_model, fundraising_percentage, fundraising_per_order_pence, fundraising_per_item_pence, fundraising_cause_name"
       )
       .eq("slug", slug)
       .maybeSingle();

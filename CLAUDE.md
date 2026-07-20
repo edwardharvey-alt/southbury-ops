@@ -2614,6 +2614,34 @@ for quick chronological recall across the whole platform.
   request another vendor's row). Run before the dry run once Catering
   Direct access is sorted (Robin may hold it).
 
+- 2026-07-20: Fundraising `per_item` model complete (#488 data layer + PR 2
+  write path and surfaces). A third model beside `percentage` and `per_order`:
+  a flat amount per ITEM unit, so a drop's contribution scales with basket size
+  rather than order count or revenue. New column
+  `drops.fundraising_per_item_pence` (nullable integer pence); the model CHECK
+  and `VALID_FUNDRAISING_MODELS` in `update-drop` / `transition-drop-status`
+  widened to admit it.
+  **The item-count rule is locked and load-bearing:** an order's item count is
+  `SUM(order_items.qty)` across ALL lines, product AND bundle, with **no descent
+  into `order_item_selections`** — a bundle counts as its own line quantity, not
+  as the items inside it. Fixed by the money view
+  (`20260720120100_drop_fundraising_per_item_views.sql`) and restated, never
+  re-decided, in `order-confirmation.html` and `send-order-confirmation`. Because
+  all three apply the same rule to the same rows, the vendor's and host's running
+  total and the customer's quoted figure agree by construction. Any new consumer
+  must adopt it verbatim — descending into bundle selections is the obvious trap
+  and would make the customer's number disagree with the drop's.
+  Two properties to preserve: `per_item` wording is **audience-neutral** (customer
+  and host differ only in the full stop — no host variant), and integer pence ×
+  integer count is **exact**, so unlike `percentage` there is no rounding to drift
+  on. The Drop Studio amount advisory carries per-model copy because the risks
+  differ: `per_order` is bounded to small baskets, `per_item` is structural on
+  every unit sold.
+  `order.html`, `scorecard.html` and `home.html` needed no change (shared module /
+  computed total). `create-drop` deliberately NOT widened — its whitelist admits
+  only `fundraising_enabled`, not `fundraising_per_order_pence` either.
+  Full narrative: BACKLOG.md T-fundraising-per-item-model.
+
 - 2026-06-30: T-fulfilment-mode-publish-gate (COMPLETE 2026-06-30).
   `drops.fulfilment_mode` carried a
   column-level NOT NULL that contradicted its own CHECK (which permits

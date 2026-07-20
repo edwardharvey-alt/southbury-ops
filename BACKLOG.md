@@ -5396,6 +5396,68 @@ This is a silent-empty failure, not an error — the same shape as operational l
 
 **Cross-reference:** `20260719140000_drop_fundraising_cause.sql` and `20260719150000_drop_fundraising_cause_views.sql` (the data layer), operational learning #26 (read side / write side), #54 (select-narrowing validation), the `host_share_descriptor` pattern in `host-view-summary/index.ts`.
 
+---
+
+T-fundraising-per-item-model — a third fundraising model: a fixed amount per ITEM
+
+**Status:** ✓ COMPLETE 2026-07-20 (#488 data layer, PR 2 write path + surfaces). Tier 5-B.
+
+**What shipped.** `per_item` alongside `percentage` and `per_order`: the vendor pledges a
+flat amount for every item unit sold, so a drop's contribution scales with basket size
+rather than with order count or revenue.
+
+PR 1 (#488) — data layer only, provably inert: `drops.fundraising_per_item_pence`
+(nullable integer pence), the widened `drops_fundraising_model_check`, and the money-view
+maths. `v_drop_fundraising_summary` pre-aggregates `order_items` to one row per order in
+its own CTE and LEFT JOINs it 1:1 onto `orders`, so `drop_gmv_pence` and `order_count`
+stay byte-identical (no Cartesian fan-out — operational learning #55).
+
+PR 2 — the write path and every rendering surface: Drop Studio (model option, £ field,
+load/save/change-detection/readiness, and the amount advisory extended to the new model),
+`update-drop` (whitelist + `VALID_FUNDRAISING_MODELS` + `> 0` guard), `transition-drop-status`
+(publish gate + typed `Drop`), the shared `assets/hearth-fundraising.js` module (rate
+pre-purchase, actual £ post-purchase), and its two Deno mirrors (`host-view-summary`,
+`send-order-confirmation`), plus `fetch-order` and `order-confirmation.html`.
+
+**THE ITEM-COUNT RULE (locked, and the reason the figures agree).** An order's item count
+is `SUM(order_items.qty)` across ALL lines, product AND bundle, with **no descent into
+`order_item_selections`** — a bundle counts as its own line quantity, not as the items
+inside it. The rule is fixed by the money view (`20260720120100_..._views.sql`) and is
+restated, not re-decided, at every other site. Because the view, the confirmation page and
+the confirmation email all apply the same rule to the same rows, the running total the
+vendor and host see and the figure quoted to the customer agree **by construction** rather
+than by coincidence. Any future consumer must adopt this rule verbatim; counting a
+different set (descending into bundle selections being the obvious trap) would tell the
+customer one number while the drop totals another.
+
+**Two properties worth keeping.** `per_item` is the one model whose wording is
+**audience-neutral** — "£1.00 per item supports X" is equally true of one basket and of
+every order, so customer and host get the same words and differ only in the terminal full
+stop; there is deliberately no host variant. And integer pence × integer count is **exact**,
+so unlike `percentage` there is no rounding that could drift from the view.
+
+**The amount advisory is per-model, not one shared string.** `per_order` and `per_item` are
+both fixed models that can exceed what they are taken from, but they are not the same risk:
+`per_order` is bounded to small baskets, whereas `per_item` is **structural** — the pledge
+is charged against every unit, so exceeding the cheapest item loses money on every one of
+those sold at any basket size. The `per_order` copy ("on small orders …") would be actively
+false for `per_item`, hence a distinct sentence for each. Non-blocking by design, as before.
+
+**Deliberately unchanged.** `order.html` (reads `v_drop_public` with `select('*')` and
+delegates wholly to the shared module), `scorecard.html` and `home.html` (read the computed
+`fundraising_total_pence`, which PR 1 already teaches) needed no edit. `create-drop` was
+**not** widened: its whitelist admits only `fundraising_enabled` and none of the detail
+fields — `fundraising_per_order_pence` included — because Drop Studio creates a blank draft
+and sets detail via `update-drop`. Adding `per_item` alone there would have broken that
+symmetry. `fundraising_cause_reference` remains absent from every customer- and host-facing
+projection.
+
+**Cross-reference:** `20260720120000_drop_fundraising_per_item.sql` and
+`20260720120100_drop_fundraising_per_item_views.sql` (data layer), operational learning #55
+(fan-out, net-of-discount, `orders.total_pence` as sole revenue truth), #26 (read side /
+write side), #54 (select-narrowing validation), T-fundraising-composed-line-consumers (the
+shared-module pattern this extends).
+
 ### Build Coherence Audit — Pass A (drop lifecycle, timing & type)
 
 Tickets surfaced by Build Coherence Audit Pass A

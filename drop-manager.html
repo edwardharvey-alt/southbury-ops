@@ -1687,6 +1687,7 @@
                           <option value="">Select model</option>
                           <option value="percentage">Percentage of sales</option>
                           <option value="per_order">Fixed amount per order</option>
+                          <option value="per_item">Fixed amount per item</option>
                         </select>
                       </div>
 
@@ -1698,6 +1699,11 @@
                       <div class="field hidden" id="fundraisingPerOrderField">
                         <label for="fundraisingPerOrderPence">Amount per Order (£)</label>
                         <input id="fundraisingPerOrderPence" type="number" min="0" step="0.01" placeholder="1.00" />
+                      </div>
+
+                      <div class="field hidden" id="fundraisingPerItemField">
+                        <label for="fundraisingPerItemPence">Amount per Item (£)</label>
+                        <input id="fundraisingPerItemPence" type="number" min="0" step="0.01" placeholder="1.00" />
                       </div>
 
                       <div class="field" style="grid-column:1 / -1;">
@@ -2601,6 +2607,7 @@
         if (!dropData.fundraising_model) fundraisingValid = false;
         if (dropData.fundraising_model === "percentage" && !(Number(dropData.fundraising_percentage) > 0)) fundraisingValid = false;
         if (dropData.fundraising_model === "per_order" && !(Number(dropData.fundraising_per_order_pence) > 0)) fundraisingValid = false;
+        if (dropData.fundraising_model === "per_item" && !(Number(dropData.fundraising_per_item_pence) > 0)) fundraisingValid = false;
         /* The cause is what fundraising now requires. fundraising_display_text became an
            OPTIONAL override of the automatically composed line, so it is deliberately no
            longer a readiness condition — mirrored server-side in update-drop and in
@@ -3828,6 +3835,7 @@
       byId("fundraisingModel").value = d.fundraising_model || "";
       byId("fundraisingPercentage").value = d.fundraising_percentage ?? "";
       byId("fundraisingPerOrderPence").value = d.fundraising_per_order_pence == null ? "" : (d.fundraising_per_order_pence / 100).toFixed(2);
+      byId("fundraisingPerItemPence").value = d.fundraising_per_item_pence == null ? "" : (d.fundraising_per_item_pence / 100).toFixed(2);
       byId("fundraisingCauseName").value = d.fundraising_cause_name || "";
       byId("fundraisingCauseReference").value = d.fundraising_cause_reference || "";
       byId("fundraisingDisplayText").value = d.fundraising_display_text || "";
@@ -4118,12 +4126,14 @@
 
        Returns "" when there isn't yet enough to say something true — an
        incomplete line is worse than none (honest degradation, per the
-       intelligence-layer invariants in CLAUDE.md). */
-    function composeFundraisingLine(model, percentage, perOrderPence, causeName) {
-      return window.HearthFundraising.compose(
-        { model, percentage, perOrderPence, causeName },
-        { audience: "customer" }
-      ) || "";
+       intelligence-layer invariants in CLAUDE.md).
+
+       Takes a FIELDS OBJECT rather than positional arguments: perOrderPence and
+       perItemPence are both money, both optional and adjacent, so a positional
+       list invites transposing them silently. The keys here are the module's own
+       field names, so the call reads as the module's contract. */
+    function composeFundraisingLine(fields) {
+      return window.HearthFundraising.compose(fields, { audience: "customer" }) || "";
     }
 
     /* Live preview under the customer-message field. Shows the composed line when the
@@ -4144,12 +4154,15 @@
         return;
       }
 
-      const auto = composeFundraisingLine(
-        byId("fundraisingModel").value,
-        byId("fundraisingPercentage").value,
-        byId("fundraisingPerOrderPence").value === "" ? null : Math.round(Number(byId("fundraisingPerOrderPence").value) * 100),
-        byId("fundraisingCauseName").value
-      );
+      const poundsToPence = (raw) => (raw === "" ? null : Math.round(Number(raw) * 100));
+
+      const auto = composeFundraisingLine({
+        model: byId("fundraisingModel").value,
+        percentage: byId("fundraisingPercentage").value,
+        perOrderPence: poundsToPence(byId("fundraisingPerOrderPence").value),
+        perItemPence: poundsToPence(byId("fundraisingPerItemPence").value),
+        causeName: byId("fundraisingCauseName").value
+      });
 
       el.textContent = auto
         ? `Customers will see: “${auto}”`
@@ -4177,12 +4190,24 @@
       return prices.length ? Math.min(...prices) : null;
     }
 
-    /* Non-blocking advisory for the fixed (per_order) fundraising model.
+    /* Non-blocking advisory for the two FIXED fundraising models (per_order and
+       per_item).
 
-       A flat per-order contribution is the only model that can exceed the order
-       it is taken from — "£3.00 from your order" is incoherent on a £1 order,
-       and the vendor would be pledging more than they earn. The percentage model
-       needs no guard: a fraction of an order is always less than the order.
+       A flat contribution is what can exceed the thing it is taken from —
+       "£3.00 from your order" is incoherent on a £1 order, and the vendor would
+       be pledging more than they earn. The percentage model needs no guard: a
+       fraction of an order is always less than the order.
+
+       The two fixed models are NOT the same risk, and are not told they are:
+
+         per_order — bounded to small baskets. A £3 pledge on a £20 order is
+           fine; it only bites when someone orders one cheap item.
+         per_item  — STRUCTURAL. The pledge is charged against every unit, so if
+           it exceeds the cheapest item, that item loses money on every single
+           one sold, at any basket size. Strictly the sharper of the two.
+
+       Hence a per-model sentence rather than one reused string: the per_order
+       copy ("on small orders …") would be actively false for per_item.
 
        Deliberately a WARNING, not a block. There are legitimate reasons a vendor
        might accept it (a token cheap item alongside a main range, an evening
@@ -4203,9 +4228,13 @@
       };
 
       if (!byId("fundraisingEnabled").checked) return hide();
-      if (byId("fundraisingModel").value !== "per_order") return hide();
 
-      const rawAmount = byId("fundraisingPerOrderPence").value;
+      const model = byId("fundraisingModel").value;
+      if (model !== "per_order" && model !== "per_item") return hide();
+
+      const rawAmount = model === "per_item"
+        ? byId("fundraisingPerItemPence").value
+        : byId("fundraisingPerOrderPence").value;
       if (rawAmount === "") return hide();
 
       const amountPence = Math.round(Number(rawAmount) * 100);
@@ -4219,11 +4248,21 @@
       /* Equal and greater are different facts, and the greater-than wording is
          plainly false at equality ("£3.00 is more than … £3.00"). Say each one
          accurately. */
-      text.textContent = amountPence === cheapestPence
-        ? `${formatMoneyPence(amountPence)} matches your cheapest item ` +
-          `(${formatMoneyPence(cheapestPence)}); an order of just that item would go entirely to the cause.`
-        : `${formatMoneyPence(amountPence)} is more than your cheapest item ` +
-          `(${formatMoneyPence(cheapestPence)}); on small orders this would exceed the order value.`;
+      const amountText = formatMoneyPence(amountPence);
+      const cheapestText = formatMoneyPence(cheapestPence);
+      const isEqual = amountPence === cheapestPence;
+
+      text.textContent = model === "per_item"
+        ? (isEqual
+            ? `${amountText} matches your cheapest item (${cheapestText}); ` +
+              `every one of those sold would go entirely to the cause.`
+            : `${amountText} is more than your cheapest item (${cheapestText}); ` +
+              `every one of those sold would give more to the cause than the item earns.`)
+        : (isEqual
+            ? `${amountText} matches your cheapest item (${cheapestText}); ` +
+              `an order of just that item would go entirely to the cause.`
+            : `${amountText} is more than your cheapest item (${cheapestText}); ` +
+              `on small orders this would exceed the order value.`);
       wrap.classList.remove("hidden");
     }
 
@@ -4261,6 +4300,7 @@
       byId("fundraisingFields").classList.toggle("hidden", !fundraisingEnabled);
       byId("fundraisingPercentageField").classList.toggle("hidden", fundraisingModel !== "percentage");
       byId("fundraisingPerOrderField").classList.toggle("hidden", fundraisingModel !== "per_order");
+      byId("fundraisingPerItemField").classList.toggle("hidden", fundraisingModel !== "per_item");
       renderFundraisingLinePreview();
       /* Live as the vendor types — renderConditionalFields() is already bound to
          input+change on every fundraising field. */
@@ -4780,6 +4820,9 @@
         fundraising_per_order_pence: byId("fundraisingEnabled").checked && byId("fundraisingModel").value === "per_order"
           ? (byId("fundraisingPerOrderPence").value === "" ? null : Math.round(Number(byId("fundraisingPerOrderPence").value) * 100))
           : null,
+        fundraising_per_item_pence: byId("fundraisingEnabled").checked && byId("fundraisingModel").value === "per_item"
+          ? (byId("fundraisingPerItemPence").value === "" ? null : Math.round(Number(byId("fundraisingPerItemPence").value) * 100))
+          : null,
         fundraising_cause_name: byId("fundraisingEnabled").checked ? (byId("fundraisingCauseName").value.trim() || null) : null,
         fundraising_cause_reference: byId("fundraisingEnabled").checked ? (byId("fundraisingCauseReference").value.trim() || null) : null,
         fundraising_display_text: byId("fundraisingEnabled").checked ? (byId("fundraisingDisplayText").value.trim() || null) : null,
@@ -4833,6 +4876,7 @@
         fundraising_model: dropData.fundraising_model,
         fundraising_percentage: dropData.fundraising_percentage,
         fundraising_per_order_pence: dropData.fundraising_per_order_pence,
+        fundraising_per_item_pence: dropData.fundraising_per_item_pence,
         fundraising_cause_name: dropData.fundraising_cause_name,
         fundraising_cause_reference: dropData.fundraising_cause_reference,
         fundraising_display_text: dropData.fundraising_display_text,
@@ -6163,7 +6207,7 @@
         "centrePostcode", "radiusKm", "capacityTotal", "expectedGuests",
         "deliveryStartTime", "deliveryEndTime",
         "opensAtDate", "opensAtTime", "closesAtDate", "closesAtTime",
-        "fundraisingEnabled", "fundraisingModel", "fundraisingPercentage", "fundraisingPerOrderPence",
+        "fundraisingEnabled", "fundraisingModel", "fundraisingPercentage", "fundraisingPerOrderPence", "fundraisingPerItemPence",
         "fundraisingCauseName", "fundraisingCauseReference", "fundraisingDisplayText",
         "hostShareEnabled", "hostShareModel", "hostSharePercentage", "hostSharePerOrderPence", "hostShareFixedPence", "hostShareCustomerVisible",
         "seriesStartDate", "seriesEndMode", "seriesEndDate", "seriesDropCount"

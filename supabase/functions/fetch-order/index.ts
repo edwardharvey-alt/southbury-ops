@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
       // is always composed from the structured fields, never the vendor's
       // pre-purchase override. See assets/hearth-fundraising.js.
       .select(
-        "id, slug, name, opens_at, closes_at, fulfilment_mode, collection_point_description, delivery_area_description, vendor_id, host_id, fundraising_enabled, fundraising_model, fundraising_percentage, fundraising_per_order_pence, fundraising_cause_name"
+        "id, slug, name, opens_at, closes_at, fulfilment_mode, collection_point_description, delivery_area_description, vendor_id, host_id, fundraising_enabled, fundraising_model, fundraising_percentage, fundraising_per_order_pence, fundraising_per_item_pence, fundraising_cause_name"
       )
       .eq("id", order.drop_id)
       .maybeSingle();
@@ -253,6 +253,7 @@ Deno.serve(async (req) => {
           fundraising_model: drop.fundraising_model,
           fundraising_percentage: drop.fundraising_percentage,
           fundraising_per_order_pence: drop.fundraising_per_order_pence,
+          fundraising_per_item_pence: drop.fundraising_per_item_pence,
           fundraising_cause_name: drop.fundraising_cause_name,
         },
         vendor: {

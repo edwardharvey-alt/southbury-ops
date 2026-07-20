@@ -118,6 +118,7 @@ type Drop = {
   fundraising_model: string | null;
   fundraising_percentage: number | null;
   fundraising_per_order_pence: number | null;
+  fundraising_per_item_pence: number | null;
   fundraising_cause_name: string | null;
 };
 
@@ -133,6 +134,14 @@ type Drop = {
  *   - fundraising must be enabled
  *   - a cause name is required — no cause, no line
  *   - per_order  -> the flat fundraising_per_order_pence
+ *   - per_item   -> fundraising_per_item_pence x itemCount, where itemCount is
+ *     SUM(order_items.qty) across ALL lines, product AND bundle, with no descent
+ *     into order_item_selections. That rule is fixed by the money view
+ *     (migration 20260720120100_drop_fundraising_per_item_views.sql), not chosen
+ *     here — the view, order-confirmation.html and this email all apply it to
+ *     the same rows so the customer's figure and the vendor's/host's running
+ *     total agree by construction. Integer pence x integer count is exact, so
+ *     unlike percentage there is no rounding to drift on.
  *   - percentage -> round(pct / 100 * netTotalPence), where netTotalPence is
  *     orders.total_pence, the post-discount amount actually charged
  *     (operational learning #55). Unlike the pre-purchase line, which shows the
@@ -146,7 +155,20 @@ type Drop = {
  * formatMoney() here and the module's default formatter both emit two decimals,
  * so the email and the confirmation page produce a byte-identical sentence.
  */
-function buildContributionLine(drop: Drop, netTotalPence: number): string | null {
+/* The order's item count for the per_item model: SUM(qty) across ALL lines,
+   product AND bundle, with no descent into order_item_selections. See the
+   per_item note in buildContributionLine above — the rule belongs to the money
+   view, not to this file. Defined once and used by both renderers so the HTML
+   and plain-text emails cannot quote different figures. */
+function sumItemUnits(items: Item[]): number {
+  return (items || []).reduce((sum, item) => sum + Number(item.qty ?? 0), 0);
+}
+
+function buildContributionLine(
+  drop: Drop,
+  netTotalPence: number,
+  itemCount: number,
+): string | null {
   if (drop.fundraising_enabled !== true) return null;
 
   const cause = String(drop.fundraising_cause_name ?? "").trim();
@@ -162,6 +184,13 @@ function buildContributionLine(drop: Drop, netTotalPence: number): string | null
     const total = Number(netTotalPence);
     if (!(pct > 0) || !(total > 0)) return null;
     pence = Math.round((pct / 100) * total);
+  } else if (model === "per_item") {
+    const perItem = Number(drop.fundraising_per_item_pence);
+    const count = Number(itemCount);
+    // No count means we cannot say what this order gave — same stance as a
+    // missing total above. Silence beats a guess.
+    if (!(perItem > 0) || !(count > 0)) return null;
+    pence = perItem * count;
   } else {
     return null;
   }
@@ -266,7 +295,7 @@ function renderHtml(order: Order, items: Item[], drop: Drop, vendor: Vendor): st
      drop raised nothing. Composed against orders.total_pence (net of discount).
      escapeHtml on the cause name: it is vendor-authored free text landing in an
      HTML email. */
-  const contributionLine = buildContributionLine(drop, order.total_pence);
+  const contributionLine = buildContributionLine(drop, order.total_pence, sumItemUnits(items));
   const contributionRow = contributionLine
     ? `<tr>` +
       `<td colspan="3" style="padding:10px 0 0 0;font-family:${bodyStack};font-size:13px;line-height:1.45;color:${muted};">` +
@@ -370,7 +399,7 @@ function renderText(order: Order, items: Item[], drop: Drop, vendor: Vendor): st
   lines.push(`Total  ${formatMoney(order.total_pence)}`);
   // Same past-tense line as the HTML part, same composer — the two parts of a
   // multipart email must not disagree.
-  const contributionText = buildContributionLine(drop, order.total_pence);
+  const contributionText = buildContributionLine(drop, order.total_pence, sumItemUnits(items));
   if (contributionText) lines.push(contributionText);
   lines.push("----");
 
@@ -461,7 +490,7 @@ Deno.serve(async (req) => {
         // drop.fundraising_* backs the past-tense contribution line. Structured
         // fields only: no fundraising_display_text (pre-purchase override) and
         // never fundraising_cause_reference (operator-only).
-        "id, drop_id, customer_name, customer_email, customer_notes, delivery_address, fulfilment_mode, total_pence, discount_pence, drop:drop_id ( name, delivery_start, delivery_end, collection_point_description, fundraising_enabled, fundraising_model, fundraising_percentage, fundraising_per_order_pence, fundraising_cause_name, vendor:vendor_id ( display_name, name, email, tagline, brand_primary_color, brand_text_on_primary, powered_by_hearth_visible ) )"
+        "id, drop_id, customer_name, customer_email, customer_notes, delivery_address, fulfilment_mode, total_pence, discount_pence, drop:drop_id ( name, delivery_start, delivery_end, collection_point_description, fundraising_enabled, fundraising_model, fundraising_percentage, fundraising_per_order_pence, fundraising_per_item_pence, fundraising_cause_name, vendor:vendor_id ( display_name, name, email, tagline, brand_primary_color, brand_text_on_primary, powered_by_hearth_visible ) )"
       )
       .eq("id", order_id)
       .maybeSingle();
@@ -505,6 +534,8 @@ Deno.serve(async (req) => {
         dropRow.fundraising_percentage != null ? Number(dropRow.fundraising_percentage) : null,
       fundraising_per_order_pence:
         dropRow.fundraising_per_order_pence != null ? Number(dropRow.fundraising_per_order_pence) : null,
+      fundraising_per_item_pence:
+        dropRow.fundraising_per_item_pence != null ? Number(dropRow.fundraising_per_item_pence) : null,
       fundraising_cause_name: (dropRow.fundraising_cause_name as string | null) ?? null,
     };
     const vendor: Vendor = {

@@ -25,6 +25,10 @@
  * variant is a hint under a figure, sitting beside host_share_descriptor, and
  * matches that sibling's no-terminal-punctuation style.
  *
+ * ONE EXCEPTION — per_item is audience-neutral: "£1.00 per item supports X" is
+ * equally true of one basket and of every order, so both surfaces get the same
+ * words and differ only in the full stop. See the note at that branch.
+ *
  * PERCENTAGE shows the RATE, never a live pound figure. The exact amount depends
  * on the final basket and is settled net-of-discount server-side (operational
  * learning #55) — quoting a pound amount at basket time would be a number we
@@ -93,6 +97,19 @@
       return formatPercentage(pct) + "% of " + whose + " supports " + cause + stop;
     }
 
+    /* per_item is the one model whose wording is AUDIENCE-NEUTRAL: "£1.00 per
+       item" is already true for one customer's basket and for every order
+       alike, so there is no "your order"/"every order" swap to make and `whose`
+       is deliberately unused here. The only difference between the two surfaces
+       is the terminal full stop, which is why `stop` still applies. This is the
+       stated exception to the AUDIENCE PHRASING note at the top of this file —
+       do not manufacture a host variant to make it look symmetrical. */
+    if (model === "per_item") {
+      var itemPence = Number(fields.perItemPence);
+      if (!(itemPence > 0)) return null;
+      return formatMoney(itemPence) + " per item supports " + cause + stop;
+    }
+
     return null;
   }
 
@@ -113,6 +130,7 @@
       model: drop.fundraising_model,
       percentage: drop.fundraising_percentage,
       perOrderPence: drop.fundraising_per_order_pence,
+      perItemPence: drop.fundraising_per_item_pence,
       causeName: drop.fundraising_cause_name
     }, opts);
   }
@@ -151,7 +169,22 @@
   /* opts.orderTotalPence -- the order's NET, post-discount total, i.e.
      orders.total_pence. Required for the percentage model, ignored by per_order.
      Passing a gross or pre-discount figure here would overstate the
-     contribution, so read it from orders.total_pence and nowhere else. */
+     contribution, so read it from orders.total_pence and nowhere else.
+
+     opts.itemCount -- the order's item count. Required for the per_item model,
+     ignored by the other two.
+
+     THE ITEM-COUNT RULE IS NOT OURS TO CHOOSE. It is fixed by the money view
+     (migration 20260720120100_drop_fundraising_per_item_views.sql, which states
+     it as a locked rule): an order's item count is SUM(order_items.qty) across
+     ALL lines, product AND bundle, with NO descent into order_item_selections —
+     a bundle counts as its own line quantity, not as the items inside it.
+     Callers must sum exactly that line set and nothing else. Because the view,
+     this page and the confirmation email all apply the same rule to the same
+     rows, the running total a vendor and host see and the figure quoted to the
+     customer agree by construction rather than by coincidence. Count a
+     different set here and the customer is told one number while the drop
+     totals another. */
   function composeContribution(fields, opts) {
     var options = opts || {};
     var formatMoney = typeof options.formatMoneyPence === "function"
@@ -173,6 +206,15 @@
          guess. */
       if (!(pct > 0) || !(total > 0)) return null;
       pence = Math.round((pct / 100) * total);
+    } else if (model === "per_item") {
+      var perItem = Number(fields.perItemPence);
+      var count = Number(fields.itemCount);
+      /* No count means we cannot say what this order gave -- same stance as a
+         missing total above. Silence beats a guess. */
+      if (!(perItem > 0) || !(count > 0)) return null;
+      /* Integer pence x integer count is exact -- no rounding, and so no
+         rounding to disagree with the view about. */
+      pence = perItem * count;
     } else {
       return null;
     }
@@ -195,8 +237,10 @@
       model: drop.fundraising_model,
       percentage: drop.fundraising_percentage,
       perOrderPence: drop.fundraising_per_order_pence,
+      perItemPence: drop.fundraising_per_item_pence,
       causeName: drop.fundraising_cause_name,
-      orderTotalPence: (opts || {}).orderTotalPence
+      orderTotalPence: (opts || {}).orderTotalPence,
+      itemCount: (opts || {}).itemCount
     }, opts);
   }
 
