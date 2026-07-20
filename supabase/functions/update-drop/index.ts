@@ -54,6 +54,7 @@ const ALLOWED_FIELDS = new Set([
   "fundraising_model",
   "fundraising_percentage",
   "fundraising_per_order_pence",
+  "fundraising_per_item_pence",
   "fundraising_display_text",
   "fundraising_cause_name",
   "fundraising_cause_reference",
@@ -74,7 +75,7 @@ const VALID_DROP_TYPES = new Set(["neighbourhood", "community", "event"]);
 // persists 'direct' rather than being 400-rejected. (T-comms-direct-2a)
 const VALID_AUDIENCE_SCOPES = new Set(["public", "community", "direct"]);
 const VALID_FULFILMENT_MODES = new Set(["collection", "delivery", "mixed"]);
-const VALID_FUNDRAISING_MODELS = new Set(["percentage", "per_order"]);
+const VALID_FUNDRAISING_MODELS = new Set(["percentage", "per_order", "per_item"]);
 const VALID_HOST_SHARE_MODELS = new Set(["percentage", "per_order", "fixed"]);
 
 function isFiniteNumber(value: unknown): value is number {
@@ -421,6 +422,12 @@ Deno.serve(async (req) => {
         const pence = update.fundraising_per_order_pence;
         if (!isFiniteNumber(pence) || pence <= 0) {
           return jsonResponse({ error: "fundraising_per_order_pence must be > 0" }, 400);
+        }
+      }
+      if (model === "per_item") {
+        const pence = update.fundraising_per_item_pence;
+        if (!isFiniteNumber(pence) || pence <= 0) {
+          return jsonResponse({ error: "fundraising_per_item_pence must be > 0" }, 400);
         }
       }
       // The cause is what fundraising requires: a contribution has to say who it

@@ -21,7 +21,7 @@ const VALID_TARGET_STATUSES = new Set(["live", "cancelled", "archived"]);
 // drop cannot (it has been delivered). 'live' and 'closed' only.
 const CANCEL_SOURCE_STATUSES = new Set(["live", "closed"]);
 const ARCHIVE_SOURCE_STATUSES = new Set(["draft", "cancelled", "closed", "completed"]);
-const VALID_FUNDRAISING_MODELS = new Set(["percentage", "per_order"]);
+const VALID_FUNDRAISING_MODELS = new Set(["percentage", "per_order", "per_item"]);
 const VALID_HOST_SHARE_MODELS = new Set(["percentage", "per_order", "fixed"]);
 
 type Drop = Record<string, unknown> & {
@@ -48,6 +48,7 @@ type Drop = Record<string, unknown> & {
   fundraising_model: string | null;
   fundraising_percentage: number | null;
   fundraising_per_order_pence: number | null;
+  fundraising_per_item_pence: number | null;
   fundraising_display_text: string | null;
   fundraising_cause_name: string | null;
   host_share_enabled: boolean | null;
@@ -172,6 +173,9 @@ async function evaluateLiveReadiness(
     }
     if (model === "percentage" && !(isFiniteNumber(drop.fundraising_percentage) && drop.fundraising_percentage > 0)) {
       return { ready: false, reason: "Fundraising percentage must be greater than zero" };
+    }
+    if (model === "per_item" && !(isFiniteNumber(drop.fundraising_per_item_pence) && drop.fundraising_per_item_pence > 0)) {
+      return { ready: false, reason: "A positive per-item fundraising amount is required" };
     }
     if (model === "per_order" && !(isFiniteNumber(drop.fundraising_per_order_pence) && drop.fundraising_per_order_pence > 0)) {
       return { ready: false, reason: "Fundraising per-order amount must be greater than zero" };

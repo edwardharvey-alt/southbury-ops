@@ -594,10 +594,27 @@
          totalPence is order.total_pence, the NET post-discount amount actually
          charged (operational learning #55), which is what the percentage model
          must be applied to. Returns null — and renders nothing — whenever the
-         drop had no fundraising, no cause name, or nothing positive to report. */
+         drop had no fundraising, no cause name, or nothing positive to report.
+
+         itemCount is what the per_item model multiplies. The rule is NOT ours to
+         pick: the money view fixes it (migration
+         20260720120100_drop_fundraising_per_item_views.sql) as SUM(qty) over ALL
+         order_items lines, product AND bundle, with no descent into
+         order_item_selections — a bundle counts as its own line quantity, not as
+         the items inside it. `items` here is exactly that line set as fetch-order
+         returns it (selections hang off each line as children, they are not rows
+         of their own), so summing qty across it reproduces the view's figure
+         penny-for-penny. Sum a different set and the customer is told one number
+         while the vendor's and host's running totals say another. */
+      const itemCount = (items || []).reduce(
+        (sum, item) => sum + Number(item.qty || 0),
+        0
+      );
+
       const contributionLine = window.HearthFundraising
         ? window.HearthFundraising.resolveContribution(drop, {
             orderTotalPence: totalPence,
+            itemCount,
             formatMoneyPence
           })
         : null;
