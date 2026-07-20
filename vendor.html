@@ -631,6 +631,24 @@
 
       /* ---------- follow ---------- */
 
+      /* Catering enquiry link. Rendered ONLY when the vendor has DECLARED they
+         offer catering (catering_enabled === true) — nothing at all otherwise:
+         no wrapper, no heading, no stray whitespace, same discipline as the FAQ
+         section. Placed as a sibling of #vpFollowCard within the SAME <section>,
+         so it survives the follow success handler's innerHTML replacement of the
+         card. A quiet under-CTA text link (.undercta), never a card or button —
+         it must not compete with the follow form, so it inherits the muted
+         under-CTA colour rather than the vendor accent. */
+      function cateringLinkHtml() {
+        var v = state.vendor;
+        if (!v || v.catering_enabled !== true) return "";
+        var href = "catering-enquiry.html?vendor=" + encodeURIComponent(v.slug || "");
+        return '<p class="undercta">' +
+          '<a href="' + escapeHtml(href) + '" style="color:inherit;text-decoration:underline">' +
+            "Catering for an event? Get in touch." +
+          "</a></p>";
+      }
+
       function followHtml(opts) {
         var btnClass = opts.ghost ? "btn ghost" : "btn";
         return '<div class="wrap"><section>' +
@@ -663,6 +681,7 @@
               '<div class="vp-notice vp-hidden" id="vpFollowNotice" role="status"></div>' +
             "</form>" +
           "</div>" +
+          cateringLinkHtml() +
         "</section></div>";
       }
 

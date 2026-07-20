@@ -1019,6 +1019,24 @@
         </div>
       </section>
 
+      <!-- CATERING DECLARATION (T-vendor-page-catering-link) — the vendor
+           declares they offer catering. Only then does a catering enquiry link
+           appear on their public page (vendor.html). Sits above the poster and
+           the enquiry list because it governs both. Saves on change via
+           update-vendor; no save button. -->
+      <section class="home-card home-pad" id="cateringDeclCard">
+        <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;">
+          <input type="checkbox" id="cateringEnabledToggle"
+                 style="width:18px;height:18px;margin-top:3px;flex:none;cursor:pointer;accent-color:var(--home-accent);" />
+          <span>
+            <span class="home-sectionTitle" style="display:block;">We offer catering</span>
+            <span class="home-sectionSub" style="display:block;">Shows a catering enquiry link on your public page.</span>
+          </span>
+        </label>
+        <p class="home-sectionSub" id="cateringEnabledStatus" role="status"
+           aria-live="polite" style="margin:10px 0 0;" hidden></p>
+      </section>
+
       <!-- CATERING POSTER (standing utility — collapsed by default so the
            enquiry list below stays the visual priority; the copyable link is
            always to hand, the full A5 poster preview is one tap away. Never
@@ -1441,7 +1459,66 @@
       });
     }
 
+    // Catering declaration (T-vendor-page-catering-link). Reflects the stored
+    // vendors.catering_enabled on load and saves immediately on change — no save
+    // button. The control is disabled while the request is in flight; on failure
+    // the toggle reverts to its prior value, because a toggle that appears set
+    // but did not persist is worse than one that visibly failed. Handles both
+    // transport `error` and the function's 4xx `data.error`, exactly as the
+    // Brand page does. update-vendor is the sole write path (the faq pattern).
+    let cateringStatusTimer = null;
+    function renderCateringToggle(){
+      const toggle = document.getElementById('cateringEnabledToggle');
+      const status = document.getElementById('cateringEnabledStatus');
+      if (!toggle) return;
+
+      // Reflect the stored value on every render.
+      toggle.checked = state.vendor && state.vendor.catering_enabled === true;
+
+      if (toggle.dataset.wired) return;
+      toggle.dataset.wired = '1';
+
+      const showStatus = (text, isError) => {
+        if (!status) return;
+        if (cateringStatusTimer) { clearTimeout(cateringStatusTimer); cateringStatusTimer = null; }
+        status.textContent = text;
+        status.style.color = isError ? 'var(--home-warn)' : '';
+        status.hidden = false;
+        // A success confirmation is brief and clears itself, matching the copy
+        // button's micro-confirmation idiom. An error stays put.
+        if (!isError) {
+          cateringStatusTimer = setTimeout(() => { status.hidden = true; status.textContent = ''; }, 2200);
+        }
+      };
+
+      toggle.addEventListener('change', async () => {
+        const desired = toggle.checked;
+        const prior = !!(state.vendor && state.vendor.catering_enabled === true);
+        toggle.disabled = true;
+        if (status && cateringStatusTimer) { clearTimeout(cateringStatusTimer); cateringStatusTimer = null; }
+
+        try {
+          const { data, error } = await sb.functions.invoke('update-vendor', {
+            body: { vendor_id: state.vendor.id, fields: { catering_enabled: desired } }
+          });
+          if (error) throw new Error(error.message || 'Save failed');
+          if (!data || data.error) throw new Error((data && data.error) || 'Save failed');
+
+          // Edge Function returns the updated row — refresh state from it.
+          state.vendor = { ...state.vendor, ...data };
+          showStatus(desired ? 'Saved — catering link is on.' : 'Saved — catering link is off.', false);
+        } catch (e) {
+          // Revert so the control never claims a change that didn't persist.
+          toggle.checked = prior;
+          showStatus("Couldn't save just now. Please try again.", true);
+        } finally {
+          toggle.disabled = false;
+        }
+      });
+    }
+
     function render(){
+      renderCateringToggle();
       renderCateringEnquiries();
       renderCateringPoster();
       setupPosterToggle();
