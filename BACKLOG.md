@@ -116,6 +116,50 @@ specific drop and is short-lived by design. Never conflate them — a durable
 sticker must never carry an expiring drop URL. **Cross-reference:** T-CAP-1,
 T-CAP-3 (till QR is a vendor QR variant).
 
+**T-CAP-2b PR1 — the vendor's line on the card ✓ SHIPPED**
+
+**Status:** ✓ Shipped 2026-07-21. Data layer + Brand page field only. The QR
+generator and the rendered card are PR2 and are deliberately not in this PR.
+
+**What shipped.** A new nullable `public.vendors.qr_card_line` (migration
+`20260721130000_vendor_qr_card_line.sql`), whitelisted and validated in
+`update-vendor`, and a field on the Brand page directly beneath Tagline —
+labelled *"Your line on the card"*, Cormorant italic, `maxlength="60"`, with a
+live `n / 60` counter and three static examples.
+
+**Why the column lands before the card.** The vendor needs somewhere to write
+the line before there is an artefact to print it on, and the Brand page is where
+they are already setting identity. PR2 adds the card block immediately below
+this field so the two read as one thing — which is why the field sits inside the
+existing identity group rather than in a new section of its own.
+
+**Null is a supported end state, not a gap.** The card is designed to read
+correctly with no line. The column is nullable with no default and no backfill,
+and both live vendors correctly start NULL — a default would put words in the
+vendor's mouth, which is the one thing a field whose entire value is *"their own
+words"* must never do. The hint says so out loud: *"Leave blank if nothing fits
+— the card reads fine without it."*
+
+**No AI generation, by decision.** Not deferred, not a scope cut — settled. A
+generated line defeats the point of the field. The three examples exist to teach
+the shape; they are static text, deliberately not clickable, and never populate
+the input.
+
+**Four independent guards, not four copies of one.** `maxlength="60"` is a soft
+UI stop so the server rejection never fires from the Brand page; `|| null` in
+`saveVendor()` handles empty; `validateQrCardLine` in `update-vendor` is the real
+guard, because that function is callable outside this page; the CHECK constraint
+is the last line of defence. Over-length is **rejected, never truncated** —
+silently cutting a vendor's words and printing the remainder on a physical card
+they cannot easily reprint is the worst available failure, and it follows the
+`faq` precedent in the same function. Whitespace-only coerces to NULL at both the
+function and (via `btrim` in the CHECK) the column, so absence has exactly one
+representation.
+
+**Cross-reference:** T-CAP-2 (the artefact this line prints on), T-CAP-1 (the
+page the QR resolves to), operational learning #16 (the `update-vendor` EF
+pattern this extends).
+
 **T-CAP-3 · Till QR — capture only (no ordering, no payment)**
 
 **Status:** Open. Above the stop line. Source: §11 Phase 2; §9.2 (payments).
@@ -5361,6 +5405,22 @@ FROM drops;
 Dropping a column is irreversible without PITR (T6-5), so a non-zero count changes the shape of this entirely.
 
 **Cross-reference:** `20260719140000_drop_fundraising_cause.sql` (the migration that surfaced it), T5-B5 (schema cleanup — legacy artefacts, same family), T-CAP-10 (overlapping-column precedent), T6-5 (PITR, prerequisite for any irreversible drop).
+
+---
+
+T-capture-state-accuracy — `capture_state` is hardcoded to `'resting'` and misreports
+
+**Status:** Open. Tier 5-B. Post-launch, low priority. Surfaced by the QR-placement PR (#495, 2026-07-21) and deliberately not fixed there.
+
+**What is wrong.** `register_vendor_interest_atomic` writes `capture_state` as a literal `'resting'` on every `drop_signals` row, while the follow form on the vendor page renders in **all four** vendor-page states. So the column currently records the state the page was assumed to be in, not the state it was actually in — which makes it a field that looks like data and is not.
+
+Verified on live at the time: `drop_signals` holds exactly one `(capture_surface, capture_state)` group — `('vendor_page','resting')`, 2 rows, all vendor-scoped (`drop_id IS NULL`) — and nothing writes these columns outside that RPC. The misreporting is therefore total rather than partial, and the blast radius is currently two rows.
+
+**Why it was left.** #495 was plumbing: it added `capture_placement` (which physical object was scanned) alongside the existing `capture_surface` (which surface captured the person). Fixing `capture_state` means deciding what the four states are and having the caller pass the real one — a semantics change, not plumbing. Widening the PR to carry it would have mixed the two.
+
+**Fix shape (not built).** Have the vendor page pass the state it actually rendered in, and have the RPC take it as a parameter rather than hardcoding the literal. The existing rows are honestly re-interpretable as unknown; consider whether to null them rather than leave them asserting a state nobody observed.
+
+**Cross-reference:** `20260721120000_drop_signals_capture_placement.sql` (the migration whose header comment records this, lines 24–27), T-CAP-10 (capture-origin extension — same family, and the reason these columns cannot be retro-fitted), T-CAP-1 (the vendor page whose four states this must reflect).
 
 ---
 
