@@ -15,6 +15,11 @@
   <script src="./assets/hearth-vendor.js?v=1"></script>
   <script src="./assets/vendor-nav.js?v=2"></script>
   <script src="./assets/hearth-photo-upload.js?v=1"></script>
+  <!-- QR generation for the counter card (T-CAP-2b). Vendored, not CDN-loaded:
+       this page renders an artefact that gets physically printed, so a runtime
+       dependency that is down at the moment a vendor prints is an unacceptable
+       failure mode. See the provenance header in the file itself. -->
+  <script src="./assets/qrcodegen.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.74.0"></script>
 
   <style>
@@ -834,6 +839,102 @@
       .faqRow input[type="text"],
       .faqRow textarea { font-size: 16px; }
     }
+
+    /* ---- T-CAP-2b PR2: the durable counter card ---------------------------
+       The card itself is SVG with viewBox="0 0 105 148", so every internal
+       coordinate is a millimetre and the downloaded file prints at true A6
+       from any printer with no scaling step. Deliberately NOT the px-at-96dpi
+       or CSS-zoom approach the drop/host posters use — those exist to fit a
+       screen, this exists to survive a print shop. */
+    .qrCardLayout{
+      display:grid;
+      grid-template-columns:minmax(0, 210px) minmax(0, 1fr);
+      gap:18px;
+      align-items:start;
+    }
+    .qrCardStage{
+      /* Screen presentation only — never affects the exported geometry. */
+      background:#ffffff;
+      border:1px solid var(--h-cinder);
+      border-radius:10px;
+      padding:10px;
+      box-shadow:var(--h-shadow-sm);
+    }
+    .qrCardStage svg{ display:block; width:100%; height:auto; }
+    .qrCardSide{ display:grid; gap:14px; align-content:start; }
+    .qrCardButtons{ display:grid; gap:8px; }
+    .qrCardButtons button{ width:100%; }
+
+    .qrLineInput{
+      font-family:'Cormorant Garamond', Georgia, serif;
+      font-style:italic;
+      font-size:17px;
+    }
+    .qrLineFoot{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:12px;
+      margin-top:6px;
+    }
+    .qrLineFoot .helperText{ margin:0; }
+    .qrLineCount{
+      font-size:12px;
+      font-weight:600;
+      color:var(--h-stone);
+      font-variant-numeric:tabular-nums;
+      white-space:nowrap;
+    }
+    .qrExamples{ border-top:1px solid var(--h-cinder); padding-top:14px; }
+    .qrExamplesHead{
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:0.06em;
+      text-transform:uppercase;
+      color:var(--h-slate);
+      margin-bottom:8px;
+    }
+    /* Static teaching copy. Never clickable, never populates the input — the
+       line's whole value is that it is the vendor's own words. */
+    .qrExampleLine{
+      font-family:'Cormorant Garamond', Georgia, serif;
+      font-style:italic;
+      font-size:16px;
+      color:var(--h-stone);
+      margin:0 0 5px;
+    }
+    .qrExampleLine:last-child{ margin-bottom:0; }
+
+    @media (max-width: 720px){
+      .qrCardLayout{ grid-template-columns:1fr; }
+      .qrCardStage{ max-width:260px; margin:0 auto; }
+      .qrLineInput{ font-size:16px; } /* 16px minimum — smaller triggers iOS zoom. */
+    }
+
+    /* ---- Print: the card alone, at true A6 ----
+       Follows the enquiries.html catering-poster precedent. The card lives
+       inside the operator shell on screen, so it is relocated to <body> root
+       just before printing and restored afterwards, letting the rest of the
+       page be display:none'd without collapsing it. A visibility-only trick
+       leaves blank trailing pages. */
+    @page{ size:A6 portrait; margin:0; }
+    @media print{
+      html.qrcard-printing body > *:not(.qrCardStage){ display:none !important; }
+      html.qrcard-printing .qrCardStage{
+        display:block !important;
+        position:static !important;
+        margin:0 !important;
+        padding:0 !important;
+        border:none !important;
+        border-radius:0 !important;
+        box-shadow:none !important;
+        max-width:none !important;
+      }
+      html.qrcard-printing .qrCardStage svg{
+        width:105mm !important;
+        height:148mm !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1116,6 +1217,64 @@
             <div class="faqFooter">
               <button class="btnGhost" id="faqAddBtn" type="button">Add a question</button>
               <span class="faqCount" id="faqCount"></span>
+            </div>
+          </div>
+
+          <!-- T-CAP-2b PR2: the durable vendor QR card. The field sits BENEATH
+               the rendered card deliberately — the card is what explains what
+               the line is for. It was pulled from PR1 precisely because, placed
+               beside Tagline, it read as a third variant of the same field. -->
+          <div class="brandSection" id="qrCardSection">
+            <div class="brandSectionHead">
+              <div>
+                <h4 class="brandSectionTitle">Your counter card</h4>
+              </div>
+            </div>
+
+            <div class="qrCardLayout">
+              <div class="qrCardStage" id="qrCardStage">
+                <div id="qrCardHost"></div>
+              </div>
+
+              <div class="qrCardSide">
+                <div class="helperText">
+                  This one lasts. It always shows whatever’s on — a live drop,
+                  what’s coming, or how to hear next.
+                </div>
+
+                <div class="field">
+                  <label for="qrCardPlacement">Where it’s going</label>
+                  <select id="qrCardPlacement">
+                    <option value="counter">On the counter</option>
+                    <option value="table">On a table</option>
+                    <option value="flyer">On a flyer</option>
+                  </select>
+                  <div class="helperText">The same card — this just records where it was scanned.</div>
+                </div>
+
+                <div class="qrCardButtons">
+                  <button class="btnGhost" id="qrCardDownloadBtn" type="button">Download card</button>
+                  <button class="btnGhost" id="qrCardDownloadQrBtn" type="button">Download QR only</button>
+                  <button class="btnGhost" id="qrCardPrintBtn" type="button">Print</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="vendorQrCardLine">Your line on the card</label>
+              <div class="helperText">One line in your own words. What would you say to someone standing at your counter?</div>
+              <input id="vendorQrCardLine" class="qrLineInput" type="text" maxlength="60" placeholder="" />
+              <div class="qrLineFoot">
+                <span class="helperText">Leave blank if nothing fits — the card reads fine without it.</span>
+                <span class="qrLineCount" id="qrCardLineCount">0 / 60</span>
+              </div>
+            </div>
+
+            <div class="qrExamples">
+              <div class="qrExamplesHead">Examples</div>
+              <p class="qrExampleLine">Everything’s made the morning you collect it.</p>
+              <p class="qrExampleLine">Twelve portions, once a week. That’s the whole thing.</p>
+              <p class="qrExampleLine">My nan’s recipe, and she checks.</p>
             </div>
           </div>
 
@@ -1436,6 +1595,7 @@
         name: byId("vendorDisplayName").value.trim(),
         display_name: byId("vendorDisplayName").value.trim(),
         tagline: byId("vendorTagline").value.trim(),
+        qr_card_line: byId("vendorQrCardLine").value.trim(),
         brand_voice: byId("vendorBrandVoice").value.trim(),
         order_label: byId("vendorOrderLabel").value.trim(),
         contact_phone: byId("vendorContactPhone").value.trim(),
@@ -1466,6 +1626,7 @@
       byId("vendorName").value = vendor.name || "";
       byId("vendorDisplayName").value = vendor.display_name || vendor.name || "";
       byId("vendorTagline").value = vendor.tagline || "";
+      byId("vendorQrCardLine").value = vendor.qr_card_line || "";
       byId("vendorBrandVoice").value = vendor.brand_voice || "";
       byId("vendorOrderLabel").value = vendor.order_label || "Order direct";
       byId("vendorContactPhone").value = vendor.contact_phone || "";
@@ -1836,6 +1997,10 @@
         window._setSocialOpenAfterPopulate();
       }
       applyPreview();
+      // Needs state.vendor (slug, brand colour, name) — so it renders here,
+      // after the vendor resolves, not at attachEvents time.
+      renderQrCardLineCount();
+      renderQrCard();
       applyOnboardingContinuity(); // T4-19
       setSaveState("saved");
     }
@@ -1849,6 +2014,9 @@
         name: form.name || state.vendor.name || "Vendor",
         display_name: form.display_name || null,
         tagline: form.tagline || null,
+        // Blank coerces to NULL — a whitespace-only line is not a line, and
+        // the card reads correctly without one.
+        qr_card_line: form.qr_card_line || null,
         brand_voice: form.brand_voice || null,
         order_label: form.order_label || null,
         contact_phone: form.contact_phone || null,
@@ -1937,6 +2105,10 @@
     function markDirty() {
       syncColourLabels();
       applyPreview();
+      // The card re-renders live: the vendor sees their line in place, and
+      // sees what 60 characters actually looks like on a printed A6.
+      renderQrCardLineCount();
+      renderQrCard();
       setSaveState("default", "Unsaved changes");
     }
 
@@ -1956,11 +2128,544 @@
       window.open(url, "_blank");
     }
 
+    /* =====================================================================
+       T-CAP-2b PR2 — the durable counter card
+       =====================================================================
+       An A6 card (105 x 148 mm) emitted as SVG with viewBox="0 0 105 148",
+       so every coordinate below IS a millimetre and the downloaded file
+       prints at true size from any printer with no scaling step.
+
+       Two rules worth not relearning:
+
+       - The QR is pure #000 on #ffffff, error correction H, with a 4-module
+         quiet zone built INSIDE the viewBox so it cannot be cropped away by
+         whoever prints it. No vendor colour in the modules, no logo inset.
+         A failed scan at a counter is unrecoverable: the customer does not
+         retry, they walk off, and we never learn it happened.
+
+       - The QR encodes ?src=<placement>; the printed text URL underneath
+         does NOT. A parameterised URL under a QR reads as tracking junk,
+         and a hand-typed visit genuinely is a different capture surface.
+       ===================================================================== */
+
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    const CARD_W = 105;
+    const CARD_H = 148;
+    const CARD_MARGIN = 9;
+    const CARD_INNER_W = CARD_W - CARD_MARGIN * 2;
+    const CARD_MID = CARD_W / 2;
+    const CARD_BAND_H = 4.5;
+
+    const CARD_INK = "#1F2937";
+    const CARD_MUTED = "#6B6257";
+    const CARD_FAINT = "#9A9287";
+    const CARD_FALLBACK_ACCENT = "#8B6B3F";
+
+    const SERIF = "'Cormorant Garamond', Georgia, serif";
+    const SANS = "'Figtree', system-ui, sans-serif";
+
+    const QR_QUIET = 4;          // modules of quiet zone per side
+    const QR_BOX_DEFAULT = 40;   // mm, quiet zone included
+    const QR_BOX_MAX = 44;       // mm — the card has room for this much
+    const QR_MIN_MODULE_MM = 0.7;
+
+    // Must match update-vendor's placement whitelist exactly. 'van' is PR3.
+    const QR_PLACEMENTS = ["counter", "table", "flyer"];
+
+    // ---- Text measurement -------------------------------------------------
+    // Measured against real font metrics rather than estimated: a card whose
+    // wordmark overflows is only discovered after it is printed. The hidden
+    // SVG shares the card's viewBox, so getComputedTextLength() returns
+    // millimetres directly.
+    let qrMeasureSvg = null;
+
+    function measureTextMm(text, family, sizeMm, trackingMm, italic, weight) {
+      if (!qrMeasureSvg) {
+        qrMeasureSvg = document.createElementNS(SVG_NS, "svg");
+        qrMeasureSvg.setAttribute("viewBox", `0 0 ${CARD_W} ${CARD_H}`);
+        qrMeasureSvg.setAttribute("width", `${CARD_W}mm`);
+        qrMeasureSvg.setAttribute("height", `${CARD_H}mm`);
+        qrMeasureSvg.setAttribute("aria-hidden", "true");
+        qrMeasureSvg.style.cssText =
+          "position:absolute;left:-10000px;top:0;opacity:0;pointer-events:none;";
+        document.body.appendChild(qrMeasureSvg);
+      }
+
+      const node = document.createElementNS(SVG_NS, "text");
+      node.setAttribute("font-family", family);
+      node.setAttribute("font-size", String(sizeMm));
+      if (trackingMm) node.setAttribute("letter-spacing", String(trackingMm));
+      if (italic) node.setAttribute("font-style", "italic");
+      if (weight) node.setAttribute("font-weight", String(weight));
+      node.textContent = text;
+      qrMeasureSvg.appendChild(node);
+
+      let width = null;
+      try { width = node.getComputedTextLength(); } catch (err) { width = null; }
+      qrMeasureSvg.removeChild(node);
+
+      // If the browser cannot measure, estimate high rather than low — an
+      // overflowing printed card is worse than a slightly small one.
+      if (width === null || !isFinite(width) || width <= 0) {
+        return text.length * (sizeMm * 0.58 + (trackingMm || 0));
+      }
+      return width;
+    }
+
+    // A single token longer than the card is wide cannot be wrapped on spaces,
+    // so break it on characters. Without this, a 60-character line containing
+    // no spaces silently overflows the card — and it is only discovered once
+    // it has been printed.
+    function hardBreakToken(token, family, sizeMm, maxW, italic, weight, trackingMm) {
+      const chunks = [];
+      let current = "";
+      for (const ch of String(token)) {
+        const trial = current + ch;
+        if (current && measureTextMm(trial, family, sizeMm, trackingMm || 0, italic, weight) > maxW) {
+          chunks.push(current);
+          current = ch;
+        } else {
+          current = trial;
+        }
+      }
+      if (current) chunks.push(current);
+      return chunks;
+    }
+
+    function wrapToWidth(text, family, sizeMm, maxW, italic, weight, trackingMm) {
+      const words = String(text).split(/\s+/).filter(Boolean);
+      const lines = [];
+      let current = "";
+
+      const flush = () => { if (current) { lines.push(current); current = ""; } };
+
+      words.forEach((word) => {
+        const wordWidth = measureTextMm(word, family, sizeMm, trackingMm || 0, italic, weight);
+        if (wordWidth > maxW) {
+          // Unbreakable on spaces — break it on characters instead.
+          flush();
+          const chunks = hardBreakToken(word, family, sizeMm, maxW, italic, weight, trackingMm);
+          chunks.slice(0, -1).forEach((chunk) => lines.push(chunk));
+          current = chunks[chunks.length - 1] || "";
+          return;
+        }
+        const trial = current ? `${current} ${word}` : word;
+        if (!current || measureTextMm(trial, family, sizeMm, trackingMm || 0, italic, weight) <= maxW) {
+          current = trial;
+        } else {
+          lines.push(current);
+          current = word;
+        }
+      });
+      flush();
+      return lines;
+    }
+
+    // ---- Wordmark ---------------------------------------------------------
+    // Deterministic sizing, so the same name always produces the same card.
+    function balancedBreak(words) {
+      let best = null;
+      for (let i = 1; i < words.length; i++) {
+        const a = words.slice(0, i).join(" ");
+        const b = words.slice(i).join(" ");
+        const delta = Math.abs(a.length - b.length);
+        if (!best || delta < best.delta) best = { a, b, delta };
+      }
+      return best ? [best.a, best.b] : [words.join(" ")];
+    }
+
+    function planWordmark(rawName) {
+      const name = String(rawName || "").trim().replace(/\s+/g, " ").toUpperCase();
+      if (!name) return { lines: [], size: 0, tracking: 0 };
+
+      const words = name.split(" ");
+      const longestWord = words.reduce((max, w) => Math.max(max, w.length), 0);
+
+      let lines;
+      let size;
+      if (longestWord > 12 || words.length >= 4) {
+        lines = [name]; size = 6;              // no break — it would not balance
+      } else if (words.length === 1) {
+        lines = [name]; size = 11;             // single short word, the big case
+      } else if (words.length === 2) {
+        lines = words.slice(); size = 9;
+      } else {
+        lines = balancedBreak(words); size = 7.5;
+      }
+
+      // Two lines, always. If the chosen size overflows, step DOWN rather
+      // than adding a third line.
+      const LADDER = [11, 9, 7.5, 6, 5, 4.2];
+      let index = LADDER.indexOf(size);
+      if (index < 0) index = LADDER.length - 1;
+
+      for (; index < LADDER.length; index++) {
+        const candidate = LADDER[index];
+        const tracking = candidate * 0.08;
+        const widest = lines.reduce(
+          (max, line) => Math.max(max, measureTextMm(line, SERIF, candidate, tracking, false, 500)),
+          0
+        );
+        if (widest <= CARD_INNER_W) return { lines, size: candidate, tracking, clamp: false };
+      }
+
+      // Nothing on the ladder fits — a pathologically long name. Set the
+      // smallest size and let the renderer compress the glyphs to the card
+      // width. Slight compression is acceptable; running off the edge of a
+      // printed card is not.
+      const smallest = LADDER[LADDER.length - 1];
+      return { lines, size: smallest, tracking: smallest * 0.08, clamp: true };
+    }
+
+    // ---- QR ---------------------------------------------------------------
+    function qrCardSlug() {
+      return (state.vendor && state.vendor.slug) || "";
+    }
+
+    function qrCardPlacement() {
+      const el = byId("qrCardPlacement");
+      const value = el ? el.value : "counter";
+      return QR_PLACEMENTS.indexOf(value) >= 0 ? value : "counter";
+    }
+
+    // What the QR encodes — carries the placement so we learn where scans
+    // actually come from.
+    function qrCardTargetUrl(slug, placement) {
+      return `https://lovehearth.co.uk/${encodeURIComponent(slug)}?src=${encodeURIComponent(placement)}`;
+    }
+
+    // What is PRINTED beneath the QR — clean, no parameter.
+    function qrCardDisplayUrl(slug) {
+      return `lovehearth.co.uk/${slug}`;
+    }
+
+    function encodeQr(text) {
+      return qrcodegen.QrCode.encodeText(text, qrcodegen.QrCode.Ecc.HIGH);
+    }
+
+    // Module size is what actually decides whether a phone reads a scuffed
+    // sticker, so it is a checked property rather than an assumption. A long
+    // slug pushes the QR to a higher version (more, smaller modules); when
+    // that would take a module below QR_MIN_MODULE_MM we render the code
+    // larger rather than ship a marginal one.
+    function qrBoxSizeFor(qr) {
+      const totalModules = qr.size + QR_QUIET * 2;
+      const box = QR_BOX_DEFAULT;
+      return (box / totalModules) < QR_MIN_MODULE_MM ? QR_BOX_MAX : box;
+    }
+
+    function qrModuleMm(qr, box) {
+      return box / (qr.size + QR_QUIET * 2);
+    }
+
+    // One path for every dark module, in module units — the enclosing <g>
+    // scales it to millimetres. Integer path coordinates avoid the float
+    // drift a per-module mm rect would accumulate across 60+ modules.
+    function qrPathData(qr) {
+      let d = "";
+      for (let y = 0; y < qr.size; y++) {
+        for (let x = 0; x < qr.size; x++) {
+          if (qr.getModule(x, y)) {
+            d += `M${x + QR_QUIET} ${y + QR_QUIET}h1v1h-1z`;
+          }
+        }
+      }
+      return d;
+    }
+
+    // Quiet zone is inside this group's own coordinate space, so it travels
+    // with the artwork and cannot be trimmed off downstream.
+    function qrGroupSvg(qr, x, y, box) {
+      const totalModules = qr.size + QR_QUIET * 2;
+      const scale = box / totalModules;
+      return [
+        `<g transform="translate(${round(x)} ${round(y)}) scale(${round(scale, 5)})">`,
+        `<rect x="0" y="0" width="${totalModules}" height="${totalModules}" fill="#ffffff"/>`,
+        `<path d="${qrPathData(qr)}" fill="#000000" shape-rendering="crispEdges"/>`,
+        `</g>`
+      ].join("");
+    }
+
+    function round(value, places) {
+      const p = typeof places === "number" ? places : 3;
+      return Number(Number(value).toFixed(p));
+    }
+
+    // The fixed card copy (ask line, URL, promise, footer) has no wrapping and
+    // no step-down to rescue it, so it is measured too and compressed to the
+    // card width if it would ever run past the edge. A no-op whenever it fits,
+    // which is the normal case — this only ever fires on an unusual font
+    // fallback or a very long slug in the URL line.
+    function clampIfWide(text, family, sizeMm, italic, weight, trackingMm) {
+      const width = measureTextMm(text, family, sizeMm, trackingMm || 0, italic, weight);
+      return width > CARD_INNER_W ? CARD_INNER_W : 0;
+    }
+
+    function svgText(text, y, opts) {
+      const parts = [
+        `<text x="${CARD_MID}" y="${round(y)}"`,
+        ` text-anchor="middle"`,
+        ` font-family="${opts.family}"`,
+        ` font-size="${opts.size}"`,
+        ` fill="${opts.fill}"`
+      ];
+      if (opts.weight) parts.push(` font-weight="${opts.weight}"`);
+      if (opts.italic) parts.push(` font-style="italic"`);
+      if (opts.tracking) parts.push(` letter-spacing="${round(opts.tracking)}"`);
+      if (opts.clampWidth) {
+        parts.push(` textLength="${round(opts.clampWidth)}" lengthAdjust="spacingAndGlyphs"`);
+      }
+      parts.push(`>${escapeHtml(text)}</text>`);
+      return parts.join("");
+    }
+
+    // ---- The card ---------------------------------------------------------
+    function buildCardSvg() {
+      const vendor = state.vendor || {};
+      const slug = qrCardSlug();
+      const accent = vendor.brand_primary_color || CARD_FALLBACK_ACCENT;
+      const name = vendor.display_name || vendor.name || "";
+      const rawLine = (byId("vendorQrCardLine")?.value || "").trim();
+
+      const qr = encodeQr(qrCardTargetUrl(slug, qrCardPlacement()));
+      const qrBox = qrBoxSizeFor(qr);
+      const wordmark = planWordmark(name);
+
+      // The vendor's own line, if there is one. Wrapped to the card width and
+      // stepped down before it would ever take a third line.
+      let quoteLines = [];
+      let quoteSize = 4.6;
+      if (rawLine) {
+        const quoted = `“${rawLine}”`;
+        const sizes = [4.6, 4.2, 3.8];
+        for (let i = 0; i < sizes.length; i++) {
+          quoteSize = sizes[i];
+          quoteLines = wrapToWidth(quoted, SERIF, quoteSize, CARD_INNER_W, true, 400, 0);
+          if (quoteLines.length <= 2) break;
+        }
+        if (quoteLines.length > 2) quoteLines = quoteLines.slice(0, 2);
+      }
+
+      // Build the stack, then centre it in the area below the band. Because
+      // the optional line is simply absent from this list when null, the
+      // layout closes up rather than leaving a gap.
+      const ASK_SIZE = 4.1, URL_SIZE = 3.5, PROMISE_SIZE = 3.3, FOOTER_SIZE = 2.6;
+      const RULE_W = 29, RULE_H = 0.3;
+
+      const blocks = [];
+      if (wordmark.lines.length) {
+        blocks.push({ kind: "wordmark", h: wordmark.lines.length * wordmark.size * 1.18, gap: 10 });
+      }
+      blocks.push({ kind: "qr", h: qrBox, gap: 8 });
+      blocks.push({ kind: "ask", h: ASK_SIZE * 1.2, gap: quoteLines.length ? 5.5 : 5 });
+      if (quoteLines.length) {
+        blocks.push({ kind: "quote", h: quoteLines.length * quoteSize * 1.25, gap: 5 });
+      }
+      blocks.push({ kind: "url", h: URL_SIZE * 1.2, gap: 4.5 });
+      blocks.push({ kind: "rule", h: RULE_H, gap: 4 });
+      blocks.push({ kind: "promise", h: PROMISE_SIZE * 1.2, gap: 5 });
+      blocks.push({ kind: "footer", h: FOOTER_SIZE * 1.2, gap: 0 });
+
+      const stackH = blocks.reduce((sum, b) => sum + b.h + b.gap, 0);
+      let y = CARD_BAND_H + Math.max(0, (CARD_H - CARD_BAND_H - stackH) / 2);
+
+      const out = [];
+      // No background fill — paper white. A full-bleed tint costs ink, bands
+      // on cheap stock, and shifts between an inkjet and a print shop.
+      out.push(`<rect x="0" y="0" width="${CARD_W}" height="${CARD_BAND_H}" fill="${escapeHtml(accent)}"/>`);
+
+      blocks.forEach((block) => {
+        switch (block.kind) {
+          case "wordmark":
+            wordmark.lines.forEach((line, i) => {
+              const baseline = y + wordmark.size * 0.82 + i * wordmark.size * 1.18;
+              out.push(svgText(line, baseline, {
+                family: SERIF, size: wordmark.size, fill: CARD_INK,
+                weight: 500, tracking: wordmark.tracking,
+                clampWidth: wordmark.clamp ? CARD_INNER_W : 0
+              }));
+            });
+            break;
+          case "qr":
+            out.push(qrGroupSvg(qr, CARD_MID - qrBox / 2, y, qrBox));
+            break;
+          case "ask": {
+            const ask = "Scan to know what’s cooking next.";
+            out.push(svgText(ask, y + ASK_SIZE * 0.82, {
+              family: SANS, size: ASK_SIZE, fill: CARD_INK, weight: 500,
+              clampWidth: clampIfWide(ask, SANS, ASK_SIZE, false, 500, 0)
+            }));
+            break;
+          }
+          case "quote":
+            quoteLines.forEach((line, i) => {
+              out.push(svgText(line, y + quoteSize * 0.82 + i * quoteSize * 1.25, {
+                family: SERIF, size: quoteSize, fill: accent, italic: true
+              }));
+            });
+            break;
+          case "url": {
+            const printed = qrCardDisplayUrl(slug);
+            out.push(svgText(printed, y + URL_SIZE * 0.82, {
+              family: SANS, size: URL_SIZE, fill: CARD_MUTED,
+              clampWidth: clampIfWide(printed, SANS, URL_SIZE, false, 0, 0)
+            }));
+            break;
+          }
+          case "rule":
+            out.push(
+              `<rect x="${round(CARD_MID - RULE_W / 2)}" y="${round(y)}" ` +
+              `width="${RULE_W}" height="${RULE_H}" fill="${escapeHtml(accent)}"/>`
+            );
+            break;
+          case "promise": {
+            const promise = "Only when there’s something on. Nothing else.";
+            out.push(svgText(promise, y + PROMISE_SIZE * 0.82, {
+              family: SANS, size: PROMISE_SIZE, fill: CARD_MUTED, italic: true,
+              clampWidth: clampIfWide(promise, SANS, PROMISE_SIZE, true, 0, 0)
+            }));
+            break;
+          }
+          case "footer": {
+            const footer = "POWERED BY HEARTH";
+            out.push(svgText(footer, y + FOOTER_SIZE * 0.82, {
+              family: SANS, size: FOOTER_SIZE, fill: CARD_FAINT, tracking: 0.5,
+              clampWidth: clampIfWide(footer, SANS, FOOTER_SIZE, false, 0, 0.5)
+            }));
+            break;
+          }
+        }
+        y += block.h + block.gap;
+      });
+
+      // xmlns is required for the downloaded file to open standalone.
+      return [
+        `<svg xmlns="${SVG_NS}" viewBox="0 0 ${CARD_W} ${CARD_H}" `,
+        `width="${CARD_W}mm" height="${CARD_H}mm" role="img" `,
+        `aria-label="Counter card for ${escapeHtml(name || slug)}">`,
+        `<rect x="0" y="0" width="${CARD_W}" height="${CARD_H}" fill="#ffffff"/>`,
+        out.join(""),
+        `</svg>`
+      ].join("");
+    }
+
+    // The bare QR, for a vendor putting it on their own menu board or A-board.
+    function buildQrOnlySvg() {
+      const qr = encodeQr(qrCardTargetUrl(qrCardSlug(), qrCardPlacement()));
+      const totalModules = qr.size + QR_QUIET * 2;
+      return [
+        `<svg xmlns="${SVG_NS}" viewBox="0 0 ${totalModules} ${totalModules}" `,
+        `width="40mm" height="40mm" role="img" aria-label="QR code">`,
+        `<rect x="0" y="0" width="${totalModules}" height="${totalModules}" fill="#ffffff"/>`,
+        `<path d="${qrPathData(qr)}" fill="#000000" shape-rendering="crispEdges"/>`,
+        `</svg>`
+      ].join("");
+    }
+
+    function renderQrCard() {
+      const host = byId("qrCardHost");
+      if (!host || typeof window.qrcodegen === "undefined") return;
+      if (!qrCardSlug()) {
+        host.innerHTML = "";
+        return;
+      }
+      try {
+        host.innerHTML = buildCardSvg();
+      } catch (err) {
+        console.error("[qrCard] render failed", err);
+      }
+    }
+
+    function renderQrCardLineCount() {
+      const input = byId("vendorQrCardLine");
+      const counter = byId("qrCardLineCount");
+      if (!input || !counter) return;
+      counter.textContent = `${input.value.length} / 60`;
+    }
+
+    // ---- Downloads --------------------------------------------------------
+    // Same shape as the activation.html asset downloads, with the SVG string
+    // standing in for canvas.toBlob.
+    function downloadSvg(svgString, filename) {
+      const blob = new Blob([svgString], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // ---- Print ------------------------------------------------------------
+    // The enquiries.html catering-poster pattern: relocate the card to <body>
+    // root just before printing and restore it after, so everything else can
+    // be display:none'd without collapsing it. A visibility-only approach
+    // leaves blank trailing pages.
+    function setupQrCardPrint() {
+      const stage = byId("qrCardStage");
+      if (!stage || stage.dataset.printWired) return;
+      stage.dataset.printWired = "1";
+      let placeholder = null;
+
+      window.addEventListener("beforeprint", () => {
+        if (stage.parentNode && stage.parentNode !== document.body) {
+          placeholder = document.createComment("qrcard-home");
+          stage.parentNode.insertBefore(placeholder, stage);
+          document.body.appendChild(stage);
+        }
+        document.documentElement.classList.add("qrcard-printing");
+      });
+
+      window.addEventListener("afterprint", () => {
+        document.documentElement.classList.remove("qrcard-printing");
+        if (placeholder && placeholder.parentNode) {
+          placeholder.parentNode.insertBefore(stage, placeholder);
+          placeholder.parentNode.removeChild(placeholder);
+          placeholder = null;
+        }
+      });
+    }
+
+    function attachQrCardEvents() {
+      const placement = byId("qrCardPlacement");
+      if (placement) placement.addEventListener("change", renderQrCard);
+
+      const downloadBtn = byId("qrCardDownloadBtn");
+      if (downloadBtn) {
+        downloadBtn.addEventListener("click", () => {
+          downloadSvg(buildCardSvg(), `${qrCardSlug() || "vendor"}-counter-card.svg`);
+        });
+      }
+
+      const qrOnlyBtn = byId("qrCardDownloadQrBtn");
+      if (qrOnlyBtn) {
+        qrOnlyBtn.addEventListener("click", () => {
+          downloadSvg(buildQrOnlySvg(), `${qrCardSlug() || "vendor"}-qr.svg`);
+        });
+      }
+
+      const printBtn = byId("qrCardPrintBtn");
+      if (printBtn) printBtn.addEventListener("click", () => window.print());
+
+      setupQrCardPrint();
+
+      // The wordmark and the vendor's line are measured against real font
+      // metrics, so re-render once the webfonts have actually loaded —
+      // otherwise the first paint sizes against the fallback stack.
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(renderQrCard).catch(() => {});
+      }
+    }
+
     function attachEvents() {
       [
         "vendorName",
         "vendorDisplayName",
         "vendorTagline",
+        "vendorQrCardLine",
         "vendorBrandVoice",
         "vendorOrderLabel",
         "vendorContactPhone",
@@ -2063,6 +2768,7 @@
 
         supabase = window._getHearthClient();
         attachEvents();
+        attachQrCardEvents();
 
         // Social channels toggle
         const socialToggleBtn = byId('socialToggleBtn');

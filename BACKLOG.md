@@ -180,6 +180,170 @@ page the QR resolves to), T-brand-page-field-grouping (the grouping problem this
 PR surfaced), operational learning #16 (the `update-vendor` EF pattern this
 extends).
 
+**T-CAP-2b PR2 — the durable counter card: generator + Brand page ✓ SHIPPED**
+
+**Status:** ✓ Shipped 2026-07-21. The printed artefact PR1's data layer existed
+for. Counter card only — the 200mm van panel is a different composition and is
+deliberately PR3.
+
+**What shipped.** An A6 counter card (105×148mm) generated on the Brand page,
+with three outputs: download the whole card as one SVG
+(`{slug}-counter-card.svg`), download the bare QR as SVG (`{slug}-qr.svg`) for a
+vendor putting it on their own menu board or A-board, and print at true A6. Plus
+the `qr_card_line` field, placed beneath the rendered card, and a placement
+selector.
+
+**The QR generator is vendored, and that decision has a history.** No reusable
+prior art existed: the three poster surfaces (`activation-poster.html`,
+`host-poster.html`, `enquiries.html`) all load `qrcodejs@1.0.0` from cdnjs,
+which renders to canvas rather than SVG and uses error correction M; and
+`drop-manager.html` round-trips the drop URL through `api.qrserver.com`, a
+remote HTTP service. None is usable for a vector artefact that gets physically
+printed.
+
+Nayuki's QR Code generator is now vendored at `assets/qrcodegen.js` — **MIT, not
+public domain** (the original ticket said public domain; it is wrong). MIT's
+attribution condition is satisfied by retaining the copyright header verbatim,
+which the file does; no LICENSE file or UI attribution is needed.
+
+Nayuki no longer ships prebuilt JavaScript — the upstream repo is
+TypeScript-only (`typescript-javascript/qrcodegen.ts`) with a `build.sh`, and the
+old `javascript/qrcodegen.js` is 404 on master and on tags v1.6.0–v1.8.0. The two
+npm candidates were rejected: `nayuki-qr-code-generator` is a third-party
+repackage by Kirill Maltsev, and `qrcodegen` is an unrelated library. So the
+`.ts` was compiled once from Nayuki's own source and the output vendored. The
+file carries a Hearth provenance header (distinct from Nayuki's) recording the
+source URL, source SHA256, source size, compiler and flags, and the date — so a
+future session can reproduce it rather than trust it. **It is unmodified
+compiler output and must never be hand-edited; change it upstream and
+recompile.** Vendored rather than CDN-loaded for the `libheif.js` reason
+(operational learning #36), sharpened: this page renders something that gets
+physically printed, so a CDN that is down at the moment a vendor prints is an
+unacceptable failure mode.
+
+**Millimetre geometry.** The card is SVG with `viewBox="0 0 105 148"`, so every
+internal coordinate IS a millimetre and the downloaded file prints at true A6
+from any printer with no scaling step. This is deliberately NOT the
+px-at-96dpi or CSS-`zoom` approach the existing posters use (operational
+learning #63) — those exist to fit a screen; this exists to survive a print
+shop.
+
+**Scan reliability is treated as unrecoverable-if-wrong.** Error correction H; a
+4-module quiet zone built INSIDE the viewBox so it cannot be cropped away by
+whoever prints it; pure `#000000` modules on `#ffffff`; no vendor colour in the
+modules and no logo inset. A failed scan at a counter is unrecoverable — the
+customer does not retry, they walk off, and we never learn it happened.
+
+**Module size is a checked property, not an assumption.** A longer slug pushes
+the QR to a higher version, meaning more and smaller modules, and module size is
+what decides whether a phone reads a scuffed sticker. The generator computes
+mm-per-module and steps the QR from 40mm up to 44mm rather than render anything
+below 0.7mm. Measured (quiet zone inside the box, worst-case `?src=counter`):
+`southbury-farm-pizza` / `healthy-habits` / `test-vendor` all v6, 49 modules,
+**0.816mm**; `test-11` / `test-12` v5, 45 modules, **0.889mm**. The floor bites
+at a 48-character slug (0.656mm at 40mm, 0.721mm at 44mm) — far beyond the
+20-character longest known production slug.
+
+**The QR encodes `?src={placement}`; the printed text URL does not.** The QR
+carries `https://lovehearth.co.uk/{slug}?src={placement}` so we learn where scans
+come from; the text beneath reads `lovehearth.co.uk/{slug}`. A parameterised URL
+under a QR reads as tracking junk, and a hand-typed visit genuinely is a
+different capture surface. Placements are `counter · table · flyer`, matching
+`update-vendor`'s whitelist exactly. Changing the selector re-renders only the
+QR — the three are the same artefact in different places.
+
+**Field placement is the whole reason PR1 was split.** `qr_card_line` sits
+BENEATH the rendered card so the card explains what the field is for; beside
+Tagline it read as a third variant of the same field. Wired through the five
+standard touchpoints exactly as `tagline` is — `getFormData()` with `.trim()`,
+`populateForm()` with `|| ""`, the `attachEvents()` id array, `saveVendor()` with
+`|| null`, and the existing Save Brand button. No save-on-change path. The card
+re-renders live as the vendor types, so they see the line in place and see what
+60 characters actually looks like. Three static examples teach the shape and are
+deliberately **not clickable** — they must never populate the input.
+
+**Settled decisions, recorded so they are not relitigated.** No catering line,
+conditional or otherwise: a printed artefact may only encode facts as durable as
+the print, and `catering_enabled` is a toggle — the page carries catering, the
+card does not. No AI generation anywhere in this feature: the line's entire value
+is that it is the vendor's own words. No `is_internal` or `status` gate: every
+vendor can generate their card, because a false positive blocking a real vendor
+from printing is far worse than a test card nobody prints. Hearthfire `#C4511A`
+appears nowhere on the card; the accent is the vendor's `brand_primary_color`,
+falling back to `#8B6B3F` when null (operational learning #85 — that fallback is
+the vendor-brand default and must never become Hearthfire).
+
+**Two overflow defects were found and fixed during verification**, both of the
+"only discovered once it has been printed" kind. First, a 60-character line
+containing no spaces is a single unbreakable token — `wrapToWidth` returned one
+over-wide line, the two-line check passed, and it ran off the card; fixed by
+falling back to a character-level break. Second, the fixed card copy (ask line,
+URL, promise, footer) has neither wrapping nor step-down to rescue it, and the
+promise line measured within ~1mm of the card width; all four are now measured
+and compressed via `textLength`/`lengthAdjust` if they would ever overrun. The
+wordmark gained the same last-resort clamp. Net effect: the card is
+structurally incapable of overflowing for any input.
+
+**Wordmark sizing is deterministic**, so the same name always produces the same
+card: one word ≤12 chars → one line at 11mm; two words → two lines at 9mm; three
+or more → two lines at 7.5mm broken at the most balanced word boundary; any word
+longer than 12 chars or four-plus words → one line at 6mm, no break. Hard cap of
+two lines; overflow steps the size DOWN rather than adding a third line. Sizes
+are chosen against real font metrics via `getComputedTextLength()` on a hidden
+SVG sharing the card's viewBox, re-run on `document.fonts.ready` so the first
+paint does not size against the fallback stack. Note that a long four-word name
+lands small by construction — `SOUTHBURY FARM PIZZA COMPANY` is 28 characters,
+and 28 characters across an 87mm measure cannot be large at any font size. That
+is the specified rule working, not a bug; if it reads too small in practice the
+fix is a spec change (allow a break for four-word names), not a code change.
+
+**Patterns followed rather than invented.** Print uses the `enquiries.html`
+catering-poster isolation pattern — relocate the card to `<body>` root on
+`beforeprint` via a comment placeholder, restore on `afterprint`, hide siblings
+through an `html.qrcard-printing` class, `@page{size:A6 portrait;margin:0}` —
+because Brand Hearth is an operator shell, not a standalone poster page; a
+visibility-only approach leaves blank trailing pages. Downloads use the
+`activation.html:2185` helper shape with `new Blob([svg],
+{type:'image/svg+xml'})` standing in for `canvas.toBlob`, same detached `<a
+download>`, same 1000ms `revokeObjectURL`. All CSS is page-scoped per critical
+rule #9 — `assets/hearth.css` is untouched.
+
+**Known limitation (not a defect).** The downloaded SVG references
+`'Cormorant Garamond'` and `'Figtree'` by family name. Printing from the Brand
+page is faithful because the webfonts are loaded; opening the downloaded `.svg`
+on a machine without those fonts installed falls back to Georgia/serif and the
+system sans. The card remains complete and correct, just not typographically
+identical. Embedding the fonts would mean base64-inlining them into every
+download (large, and a licensing question); converting text to paths needs a font
+parser we do not have. Revisit only if a vendor takes an SVG to a print shop and
+it comes back wrong.
+
+**Cross-reference:** T-CAP-2b PR1 (the data layer this writes to), T-CAP-2b PR3
+(the van panel), T-CAP-2 (the two-artefact distinction), T-CAP-1 (the page the
+QR resolves to), T-drop-poster-remote-qr and T-service-board-stale-colour-column
+(both surfaced by this PR's audit), T-brand-page-field-grouping, operational
+learnings #36 (self-host critical libraries), #63 (why not CSS zoom) and #85
+(the `#8B6B3F` fallback).
+
+**T-CAP-2b PR3 · The van panel (200mm)**
+
+**Status:** Open. Above the stop line. The 200mm van panel, deliberately held
+back from PR2 because it is a different composition rather than a rescaled
+counter card — a panel read from across a car park has different size, contrast
+and copy requirements from a card read at arm's length on a counter.
+
+**Hard requirement:** it must use the vendored Nayuki generator
+(`assets/qrcodegen.js`) at **error correction H**, NOT `qrcodejs`. Two QR stacks
+on the same platform is precisely the outcome to avoid. The same rules carry
+over: 4-module quiet zone inside the viewBox, pure black on white, no vendor
+colour in the modules, mm-based `viewBox` geometry, and module size as a checked
+property — at 200mm the module size is generous, but it should still be computed
+rather than assumed. A `van` placement value will need adding to
+`update-vendor`'s whitelist, which PR2 deliberately did not do.
+
+**Cross-reference:** T-CAP-2b PR2 (the generator and every decision it settled),
+T-CAP-2 (durable vendor QR vs drop QR).
+
 **T-CAP-3 · Till QR — capture only (no ordering, no payment)**
 
 **Status:** Open. Above the stop line. Source: §11 Phase 2; §9.2 (payments).
@@ -5386,6 +5550,31 @@ T-hearth-intelligence-revenue-field-audit — audit hearth-intelligence.js for s
 **Fix shape (not built):** grep `revenue_pence` across `assets/hearth-intelligence.js`, identify every read site, trace `d` back to its source (raw row from which view? from which EF response?), confirm the field is actually populated. For each broken read, switch to the canonical field name. Verify against the same surfaces the intelligence module renders into (insights.html, customers.html, home.html).
 
 **Cross-reference:** operational learning #56 (the consolidated revenue/scope-source correctness rule).
+
+T-drop-poster-remote-qr — drop QR is generated by a third-party HTTP service
+
+**Status:** Open. Tier 5-B. Post-launch. Surfaced by the T-CAP-2b PR2 prior-art audit (2026-07-21).
+
+**Problem:** `drop-manager.html:2264` (`getQrImageUrl`) builds its QR by calling `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=<drop URL>`, and `downloadQr()` (~:5920) hands that remote URL straight to the download anchor. Two distinct problems, of different severity:
+
+1. **Data.** The drop URL — which identifies the vendor and the drop — leaves the platform to a third party we have no relationship with, no agreement with, and no visibility into. It is not sensitive in the PII sense, but it is unnecessary egress on a path that has no need to leave the origin.
+2. **Availability.** Poster generation silently depends on that service being up at the exact moment a vendor needs it. The failure is a broken image, at the point of printing.
+
+The three `qrcodejs@1.0.0` cdnjs sites (`activation-poster.html:13`, `host-poster.html:12`, `enquiries.html:20`) are the same family but less severe — a CDN dependency rather than a data one, since qrcodejs renders locally once loaded.
+
+**Fix shape (not built):** point all four at the vendored `assets/qrcodegen.js` (shipped by T-CAP-2b PR2). `getQrImageUrl` becomes a local SVG or canvas render; the download path then serialises locally rather than fetching a remote URL. Note the existing sites use error correction M and render to canvas, so this is a behaviour change as well as a dependency change — worth confirming the drop poster's QR still scans at its printed size, using the same mm-per-module check PR2 introduced.
+
+**Cross-reference:** T-CAP-2b PR2 (vendored the generator), operational learning #36 (self-host critical client-side libraries).
+
+T-service-board-stale-colour-column — Service Board reads a column that may not exist
+
+**Status:** Open. Tier 5-B. Post-launch, small. Surfaced by the T-CAP-2b PR2 audit (2026-07-21).
+
+**Problem:** `service-board.html` reads `vendor.primary_color` at :2067, :2435 and :2567, each as `const accent = vendor.primary_color || "#8B6B3F"`. Every other surface on the platform reads `brand_primary_color` — `order.html`, `catering-enquiry.html`, `activation.html`, `enquiries.html`, `home.html` and `brand-hearth.html` all use that name. If `primary_color` is null (or absent) on vendor rows, these three reads fall through to the `#8B6B3F` fallback and the vendor's actual brand colour never appears on the Service Board — silently, with no error, which is why it would not have been noticed.
+
+**Verify before fixing:** confirm against `information_schema.columns` whether `vendors.primary_color` exists at all, and if it does, whether any row has a non-null value. The fix is a three-line rename only if the column is genuinely stale; if it exists and is populated for some vendors, the question becomes which column is authoritative. CLAUDE.md's operational learning #33 also referenced `primary_color` and was corrected to `brand_primary_color` in the T-CAP-2b PR2 commit — the doc was propagating the same staleness.
+
+**Cross-reference:** operational learning #26 (audit the full read-write loop when columns change), operational learning #54 (validate column lists against the live schema, not SCHEMA.md).
 
 T-order-error-state-polish — order.html failed-load state reads as a rendering failure
 
