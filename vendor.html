@@ -280,7 +280,11 @@
       var SUPABASE_ANON_KEY = (window.HEARTH_CONFIG || {}).SUPABASE_ANON_KEY;
 
       var supabase = null;
-      var state = { vendor: null, page: null, slug: null, followDone: false };
+      // capturePlacement holds ?src= for the lifetime of this page view ONLY.
+      // Deliberately NOT persisted to localStorage/sessionStorage: a stored
+      // value would survive the visit and misattribute a later direct visit as
+      // a QR scan. The page has no storage usage at all — keep it that way.
+      var state = { vendor: null, page: null, slug: null, followDone: false, capturePlacement: null };
 
       var root = document.getElementById("vpRoot");
 
@@ -313,6 +317,51 @@
         var q = params.get("slug");
         if (q && q.trim()) return q.trim();
         return slugFromPath(window.location.pathname);
+      }
+
+      /* T-CAP-2a — ?src= records which physical object was scanned (the durable
+         vendor QR encodes it). Read raw here; the server whitelists it and
+         writes null for anything unrecognised, so an odd value can never fail a
+         follow. */
+      function readCapturePlacement() {
+        var params = new URLSearchParams(window.location.search);
+        var v = params.get("src");
+        return v && v.trim() ? v.trim() : null;
+      }
+
+      /* Remove ?src= from the address bar once it has been read into memory.
+         Without this, a customer who copies the URL — or uses the Share button,
+         which reads window.location.href — propagates their sticker's origin to
+         someone who never saw it, and that person's follow is recorded as a
+         counter capture. The parameter exists to answer "what physical object
+         did they scan"; a shared link corrupts precisely that.
+
+         replaceState, never pushState: pushState would add a history entry and
+         break the back button. Every other parameter is preserved (notably the
+         legacy ?slug=), and the stripped URL still resolves on reload because
+         readSlug() falls back to the path. If there is no src, no history call
+         is made at all. */
+      function stripCapturePlacementFromUrl() {
+        if (!window.history || !window.history.replaceState) return;
+
+        var url;
+        try {
+          url = new URL(window.location.href);
+        } catch (_) {
+          return;
+        }
+        if (!url.searchParams.has("src")) return;
+
+        url.searchParams.delete("src");
+        // Drop the "?" entirely when src was the only parameter, rather than
+        // leaving a bare trailing "?" in the address bar.
+        var next = url.pathname + (url.searchParams.toString() ? "?" + url.searchParams.toString() : "") + url.hash;
+        try {
+          window.history.replaceState(window.history.state, "", next);
+        } catch (_) {
+          /* Non-fatal: the value is already in memory and the follow still
+             records correctly. A failed tidy-up must never break the page. */
+        }
       }
 
       function slugFromPath(pathname) {
@@ -892,7 +941,11 @@
             consent: true,
             // Belt-and-braces &&: the sync above already unticks on an empty
             // field, and the server refuses the pair outright.
-            messaging_consent: messagingBox.checked && !!phone
+            messaging_consent: messagingBox.checked && !!phone,
+            // Read from ?src= at boot and held in memory only. Null when the
+            // visit did not come from a QR. Sent raw — the server whitelists it
+            // and stores null for anything unrecognised, never an error.
+            capture_placement: state.capturePlacement
           });
 
           if (!result.ok) {
@@ -921,6 +974,11 @@
       async function init() {
         var slug = readSlug();
         state.slug = slug;
+
+        // Order is load-bearing: both reads must happen BEFORE the strip, since
+        // stripping rewrites window.location.search that readSlug() also uses.
+        state.capturePlacement = readCapturePlacement();
+        stripCapturePlacementFromUrl();
 
         if (!slug) {
           renderNotFound();
