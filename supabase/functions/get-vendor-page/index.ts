@@ -69,6 +69,7 @@ const VENDOR_COLUMNS = [
   "brand_text_on_primary",
   "powered_by_hearth_visible",
   "faq",
+  "catering_enabled",
   "status",
   "is_internal",
 ].join(", ");
@@ -155,6 +156,13 @@ function buildVendorBlock(vendor: VendorRow) {
     // the whole section. Present on every successful state because
     // buildVendorBlock backs all four.
     faq: Array.isArray(vendor.faq) ? vendor.faq : [],
+    // T-vendor-page-catering-link. The vendor has DECLARED they offer catering;
+    // vendor.html renders a catering enquiry link only when this is true.
+    // Strict `=== true` so an unexpected null/absent value reads as "off",
+    // matching the column's NOT NULL DEFAULT false — a vendor must never get a
+    // catering CTA they did not ask for. Present on all four success states
+    // because buildVendorBlock backs them; never on the vendor_not_found 404.
+    catering_enabled: vendor.catering_enabled === true,
     // T-vendor-is-internal. A SIGNAL TO THE PAGE, NOT A GATE: an internal
     // vendor serves its normal state exactly like a real one (never a 404),
     // because these records exist to keep the live path testable. The page's

@@ -51,6 +51,10 @@ const ALLOWED_FIELDS = new Set([
   // Public vendor page
   "faq",
 
+  // Service declaration — vendor declares they offer catering, which surfaces a
+  // catering enquiry link on their public page (get-vendor-page / vendor.html).
+  "catering_enabled",
+
   // UI dismissals
   "head_start_dismissed",
 ]);
@@ -186,6 +190,17 @@ Deno.serve(async (req) => {
       const result = validateFaq(fields[key]);
       if (!result.ok) return jsonResponse({ error: result.error }, 400);
       update[key] = result.value;
+      continue;
+    }
+
+    // catering_enabled is a service declaration the vendor toggles, and the
+    // column is a strict NOT NULL boolean — so validate the type here rather
+    // than pass an arbitrary shape through and let the DB reject it opaquely.
+    if (key === "catering_enabled") {
+      if (typeof fields[key] !== "boolean") {
+        return jsonResponse({ error: "catering_enabled must be true or false" }, 400);
+      }
+      update[key] = fields[key];
       continue;
     }
 
