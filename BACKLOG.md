@@ -452,6 +452,57 @@ rather than assumed. A `van` placement value will need adding to
 **Cross-reference:** T-CAP-2b PR2 (the generator and every decision it settled),
 T-CAP-2 (durable vendor QR vs drop QR).
 
+**T-CAP-2b-print-paper-sizes · Let the vendor choose their paper**
+
+**Status:** Open. Tier 5. Post-launch, small. Surfaced by T-CAP-2b PR2
+(2026-07-21).
+
+**The problem.** Print is hardcoded to A4 with four cards. That is the right
+default — A4 is the only size a domestic printer can be assumed to have loaded —
+but it is not the only case. A vendor with A5 in the tray, or one who wants a
+single larger card, has no route except downloading the SVG and scaling it in
+their own print software.
+
+**Why it cannot simply be changed.** The declared `@page` size must match the
+paper actually loaded or the artwork scales — this is exactly the defect PR2
+fixed, where a declared A6 page printed at ~2x on A4. So a paper option must
+change the declaration AND the layout together, never one or the other. A
+half-done version of this ticket (a selector that changes the grid but not the
+`@page` rule, or vice versa) reintroduces the original defect in a form that is
+harder to spot, because it would only misprint on the non-default option.
+
+**Fix shape (not built).** A paper selector that sets both the `@page` size and
+the cell grid:
+
+| Paper | Cards | Grid |
+|---|---|---|
+| A4 portrait (210×297) | 4 | 2 × 2 — current behaviour, stays the default |
+| A5 **landscape** (210×148) | 2 | 2 × 1 |
+| A6 portrait (105×148) | 1 | 1 × 1 |
+
+Each option fills its sheet, so no configuration wastes paper or floats a card
+in white space. The trim guide logic is unchanged — it already draws per cell.
+
+**Derived at ticket-writing time, not specified — the A5 option must be
+LANDSCAPE.** A5 portrait is 148×210mm, which fits only ONE 105×148 card and
+leaves 43×62mm of waste, breaking this ticket's own fills-its-sheet principle.
+A5 landscape is 210×148mm and takes exactly two cards across with zero slack.
+Worth stating explicitly because "A5 → two cards" reads as obviously true and is
+only true in one orientation — the same shape of assumption that produced the
+A6 defect. Verified arithmetic for all four candidates: A4 portrait 2×2 with
+0mm × 1mm slack; A5 landscape 2×1 with zero slack; A6 portrait 1×1 with zero
+slack; A5 portrait 1×1 with 43mm × 62mm waste (rejected).
+
+**Guardrail: whatever is selected, the card geometry stays 105×148mm with a 40mm
+QR.** The paper changes, the artefact never does. A vendor wanting a physically
+bigger artefact wants PR3's van panel, not a scaled counter card — scaling this
+one would also scale the QR past the size the module-size check was reasoned
+about.
+
+**Cross-reference:** T-CAP-2b PR2 (the A4 fix and why the declared page size is
+load-bearing), T-CAP-2b PR3 (the van panel — a genuinely larger artefact, which
+is the right answer to "I want something bigger" rather than scaling this one).
+
 **T-CAP-3 · Till QR — capture only (no ordering, no payment)**
 
 **Status:** Open. Above the stop line. Source: §11 Phase 2; §9.2 (payments).
