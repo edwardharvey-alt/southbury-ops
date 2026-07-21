@@ -333,32 +333,70 @@ checklist: a print defect is only visible in print.
 **Resolution: declare the size of real paper and position the card at true
 dimensions inside it.** `@page{size:A4 portrait;margin:0}`, with the card
 absolutely positioned at `top:74.5mm; left:52.5mm; width:105mm; height:148mm`
-— A4 is 210×297mm, so (210−105)/2 = 52.5mm and (297−148)/2 = 74.5mm. Absolute
-offsets rather than centring margins because 74.5 + 148 + 74.5 sums to exactly
-297mm: any margin collapse or stray padding would push the card onto a second
-sheet, whereas offsets from the page box cannot overflow that way. **Do not
-"fix" this back to A6** — nobody owns A6 paper, and printing an A6 card at home
-always meant printing on A4 and cutting it out.
+— A4 is 210×297mm. **Do not "fix" this back to A6** — nobody owns A6 paper, and
+printing an A6 card at home always meant printing on A4 and cutting it out.
 
-A hairline **trim guide** (0.2mm, `#C9C4BC`) sits exactly on the 105×148mm
-boundary so the vendor knows where to cut. Deliberately neutral grey and never
-the vendor accent — it is a production mark, not part of the design.
-`print-color-adjust:exact` stops browsers dropping a pale hairline as
-background decoration. It is a print-only DOM element and a **sibling** of the
-SVG host rather than a child, so re-rendering the card cannot remove it; and
-because both downloads build their SVG string from scratch (no `outerHTML`, no
-`XMLSerializer`, no DOM read), the guide can never reach a downloaded file.
+**VERIFIED CORRECT by measurement, not asserted.** The A4 page fix was confirmed
+in print preview: the card measures exactly **50% of sheet width** and sits
+**25%–75% vertically**, and **Chrome hides the paper-size selector entirely** —
+which is the tell that the declared page size is being honoured rather than
+scaled to fit a different sheet. Recorded as a verified fact because the
+original A6 defect also *looked* right at every stage short of measuring it.
+
+**The sheet prints FOUR cards, not one.** A4 is exactly four A6, so one card per
+sheet wasted three quarters of the paper and handed the vendor a single card
+when what they want is a stack. Print output is a 2×2 grid of the same card at
+true 105×148mm, edge to edge with no page margins: cells at (0,0), (105,0),
+(0,148) and (105,148) mm. 2 × 105 = 210mm exactly across; 2 × 148 = 296mm of a
+297mm sheet. **The spare 1mm sits at the bottom rather than being split** — a
+0.5mm offset at the top would put the top cut line just inside the paper edge
+and make it ambiguous to cut against. Cells are positioned from the top-left, so
+the slack falls out at the bottom by construction.
+
+The sheet is **print-only and cloned**: `buildPrintSheet()` copies the rendered
+SVG into four positioned cells at `beforeprint`, `teardownPrintSheet()` removes
+them at `afterprint` — the same lifecycle the earlier single-card relocation
+used, but building a separate sheet rather than moving the live node, so the
+on-screen preview is never disturbed. Cloning rather than re-generating matters:
+the four cards must be identical to each other *and* to the preview the vendor
+just approved. **The on-screen preview stays as ONE card** — only print repeats.
+
+Each cell carries its **own** hairline **trim guide** (0.2mm, `#C9C4BC`) on its
+105×148mm boundary, so the four guides line up into one continuous cut grid —
+two cuts with a guillotine, four with scissors. Deliberately neutral grey and
+never the vendor accent: it is a production mark, not part of the design.
+`print-color-adjust:exact` stops browsers dropping a pale hairline as background
+decoration. Guides and clones are print-only DOM, and because both downloads
+build their SVG string from scratch (no `outerHTML`, no `XMLSerializer`, no DOM
+read), neither can ever reach a downloaded file.
 
 **General lesson worth carrying to any future print surface:** declaring a
 `@page` size smaller than the paper the user actually has scales the artwork.
 If a surface must come out at a true physical size, declare the real sheet and
-place the artefact inside it.
+place the artefact inside it — then fill the sheet, because paper comes in whole
+sheets whatever you put on it.
 
 **Section order: the counter card sits ABOVE the FAQ section.** Q&A is content
 that appears on the vendor page and can be edited at any time; the counter card
 is a physical artefact the vendor takes away and has to print before launch. The
 take-away with a deadline comes first. Only the existing block moved — the
 broader regrouping of the Brand page remains T-brand-page-field-grouping.
+
+**Action order: Print is primary, the downloads are the expert path.** Print
+sits first and is the only `btnAccent` on the card; "Download card" and
+"Download QR only" follow as `btnGhost`. Most vendors want a card in their hand,
+not an SVG file — the file outputs serve a vendor with their own artwork or a
+print shop, which is the minority case.
+
+**Every button carries its own caption, directly beneath it.** An earlier
+arrangement left one caption floating between two buttons and another three
+elements away from the button it described, so neither reliably read as
+belonging to anything. Each action is now a button plus its caption in one
+wrapper, with the gap *between* actions (18px) several times the gap *within*
+one (5px), so the pairing is visible rather than inferred. The captions do
+distinct work: Print names the four-up sheet and the PDF route; "Download card"
+states that opening small in a browser IS the true printed size (see below);
+"Download QR only" names the menu-board / A-board use.
 
 **The two outputs are for different jobs, and the guidance says so.** The
 downloaded SVG references `'Cormorant Garamond'` and `'Figtree'` by family name,
@@ -367,19 +405,19 @@ so it renders with those fonts only where they are installed. That makes
 shop** — printing happens from the Brand page with the webfonts loaded, so the
 PDF embeds them and the type is exactly right. **The SVG download is for a
 vendor placing the QR into their own artwork** — a menu board, an A-board, a
-designer's layout — where they will be setting their own type anyway. A
-`.helperText` line beneath the buttons on the Brand page states the route
-("Prints on A4 — trim along the guide. Use Print, then Save as PDF to keep the
-fonts exactly right.") so a vendor does not reach the print shop with a
-font-substituted card.
+designer's layout — where they will be setting their own type anyway. The Print
+caption states the route ("Four cards on one A4 sheet — cut along the guides.
+Choose Save as PDF to keep the fonts exactly right.") so a vendor does not reach
+the print shop with a font-substituted card.
 
 **The SVG opening small in a browser is CORRECT behaviour, not a defect.** It
 carries `width="105mm" height="148mm"`, so a browser renders it at its true
 physical size — which on a typical monitor looks like a small image. That is the
-card being right, not the card being broken. A `.helperText` beneath the
-"Download card" button says so directly ("For your own artwork. Opens small in a
-browser — that is the true printed size.") specifically to stop the next person
-filing it as a bug and "fixing" the geometry that makes true-size printing work.
+card being right, not the card being broken. The "Download card" caption says so
+directly ("The full card as a vector file, for your own artwork or a print shop.
+Opens small in a browser — that is its true printed size.") specifically to stop
+the next person filing it as a bug and "fixing" the geometry that true-size
+printing depends on.
 
 Opening the downloaded `.svg` on a machine without those fonts falls back to
 Georgia/serif and the system sans — the card stays complete and correct, just

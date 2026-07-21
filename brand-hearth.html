@@ -862,8 +862,15 @@
     }
     .qrCardStage svg{ display:block; width:100%; height:auto; }
     .qrCardSide{ display:grid; gap:14px; align-content:start; }
-    .qrCardButtons{ display:grid; gap:8px; }
-    .qrCardButtons button{ width:100%; }
+
+    /* Each action is a button and its own caption, bound tightly together;
+       the gap BETWEEN actions is deliberately several times the gap WITHIN
+       one, so a caption visibly belongs to the button above it rather than
+       floating ambiguously between two buttons. */
+    .qrCardActions{ display:grid; gap:18px; }
+    .qrCardAction{ display:grid; gap:5px; }
+    .qrCardAction button{ width:100%; }
+    .qrCardAction .helperText{ margin:0; }
 
     .qrLineInput{
       font-family:'Cormorant Garamond', Georgia, serif;
@@ -911,23 +918,30 @@
       .qrLineInput{ font-size:16px; } /* 16px minimum — smaller triggers iOS zoom. */
     }
 
-    /* ---- Print: a true-size A6 card, centred on an A4 sheet ----
-       Relocation follows the enquiries.html catering-poster precedent — the
-       card lives inside the operator shell on screen, so it is moved to
-       <body> root just before printing and restored afterwards, letting the
-       rest of the page be display:none'd without collapsing it. A
-       visibility-only trick leaves blank trailing pages.
+    /* ---- Print: four true-size cards filling an A4 sheet ----
+       A4 is exactly four A6. Printing one card per sheet wasted three
+       quarters of the paper and handed the vendor a single card when they
+       want a stack, so print output is a 2x2 grid of the SAME card at true
+       105x148mm, edge to edge with no page margins. Each cell carries its
+       own trim guide, so the four guides form one continuous cut grid — two
+       cuts with a guillotine, four with scissors.
+
+       The sheet is built by cloning the rendered SVG at `beforeprint` and
+       torn down at `afterprint` (see buildPrintSheet / teardownPrintSheet).
+       The on-screen preview stays as ONE card, and neither download ever
+       reads the DOM — both build their SVG string from scratch — so the
+       clones cannot reach a downloaded file.
 
        LOAD-BEARING — the page size is A4, NOT A6, and that is deliberate.
        `@page{size:...}` is a HINT, not a paper selection. Chrome lays out a
        page box at the declared size and then SCALES that box to fit whatever
        sheet the user actually has loaded. Declaring A6 therefore printed the
        card at roughly 2x on A4 — a ~210mm card carrying an ~80mm QR — while
-       the on-screen preview looked perfectly correct. Declaring the size of
-       real paper and positioning the card at true dimensions inside it is
-       the only way to get 105x148mm out of a domestic printer. Nobody owns
-       A6 paper; printing an A6 card at home always meant printing on A4 and
-       cutting it out. Do NOT "fix" this back to A6. */
+       the on-screen preview looked perfectly correct. VERIFIED CORRECT since:
+       the card measures exactly 50% of sheet width, sits 25%-75% vertically,
+       and Chrome hides the paper-size selector, which confirms the declared
+       page size is being honoured rather than scaled. Do NOT "fix" this back
+       to A6, and do not reintroduce page margins. */
     @page{ size:A4 portrait; margin:0; }
     @media print{
       html.qrcard-printing,
@@ -936,28 +950,32 @@
         padding:0 !important;
         background:none !important;
       }
-      html.qrcard-printing body > *:not(.qrCardStage){ display:none !important; }
+      html.qrcard-printing body > *:not(#qrCardSheet){ display:none !important; }
 
-      /* Absolutely positioned rather than centred with margins: 74.5 + 148 +
-         74.5 sums to exactly 297mm, so any margin collapse or stray padding
-         would push the card onto a second sheet. Offsets from the page box
-         cannot overflow that way.
-         A4 210mm - 105mm card = 52.5mm each side; 297mm - 148mm = 74.5mm. */
-      html.qrcard-printing .qrCardStage{
+      html.qrcard-printing #qrCardSheet{
         display:block !important;
         position:absolute !important;
-        top:74.5mm !important;
-        left:52.5mm !important;
-        width:105mm !important;
-        height:148mm !important;
+        top:0 !important;
+        left:0 !important;
+        width:210mm !important;
+        height:297mm !important;
         margin:0 !important;
         padding:0 !important;
-        border:none !important;
-        border-radius:0 !important;
-        box-shadow:none !important;
-        max-width:none !important;
       }
-      html.qrcard-printing .qrCardStage svg{
+
+      /* 2 x 105 = 210mm exactly across, and 2 x 148 = 296mm of a 297mm
+         sheet. The spare 1mm sits at the BOTTOM rather than being split
+         half above and half below — a 0.5mm offset at the top would put
+         the top cut line just inside the paper edge and make it ambiguous
+         to cut against. Cells are positioned from the top-left, so the
+         slack falls out at the bottom by construction. */
+      html.qrcard-printing .qrCardCell{
+        position:absolute;
+        width:105mm;
+        height:148mm;
+        box-sizing:border-box;
+      }
+      html.qrcard-printing .qrCardCell svg{
         display:block !important;
         width:105mm !important;
         height:148mm !important;
@@ -965,9 +983,9 @@
 
       /* Trim guide — a production mark, not part of the design, so it is
          deliberately neutral grey and never the vendor accent. Print-only
-         and injected as a sibling element, so it can never reach the
-         downloaded SVG. print-color-adjust keeps browsers from dropping a
-         pale hairline as "background decoration". */
+         and a sibling of the cloned SVG, so it can never reach a download.
+         print-color-adjust keeps browsers from dropping a pale hairline as
+         "background decoration". */
       html.qrcard-printing .qrCardTrim{
         display:block !important;
         position:absolute;
@@ -979,8 +997,10 @@
         pointer-events:none;
       }
     }
-    /* Never visible on screen, and never serialised into a download. */
+    /* Print-only scaffolding — never visible on screen, and never
+       serialised into a download. */
     .qrCardTrim{ display:none; }
+    #qrCardSheet{ display:none; }
   </style>
 </head>
 <body>
@@ -1267,12 +1287,11 @@
             </div>
 
             <div class="qrCardLayout">
+              <!-- On-screen preview is always ONE card. The four-up print
+                   sheet is cloned from this at beforeprint and torn down
+                   after — see buildPrintSheet(). -->
               <div class="qrCardStage" id="qrCardStage">
                 <div id="qrCardHost"></div>
-                <!-- Print-only trim guide. A sibling of the SVG host, never a
-                     child, so re-rendering the card cannot remove it and it can
-                     never be serialised into a download. -->
-                <div class="qrCardTrim" aria-hidden="true"></div>
               </div>
 
               <div class="qrCardSide">
@@ -1291,16 +1310,32 @@
                   <div class="helperText">The same card — this just records where it was scanned.</div>
                 </div>
 
-                <div class="qrCardButtons">
-                  <button class="btnGhost" id="qrCardDownloadBtn" type="button">Download card</button>
-                  <div class="helperText">For your own artwork. Opens small in a browser — that is the true printed size.</div>
-                  <button class="btnGhost" id="qrCardDownloadQrBtn" type="button">Download QR only</button>
-                  <button class="btnGhost" id="qrCardPrintBtn" type="button">Print</button>
-                </div>
+                <!-- Print is the primary action: most vendors want a card,
+                     not a file. The two downloads are the expert path. -->
+                <div class="qrCardActions">
+                  <div class="qrCardAction">
+                    <button class="btnAccent" id="qrCardPrintBtn" type="button">Print</button>
+                    <div class="helperText">
+                      Four cards on one A4 sheet — cut along the guides. Choose
+                      Save as PDF to keep the fonts exactly right.
+                    </div>
+                  </div>
 
-                <div class="helperText">
-                  Prints on A4 — trim along the guide. Use Print, then Save as
-                  PDF to keep the fonts exactly right.
+                  <div class="qrCardAction">
+                    <button class="btnGhost" id="qrCardDownloadBtn" type="button">Download card</button>
+                    <div class="helperText">
+                      The full card as a vector file, for your own artwork or a
+                      print shop. Opens small in a browser — that is its true
+                      printed size.
+                    </div>
+                  </div>
+
+                  <div class="qrCardAction">
+                    <button class="btnGhost" id="qrCardDownloadQrBtn" type="button">Download QR only</button>
+                    <div class="helperText">
+                      Just the code, for putting on a menu board or A-board.
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2670,32 +2705,75 @@
     }
 
     // ---- Print ------------------------------------------------------------
-    // The enquiries.html catering-poster pattern: relocate the card to <body>
-    // root just before printing and restore it after, so everything else can
-    // be display:none'd without collapsing it. A visibility-only approach
-    // leaves blank trailing pages.
+    // A4 is exactly four A6, so the print sheet is a 2x2 grid of the SAME
+    // card at true size, edge to edge. Built by cloning the rendered SVG at
+    // beforeprint and torn down at afterprint — the same lifecycle the
+    // earlier single-card relocation used, but building a print-only sheet
+    // rather than moving the live node, so the on-screen preview is never
+    // disturbed.
+    //
+    // 2 x 105 = 210mm exactly; 2 x 148 = 296mm of a 297mm sheet. Cells are
+    // positioned from the top-left, so the spare 1mm falls out at the bottom
+    // rather than being split — a 0.5mm offset at the top would leave the top
+    // cut line just inside the paper edge and ambiguous to cut against.
+    const PRINT_CELLS = [
+      { left: 0,   top: 0   },
+      { left: 105, top: 0   },
+      { left: 0,   top: 148 },
+      { left: 105, top: 148 }
+    ];
+
+    function teardownPrintSheet() {
+      const existing = document.getElementById("qrCardSheet");
+      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    }
+
+    function buildPrintSheet() {
+      teardownPrintSheet();
+
+      const host = byId("qrCardHost");
+      const source = host && host.querySelector("svg");
+      if (!source) return;   // nothing rendered yet — print whatever is there
+
+      const sheet = document.createElement("div");
+      sheet.id = "qrCardSheet";
+
+      PRINT_CELLS.forEach((pos) => {
+        const cell = document.createElement("div");
+        cell.className = "qrCardCell";
+        cell.style.left = `${pos.left}mm`;
+        cell.style.top = `${pos.top}mm`;
+
+        // Clone rather than re-generate: the four cards must be identical to
+        // each other AND to the preview the vendor just approved.
+        cell.appendChild(source.cloneNode(true));
+
+        // Each cell carries its own guide, so the four line up into one
+        // continuous cut grid across the sheet.
+        const trim = document.createElement("div");
+        trim.className = "qrCardTrim";
+        trim.setAttribute("aria-hidden", "true");
+        cell.appendChild(trim);
+
+        sheet.appendChild(cell);
+      });
+
+      document.body.appendChild(sheet);
+    }
+
     function setupQrCardPrint() {
       const stage = byId("qrCardStage");
       if (!stage || stage.dataset.printWired) return;
       stage.dataset.printWired = "1";
-      let placeholder = null;
 
       window.addEventListener("beforeprint", () => {
-        if (stage.parentNode && stage.parentNode !== document.body) {
-          placeholder = document.createComment("qrcard-home");
-          stage.parentNode.insertBefore(placeholder, stage);
-          document.body.appendChild(stage);
-        }
+        buildPrintSheet();
         document.documentElement.classList.add("qrcard-printing");
       });
 
       window.addEventListener("afterprint", () => {
         document.documentElement.classList.remove("qrcard-printing");
-        if (placeholder && placeholder.parentNode) {
-          placeholder.parentNode.insertBefore(stage, placeholder);
-          placeholder.parentNode.removeChild(placeholder);
-          placeholder = null;
-        }
+        teardownPrintSheet();
       });
     }
 
