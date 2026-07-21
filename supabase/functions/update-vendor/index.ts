@@ -51,6 +51,10 @@ const ALLOWED_FIELDS = new Set([
   // Public vendor page
   "faq",
 
+  // Durable vendor QR card — an optional line the vendor writes in their own
+  // words, printed on the card (T-CAP-2b).
+  "qr_card_line",
+
   // Service declaration — vendor declares they offer catering, which surfaces a
   // catering enquiry link on their public page (get-vendor-page / vendor.html).
   "catering_enabled",
@@ -122,6 +126,47 @@ function validateFaq(
   return { ok: true, value: cleaned };
 }
 
+// T-CAP-2b (PR1) — the line printed on the durable vendor QR card.
+//
+// Validated here rather than passed through for the same reason as `faq`: it is
+// free text the vendor writes, and it ends up printed on a physical artefact
+// that lives for months. The whitelist alone would let any type through, and
+// the column CHECK only guarantees the 1..60 range — so the type, the trim, and
+// the empty-means-null rule are enforced here.
+//
+// This is the real guard, not a duplicate of the input's maxlength: that
+// attribute is a soft UI stop on the Brand page, and this function is callable
+// outside it.
+const QR_CARD_LINE_MAX = 60;
+
+// Returns the value to store on success, or an error string for the 400 body.
+// An empty or whitespace-only value becomes null, not "": the card is designed
+// to read correctly without the line, so "nothing written" is a supported end
+// state and must have exactly one representation in the column. Over-length is
+// rejected rather than truncated — silently cutting a vendor's own words and
+// then printing the remainder on a card they cannot easily reprint is worse
+// than telling them.
+function validateQrCardLine(
+  value: unknown,
+): { ok: true; value: string | null } | { ok: false; error: string } {
+  if (value === null) return { ok: true, value: null };
+  if (typeof value !== "string") {
+    return { ok: false, error: "qr_card_line must be a string or null" };
+  }
+
+  const line = value.trim();
+  if (!line) return { ok: true, value: null };
+
+  if (line.length > QR_CARD_LINE_MAX) {
+    return {
+      ok: false,
+      error: `qr_card_line cannot be longer than ${QR_CARD_LINE_MAX} characters`,
+    };
+  }
+
+  return { ok: true, value: line };
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   const jsonResponse = (body: unknown, status: number) =>
@@ -188,6 +233,13 @@ Deno.serve(async (req) => {
 
     if (key === "faq") {
       const result = validateFaq(fields[key]);
+      if (!result.ok) return jsonResponse({ error: result.error }, 400);
+      update[key] = result.value;
+      continue;
+    }
+
+    if (key === "qr_card_line") {
+      const result = validateQrCardLine(fields[key]);
       if (!result.ok) return jsonResponse({ error: result.error }, 400);
       update[key] = result.value;
       continue;
