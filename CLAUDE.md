@@ -2745,7 +2745,9 @@ for quick chronological recall across the whole platform.
   Decisions embedded in the artefact, all settled rather than deferred:
   no catering line (a printed artefact may only encode facts as durable
   as the print, and `catering_enabled` is a toggle — the page carries
-  catering, the card does not); no AI generation anywhere (the line's
+  catering, the card does not; **this makes the vendor page's catering
+  block load-bearing for the card's design — see
+  T-catering-link-presence, 2026-07-21**); no AI generation anywhere (the line's
   entire value is that it is the vendor's own words); no `is_internal`
   or `status` gate (a false positive blocking a real vendor from
   printing is far worse than a test card nobody prints); counter card
@@ -2765,6 +2767,43 @@ for quick chronological recall across the whole platform.
   reads a `primary_color` column that is not the live one). CLAUDE.md's
   own stale `primary_color` reference in learning #33 corrected to
   `brand_primary_color` in the same commit.
+
+- 2026-07-21: T-catering-link-presence — the catering route on
+  `vendor.html` given enough presence to be found. Follow-up to PR #494,
+  which shipped the route as a bare `.undercta` text link below the
+  follow card; live review found it read as a footer legal link.
+
+  **This is not cosmetic, and the reason is worth carrying forward.**
+  The durable counter card (T-CAP-2b PR2) deliberately carries NO
+  catering copy, on the explicit grounds that a printed artefact may
+  only encode facts as durable as the print and `catering_enabled` is a
+  toggle — the page carries catering, the card does not. That decision
+  only holds while the page carries the route legibly, so this block's
+  presence is a **dependency of the counter card's design**, not a
+  styling preference. The rationale is recorded in `vendor.html` above
+  `cateringLinkHtml()` as well as in BACKLOG.md, because whoever next
+  tidies that block will be reading the file.
+
+  The bare link became a contained block (`h3` "Feeding a crowd?", muted
+  body naming the vendor, brand-coloured "Send an enquiry →"). New
+  `.catering` class — **`.undercta` was deliberately not reused**: the
+  audit found it already owns the live-drop "Pre-order only…" line in
+  `orderCtaHtml()`, so restyling it in place would have silently changed
+  an unrelated line. Tint derives from `var(--v-primary)` via
+  `color-mix`, so a vendor with no `brand_primary_color` gets the
+  `#8B6B3F` fallback and nothing breaks (learning #85).
+
+  Two invariants carried over from #494, both easy to break by accident:
+  the block is a **sibling of `#vpFollowCard`, never inside it** (the
+  follow success handler replaces `card.innerHTML`, destroying anything
+  nested), and it renders **only** when `catering_enabled === true`, with
+  spacing on its own margin so a false value leaves no gap. It is a
+  deliberate SECOND door — in `live_drop` the follow card is
+  intentionally de-emphasised (ghost CTA, primary action is the hero
+  order button), so the block is kept quieter on every axis at once
+  rather than branching per state. If it still out-weighs the ghost card,
+  the fix is dropping the tint to `transparent` — one line, and
+  explicitly not per-state branching.
 
 ## Future architecture
 

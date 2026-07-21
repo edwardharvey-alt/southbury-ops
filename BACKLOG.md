@@ -107,6 +107,74 @@ read-path prerequisite).
 **Cross-reference:** T-CAP-2 (the durable QR points here), T-CAP-7 (the "nothing
 on" capture surface), T-drop-capacity-anon-grants (public read path).
 
+**T-catering-link-presence — the catering route, made findable ✓ SHIPPED**
+
+**Status:** ✓ Shipped 2026-07-21. Customer-facing change to `vendor.html`, on a
+page two live vendors are already using. Follow-up to PR #494, which shipped the
+catering route but not enough presence to be found.
+
+**The problem.** PR #494 rendered the catering route as a bare `.undercta` text
+link — "Catering for an event? Get in touch." — below the follow card, with no
+container and no accent. Live review found it read as a footer legal link. It
+was smaller in weight than the follow form's own helper text despite being
+nominally a similar size, because the deficit was containment rather than type
+scale.
+
+**Why this is not cosmetic — the load-bearing part.** The durable counter card
+(T-CAP-2b PR2) deliberately carries **no catering copy at all**, on the explicit
+grounds that a printed artefact may only encode facts as durable as the print
+and `catering_enabled` is a toggle: *the page carries catering, the card does
+not*. That decision is only sound while the page carries the route legibly. This
+block's presence is therefore a **dependency of the counter card's design**, not
+a styling preference — quietly returning it to footer weight would silently
+remove the one route the counter card was permitted to omit. That reasoning is
+recorded in `vendor.html` itself above `cateringLinkHtml()`, not only here,
+because the next person to tidy this block will be reading the file, not the
+backlog. A catering enquiry is also the highest-value single interaction
+available on that page.
+
+**What shipped.** The bare link became a contained block: an `h3` "Feeding a
+crowd?", a muted body line naming the vendor, and a brand-coloured "Send an
+enquiry →" text link. New `.catering` class — `.undercta` was deliberately NOT
+reused or modified, because the audit found it already owns the live-drop
+"Pre-order only…" line in `orderCtaHtml()`; restyling it in place would have
+silently changed that unrelated line. The link target is unchanged from #494.
+
+**Copy decisions.** "Feeding a crowd?" mirrors the question form of "Can't make
+this one?" directly above it and states the customer's *problem* rather than the
+vendor's service word. Not to be reverted to "Catering for an event?".
+
+**Hierarchy — the constraint that shaped the styling.** This is a deliberate
+**second door**, never a primary action. In the `live_drop` state the follow
+card is intentionally de-emphasised (ghost CTA) because the primary action is
+the order button up in the hero, so a tinted block beneath it risked inverting
+the hierarchy — someone who simply cannot make this drop should reach the follow
+form first. Resolved without per-state branching (one treatment, all four
+states) by keeping the block quieter than the follow card on every axis at once:
+4% tint vs white fill, 0.5px vs 1px border, 12px vs 14px radius, ~18px vs 34px
+padding, 19px `h3` vs 34px `h2`, text link vs button. If it still out-weighs the
+ghost card on review, dropping `background` to `transparent` is a one-line change
+— branching by state is explicitly *not* the fallback.
+
+**Two invariants preserved from #494, both easy to break by accident.** (a) The
+block is a **sibling of `#vpFollowCard`, never inside it** — the follow success
+handler replaces `card.innerHTML`, so anything nested inside is destroyed on
+submit. (b) It renders **only** when `catering_enabled === true`, with all
+spacing on the block's own margin so a false value leaves no empty container and
+no residual gap. Never rendered in the not-found state.
+
+**Colour.** The tint derives from `var(--v-primary)` via `color-mix` (the
+established pattern on this page), so a vendor with no `brand_primary_color`
+inherits the `#8B6B3F` vendor-brand fallback and the block still renders
+correctly. No second colour value is hardcoded anywhere, and Hearthfire does not
+appear (operational learning #85 — that fallback is the vendor-brand default and
+must never become Hearth's own accent).
+
+**Cross-reference:** PR #494 (shipped the route this makes findable), T-CAP-2b
+PR2 (the counter card whose no-catering-line decision depends on this block's
+legibility), T-CAP-1 (the permanent vendor page this is part of), operational
+learning #85 (the `#8B6B3F` vendor fallback).
+
 **T-CAP-2 · Vendor QR vs drop QR — two distinct artefacts**
 
 **Status:** Open. Above the stop line. Source: §11 Phase 1. Two clearly-labelled
