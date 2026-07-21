@@ -911,18 +911,45 @@
       .qrLineInput{ font-size:16px; } /* 16px minimum — smaller triggers iOS zoom. */
     }
 
-    /* ---- Print: the card alone, at true A6 ----
-       Follows the enquiries.html catering-poster precedent. The card lives
-       inside the operator shell on screen, so it is relocated to <body> root
-       just before printing and restored afterwards, letting the rest of the
-       page be display:none'd without collapsing it. A visibility-only trick
-       leaves blank trailing pages. */
-    @page{ size:A6 portrait; margin:0; }
+    /* ---- Print: a true-size A6 card, centred on an A4 sheet ----
+       Relocation follows the enquiries.html catering-poster precedent — the
+       card lives inside the operator shell on screen, so it is moved to
+       <body> root just before printing and restored afterwards, letting the
+       rest of the page be display:none'd without collapsing it. A
+       visibility-only trick leaves blank trailing pages.
+
+       LOAD-BEARING — the page size is A4, NOT A6, and that is deliberate.
+       `@page{size:...}` is a HINT, not a paper selection. Chrome lays out a
+       page box at the declared size and then SCALES that box to fit whatever
+       sheet the user actually has loaded. Declaring A6 therefore printed the
+       card at roughly 2x on A4 — a ~210mm card carrying an ~80mm QR — while
+       the on-screen preview looked perfectly correct. Declaring the size of
+       real paper and positioning the card at true dimensions inside it is
+       the only way to get 105x148mm out of a domestic printer. Nobody owns
+       A6 paper; printing an A6 card at home always meant printing on A4 and
+       cutting it out. Do NOT "fix" this back to A6. */
+    @page{ size:A4 portrait; margin:0; }
     @media print{
+      html.qrcard-printing,
+      html.qrcard-printing body{
+        margin:0 !important;
+        padding:0 !important;
+        background:none !important;
+      }
       html.qrcard-printing body > *:not(.qrCardStage){ display:none !important; }
+
+      /* Absolutely positioned rather than centred with margins: 74.5 + 148 +
+         74.5 sums to exactly 297mm, so any margin collapse or stray padding
+         would push the card onto a second sheet. Offsets from the page box
+         cannot overflow that way.
+         A4 210mm - 105mm card = 52.5mm each side; 297mm - 148mm = 74.5mm. */
       html.qrcard-printing .qrCardStage{
         display:block !important;
-        position:static !important;
+        position:absolute !important;
+        top:74.5mm !important;
+        left:52.5mm !important;
+        width:105mm !important;
+        height:148mm !important;
         margin:0 !important;
         padding:0 !important;
         border:none !important;
@@ -931,10 +958,29 @@
         max-width:none !important;
       }
       html.qrcard-printing .qrCardStage svg{
+        display:block !important;
         width:105mm !important;
         height:148mm !important;
       }
+
+      /* Trim guide — a production mark, not part of the design, so it is
+         deliberately neutral grey and never the vendor accent. Print-only
+         and injected as a sibling element, so it can never reach the
+         downloaded SVG. print-color-adjust keeps browsers from dropping a
+         pale hairline as "background decoration". */
+      html.qrcard-printing .qrCardTrim{
+        display:block !important;
+        position:absolute;
+        inset:0;
+        box-sizing:border-box;
+        border:0.2mm solid #C9C4BC;
+        -webkit-print-color-adjust:exact;
+        print-color-adjust:exact;
+        pointer-events:none;
+      }
     }
+    /* Never visible on screen, and never serialised into a download. */
+    .qrCardTrim{ display:none; }
   </style>
 </head>
 <body>
@@ -1203,27 +1249,16 @@
             </div>
           </div>
 
-          <!-- T-CAP-1 (PR4): vendor-authored FAQ -->
-          <div class="brandSection">
-            <div class="brandSectionHead">
-              <div>
-                <h4 class="brandSectionTitle">Questions people ask</h4>
-                <p class="brandSectionSub">These appear on your public page. Answer in your own words — leave any blank and it won’t show.</p>
-              </div>
-            </div>
-
-            <div class="faqRows" id="faqRows"></div>
-
-            <div class="faqFooter">
-              <button class="btnGhost" id="faqAddBtn" type="button">Add a question</button>
-              <span class="faqCount" id="faqCount"></span>
-            </div>
-          </div>
-
           <!-- T-CAP-2b PR2: the durable vendor QR card. The field sits BENEATH
                the rendered card deliberately — the card is what explains what
                the line is for. It was pulled from PR1 precisely because, placed
-               beside Tagline, it read as a third variant of the same field. -->
+               beside Tagline, it read as a third variant of the same field.
+
+               Ordered ABOVE the FAQ section: Q&A is content on the vendor page
+               that can be edited at any time, whereas the card is a physical
+               artefact the vendor has to print before launch. The take-away
+               with a deadline comes first. (The broader regrouping of this page
+               is T-brand-page-field-grouping, deliberately not this PR.) -->
           <div class="brandSection" id="qrCardSection">
             <div class="brandSectionHead">
               <div>
@@ -1234,6 +1269,10 @@
             <div class="qrCardLayout">
               <div class="qrCardStage" id="qrCardStage">
                 <div id="qrCardHost"></div>
+                <!-- Print-only trim guide. A sibling of the SVG host, never a
+                     child, so re-rendering the card cannot remove it and it can
+                     never be serialised into a download. -->
+                <div class="qrCardTrim" aria-hidden="true"></div>
               </div>
 
               <div class="qrCardSide">
@@ -1254,13 +1293,14 @@
 
                 <div class="qrCardButtons">
                   <button class="btnGhost" id="qrCardDownloadBtn" type="button">Download card</button>
+                  <div class="helperText">For your own artwork. Opens small in a browser — that is the true printed size.</div>
                   <button class="btnGhost" id="qrCardDownloadQrBtn" type="button">Download QR only</button>
                   <button class="btnGhost" id="qrCardPrintBtn" type="button">Print</button>
                 </div>
 
                 <div class="helperText">
-                  Printing at home? Use Print, then Save as PDF — it keeps the
-                  fonts exactly right.
+                  Prints on A4 — trim along the guide. Use Print, then Save as
+                  PDF to keep the fonts exactly right.
                 </div>
               </div>
             </div>
@@ -1280,6 +1320,23 @@
               <p class="qrExampleLine">Everything’s made the morning you collect it.</p>
               <p class="qrExampleLine">Twelve portions, once a week. That’s the whole thing.</p>
               <p class="qrExampleLine">My nan’s recipe, and she checks.</p>
+            </div>
+          </div>
+
+          <!-- T-CAP-1 (PR4): vendor-authored FAQ -->
+          <div class="brandSection">
+            <div class="brandSectionHead">
+              <div>
+                <h4 class="brandSectionTitle">Questions people ask</h4>
+                <p class="brandSectionSub">These appear on your public page. Answer in your own words — leave any blank and it won’t show.</p>
+              </div>
+            </div>
+
+            <div class="faqRows" id="faqRows"></div>
+
+            <div class="faqFooter">
+              <button class="btnGhost" id="faqAddBtn" type="button">Add a question</button>
+              <span class="faqCount" id="faqCount"></span>
             </div>
           </div>
 

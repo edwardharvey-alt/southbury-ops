@@ -307,13 +307,58 @@ one line does not make it bigger, it makes it smaller.
 **Patterns followed rather than invented.** Print uses the `enquiries.html`
 catering-poster isolation pattern — relocate the card to `<body>` root on
 `beforeprint` via a comment placeholder, restore on `afterprint`, hide siblings
-through an `html.qrcard-printing` class, `@page{size:A6 portrait;margin:0}` —
-because Brand Hearth is an operator shell, not a standalone poster page; a
-visibility-only approach leaves blank trailing pages. Downloads use the
-`activation.html:2185` helper shape with `new Blob([svg],
-{type:'image/svg+xml'})` standing in for `canvas.toBlob`, same detached `<a
-download>`, same 1000ms `revokeObjectURL`. All CSS is page-scoped per critical
-rule #9 — `assets/hearth.css` is untouched.
+through an `html.qrcard-printing` class — because Brand Hearth is an operator
+shell, not a standalone poster page; a visibility-only approach leaves blank
+trailing pages. Downloads use the `activation.html:2185` helper shape with
+`new Blob([svg], {type:'image/svg+xml'})` standing in for `canvas.toBlob`, same
+detached `<a download>`, same 1000ms `revokeObjectURL`. All CSS is page-scoped
+per critical rule #9 — `assets/hearth.css` is untouched.
+
+**LOAD-BEARING — the print page is A4, not A6, and declaring A6 silently
+printed the card at ~2x.** The first implementation declared
+`@page{size:A6 portrait;margin:0}`, which reads as correct and previewed as
+correct. It is not. **`@page{size:...}` is a HINT, not a paper selection:**
+Chrome lays out a page box at the declared size and then SCALES that box to fit
+whatever sheet is actually loaded. Declaring A6 and printing on A4 therefore
+scaled the whole card up by the A4/A6 ratio — a ~210mm card carrying an ~80mm
+QR instead of a 105×148mm card with a 40mm QR, with the brand band spanning the
+full width of the sheet.
+
+**Found by printing it.** Nothing in the code, the preview at the page's own
+scale, or any automated check would have caught this — the SVG geometry was
+correct throughout; it was the page box around it that was wrong. This is the
+concrete argument for the "print one on paper" line at the top of the manual
+checklist: a print defect is only visible in print.
+
+**Resolution: declare the size of real paper and position the card at true
+dimensions inside it.** `@page{size:A4 portrait;margin:0}`, with the card
+absolutely positioned at `top:74.5mm; left:52.5mm; width:105mm; height:148mm`
+— A4 is 210×297mm, so (210−105)/2 = 52.5mm and (297−148)/2 = 74.5mm. Absolute
+offsets rather than centring margins because 74.5 + 148 + 74.5 sums to exactly
+297mm: any margin collapse or stray padding would push the card onto a second
+sheet, whereas offsets from the page box cannot overflow that way. **Do not
+"fix" this back to A6** — nobody owns A6 paper, and printing an A6 card at home
+always meant printing on A4 and cutting it out.
+
+A hairline **trim guide** (0.2mm, `#C9C4BC`) sits exactly on the 105×148mm
+boundary so the vendor knows where to cut. Deliberately neutral grey and never
+the vendor accent — it is a production mark, not part of the design.
+`print-color-adjust:exact` stops browsers dropping a pale hairline as
+background decoration. It is a print-only DOM element and a **sibling** of the
+SVG host rather than a child, so re-rendering the card cannot remove it; and
+because both downloads build their SVG string from scratch (no `outerHTML`, no
+`XMLSerializer`, no DOM read), the guide can never reach a downloaded file.
+
+**General lesson worth carrying to any future print surface:** declaring a
+`@page` size smaller than the paper the user actually has scales the artwork.
+If a surface must come out at a true physical size, declare the real sheet and
+place the artefact inside it.
+
+**Section order: the counter card sits ABOVE the FAQ section.** Q&A is content
+that appears on the vendor page and can be edited at any time; the counter card
+is a physical artefact the vendor takes away and has to print before launch. The
+take-away with a deadline comes first. Only the existing block moved — the
+broader regrouping of the Brand page remains T-brand-page-field-grouping.
 
 **The two outputs are for different jobs, and the guidance says so.** The
 downloaded SVG references `'Cormorant Garamond'` and `'Figtree'` by family name,
@@ -323,9 +368,18 @@ shop** — printing happens from the Brand page with the webfonts loaded, so the
 PDF embeds them and the type is exactly right. **The SVG download is for a
 vendor placing the QR into their own artwork** — a menu board, an A-board, a
 designer's layout — where they will be setting their own type anyway. A
-`.helperText` line beneath the buttons on the Brand page states the PDF route
-("Printing at home? Use Print, then Save as PDF — it keeps the fonts exactly
-right.") so a vendor does not reach the print shop with a font-substituted card.
+`.helperText` line beneath the buttons on the Brand page states the route
+("Prints on A4 — trim along the guide. Use Print, then Save as PDF to keep the
+fonts exactly right.") so a vendor does not reach the print shop with a
+font-substituted card.
+
+**The SVG opening small in a browser is CORRECT behaviour, not a defect.** It
+carries `width="105mm" height="148mm"`, so a browser renders it at its true
+physical size — which on a typical monitor looks like a small image. That is the
+card being right, not the card being broken. A `.helperText` beneath the
+"Download card" button says so directly ("For your own artwork. Opens small in a
+browser — that is the true printed size.") specifically to stop the next person
+filing it as a bug and "fixing" the geometry that makes true-size printing work.
 
 Opening the downloaded `.svg` on a machine without those fonts falls back to
 Georgia/serif and the system sans — the card stays complete and correct, just
