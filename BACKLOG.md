@@ -180,6 +180,329 @@ page the QR resolves to), T-brand-page-field-grouping (the grouping problem this
 PR surfaced), operational learning #16 (the `update-vendor` EF pattern this
 extends).
 
+**T-CAP-2b PR2 — the durable counter card: generator + Brand page ✓ SHIPPED**
+
+**Status:** ✓ Shipped 2026-07-21. The printed artefact PR1's data layer existed
+for. Counter card only — the 200mm van panel is a different composition and is
+deliberately PR3.
+
+**What shipped.** An A6 counter card (105×148mm) generated on the Brand page,
+with three outputs: download the whole card as one SVG
+(`{slug}-counter-card.svg`), download the bare QR as SVG (`{slug}-qr.svg`) for a
+vendor putting it on their own menu board or A-board, and print at true A6. Plus
+the `qr_card_line` field, placed beneath the rendered card, and a placement
+selector.
+
+**The QR generator is vendored, and that decision has a history.** No reusable
+prior art existed: the three poster surfaces (`activation-poster.html`,
+`host-poster.html`, `enquiries.html`) all load `qrcodejs@1.0.0` from cdnjs,
+which renders to canvas rather than SVG and uses error correction M; and
+`drop-manager.html` round-trips the drop URL through `api.qrserver.com`, a
+remote HTTP service. None is usable for a vector artefact that gets physically
+printed.
+
+Nayuki's QR Code generator is now vendored at `assets/qrcodegen.js` — **MIT, not
+public domain** (the original ticket said public domain; it is wrong). MIT's
+attribution condition is satisfied by retaining the copyright header verbatim,
+which the file does; no LICENSE file or UI attribution is needed.
+
+Nayuki no longer ships prebuilt JavaScript — the upstream repo is
+TypeScript-only (`typescript-javascript/qrcodegen.ts`) with a `build.sh`, and the
+old `javascript/qrcodegen.js` is 404 on master and on tags v1.6.0–v1.8.0. The two
+npm candidates were rejected: `nayuki-qr-code-generator` is a third-party
+repackage by Kirill Maltsev, and `qrcodegen` is an unrelated library. So the
+`.ts` was compiled once from Nayuki's own source and the output vendored. The
+file carries a Hearth provenance header (distinct from Nayuki's) recording the
+source URL, source SHA256, source size, compiler and flags, and the date — so a
+future session can reproduce it rather than trust it. **It is unmodified
+compiler output and must never be hand-edited; change it upstream and
+recompile.** Vendored rather than CDN-loaded for the `libheif.js` reason
+(operational learning #36), sharpened: this page renders something that gets
+physically printed, so a CDN that is down at the moment a vendor prints is an
+unacceptable failure mode.
+
+**Millimetre geometry.** The card is SVG with `viewBox="0 0 105 148"`, so every
+internal coordinate IS a millimetre and the downloaded file prints at true A6
+from any printer with no scaling step. This is deliberately NOT the
+px-at-96dpi or CSS-`zoom` approach the existing posters use (operational
+learning #63) — those exist to fit a screen; this exists to survive a print
+shop.
+
+**Scan reliability is treated as unrecoverable-if-wrong.** Error correction H; a
+4-module quiet zone built INSIDE the viewBox so it cannot be cropped away by
+whoever prints it; pure `#000000` modules on `#ffffff`; no vendor colour in the
+modules and no logo inset. A failed scan at a counter is unrecoverable — the
+customer does not retry, they walk off, and we never learn it happened.
+
+**Module size is a checked property, not an assumption.** A longer slug pushes
+the QR to a higher version, meaning more and smaller modules, and module size is
+what decides whether a phone reads a scuffed sticker. The generator computes
+mm-per-module and steps the QR from 40mm up to 44mm rather than render anything
+below 0.7mm. Measured (quiet zone inside the box, worst-case `?src=counter`):
+`southbury-farm-pizza` / `healthy-habits` / `test-vendor` all v6, 49 modules,
+**0.816mm**; `test-11` / `test-12` v5, 45 modules, **0.889mm**. The floor bites
+at a 48-character slug (0.656mm at 40mm, 0.721mm at 44mm) — far beyond the
+20-character longest known production slug.
+
+**The QR encodes `?src={placement}`; the printed text URL does not.** The QR
+carries `https://lovehearth.co.uk/{slug}?src={placement}` so we learn where scans
+come from; the text beneath reads `lovehearth.co.uk/{slug}`. A parameterised URL
+under a QR reads as tracking junk, and a hand-typed visit genuinely is a
+different capture surface. Placements are `counter · table · flyer`, matching
+`update-vendor`'s whitelist exactly. Changing the selector re-renders only the
+QR — the three are the same artefact in different places.
+
+**Field placement is the whole reason PR1 was split.** `qr_card_line` sits
+BENEATH the rendered card so the card explains what the field is for; beside
+Tagline it read as a third variant of the same field. Wired through the five
+standard touchpoints exactly as `tagline` is — `getFormData()` with `.trim()`,
+`populateForm()` with `|| ""`, the `attachEvents()` id array, `saveVendor()` with
+`|| null`, and the existing Save Brand button. No save-on-change path. The card
+re-renders live as the vendor types, so they see the line in place and see what
+60 characters actually looks like. Three static examples teach the shape and are
+deliberately **not clickable** — they must never populate the input.
+
+**Settled decisions, recorded so they are not relitigated.** No catering line,
+conditional or otherwise: a printed artefact may only encode facts as durable as
+the print, and `catering_enabled` is a toggle — the page carries catering, the
+card does not. No AI generation anywhere in this feature: the line's entire value
+is that it is the vendor's own words. No `is_internal` or `status` gate: every
+vendor can generate their card, because a false positive blocking a real vendor
+from printing is far worse than a test card nobody prints. Hearthfire `#C4511A`
+appears nowhere on the card; the accent is the vendor's `brand_primary_color`,
+falling back to `#8B6B3F` when null (operational learning #85 — that fallback is
+the vendor-brand default and must never become Hearthfire).
+
+**Two overflow defects were found and fixed during verification**, both of the
+"only discovered once it has been printed" kind. First, a 60-character line
+containing no spaces is a single unbreakable token — `wrapToWidth` returned one
+over-wide line, the two-line check passed, and it ran off the card; fixed by
+falling back to a character-level break. Second, the fixed card copy (ask line,
+URL, promise, footer) has neither wrapping nor step-down to rescue it, and the
+promise line measured within ~1mm of the card width; all four are now measured
+and compressed via `textLength`/`lengthAdjust` if they would ever overrun. The
+wordmark gained the same last-resort clamp. Net effect: the card is
+structurally incapable of overflowing for any input.
+
+**Wordmark sizing is deterministic**, so the same name always produces the same
+card: any single word longer than 12 chars → one line at 6mm, no break; one word
+of 12 chars or fewer → one line at 11mm; two words → two lines at 9mm; three or
+more words → two lines at 7.5mm broken at the most balanced word boundary. Hard
+cap of two lines; overflow steps the size DOWN rather than adding a third line.
+Sizes are chosen against real font metrics via `getComputedTextLength()` on a
+hidden SVG sharing the card's viewBox, re-run on `document.fonts.ready` so the
+first paint does not size against the fallback stack.
+
+**The no-break clause is scoped to an over-long single word, and that scoping
+matters.** The rule originally also forced four-or-more-word names onto one
+line, which produced `SOUTHBURY FARM PIZZA COMPANY` at 4.2mm — 28 characters
+across an 87mm measure cannot be set large at any font size, so the step-down
+ladder drove it down until it fitted. Corrected so a many-word name breaks to
+two balanced lines exactly as a three-word name does; that name now sets as
+`SOUTHBURY FARM` / `PIZZA COMPANY` at the specified 7.5mm. The surviving
+no-break case is the only one where it is actually needed: a single word has no
+boundary to break on. General principle worth keeping — forcing a long name onto
+one line does not make it bigger, it makes it smaller.
+
+**Patterns followed rather than invented.** Print uses the `enquiries.html`
+catering-poster isolation pattern — relocate the card to `<body>` root on
+`beforeprint` via a comment placeholder, restore on `afterprint`, hide siblings
+through an `html.qrcard-printing` class — because Brand Hearth is an operator
+shell, not a standalone poster page; a visibility-only approach leaves blank
+trailing pages. Downloads use the `activation.html:2185` helper shape with
+`new Blob([svg], {type:'image/svg+xml'})` standing in for `canvas.toBlob`, same
+detached `<a download>`, same 1000ms `revokeObjectURL`. All CSS is page-scoped
+per critical rule #9 — `assets/hearth.css` is untouched.
+
+**LOAD-BEARING — the print page is A4, not A6, and declaring A6 silently
+printed the card at ~2x.** The first implementation declared
+`@page{size:A6 portrait;margin:0}`, which reads as correct and previewed as
+correct. It is not. **`@page{size:...}` is a HINT, not a paper selection:**
+Chrome lays out a page box at the declared size and then SCALES that box to fit
+whatever sheet is actually loaded. Declaring A6 and printing on A4 therefore
+scaled the whole card up by the A4/A6 ratio — a ~210mm card carrying an ~80mm
+QR instead of a 105×148mm card with a 40mm QR, with the brand band spanning the
+full width of the sheet.
+
+**Found by printing it.** Nothing in the code, the preview at the page's own
+scale, or any automated check would have caught this — the SVG geometry was
+correct throughout; it was the page box around it that was wrong. This is the
+concrete argument for the "print one on paper" line at the top of the manual
+checklist: a print defect is only visible in print.
+
+**Resolution: declare the size of real paper and position the card at true
+dimensions inside it.** `@page{size:A4 portrait;margin:0}`, with the card
+absolutely positioned at `top:74.5mm; left:52.5mm; width:105mm; height:148mm`
+— A4 is 210×297mm. **Do not "fix" this back to A6** — nobody owns A6 paper, and
+printing an A6 card at home always meant printing on A4 and cutting it out.
+
+**VERIFIED CORRECT by measurement, not asserted.** The A4 page fix was confirmed
+in print preview: the card measures exactly **50% of sheet width** and sits
+**25%–75% vertically**, and **Chrome hides the paper-size selector entirely** —
+which is the tell that the declared page size is being honoured rather than
+scaled to fit a different sheet. Recorded as a verified fact because the
+original A6 defect also *looked* right at every stage short of measuring it.
+
+**The sheet prints FOUR cards, not one.** A4 is exactly four A6, so one card per
+sheet wasted three quarters of the paper and handed the vendor a single card
+when what they want is a stack. Print output is a 2×2 grid of the same card at
+true 105×148mm, edge to edge with no page margins: cells at (0,0), (105,0),
+(0,148) and (105,148) mm. 2 × 105 = 210mm exactly across; 2 × 148 = 296mm of a
+297mm sheet. **The spare 1mm sits at the bottom rather than being split** — a
+0.5mm offset at the top would put the top cut line just inside the paper edge
+and make it ambiguous to cut against. Cells are positioned from the top-left, so
+the slack falls out at the bottom by construction.
+
+The sheet is **print-only and cloned**: `buildPrintSheet()` copies the rendered
+SVG into four positioned cells at `beforeprint`, `teardownPrintSheet()` removes
+them at `afterprint` — the same lifecycle the earlier single-card relocation
+used, but building a separate sheet rather than moving the live node, so the
+on-screen preview is never disturbed. Cloning rather than re-generating matters:
+the four cards must be identical to each other *and* to the preview the vendor
+just approved. **The on-screen preview stays as ONE card** — only print repeats.
+
+Each cell carries its **own** hairline **trim guide** (0.2mm, `#C9C4BC`) on its
+105×148mm boundary, so the four guides line up into one continuous cut grid —
+two cuts with a guillotine, four with scissors. Deliberately neutral grey and
+never the vendor accent: it is a production mark, not part of the design.
+`print-color-adjust:exact` stops browsers dropping a pale hairline as background
+decoration. Guides and clones are print-only DOM, and because both downloads
+build their SVG string from scratch (no `outerHTML`, no `XMLSerializer`, no DOM
+read), neither can ever reach a downloaded file.
+
+**General lesson worth carrying to any future print surface:** declaring a
+`@page` size smaller than the paper the user actually has scales the artwork.
+If a surface must come out at a true physical size, declare the real sheet and
+place the artefact inside it — then fill the sheet, because paper comes in whole
+sheets whatever you put on it.
+
+**Section order: the counter card sits ABOVE the FAQ section.** Q&A is content
+that appears on the vendor page and can be edited at any time; the counter card
+is a physical artefact the vendor takes away and has to print before launch. The
+take-away with a deadline comes first. Only the existing block moved — the
+broader regrouping of the Brand page remains T-brand-page-field-grouping.
+
+**Action order: Print is primary, the downloads are the expert path.** Print
+sits first and is the only `btnAccent` on the card; "Download card" and
+"Download QR only" follow as `btnGhost`. Most vendors want a card in their hand,
+not an SVG file — the file outputs serve a vendor with their own artwork or a
+print shop, which is the minority case.
+
+**Every button carries its own caption, directly beneath it.** An earlier
+arrangement left one caption floating between two buttons and another three
+elements away from the button it described, so neither reliably read as
+belonging to anything. Each action is now a button plus its caption in one
+wrapper, with the gap *between* actions (18px) several times the gap *within*
+one (5px), so the pairing is visible rather than inferred. The captions do
+distinct work: Print names the four-up sheet and the PDF route; "Download card"
+states that opening small in a browser IS the true printed size (see below);
+"Download QR only" names the menu-board / A-board use.
+
+**The two outputs are for different jobs, and the guidance says so.** The
+downloaded SVG references `'Cormorant Garamond'` and `'Figtree'` by family name,
+so it renders with those fonts only where they are installed. That makes
+**Print → Save as PDF the recommended route for anything going to a print
+shop** — printing happens from the Brand page with the webfonts loaded, so the
+PDF embeds them and the type is exactly right. **The SVG download is for a
+vendor placing the QR into their own artwork** — a menu board, an A-board, a
+designer's layout — where they will be setting their own type anyway. The Print
+caption states the route ("Four cards on one A4 sheet — cut along the guides.
+Choose Save as PDF to keep the fonts exactly right.") so a vendor does not reach
+the print shop with a font-substituted card.
+
+**The SVG opening small in a browser is CORRECT behaviour, not a defect.** It
+carries `width="105mm" height="148mm"`, so a browser renders it at its true
+physical size — which on a typical monitor looks like a small image. That is the
+card being right, not the card being broken. The "Download card" caption says so
+directly ("The full card as a vector file, for your own artwork or a print shop.
+Opens small in a browser — that is its true printed size.") specifically to stop
+the next person filing it as a bug and "fixing" the geometry that true-size
+printing depends on.
+
+Opening the downloaded `.svg` on a machine without those fonts falls back to
+Georgia/serif and the system sans — the card stays complete and correct, just
+not typographically identical. Embedding the fonts would mean base64-inlining
+them into every download (large, and a licensing question); converting text to
+paths needs a font parser we do not have. Revisit only if the PDF route turns
+out not to cover a real vendor's workflow.
+
+**Cross-reference:** T-CAP-2b PR1 (the data layer this writes to), T-CAP-2b PR3
+(the van panel), T-CAP-2 (the two-artefact distinction), T-CAP-1 (the page the
+QR resolves to), T-drop-poster-remote-qr and T-service-board-stale-colour-column
+(both surfaced by this PR's audit), T-brand-page-field-grouping, operational
+learnings #36 (self-host critical libraries), #63 (why not CSS zoom) and #85
+(the `#8B6B3F` fallback).
+
+**T-CAP-2b PR3 · The van panel (200mm)**
+
+**Status:** Open. Above the stop line. The 200mm van panel, deliberately held
+back from PR2 because it is a different composition rather than a rescaled
+counter card — a panel read from across a car park has different size, contrast
+and copy requirements from a card read at arm's length on a counter.
+
+**Hard requirement:** it must use the vendored Nayuki generator
+(`assets/qrcodegen.js`) at **error correction H**, NOT `qrcodejs`. Two QR stacks
+on the same platform is precisely the outcome to avoid. The same rules carry
+over: 4-module quiet zone inside the viewBox, pure black on white, no vendor
+colour in the modules, mm-based `viewBox` geometry, and module size as a checked
+property — at 200mm the module size is generous, but it should still be computed
+rather than assumed. A `van` placement value will need adding to
+`update-vendor`'s whitelist, which PR2 deliberately did not do.
+
+**Cross-reference:** T-CAP-2b PR2 (the generator and every decision it settled),
+T-CAP-2 (durable vendor QR vs drop QR).
+
+**T-CAP-2b-print-paper-sizes · Let the vendor choose their paper**
+
+**Status:** Open. Tier 5. Post-launch, small. Surfaced by T-CAP-2b PR2
+(2026-07-21).
+
+**The problem.** Print is hardcoded to A4 with four cards. That is the right
+default — A4 is the only size a domestic printer can be assumed to have loaded —
+but it is not the only case. A vendor with A5 in the tray, or one who wants a
+single larger card, has no route except downloading the SVG and scaling it in
+their own print software.
+
+**Why it cannot simply be changed.** The declared `@page` size must match the
+paper actually loaded or the artwork scales — this is exactly the defect PR2
+fixed, where a declared A6 page printed at ~2x on A4. So a paper option must
+change the declaration AND the layout together, never one or the other. A
+half-done version of this ticket (a selector that changes the grid but not the
+`@page` rule, or vice versa) reintroduces the original defect in a form that is
+harder to spot, because it would only misprint on the non-default option.
+
+**Fix shape (not built).** A paper selector that sets both the `@page` size and
+the cell grid:
+
+| Paper | Cards | Grid |
+|---|---|---|
+| A4 portrait (210×297) | 4 | 2 × 2 — current behaviour, stays the default |
+| A5 **landscape** (210×148) | 2 | 2 × 1 |
+| A6 portrait (105×148) | 1 | 1 × 1 |
+
+Each option fills its sheet, so no configuration wastes paper or floats a card
+in white space. The trim guide logic is unchanged — it already draws per cell.
+
+**Derived at ticket-writing time, not specified — the A5 option must be
+LANDSCAPE.** A5 portrait is 148×210mm, which fits only ONE 105×148 card and
+leaves 43×62mm of waste, breaking this ticket's own fills-its-sheet principle.
+A5 landscape is 210×148mm and takes exactly two cards across with zero slack.
+Worth stating explicitly because "A5 → two cards" reads as obviously true and is
+only true in one orientation — the same shape of assumption that produced the
+A6 defect. Verified arithmetic for all four candidates: A4 portrait 2×2 with
+0mm × 1mm slack; A5 landscape 2×1 with zero slack; A6 portrait 1×1 with zero
+slack; A5 portrait 1×1 with 43mm × 62mm waste (rejected).
+
+**Guardrail: whatever is selected, the card geometry stays 105×148mm with a 40mm
+QR.** The paper changes, the artefact never does. A vendor wanting a physically
+bigger artefact wants PR3's van panel, not a scaled counter card — scaling this
+one would also scale the QR past the size the module-size check was reasoned
+about.
+
+**Cross-reference:** T-CAP-2b PR2 (the A4 fix and why the declared page size is
+load-bearing), T-CAP-2b PR3 (the van panel — a genuinely larger artefact, which
+is the right answer to "I want something bigger" rather than scaling this one).
+
 **T-CAP-3 · Till QR — capture only (no ordering, no payment)**
 
 **Status:** Open. Above the stop line. Source: §11 Phase 2; §9.2 (payments).
@@ -5386,6 +5709,31 @@ T-hearth-intelligence-revenue-field-audit — audit hearth-intelligence.js for s
 **Fix shape (not built):** grep `revenue_pence` across `assets/hearth-intelligence.js`, identify every read site, trace `d` back to its source (raw row from which view? from which EF response?), confirm the field is actually populated. For each broken read, switch to the canonical field name. Verify against the same surfaces the intelligence module renders into (insights.html, customers.html, home.html).
 
 **Cross-reference:** operational learning #56 (the consolidated revenue/scope-source correctness rule).
+
+T-drop-poster-remote-qr — drop QR is generated by a third-party HTTP service
+
+**Status:** Open. Tier 5-B. Post-launch. Surfaced by the T-CAP-2b PR2 prior-art audit (2026-07-21).
+
+**Problem:** `drop-manager.html:2264` (`getQrImageUrl`) builds its QR by calling `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=<drop URL>`, and `downloadQr()` (~:5920) hands that remote URL straight to the download anchor. Two distinct problems, of different severity:
+
+1. **Data.** The drop URL — which identifies the vendor and the drop — leaves the platform to a third party we have no relationship with, no agreement with, and no visibility into. It is not sensitive in the PII sense, but it is unnecessary egress on a path that has no need to leave the origin.
+2. **Availability.** Poster generation silently depends on that service being up at the exact moment a vendor needs it. The failure is a broken image, at the point of printing.
+
+The three `qrcodejs@1.0.0` cdnjs sites (`activation-poster.html:13`, `host-poster.html:12`, `enquiries.html:20`) are the same family but less severe — a CDN dependency rather than a data one, since qrcodejs renders locally once loaded.
+
+**Fix shape (not built):** point all four at the vendored `assets/qrcodegen.js` (shipped by T-CAP-2b PR2). `getQrImageUrl` becomes a local SVG or canvas render; the download path then serialises locally rather than fetching a remote URL. Note the existing sites use error correction M and render to canvas, so this is a behaviour change as well as a dependency change — worth confirming the drop poster's QR still scans at its printed size, using the same mm-per-module check PR2 introduced.
+
+**Cross-reference:** T-CAP-2b PR2 (vendored the generator), operational learning #36 (self-host critical client-side libraries).
+
+T-service-board-stale-colour-column — Service Board reads a column that may not exist
+
+**Status:** Open. Tier 5-B. Post-launch, small. Surfaced by the T-CAP-2b PR2 audit (2026-07-21).
+
+**Problem:** `service-board.html` reads `vendor.primary_color` at :2067, :2435 and :2567, each as `const accent = vendor.primary_color || "#8B6B3F"`. Every other surface on the platform reads `brand_primary_color` — `order.html`, `catering-enquiry.html`, `activation.html`, `enquiries.html`, `home.html` and `brand-hearth.html` all use that name. If `primary_color` is null (or absent) on vendor rows, these three reads fall through to the `#8B6B3F` fallback and the vendor's actual brand colour never appears on the Service Board — silently, with no error, which is why it would not have been noticed.
+
+**Verify before fixing:** confirm against `information_schema.columns` whether `vendors.primary_color` exists at all, and if it does, whether any row has a non-null value. The fix is a three-line rename only if the column is genuinely stale; if it exists and is populated for some vendors, the question becomes which column is authoritative. CLAUDE.md's operational learning #33 also referenced `primary_color` and was corrected to `brand_primary_color` in the T-CAP-2b PR2 commit — the doc was propagating the same staleness.
+
+**Cross-reference:** operational learning #26 (audit the full read-write loop when columns change), operational learning #54 (validate column lists against the live schema, not SCHEMA.md).
 
 T-order-error-state-polish — order.html failed-load state reads as a rendering failure
 

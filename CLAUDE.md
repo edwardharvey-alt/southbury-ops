@@ -875,7 +875,7 @@ on top of the coding rules above.
 33. **Vendor colour vs Hearthfire on customer-facing pages.**
     `order.html` is the vendor's customer surface, not a Hearth
     operator page. Primary CTAs ("Add to order", "Customize",
-    "Pay") use the vendor's `primary_color` from the loaded
+    "Pay") use the vendor's `brand_primary_color` from the loaded
     vendor record — not the Hearthfire constant `#c4511a`.
     Hearthfire belongs on Hearth operator pages only. The only
     Hearth signal on the order page is the "Powered by Hearth"
@@ -2196,6 +2196,9 @@ stop.
 - T-CAP-1 — Permanent vendor page: durable `lovehearth.co.uk/{vendor}` resolving to ordering / drop announced / drop live / nothing on; the "nothing on" state IS a capture surface; live state shows real capacity via an Edge Function (never anon PostgREST — see T-drop-capacity-anon-grants). **THE UNLOCK / highest capture-layer priority.** §11 Phase 1. — open
 - T-CAP-2 — Vendor QR vs drop QR: two artefacts — durable vendor QR → vendor page; drop QR → a drop, short-lived. §11 Phase 1. — open
 - T-CAP-2b PR1 — vendor QR card line, DATA LAYER ONLY: ✓ SHIPPED 2026-07-21. Nullable `vendors.qr_card_line` (migration `20260721130000`) + CHECK (1–60 chars after `btrim`) + `update-vendor` whitelist entry and `validateQrCardLine`. **No UI** — the Brand page field was built in this PR and pulled before merge (beside Tagline and "In your own words" it read as a third variant of the same field while naming a card absent from the page); it moves to PR2, beneath the rendered card that explains it. Sequencing correction, not a scope cut. After this PR the column has validation and no writer — intended, not drift. NULL is a supported end state; no AI generation, by decision; over-length rejected, never truncated; whitespace-only coerces to NULL. See T-brand-page-field-grouping.
+- T-CAP-2b PR2 — the durable vendor QR card (generator + Brand page): ✓ SHIPPED 2026-07-21. A6 counter card (105×148mm) rendered as SVG with `viewBox="0 0 105 148"` so every coordinate is a millimetre and the download prints at true size with no scaling step. Nayuki's QR generator vendored at `assets/qrcodegen.js` (MIT, compiled once from his TypeScript source — see the provenance header; never hand-edit, recompile). Error correction H, 4-module quiet zone inside the viewBox, pure `#000` on `#ffffff`. QR encodes `?src={placement}`; the printed text URL stays clean. `qr_card_line` field placed BENEATH the rendered card, wired through the five standard touchpoints. Outputs: download card SVG, download QR-only SVG, print at true A6 (enquiries.html print-isolation pattern). Decisions embedded: no catering line (a printed artefact may only encode facts as durable as the print, and `catering_enabled` is a toggle), no AI generation (the line's whole value is that it is the vendor's own words), no `is_internal`/`status` gate (a false positive blocking a real vendor from printing is worse than a test card nobody prints), counter card only — the 200mm van panel is PR3.
+- T-CAP-2b PR3 — the van panel (200mm): a different composition from the counter card, deliberately deferred out of PR2. **Must use the vendored Nayuki generator at error correction H — NOT qrcodejs.** Two QR stacks on the same platform is the outcome to avoid. — open
+- T-CAP-2b-print-paper-sizes — let the vendor choose their paper: print is hardcoded to A4/four-up, which is the right default (the only size a domestic printer can be assumed to have) but not the only case. A paper selector must change the `@page` declaration AND the cell grid together — changing one without the other reintroduces the PR2 scaling defect on the non-default option only, which is harder to spot. A4 → 4 cards, A5 **landscape** → 2, A6 → 1; each fills its sheet (A5 *portrait* fits only one card with 43×62mm waste — the orientation is load-bearing). Card geometry stays 105×148mm with a 40mm QR whatever the paper; a vendor wanting a bigger artefact wants PR3's van panel, not a scaled card. Post-launch, small. — open
 - T-CAP-3 — Till QR (capture only): no ordering, no payment; "scan to hear what's next." Capture-only is principled, not a Stripe compromise (§9.2). — open
 - T-CAP-4 — Table QR / order-ahead: order + pay; justified by staff-time / queue saving. §11 Phase 2. — open
 - T-CAP-5 — Ordering windows, ring-fenced slotted capacity: §6.2 design — default closed, real declared capacity (no rejection), slotted, planned variation only, never dynamic, never "always on." Distinct from the event multi-window feature. — open
@@ -2356,6 +2359,8 @@ building any T4-33, T5-9, T5-11, T5-25 or T5-26 work.
 - T-fundraising-notes-overlap — decide the fate of the dormant `drops.fundraising_notes` and `drops.host_share_notes` (nullable text, zero code references, absent from every EF whitelist so nothing can write them). A DECISION ticket, not a delete: do the structured fields (`fundraising_cause_reference`, and a future `host_share_reference`) fully replace free-form notes, or is a notes field still wanted alongside them? Surfaced by `20260719140000_drop_fundraising_cause.sql`. Confirm both columns are empty across ALL rows before any drop — the anon path only sees live/closed/completed. Post-launch, low priority. — open
 - T-order-confirmation-realtime-dead-code — the `postgres_changes` subscription on `orders` in order-confirmation.html's `setupPendingWatch` is inert (`orders` has no anon policy; verified by read-only curl). The 3s poll + reconcile backstop carry every customer. Remove it or document it as inert — recommendation is remove. Do NOT add an anon policy to `orders`. Post-launch. Source: PR #478. — open
 - T-capture-state-accuracy — `register_vendor_interest_atomic` hardcodes `drop_signals.capture_state` to `'resting'` while the follow form renders in all four vendor-page states, so the column records an assumed state rather than the observed one. Verified on live: one `('vendor_page','resting')` group, 2 rows, nothing else writes it. Fix = pass the real state from the page and take it as an RPC parameter (a semantics change, deliberately kept out of the #495 plumbing PR). Surfaced by `20260721120000_drop_signals_capture_placement.sql`. Post-launch, low priority. — open
+- T-drop-poster-remote-qr — `drop-manager.html:2264` (`getQrImageUrl`) generates its QR by round-tripping the drop URL through `api.qrserver.com`. Two problems: the drop URL leaves the platform to a third party we have no relationship with, and poster generation silently depends on that service being up at the moment a vendor needs it. Now that Nayuki is vendored at `assets/qrcodegen.js` (T-CAP-2b PR2) the fix is to point this at the local generator. Also applies to the three `qrcodejs` CDN sites (`activation-poster.html`, `host-poster.html`, `enquiries.html`) — less severe, a CDN dependency rather than a data one, but they should converge on the same generator. Post-launch. Source: T-CAP-2b PR2 audit. — open
+- T-service-board-stale-colour-column — `service-board.html` reads `vendor.primary_color` at :2067, :2435 and :2567. The live column is `brand_primary_color`; if `primary_color` is null on every vendor row in production then these reads are silently falling through to the `#8B6B3F` fallback and the vendor's actual brand colour never appears on the Service Board. Verify against `information_schema` before fixing — the column may not exist at all. Post-launch, small. Source: T-CAP-2b PR2 audit. — open
 - T5-B24 — Password reset page: button stuck on "Sending..." — open (cosmetic)
 - T5-B25 — admin.html: vendor creation is not atomic — open
 - T5-B36 — duplicate-bundle rollback verification — open
@@ -2686,6 +2691,80 @@ for quick chronological recall across the whole platform.
   function and dropping the NOT NULL in the wrong order would leave a
   window where a live drop could be published with a null
   fulfilment_mode (which 500s every checkout in `create-order`).
+
+- 2026-07-21: T-CAP-2b PR2 — the durable vendor QR card. The printed
+  artefact that PR1's data layer existed for. A6 counter card
+  (105×148mm) generated on the Brand page as SVG, downloadable as a
+  card or as the bare QR, and printable at true A6.
+
+  **First vendored QR generator on the platform.** Nayuki's library at
+  `assets/qrcodegen.js` — MIT, header retained verbatim as MIT
+  requires. Nayuki no longer ships prebuilt JavaScript (the repo is
+  TypeScript-only), so it was compiled once from his own source rather
+  than taken from a third-party npm repackage; the file carries a
+  Hearth provenance header recording the source URL, SHA256, compiler
+  and flags so a future session can reproduce it. **It is unmodified
+  compiler output and must never be hand-edited — change it upstream
+  and recompile.** Vendored rather than CDN-loaded for the same reason
+  as `libheif.js` (learning #36): this renders something that gets
+  physically printed, so a CDN that is down when a vendor prints is an
+  unacceptable failure mode.
+
+  **Millimetre geometry is the point.** `viewBox="0 0 105 148"` means
+  every internal coordinate is a millimetre, so the downloaded SVG
+  prints at true A6 from any printer with no scaling step. Deliberately
+  NOT the px-at-96dpi or CSS-`zoom` approach the drop/host posters use
+  — those exist to fit a screen; this exists to survive a print shop.
+
+  **Scan reliability is treated as unrecoverable-if-wrong.** Error
+  correction H, a 4-module quiet zone built INSIDE the viewBox so it
+  cannot be cropped away by whoever prints it, pure `#000000` on
+  `#ffffff`, no vendor colour in the modules, no logo inset. A failed
+  scan at a counter is unrecoverable: the customer does not retry, they
+  walk off, and we never learn it happened. Module size is a CHECKED
+  property, not an assumption — the generator computes mm-per-module
+  and steps the QR from 40mm to 44mm rather than shipping anything
+  below 0.7mm. All known production slugs sit at 0.816–0.889mm.
+
+  **The QR encodes `?src={placement}`; the printed text URL does not.**
+  A parameterised URL under a QR reads as tracking junk, and a
+  hand-typed visit genuinely is a different capture surface. Placements
+  are `counter · table · flyer`, matching `update-vendor`'s whitelist
+  exactly.
+
+  **Field placement was the whole reason PR1 was split.** `qr_card_line`
+  sits BENEATH the rendered card, so the card explains what the line is
+  for — beside Tagline it read as a third variant of the same field.
+  Wired through the five standard touchpoints (`getFormData` with
+  `.trim()`, `populateForm` with `|| ""`, the `attachEvents` id array,
+  `saveVendor` with `|| null`, and the existing Save Brand button); the
+  card re-renders live as the vendor types. Three static examples teach
+  the shape and are deliberately NOT clickable — they must never
+  populate the input.
+
+  Decisions embedded in the artefact, all settled rather than deferred:
+  no catering line (a printed artefact may only encode facts as durable
+  as the print, and `catering_enabled` is a toggle — the page carries
+  catering, the card does not); no AI generation anywhere (the line's
+  entire value is that it is the vendor's own words); no `is_internal`
+  or `status` gate (a false positive blocking a real vendor from
+  printing is far worse than a test card nobody prints); counter card
+  only, with the 200mm van panel deferred to PR3.
+
+  Print follows the `enquiries.html` catering-poster precedent
+  (relocate to `<body>` root on `beforeprint`, restore after,
+  `@page{size:A6 portrait;margin:0}`) rather than the standalone-page
+  approach, because Brand Hearth is an operator shell. Downloads follow
+  the `activation.html` helper shape with `new Blob([svg])` standing in
+  for `canvas.toBlob`.
+
+  Two spillover findings logged, not fixed: **T-drop-poster-remote-qr**
+  (drop-manager round-trips drop URLs through `api.qrserver.com`; the
+  three `qrcodejs` CDN sites should converge on the vendored generator
+  too) and **T-service-board-stale-colour-column** (`service-board.html`
+  reads a `primary_color` column that is not the live one). CLAUDE.md's
+  own stale `primary_color` reference in learning #33 corrected to
+  `brand_primary_color` in the same commit.
 
 ## Future architecture
 
