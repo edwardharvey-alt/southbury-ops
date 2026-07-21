@@ -1257,6 +1257,11 @@
                   <button class="btnGhost" id="qrCardDownloadQrBtn" type="button">Download QR only</button>
                   <button class="btnGhost" id="qrCardPrintBtn" type="button">Print</button>
                 </div>
+
+                <div class="helperText">
+                  Printing at home? Use Print, then Save as PDF — it keeps the
+                  fonts exactly right.
+                </div>
               </div>
             </div>
 
@@ -2284,8 +2289,13 @@
 
       let lines;
       let size;
-      if (longestWord > 12 || words.length >= 4) {
-        lines = [name]; size = 6;              // no break — it would not balance
+      // The no-break clause applies ONLY to an over-long single word — there
+      // is no boundary to break on. A many-word name still breaks to two
+      // lines: forcing it onto one line means a long single line, and a long
+      // single line can only be set small (28 characters across an 87mm
+      // measure is ~4mm at any font), which is worse than two balanced lines.
+      if (longestWord > 12) {
+        lines = [name]; size = 6;              // nowhere to break
       } else if (words.length === 1) {
         lines = [name]; size = 11;             // single short word, the big case
       } else if (words.length === 2) {
@@ -2450,7 +2460,10 @@
       // Build the stack, then centre it in the area below the band. Because
       // the optional line is simply absent from this list when null, the
       // layout closes up rather than leaving a gap.
-      const ASK_SIZE = 4.1, URL_SIZE = 3.5, PROMISE_SIZE = 3.3, FOOTER_SIZE = 2.6;
+      // PROMISE_SIZE is 3.0 rather than 3.3: at 3.3 the line measures within
+      // ~1mm of the inner width, which clears the overflow check but runs the
+      // full width of the card with no breathing room either side.
+      const ASK_SIZE = 4.1, URL_SIZE = 3.5, PROMISE_SIZE = 3.0, FOOTER_SIZE = 2.6;
       const RULE_W = 29, RULE_H = 0.3;
 
       const blocks = [];

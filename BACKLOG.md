@@ -285,17 +285,24 @@ wordmark gained the same last-resort clamp. Net effect: the card is
 structurally incapable of overflowing for any input.
 
 **Wordmark sizing is deterministic**, so the same name always produces the same
-card: one word ≤12 chars → one line at 11mm; two words → two lines at 9mm; three
-or more → two lines at 7.5mm broken at the most balanced word boundary; any word
-longer than 12 chars or four-plus words → one line at 6mm, no break. Hard cap of
-two lines; overflow steps the size DOWN rather than adding a third line. Sizes
-are chosen against real font metrics via `getComputedTextLength()` on a hidden
-SVG sharing the card's viewBox, re-run on `document.fonts.ready` so the first
-paint does not size against the fallback stack. Note that a long four-word name
-lands small by construction — `SOUTHBURY FARM PIZZA COMPANY` is 28 characters,
-and 28 characters across an 87mm measure cannot be large at any font size. That
-is the specified rule working, not a bug; if it reads too small in practice the
-fix is a spec change (allow a break for four-word names), not a code change.
+card: any single word longer than 12 chars → one line at 6mm, no break; one word
+of 12 chars or fewer → one line at 11mm; two words → two lines at 9mm; three or
+more words → two lines at 7.5mm broken at the most balanced word boundary. Hard
+cap of two lines; overflow steps the size DOWN rather than adding a third line.
+Sizes are chosen against real font metrics via `getComputedTextLength()` on a
+hidden SVG sharing the card's viewBox, re-run on `document.fonts.ready` so the
+first paint does not size against the fallback stack.
+
+**The no-break clause is scoped to an over-long single word, and that scoping
+matters.** The rule originally also forced four-or-more-word names onto one
+line, which produced `SOUTHBURY FARM PIZZA COMPANY` at 4.2mm — 28 characters
+across an 87mm measure cannot be set large at any font size, so the step-down
+ladder drove it down until it fitted. Corrected so a many-word name breaks to
+two balanced lines exactly as a three-word name does; that name now sets as
+`SOUTHBURY FARM` / `PIZZA COMPANY` at the specified 7.5mm. The surviving
+no-break case is the only one where it is actually needed: a single word has no
+boundary to break on. General principle worth keeping — forcing a long name onto
+one line does not make it bigger, it makes it smaller.
 
 **Patterns followed rather than invented.** Print uses the `enquiries.html`
 catering-poster isolation pattern — relocate the card to `<body>` root on
@@ -308,15 +315,24 @@ visibility-only approach leaves blank trailing pages. Downloads use the
 download>`, same 1000ms `revokeObjectURL`. All CSS is page-scoped per critical
 rule #9 — `assets/hearth.css` is untouched.
 
-**Known limitation (not a defect).** The downloaded SVG references
-`'Cormorant Garamond'` and `'Figtree'` by family name. Printing from the Brand
-page is faithful because the webfonts are loaded; opening the downloaded `.svg`
-on a machine without those fonts installed falls back to Georgia/serif and the
-system sans. The card remains complete and correct, just not typographically
-identical. Embedding the fonts would mean base64-inlining them into every
-download (large, and a licensing question); converting text to paths needs a font
-parser we do not have. Revisit only if a vendor takes an SVG to a print shop and
-it comes back wrong.
+**The two outputs are for different jobs, and the guidance says so.** The
+downloaded SVG references `'Cormorant Garamond'` and `'Figtree'` by family name,
+so it renders with those fonts only where they are installed. That makes
+**Print → Save as PDF the recommended route for anything going to a print
+shop** — printing happens from the Brand page with the webfonts loaded, so the
+PDF embeds them and the type is exactly right. **The SVG download is for a
+vendor placing the QR into their own artwork** — a menu board, an A-board, a
+designer's layout — where they will be setting their own type anyway. A
+`.helperText` line beneath the buttons on the Brand page states the PDF route
+("Printing at home? Use Print, then Save as PDF — it keeps the fonts exactly
+right.") so a vendor does not reach the print shop with a font-substituted card.
+
+Opening the downloaded `.svg` on a machine without those fonts falls back to
+Georgia/serif and the system sans — the card stays complete and correct, just
+not typographically identical. Embedding the fonts would mean base64-inlining
+them into every download (large, and a licensing question); converting text to
+paths needs a font parser we do not have. Revisit only if the PDF route turns
+out not to cover a real vendor's workflow.
 
 **Cross-reference:** T-CAP-2b PR1 (the data layer this writes to), T-CAP-2b PR3
 (the van panel), T-CAP-2 (the two-artefact distinction), T-CAP-1 (the page the
