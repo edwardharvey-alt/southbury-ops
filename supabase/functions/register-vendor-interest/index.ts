@@ -21,7 +21,14 @@ type Payload = {
   postcode: string | null;
   consent: boolean;
   messaging_consent: boolean;
+  capture_placement: string | null;
 };
+
+// T-CAP-2a — which physical object the person scanned to get here. Arrives as
+// ?src= on the vendor page URL, encoded into the durable vendor QR (PR 3b).
+// NULL means NOT FROM A QR: a shared link, a typed URL, an organic visit. That
+// is a real and common case, not a missing value.
+const CAPTURE_PLACEMENTS = ["counter", "table", "van", "flyer"] as const;
 
 function isUuid(v: unknown): v is string {
   return typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
@@ -65,6 +72,28 @@ function normaliseOutwardPostcode(
   return { ok: true, value: compact };
 }
 
+// Whitelist-match, or NULL. This is the ONE field on this function that is
+// permissive rather than rejecting, and that asymmetry is deliberate: every
+// other field is the person's own submission, whereas this is a machine-supplied
+// hint about a sticker. A stranger typing ?src=banana, a mangled or misprinted
+// QR, or a future placement value this deployment doesn't know yet must NEVER
+// fail a capture — losing the person is far worse than losing the attribution.
+// Log the unrecognised value (so a misprinted batch of stickers is diagnosable),
+// drop it, and proceed with the follow.
+function normaliseCapturePlacement(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const compact = v.trim().toLowerCase();
+  if (!compact) return null;
+  if ((CAPTURE_PLACEMENTS as readonly string[]).includes(compact)) return compact;
+  console.log(
+    JSON.stringify({
+      event: "capture_placement_unrecognised",
+      value: compact.slice(0, 64),
+    })
+  );
+  return null;
+}
+
 type ParsedBody = {
   vendor_id?: string;
   vendor_slug?: string;
@@ -74,6 +103,7 @@ type ParsedBody = {
   postcode: string;
   consent: boolean;
   messaging_consent: boolean;
+  capture_placement: string | null;
 };
 
 function validateBody(body: unknown): { ok: true; data: ParsedBody } | { ok: false; reason: string } {
@@ -118,6 +148,8 @@ function validateBody(body: unknown): { ok: true; data: ParsedBody } | { ok: fal
       postcode: postcodeResult.value,
       consent: true,
       messaging_consent,
+      // Never rejects — unrecognised or absent both resolve to null.
+      capture_placement: normaliseCapturePlacement(b.capture_placement),
     },
   };
 }
@@ -205,6 +237,11 @@ Deno.serve(async (req) => {
         // consent, when this is true. Passing the number without the tick
         // deliberately discards it.
         p_messaging_consent: body.messaging_consent,
+        // Written on INSERT only. The drop_signals conflict clause is DO
+        // NOTHING, so a repeat follow from a different source leaves the
+        // original placement intact — the first physical capture is the true
+        // one. capture_surface is unaffected and still records 'vendor_page'.
+        p_capture_placement: body.capture_placement,
       }
     );
 
