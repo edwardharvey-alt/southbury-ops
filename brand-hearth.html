@@ -826,58 +826,6 @@
     }
     .faqCount { font-size: 12px; font-weight: 600; color: var(--h-stone); }
 
-    /* T-CAP-2b — the vendor QR card line.
-       Set in Cormorant italic so the field reads as a quoted voice rather than
-       a form value: what the vendor types here is printed verbatim on the card,
-       and the input should look like the thing it becomes. 16px minimum so iOS
-       Safari never zooms the viewport on focus. */
-    .qrCardLineInput {
-      font-family: 'Cormorant Garamond', Georgia, serif;
-      font-style: italic;
-      font-size: 18px;
-      line-height: 1.4;
-    }
-    .qrCardLineFoot {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 12px;
-      margin-top: 6px;
-    }
-    /* The hint takes the slack so the count never wraps away from the edge. */
-    .qrCardLineFoot .helperText { flex: 1; }
-    .qrCardLineCount {
-      flex-shrink: 0;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--h-stone);
-      font-variant-numeric: tabular-nums;
-    }
-    .qrCardLineExamples {
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid var(--h-border);
-    }
-    .qrCardLineExamplesHead {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--h-muted);
-      margin-bottom: 6px;
-    }
-    /* Static text. These teach the shape of a line — they are deliberately not
-       clickable and must never populate the input. The vendor writes their own
-       words; that is the entire value of the field. */
-    .qrCardLineExample {
-      font-family: 'Cormorant Garamond', Georgia, serif;
-      font-style: italic;
-      font-size: 15px;
-      line-height: 1.5;
-      color: var(--h-muted);
-      margin: 0 0 2px;
-    }
-
     @media (max-width: 720px) {
       .faqFooter { flex-direction: column; align-items: stretch; }
       .faqFooter .btnGhost { width: 100%; min-height: 44px; }
@@ -885,10 +833,6 @@
       /* Overrides the mobile .field rule above — 14px would trigger iOS zoom. */
       .faqRow input[type="text"],
       .faqRow textarea { font-size: 16px; }
-      /* Same override, same reason: the mobile `.field input` rule is (0,2,0)
-         and would otherwise beat `.qrCardLineInput` (0,1,0) and drop this to
-         14px. Matched on the class to keep the serif sizing deliberate. */
-      .field input.qrCardLineInput { font-size: 17px; }
     }
   </style>
 </head>
@@ -1023,26 +967,6 @@
               <label for="vendorTagline">Tagline</label>
               <input id="vendorTagline" type="text" placeholder="Wood-fired drops from the farmhouse oven" />
               <div class="helperText">Shown beneath the vendor name on the ordering page.</div>
-            </div>
-
-            <!-- T-CAP-2b: the line printed on the durable vendor QR card. The
-                 card itself is built in PR2 and will sit directly below this
-                 field, so the two read as one thing. -->
-            <div class="field">
-              <label for="vendorQrCardLine">Your line on the card</label>
-              <div class="helperText">One line in your own words. What would you say to someone standing at your counter?</div>
-              <input id="vendorQrCardLine" class="qrCardLineInput" type="text" maxlength="60" />
-              <div class="qrCardLineFoot">
-                <span class="helperText">Leave blank if nothing fits — the card reads fine without it.</span>
-                <span class="qrCardLineCount" id="vendorQrCardLineCount">0 / 60</span>
-              </div>
-
-              <div class="qrCardLineExamples">
-                <div class="qrCardLineExamplesHead">Examples</div>
-                <p class="qrCardLineExample">Everything’s made the morning you collect it.</p>
-                <p class="qrCardLineExample">Twelve portions, once a week. That’s the whole thing.</p>
-                <p class="qrCardLineExample">My nan’s recipe, and she checks.</p>
-              </div>
             </div>
 
             <div class="field">
@@ -1512,7 +1436,6 @@
         name: byId("vendorDisplayName").value.trim(),
         display_name: byId("vendorDisplayName").value.trim(),
         tagline: byId("vendorTagline").value.trim(),
-        qr_card_line: byId("vendorQrCardLine").value.trim(),
         brand_voice: byId("vendorBrandVoice").value.trim(),
         order_label: byId("vendorOrderLabel").value.trim(),
         contact_phone: byId("vendorContactPhone").value.trim(),
@@ -1543,8 +1466,6 @@
       byId("vendorName").value = vendor.name || "";
       byId("vendorDisplayName").value = vendor.display_name || vendor.name || "";
       byId("vendorTagline").value = vendor.tagline || "";
-      byId("vendorQrCardLine").value = vendor.qr_card_line || "";
-      syncQrCardLineCount();
       byId("vendorBrandVoice").value = vendor.brand_voice || "";
       byId("vendorOrderLabel").value = vendor.order_label || "Order direct";
       byId("vendorContactPhone").value = vendor.contact_phone || "";
@@ -1717,17 +1638,6 @@
       byId("brandPrimaryColorText").textContent = (byId("brandPrimaryColor").value || "").toUpperCase();
       byId("brandSecondaryColorText").textContent = (byId("brandSecondaryColor").value || "").toUpperCase();
       byId("brandTextOnPrimaryText").textContent = (byId("brandTextOnPrimary").value || "").toUpperCase();
-    }
-
-    // T-CAP-2b. Counts the raw value, not the trimmed one, so the number
-    // tracks what the vendor can actually see in the box — a trailing space
-    // they have typed is a character they typed. maxlength caps this at 60 in
-    // the UI; the server is what actually enforces the limit.
-    function syncQrCardLineCount() {
-      const el = byId("vendorQrCardLine");
-      const countEl = byId("vendorQrCardLineCount");
-      if (!el || !countEl) return;
-      countEl.textContent = `${el.value.length} / 60`;
     }
 
     function applyPreview() {
@@ -1939,7 +1849,6 @@
         name: form.name || state.vendor.name || "Vendor",
         display_name: form.display_name || null,
         tagline: form.tagline || null,
-        qr_card_line: form.qr_card_line || null,
         brand_voice: form.brand_voice || null,
         order_label: form.order_label || null,
         contact_phone: form.contact_phone || null,
@@ -2027,7 +1936,6 @@
 
     function markDirty() {
       syncColourLabels();
-      syncQrCardLineCount();
       applyPreview();
       setSaveState("default", "Unsaved changes");
     }
@@ -2053,7 +1961,6 @@
         "vendorName",
         "vendorDisplayName",
         "vendorTagline",
-        "vendorQrCardLine",
         "vendorBrandVoice",
         "vendorOrderLabel",
         "vendorContactPhone",
