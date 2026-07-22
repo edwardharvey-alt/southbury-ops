@@ -2120,7 +2120,15 @@
         menuScrollObserver: null,
         nextDrop: null,
         deliveryAreaBlocked: false /* T3-12a */,
-        expandedMenuItems: new Set()
+        expandedMenuItems: new Set(),
+        /* Ticket 4 core — the arrival SURFACE (?src=), read once at boot, held
+           in memory only, and passed to create-order. Never persisted to
+           storage and stripped from the address bar after reading (see
+           readCaptureSurface / stripCaptureSurfaceFromUrl), so a customer who
+           later copies their bare URL is word-of-mouth (correctly NULL), not a
+           re-attributed arrival. The server (create-order) is authoritative and
+           re-sanitises against its own whitelist. */
+        captureSurface: null
       };
 
       /* Single piece of copy for every "we could not load this drop" outcome.
@@ -2281,6 +2289,25 @@
 
       function getQueryParam(name) {
         return new URLSearchParams(window.location.search).get(name);
+      }
+
+      /* Ticket 4 core — arrival surface plumbing, mirroring vendor.html's
+         ?src= discipline (vendor.html:353-370). Read the raw value (trimmed +
+         lowercased only — the create-order server does the authoritative
+         whitelist match), then strip ?src= from the address bar so a shared or
+         copied link cannot propagate this arrival's origin to someone who never
+         used that link. Placement (counter/table/van/flyer) is a different
+         concept and is never read here — only surface. */
+      function readCaptureSurface() {
+        const v = getQueryParam("src");
+        return v && v.trim() ? v.trim().toLowerCase() : null;
+      }
+
+      function stripCaptureSurfaceFromUrl() {
+        if (!new URLSearchParams(window.location.search).has("src")) return;
+        const url = new URL(window.location);
+        url.searchParams.delete("src");
+        window.history.replaceState({}, "", url);
       }
 
       function getCategoryById(id) {
@@ -4231,6 +4258,10 @@
 
         return {
           source: "order.html",
+          /* Ticket 4 core — arrival surface (distinct from the `source` client
+             tag above). create-order sanitises this against its whitelist and
+             stamps orders.capture_surface; unknown/absent => NULL. */
+          src: state.captureSurface || null,
           vendor_id: state.vendor?.id || null,
           vendor_name: state.vendor?.display_name || state.vendor?.name || null,
           drop_id: state.drop?.id || null,
@@ -4750,6 +4781,12 @@ async function handoffToPayment() {
           publicClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
             auth: { persistSession: false, autoRefreshToken: false }
           });
+
+          /* Read the arrival surface into memory and strip it from the URL
+             before anything else runs — held for this page view only, sent to
+             create-order at checkout. (Ticket 4 core.) */
+          state.captureSurface = readCaptureSurface();
+          stripCaptureSurfaceFromUrl();
 
           bindDynamicEvents();
           await loadDropContext();
