@@ -51,6 +51,12 @@ const ALLOWED_FIELDS = new Set([
   // Public vendor page
   "faq",
 
+  // Customer-facing description of what the vendor offers, in their own words
+  // (T-vendor-offer-statement). Plain nullable text with no DB constraint, so
+  // it needs no validation interceptor below — the page sends `|| null`, which
+  // is what makes blank input store NULL rather than "".
+  "offer_statement",
+
   // Durable vendor QR card — an optional line the vendor writes in their own
   // words, printed on the card (T-CAP-2b).
   "qr_card_line",

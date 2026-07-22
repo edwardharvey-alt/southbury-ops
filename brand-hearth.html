@@ -1136,6 +1136,28 @@
               <div class="helperText">Shown beneath the vendor name on the ordering page.</div>
             </div>
 
+            <!-- T-vendor-offer-statement. Sits between Tagline (one line, shown
+                 under the name) and "In your own words" (never shown to
+                 customers) because it is the customer-facing paragraph the
+                 other two are not. The helper's last sentence is load-bearing:
+                 the field describes the VENDOR'S OFFER, not how Hearth works —
+                 a visitor arriving cold needs to know what this place makes,
+                 not what a drop is. -->
+            <div class="field">
+              <label for="vendorOfferStatement">What you offer</label>
+              <div class="helperText">A sentence or two describing what you make and how ordering works, in your own words — the first thing a new visitor reads. Describe what you offer, not how Hearth works.</div>
+              <textarea id="vendorOfferStatement" rows="3" placeholder="Healthy Habits releases fresh meals at set times you order ahead for."></textarea>
+              <div class="qrLineFoot">
+                <span class="helperText">Leave blank and nothing shows.</span>
+                <!-- Soft guide only. Deliberately NO maxlength, unlike the QR
+                     card line above: that one is a fixed-width printed artefact,
+                     this is a paragraph, and a vendor mid-sentence must never
+                     hit a wall. Nothing enforces 200 — not the input, not
+                     update-vendor, not the column. -->
+                <span class="qrLineCount" id="offerStatementCount"></span>
+              </div>
+            </div>
+
             <div class="field">
               <label for="vendorBrandVoice">In your own words</label>
               <div class="helperText">Hearth drafts your posts, messages and posters — this is where it learns to sound like you, not like everyone else. Write a few sentences the way you'd describe your place to a regular who asked: plain and honest, how you really talk — not marketing.</div>
@@ -1692,6 +1714,7 @@
         name: byId("vendorDisplayName").value.trim(),
         display_name: byId("vendorDisplayName").value.trim(),
         tagline: byId("vendorTagline").value.trim(),
+        offer_statement: byId("vendorOfferStatement").value.trim(),
         qr_card_line: byId("vendorQrCardLine").value.trim(),
         brand_voice: byId("vendorBrandVoice").value.trim(),
         order_label: byId("vendorOrderLabel").value.trim(),
@@ -1723,6 +1746,7 @@
       byId("vendorName").value = vendor.name || "";
       byId("vendorDisplayName").value = vendor.display_name || vendor.name || "";
       byId("vendorTagline").value = vendor.tagline || "";
+      byId("vendorOfferStatement").value = vendor.offer_statement || "";
       byId("vendorQrCardLine").value = vendor.qr_card_line || "";
       byId("vendorBrandVoice").value = vendor.brand_voice || "";
       byId("vendorOrderLabel").value = vendor.order_label || "Order direct";
@@ -2097,6 +2121,7 @@
       // Needs state.vendor (slug, brand colour, name) — so it renders here,
       // after the vendor resolves, not at attachEvents time.
       renderQrCardLineCount();
+      renderOfferStatementCount();
       renderQrCard();
       applyOnboardingContinuity(); // T4-19
       setSaveState("saved");
@@ -2111,6 +2136,9 @@
         name: form.name || state.vendor.name || "Vendor",
         display_name: form.display_name || null,
         tagline: form.tagline || null,
+        // Blank coerces to NULL — an unwritten statement is genuinely absent,
+        // and "" would render as an empty paragraph on the public page (PR2).
+        offer_statement: form.offer_statement || null,
         // Blank coerces to NULL — a whitespace-only line is not a line, and
         // the card reads correctly without one.
         qr_card_line: form.qr_card_line || null,
@@ -2205,6 +2233,7 @@
       // The card re-renders live: the vendor sees their line in place, and
       // sees what 60 characters actually looks like on a printed A6.
       renderQrCardLineCount();
+      renderOfferStatementCount();
       renderQrCard();
       setSaveState("default", "Unsaved changes");
     }
@@ -2682,6 +2711,17 @@
       }
     }
 
+    // Advisory only — 200 is a shape, not a limit, so an over-length statement
+    // still saves. Stays blank until there is something to count, so an empty
+    // field reads as an invitation rather than a form to fill.
+    function renderOfferStatementCount() {
+      const input = byId("vendorOfferStatement");
+      const counter = byId("offerStatementCount");
+      if (!input || !counter) return;
+      const len = input.value.trim().length;
+      counter.textContent = len === 0 ? "" : `${len} / 200`;
+    }
+
     function renderQrCardLineCount() {
       const input = byId("vendorQrCardLine");
       const counter = byId("qrCardLineCount");
@@ -2813,6 +2853,7 @@
         "vendorName",
         "vendorDisplayName",
         "vendorTagline",
+        "vendorOfferStatement",
         "vendorQrCardLine",
         "vendorBrandVoice",
         "vendorOrderLabel",
