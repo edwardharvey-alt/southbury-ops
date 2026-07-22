@@ -320,8 +320,20 @@
       }).toLowerCase().replace(' ', '');
     }
 
-    function getOrderingLink(slug) {
-      return `https://lovehearth.co.uk/order.html?drop=${slug}`;
+    // `src` is the arrival surface (Ticket 4 core): order.html reads it and
+    // create-order stamps orders.capture_surface. It is opt-in, and OFF by
+    // default, because this poster's URL has two consumers with different
+    // truths: the QR is scanned (a real activation-poster arrival), but the
+    // printed text below it is TYPED, and someone typing a URL off a poster is
+    // word-of-mouth — honestly NULL, not an arrival we can claim. Stamping the
+    // visible text would fabricate a scan that never happened. Same reasoning
+    // as the T-CAP-2b counter card (the QR carries the param, the printed URL
+    // stays clean) and vendor.html's strip-on-load discipline.
+    function getOrderingLink(slug, withSrc = false) {
+      const u = new URL('/order.html', 'https://lovehearth.co.uk');
+      u.searchParams.set('drop', slug);
+      if (withSrc) u.searchParams.set('src', 'activation_poster');
+      return u.toString();
     }
 
     async function init() {
@@ -375,7 +387,11 @@
 
     function renderPoster(vendor, drop) {
       const wrap = byId('posterWrap');
+      // Two URLs, deliberately: the bare one is PRINTED (typed = word-of-mouth,
+      // honestly unstamped), the stamped one is ENCODED IN THE QR (scanned =
+      // a real activation-poster arrival). Do not collapse these back into one.
       const orderingUrl = getOrderingLink(drop.slug);
+      const orderingQrUrl = getOrderingLink(drop.slug, true);
 
       const closesAt = drop.closes_at;
       const closesTime = closesAt && !isNaN(new Date(closesAt).getTime())
@@ -447,7 +463,7 @@
 
       // Generate QR code
       new QRCode(byId('posterQr'), {
-        text: orderingUrl,
+        text: orderingQrUrl,
         width: 204,  // 54mm at 96dpi ≈ 204px
         height: 204,
         colorDark: '#1F2937',

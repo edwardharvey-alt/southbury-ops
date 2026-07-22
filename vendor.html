@@ -462,7 +462,13 @@
 
       function orderUrl(slug) {
         // Mirrors drop-manager.html getShareUrl() / host-view.html buildOrderLink().
-        return "/order.html?drop=" + encodeURIComponent(slug);
+        // `src` is the arrival surface (Ticket 4 core): order.html reads it and
+        // create-order stamps orders.capture_surface. Built via URL so the query
+        // string stays well-formed as params are added.
+        var u = new URL("/order.html", window.location.origin);
+        u.searchParams.set("drop", slug);
+        u.searchParams.set("src", "vendor_page");
+        return u.pathname + u.search;
       }
 
       /* Normalises supabase-js's two failure shapes into one result. On a
