@@ -14,6 +14,39 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 
 type Kind = "interest" | "waitlist";
 
+// Hand-mirrored from create-order's CAPTURE_SURFACES — KEEP IN SYNC with it
+// (Deno EFs cannot share imports). `followup`/`reactivation` are reserved
+// literals with no stamper yet (email surfaces unbuilt); listed so no future
+// whitelist change is needed when those ship.
+const CAPTURE_SURFACES = [
+  "vendor_page",
+  "drop_qr",
+  "host_poster",
+  "activation_poster",
+  "followup",
+  "reactivation",
+];
+
+// Whitelist-match, or NULL — never rejecting. Identical to create-order's
+// normaliseCaptureSurface: `src` is a machine-supplied hint from the arrival
+// URL, not part of the customer's submission, so an unknown/absent/misprinted
+// value must NEVER fail a registration — it is dropped to NULL and the
+// interest records anyway. Log the unrecognised value so a mis-stamped link
+// is diagnosable.
+function normaliseCaptureSurface(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const compact = v.trim().toLowerCase();
+  if (!compact) return null;
+  if (CAPTURE_SURFACES.includes(compact)) return compact;
+  console.log(
+    JSON.stringify({
+      event: "capture_surface_unrecognised",
+      value: compact.slice(0, 64),
+    })
+  );
+  return null;
+}
+
 type Payload = {
   drop_id: string;
   kind: Kind;
@@ -21,6 +54,7 @@ type Payload = {
   email: string;
   phone: string;
   postcode: string | null;
+  capture_surface: string | null;
 };
 
 function isUuid(v: unknown): v is string {
@@ -61,6 +95,10 @@ function validatePayload(body: unknown): { ok: true; data: Payload } | { ok: fal
       email: (b.email as string).trim().toLowerCase(),
       phone: (b.phone as string).trim(),
       postcode,
+      // `src` is optional and NEVER a validation failure — interest arriving
+      // without a known surface is valid and common (a bare link, a shared
+      // URL, word of mouth). Absent or unrecognised both normalise to null.
+      capture_surface: normaliseCaptureSurface(b.src),
     },
   };
 }
@@ -176,6 +214,14 @@ Deno.serve(async (req) => {
           drop_id: payload.drop_id,
           customer_id: customerId,
           kind: payload.kind,
+          // Ticket 4 core — the surface this registration arrived through.
+          // capture_placement is explicitly null: placement ("counter",
+          // "table", "flyer") describes a physical artefact and belongs only
+          // to the vendor-page follow path (register-vendor-interest). An
+          // order-page registration has a surface but no placement object.
+          // capture_state is deliberately untouched.
+          capture_surface: payload.capture_surface,
+          capture_placement: null,
         },
         { onConflict: "drop_id,customer_id,kind", ignoreDuplicates: true }
       )

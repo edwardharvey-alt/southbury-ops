@@ -3224,6 +3224,12 @@
                 email,
                 phone: mobile,
                 postcode: postcode || null,
+                /* Ticket 4 core — arrival surface. The SAME in-memory value the
+                   checkout payload sends, read and stripped once at boot, so
+                   interest and an order from one visit attribute identically.
+                   Never re-read from the URL here: by this point PR1 has already
+                   stripped ?src=, so a fresh read would always yield null. */
+                src: state.captureSurface || null,
               },
             }));
           } catch (e) {
