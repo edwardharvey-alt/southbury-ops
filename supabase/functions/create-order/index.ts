@@ -19,6 +19,44 @@ const ORDERABLE_STATUSES = new Set(["live", "scheduled"]);
 // from session creation; the reserved capacity is held for the same window.
 const HOLD_WINDOW_SECONDS = 1800;
 
+// Ticket 4 core — order arrival SURFACE (which link the order came in through).
+// This is the link's own identity, not the physical object scanned: sharing a
+// `drop_qr` link still means everyone who used it arrived via the drop QR, so —
+// unlike placement (counter/table/van/flyer) — a surface is safe to carry onto
+// an order. Placement is NEVER stored here; it stays on the vendor-follow record.
+//
+// Hand-mirrored from register-interest's CAPTURE_SURFACES — KEEP IN SYNC with it
+// (Deno EFs cannot share imports). `followup`/`reactivation` are reserved
+// literals with no stamper yet (email surfaces unbuilt); listed so no future
+// whitelist change is needed when those ship.
+const CAPTURE_SURFACES = [
+  "vendor_page",
+  "drop_qr",
+  "host_poster",
+  "activation_poster",
+  "followup",
+  "reactivation",
+];
+
+// Whitelist-match, or NULL — never rejecting. Mirrors register-vendor-interest's
+// normaliseCapturePlacement: `src` is a machine-supplied hint from the arrival
+// URL, not part of the customer's submission, so an unknown/absent/misprinted
+// value must NEVER fail an order — it is dropped to NULL and the order proceeds.
+// Log the unrecognised value so a mis-stamped link is diagnosable.
+function normaliseCaptureSurface(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const compact = v.trim().toLowerCase();
+  if (!compact) return null;
+  if (CAPTURE_SURFACES.includes(compact)) return compact;
+  console.log(
+    JSON.stringify({
+      event: "capture_surface_unrecognised",
+      value: compact.slice(0, 64),
+    })
+  );
+  return null;
+}
+
 type BasketSelection = {
   bundle_line_id: string;
   selected_product_id: string;
@@ -260,6 +298,15 @@ Deno.serve(async (req) => {
     const parsed = validatePayload(raw);
     if (!parsed.ok) return jsonResponse({ error: parsed.reason }, 400);
     const payload = parsed.data;
+
+    // Order arrival surface (Ticket 4 core). Read from the RAW body, NOT via
+    // validatePayload, on purpose: this is additive provenance metadata and a
+    // malformed/unknown `src` must never cause a 400 — it sanitises to NULL and
+    // the order proceeds. Persisted after the order row exists (see the
+    // best-effort stamp below); it appears in NO monetary calculation.
+    const captureSurface = normaliseCaptureSurface(
+      (raw as Record<string, unknown> | null)?.src,
+    );
 
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -801,6 +848,37 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Could not create order — please try again" }, 400);
     }
     const orderId = rpcResult.order_id as string;
+
+    // Ticket 4 core — stamp the order's arrival surface. ADDITIVE METADATA ONLY.
+    //
+    // Money-path invariant: every total / subtotal / fee / application_fee_amount
+    // was re-derived server-side above from drop + menu data and committed inside
+    // create_order_atomic; `captureSurface` is written here, AFTER that atomic
+    // transaction, in a separate statement, and appears in NO monetary
+    // calculation. It CANNOT block, delay, or roll back the order:
+    //   - only issued when there is a real whitelisted surface (a NULL surface —
+    //     the common case until the link stampers ship — needs no write, since
+    //     the insert already left the column NULL);
+    //   - supabase-js .update() returns { error } on a Postgres failure WITHOUT
+    //     throwing, so we inspect the returned error AND wrap for network throws,
+    //     and log-and-swallow BOTH. A failed stamp leaves capture_surface NULL,
+    //     which is a valid end state — the order still completes.
+    // Kept a dedicated write (not folded into the fatal stripe_session_id stamp)
+    // so provenance can never inherit another write's order-cancelling failure
+    // semantics. Same `.eq("id", orderId)` key predicate as the existing stamps.
+    if (captureSurface) {
+      try {
+        const { error: surfaceErr } = await serviceClient
+          .from("orders")
+          .update({ capture_surface: captureSurface })
+          .eq("id", orderId);
+        if (surfaceErr) {
+          console.error("orders.capture_surface stamp failed (non-fatal)", surfaceErr);
+        }
+      } catch (surfaceThrow) {
+        console.error("orders.capture_surface stamp threw (non-fatal)", surfaceThrow);
+      }
+    }
 
     // markCancelled — best-effort cleanup if a downstream step fails.
     // Customer sees the error and can retry; retry creates a fresh order.
