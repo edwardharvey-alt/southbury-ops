@@ -62,6 +62,7 @@ const VENDOR_COLUMNS = [
   "name",
   "display_name",
   "tagline",
+  "offer_statement",
   "logo_url",
   "hero_image_url",
   "brand_primary_color",
@@ -139,6 +140,12 @@ function buildVendorBlock(vendor: VendorRow) {
     slug: vendor.slug ?? null,
     display_name: vendor.display_name ?? vendor.name ?? null,
     tagline: vendor.tagline ?? null,
+    // T-vendor-offer-statement. The vendor's own description of what they
+    // offer. Returned AS STORED — update-vendor is the sole write path and has
+    // already coerced blank input to NULL, so there is nothing to re-derive.
+    // Null means the vendor has not written one, and the page renders nothing
+    // (PR2) — the same absent-is-honest rule as tagline and qr_card_line.
+    offer_statement: vendor.offer_statement ?? null,
     logo_url: vendor.logo_url ?? null,
     hero_image_url: vendor.hero_image_url ?? null,
     brand: {
