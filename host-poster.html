@@ -302,15 +302,23 @@
 
     // Public order URL — slug only, never the host token. Mirrors
     // host-view.html's buildOrderLink (origin + /order.html?drop=<slug>).
-    function buildOrderLink(slug) {
+    // `src` is the arrival surface (Ticket 4 core): order.html reads it and
+    // create-order stamps orders.capture_surface. It is opt-in, and OFF by
+    // default, because this poster's URL has two consumers with different
+    // truths: the QR is scanned (a real host-poster arrival), but the printed
+    // text below it is TYPED, and someone typing a URL off a poster is
+    // word-of-mouth — honestly NULL, not an arrival we can claim. Stamping the
+    // visible text would fabricate a scan that never happened. Same reasoning
+    // as the T-CAP-2b counter card (the QR carries the param, the printed URL
+    // stays clean) and vendor.html's strip-on-load discipline.
+    //
+    // Stamped now even though no host poster is in use yet — origin cannot be
+    // retrofitted onto orders placed before the stamper exists.
+    function buildOrderLink(slug, withSrc = false) {
       if (!slug) return '';
-      // `src` is the arrival surface (Ticket 4 core): order.html reads it and
-      // create-order stamps orders.capture_surface. Stamped now even though no
-      // host poster is in use yet — origin cannot be retrofitted onto orders
-      // placed before the stamper exists.
       const u = new URL('/order.html', window.location.origin);
       u.searchParams.set('drop', slug);
-      u.searchParams.set('src', 'host_poster');
+      if (withSrc) u.searchParams.set('src', 'host_poster');
       return u.toString();
     }
 
@@ -365,7 +373,11 @@
 
     function renderPoster(summary, slug) {
       const wrap = byId('posterWrap');
+      // Two URLs, deliberately: the bare one is PRINTED (typed = word-of-mouth,
+      // honestly unstamped), the stamped one is ENCODED IN THE QR (scanned =
+      // a real host-poster arrival). Do not collapse these back into one.
       const orderingUrl = buildOrderLink(slug);
+      const orderingQrUrl = buildOrderLink(slug, true);
 
       // Foreground the maker. If vendor_name is missing we omit it rather
       // than printing the platform name — outbound copy never names Hearth
@@ -414,7 +426,7 @@
 
       // Large QR encoding the PUBLIC order URL only — never the token.
       new QRCode(byId('posterQr'), {
-        text: orderingUrl,
+        text: orderingQrUrl,
         width: 272,  // ~72mm at 96dpi
         height: 272,
         colorDark: '#1F2937',
