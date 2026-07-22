@@ -321,7 +321,13 @@
     }
 
     function getOrderingLink(slug) {
-      return `https://lovehearth.co.uk/order.html?drop=${slug}`;
+      // `src` is the arrival surface (Ticket 4 core): order.html reads it and
+      // create-order stamps orders.capture_surface. Built via URL so the query
+      // string stays well-formed and the slug is encoded.
+      const u = new URL('/order.html', 'https://lovehearth.co.uk');
+      u.searchParams.set('drop', slug);
+      u.searchParams.set('src', 'activation_poster');
+      return u.toString();
     }
 
     async function init() {

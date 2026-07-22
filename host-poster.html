@@ -304,7 +304,14 @@
     // host-view.html's buildOrderLink (origin + /order.html?drop=<slug>).
     function buildOrderLink(slug) {
       if (!slug) return '';
-      return `${window.location.origin}/order.html?drop=${encodeURIComponent(slug)}`;
+      // `src` is the arrival surface (Ticket 4 core): order.html reads it and
+      // create-order stamps orders.capture_surface. Stamped now even though no
+      // host poster is in use yet — origin cannot be retrofitted onto orders
+      // placed before the stamper exists.
+      const u = new URL('/order.html', window.location.origin);
+      u.searchParams.set('drop', slug);
+      u.searchParams.set('src', 'host_poster');
+      return u.toString();
     }
 
     function showState(message) {

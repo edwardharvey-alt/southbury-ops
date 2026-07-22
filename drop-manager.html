@@ -2246,7 +2246,13 @@
     function getSharePath() {
       const slug = (getLiveDropFromForm()?.slug || state.drop?.slug || "").trim();
       if (!slug) return "";
-      return `/order.html?drop=${encodeURIComponent(slug)}`;
+      // `src` is the arrival surface (Ticket 4 core): order.html reads it and
+      // create-order stamps orders.capture_surface. This path is the drop QR /
+      // share link, so every arrival through it is `drop_qr`.
+      const u = new URL("/order.html", window.location.origin);
+      u.searchParams.set("drop", slug);
+      u.searchParams.set("src", "drop_qr");
+      return u.pathname + u.search;
     }
 
     function getShareUrl() {
