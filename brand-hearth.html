@@ -1148,7 +1148,6 @@
 
             <input id="vendorName" type="hidden" />
             <input id="vendorOrderLabel" type="hidden" value="Order direct" />
-            <input id="vendorAddress" type="hidden" />
 
             <div class="field">
               <label for="vendorDisplayName">Business name</label>
@@ -1190,10 +1189,51 @@
               <textarea id="vendorBrandVoice" rows="4" placeholder="e.g. A small family-run cafe doing proper, fresh food — generous, unfussy, the kind of thing people come back for."></textarea>
             </div>
 
+            <!-- T-vendor-location-contact. "Where to find you" — the public
+                 location + contact cluster. The address field was previously a
+                 hidden input (swept up in redesign commit 56924db with no
+                 explanatory comment while left wired through all five
+                 touchpoints), so no vendor could set or correct it; unhiding it
+                 here restores the edit path. `address` is now the STREET LINE
+                 only — town and postcode are their own fields below it (and
+                 their own columns). Legacy vendors have a full composed address
+                 sitting in the street box, which is why the helper tells them
+                 what it should become. contact_email is DISTINCT from the
+                 sign-in email — the helper's second sentence is load-bearing. -->
+            <div style="border-top:1px solid var(--h-cinder, var(--h-cinder)); margin-top:16px; padding-top:16px;">
+              <div class="brandSectionTitle" style="font-size:15px;">Where to find you</div>
+              <p class="brandSectionSub">These appear publicly on your page. Fill in only what you're happy for customers to see.</p>
+            </div>
+
             <div class="field">
               <label for="vendorContactPhone">Phone number</label>
               <input id="vendorContactPhone" type="tel" placeholder="01234 567890" />
               <div class="helperText">Shown to customers if they need to reach you.</div>
+            </div>
+
+            <div class="field">
+              <label for="vendorAddress">Street address</label>
+              <input id="vendorAddress" type="text" placeholder="14 High Street" />
+              <div class="helperText">Just the street line — the town and postcode go below. Leave blank if you'd rather not show it.</div>
+            </div>
+
+            <div class="studioGrid2">
+              <div class="field">
+                <label for="vendorTown">Town or city</label>
+                <input id="vendorTown" type="text" placeholder="Henley-on-Thames" />
+              </div>
+
+              <div class="field">
+                <label for="vendorPostcode">Postcode</label>
+                <input id="vendorPostcode" type="text" placeholder="RG9 2LU" />
+                <div class="helperText">Helps customers see where you are.</div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="vendorContactEmail">Contact email</label>
+              <input id="vendorContactEmail" type="email" placeholder="hello@example.com" />
+              <div class="helperText">A public address for customer questions. This is not the email you sign in with.</div>
             </div>
 
             <div class="field">
@@ -1753,6 +1793,9 @@
         contact_phone: byId("vendorContactPhone").value.trim(),
         website_url: byId("vendorWebsiteUrl").value.trim(),
         address: byId("vendorAddress").value.trim(),
+        town: byId("vendorTown").value.trim(),
+        postcode: byId("vendorPostcode").value.trim(),
+        contact_email: byId("vendorContactEmail").value.trim(),
         social_handles: social_handles,
         logo_url: byId("vendorLogoUrl").value.trim(),
         hero_image_url: byId("vendorHeroImageUrl").value.trim(),
@@ -1785,6 +1828,9 @@
       byId("vendorContactPhone").value = vendor.contact_phone || "";
       byId("vendorWebsiteUrl").value = vendor.website_url || "";
       byId("vendorAddress").value = vendor.address || "";
+      byId("vendorTown").value = vendor.town || "";
+      byId("vendorPostcode").value = vendor.postcode || "";
+      byId("vendorContactEmail").value = vendor.contact_email || "";
       const socials = (vendor.social_handles && typeof vendor.social_handles === "object") ? vendor.social_handles : {};
       byId("vendorSocialInstagram").value = socials.instagram || "";
       byId("vendorSocialFacebook").value = socials.facebook || "";
@@ -2209,6 +2255,12 @@
         contact_phone: form.contact_phone || null,
         website_url: form.website_url || null,
         address: form.address || null,
+        // Blank coerces to NULL — an unwritten location/contact part is
+        // genuinely absent, and "" would leave stray commas / empty lines in
+        // the "Find us" block (vendor.html omits absent parts only when NULL).
+        town: form.town || null,
+        postcode: form.postcode || null,
+        contact_email: form.contact_email || null,
         social_handles: form.social_handles || {},
         logo_url: form.logo_url || null,
         hero_image_url: form.hero_image_url || null,
@@ -2922,6 +2974,9 @@
         "vendorContactPhone",
         "vendorWebsiteUrl",
         "vendorAddress",
+        "vendorTown",
+        "vendorPostcode",
+        "vendorContactEmail",
         "vendorSocialInstagram",
         "vendorSocialFacebook",
         "vendorSocialTiktok",

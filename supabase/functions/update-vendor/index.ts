@@ -23,6 +23,14 @@ const ALLOWED_FIELDS = new Set([
   "contact_phone",
   "website_url",
   "address",
+  // T-vendor-location-contact. Public location + contact. Plain nullable text,
+  // no interceptor needed below — the Brand page sends `|| null`, which is what
+  // makes blank input store NULL rather than "" (same as offer_statement).
+  // contact_email is DISTINCT from `email` (the account/login address), which
+  // is intentionally NOT in this whitelist and must never become editable here.
+  "town",
+  "postcode",
+  "contact_email",
   "social_handles",
 
   // Brand

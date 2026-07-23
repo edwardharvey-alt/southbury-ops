@@ -213,6 +213,15 @@
     .faq summary:focus-visible{outline:2px solid var(--v-primary);outline-offset:3px}
     .faq p{margin:0 0 20px;color:var(--h-ink-soft);max-width:46em;white-space:pre-line}
 
+    /* ---------- Find us: quiet reference block (location + contact) ----------
+       Reference information, not identity — UI face, soft-ink, small.
+       Deliberately no card, border or icon: the vendor-page redesign will
+       re-place this block, so it stays plain typography on existing tokens. */
+    .findus p{margin:0 0 6px;font-size:15px;line-height:1.5;color:var(--h-ink-soft)}
+    .findus p:last-child{margin-bottom:0}
+    .findus a{color:var(--v-primary);text-decoration:none}
+    .findus a:hover{text-decoration:underline}
+
     /* ---------- Explainer: Hearth's model, stated plainly ---------- */
     .explain{
       background:var(--h-surface);
@@ -749,6 +758,50 @@
          half are skipped here as well as in update-vendor — this render must
          stand on its own, not on the write path having behaved. If nothing
          survives, the section returns "" and the heading never appears. */
+      /* ---------- Find us (location + contact) ----------
+         A quiet reference block above the FAQ, shown in every state — a
+         customer mid-drop still wants to know where the vendor is and how to
+         reach them. Degrades to NOTHING (no heading, no gap) when every field
+         is absent, which is the common state until a vendor fills it in.
+
+         The location line composes address (street only), town and postcode
+         with ", " separators, OMITTING absent parts — no stray commas, no
+         empty segments. This omission is what makes a legacy vendor's composed
+         `address` (with empty town/postcode) render exactly as it did before
+         the field was split.
+
+         Contact renders phone and contact_email (a mailto: link). Neither is
+         rendered anywhere else on this page, so there is no duplication — and
+         this finally makes the phone field's Brand helper ("shown to
+         customers") true. contact_email is the PUBLIC contact address, never
+         vendors.email (the login email, which get-vendor-page never projects). */
+      function findUsHtml(vendor) {
+        if (!vendor) return "";
+
+        var locationLine = [vendor.address, vendor.town, vendor.postcode]
+          .map(function (part) { return typeof part === "string" ? part.trim() : ""; })
+          .filter(Boolean)
+          .map(escapeHtml)
+          .join(", ");
+
+        var phone = typeof vendor.contact_phone === "string" ? vendor.contact_phone.trim() : "";
+        var email = typeof vendor.contact_email === "string" ? vendor.contact_email.trim() : "";
+
+        if (!locationLine && !phone && !email) return "";
+
+        var lines = "";
+        if (locationLine) lines += "<p>" + locationLine + "</p>";
+        if (phone) lines += "<p>" + escapeHtml(phone) + "</p>";
+        if (email) {
+          lines += '<p><a href="mailto:' + escapeHtml(email) + '">' + escapeHtml(email) + "</a></p>";
+        }
+
+        return '<div class="wrap"><section class="findus">' +
+          '<div class="sechead"><h2>Find us</h2></div>' +
+          lines +
+        "</section></div>";
+      }
+
       function faqHtml(vendor) {
         var entries = vendor && Array.isArray(vendor.faq) ? vendor.faq : [];
         var rows = entries.map(function (item) {
@@ -913,6 +966,11 @@
             ghost: false
           }) + recentDropsHtml(recent) + explainHtml();
         }
+
+        // "Find us" (location + contact) sits above the FAQ in every state —
+        // reference information a customer wants whatever brought them here.
+        // Renders nothing when the vendor has set no location or contact field.
+        sections += findUsHtml(vendor);
 
         // The FAQ sits last in every state, below the follow card — the same
         // position for all four, because "questions I still have" is where a

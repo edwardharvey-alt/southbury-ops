@@ -63,6 +63,15 @@ const VENDOR_COLUMNS = [
   "display_name",
   "tagline",
   "offer_statement",
+  // T-vendor-location-contact. Public location + contact fields for the "Find
+  // us" block. `address` is the street line only (redefined); `contact_email`
+  // is DISTINCT from `email`, the account/login address, which must never be
+  // projected here (the PII trap — see the audit and buildVendorBlock below).
+  "address",
+  "town",
+  "postcode",
+  "contact_phone",
+  "contact_email",
   "logo_url",
   "hero_image_url",
   "brand_primary_color",
@@ -146,6 +155,18 @@ function buildVendorBlock(vendor: VendorRow) {
     // Null means the vendor has not written one, and the page renders nothing
     // (PR2) — the same absent-is-honest rule as tagline and qr_card_line.
     offer_statement: vendor.offer_statement ?? null,
+    // T-vendor-location-contact. Public location + contact, returned AS STORED
+    // — update-vendor is the sole write path and has already coerced blank
+    // input to NULL, so there is nothing to re-derive. Each renders nothing
+    // when absent (vendor.html omits absent parts and hides the whole block
+    // when all are absent). `address` is the STREET LINE only. `contact_email`
+    // is the public contact address, NOT vendors.email (the login email, which
+    // is deliberately absent from VENDOR_COLUMNS and from this projection).
+    address: vendor.address ?? null,
+    town: vendor.town ?? null,
+    postcode: vendor.postcode ?? null,
+    contact_phone: vendor.contact_phone ?? null,
+    contact_email: vendor.contact_email ?? null,
     logo_url: vendor.logo_url ?? null,
     hero_image_url: vendor.hero_image_url ?? null,
     brand: {
