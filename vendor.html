@@ -108,6 +108,13 @@
     }
     .hero.resting h1,.hero.plain h1{font-size:clamp(52px,9vw,86px);line-height:.98}
     .lede{font-size:20px;line-height:1.6;color:var(--h-ink-soft);max-width:34em;margin:0}
+    /* T-vendor-page-findability 2c. In the resting hero the lede is the platform
+       status line and now follows the vendor's offer/tagline line, which carries
+       no bottom margin — without this it would butt straight against it. Scoped
+       to .resting so the drop heroes' and .plain's ledes are untouched. Adjacent
+       margins collapse, so separation resolves to a flat 26px whether the offer,
+       the tagline, or neither sits above. Spacing only — no new class. */
+    .hero.resting .lede{margin-top:26px}
     .vendorline{
       display:flex;align-items:center;gap:14px;
       margin:34px 0 0;padding-top:26px;border-top:1px solid var(--h-hair);
@@ -581,9 +588,34 @@
 
       /* ---------- hero ---------- */
 
+      /* T-vendor-page-findability 2c. The resting state is the state this page
+         is in MOST of the time, and per strategy it is not an empty state — it
+         is the capture surface. So it leads with identity, not absence: the
+         vendor's name, then their own line, then the platform's quiet status,
+         then the one thing a visitor can do.
+
+         TWO VOICES, DELIBERATELY NOT MERGED. The offer/tagline line is the
+         VENDOR speaking — display face, prominent, and rendered only if they
+         actually wrote it. The status line is HEARTH speaking as itself — UI
+         face, quiet, always rendered. That is legitimate platform voice, not a
+         return of the fabricated vendor filler Ticket 1 deleted; the difference
+         is that nothing here is put in the vendor's mouth. Keep them as separate
+         elements in separate registers.
+
+         THERE IS DELIBERATELY NO "NEXT DROP" LINE. `resting` means there is no
+         drop — an announced one puts the page in `announced_drop`, a different
+         state — so there is nothing TRUE to say about a next drop here. The only
+         ways to fill that slot would be inferring cadence from past drops
+         (intelligence-layer, data-gated; fabricating it is a brand violation) or
+         surfacing an unpublished draft (leaks unannounced information). If
+         cadence intelligence ever ships, it slots in between the status and the
+         follow. Do not stub it before then. */
       function heroRestingHtml(vendor) {
-        var lede = escapeHtml(vendorName()) +
-          " cooks to a plan — a set menu, a fixed window to order, and a set number of places. There’s nothing open at the moment, but there will be.";
+        // Platform voice. Names no vendor and assumes no cooking verb, so it
+        // reads correctly for every vendor on the platform — the sentence it
+        // replaces was generated per-vendor and asserted that they "cook".
+        var status = "Nothing open to order right now. Drops are announced ahead of time — " +
+          "a set menu, a fixed window to order, and a set number of places.";
         // T-vendor-offer-statement (Ticket 1 PR2). ONE descriptive line beneath
         // the identity block, never two, by precedence: offer_statement if the
         // vendor has written one, else tagline, else nothing at all.
@@ -599,8 +631,7 @@
         // This is the RESTING state only, because it is the only state whose hero
         // carries vendor identity at all — the three drop states lead with the
         // drop's own name and lede, and dropping a vendor paragraph between a
-        // drop title and its order CTA would be a composition change, not this
-        // PR. Reordering within this hero is Ticket 2c's job, not this one.
+        // drop title and its order CTA would be a composition change.
         //
         // trim() on both: update-vendor coerces blank to NULL today, but this
         // render must stand on its own, not on the write path having behaved.
@@ -618,11 +649,14 @@
           identityLine = '<div class="vendorline"><span>' + escapeHtml(taglineText) + "</span></div>";
         }
 
+        // identity -> offer -> status. No eyebrow: leading with a negative label
+        // above the name is still leading with absence, so the status moved
+        // below the vendor's own line instead. (.eyebrow itself stays — the
+        // three drop heroes still use it.)
         return '<div class="wrap"><div class="hero resting">' +
-          '<p class="eyebrow">Nothing on right now</p>' +
-          "<h1>Between drops</h1>" +
-          '<p class="lede">' + lede + "</p>" +
+          "<h1>" + escapeHtml(vendorName()) + "</h1>" +
           identityLine +
+          '<p class="lede">' + escapeHtml(status) + "</p>" +
         "</div></div>";
       }
 
@@ -861,12 +895,23 @@
           });
         } else { // resting
           hero = heroRestingHtml(vendor);
-          sections = recentDropsHtml(recent) + explainHtml() + followHtml({
+          // T-vendor-page-findability 2c. Follow FIRST, completing the hero's
+          // identity -> offer -> status lead with the one thing a visitor can
+          // actually do here. It previously sat fifth, behind the recent-drops
+          // list and the explainer, on the state the strategy calls the capture
+          // surface. Pure ordering change — same components, same copy, same
+          // write path.
+          //
+          // The drop states keep explainer-first for their own stated reason (a
+          // stranger arriving mid-order needs the model before the CTA makes
+          // sense); that reasoning does not carry here, because the resting
+          // status line now states the model inline.
+          sections = followHtml({
             title: "See what’s coming next",
             sub: "Hear first when the next drop opens.",
             cta: "Keep me posted",
             ghost: false
-          });
+          }) + recentDropsHtml(recent) + explainHtml();
         }
 
         // The FAQ sits last in every state, below the follow card — the same
