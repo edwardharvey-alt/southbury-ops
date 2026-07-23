@@ -37,9 +37,16 @@ import type { Config, Context } from "@netlify/edge-functions";
 // crawlers something different from humans is cloaking, and Google penalises
 // it. What the crawler reads is what the visitor is served.
 //
-// PR1 is the essential head only — title, description, canonical, robots.
-// Open Graph, Twitter cards and JSON-LD are PR2, deliberately held back until
-// the mechanism has been proven in production.
+// WHAT IS STATE-DEPENDENT AND WHAT IS NOT. The split runs through this whole
+// file and is the reason the tags differ:
+//   - <title> and description are STATE-INDEPENDENT. Crawlers index at
+//     arbitrary moments, so a title naming whichever drop happened to be live
+//     would be cached and stale within days. They carry the durable fact.
+//   - og:* / twitter:* are STATE-DEPENDENT. They are read at the instant
+//     someone shares or previews the link, so they say what is happening now.
+//   - JSON-LD is STATE-INDEPENDENT. It describes the business, not the moment.
+// PR2 added the share preview and the structured data without touching the
+// first group — the title and description bytes are unchanged from PR1.
 
 // Same public endpoint and publishable key the browser already uses (see
 // assets/config.js — this key ships to every visitor and carries no
@@ -73,6 +80,11 @@ const ROBOTS_NOINDEX = '<meta name="robots" content="noindex, nofollow" />';
 
 // Spaced em dash, matching the platform's display convention.
 const TITLE_SEPARATOR = " — ";
+
+// A card with a real image gets the large format; a card without one must not
+// claim it, or the preview renders as a large empty frame.
+const TWITTER_CARD_WITH_IMAGE = "summary_large_image";
+const TWITTER_CARD_TEXT_ONLY = "summary";
 
 function escapeHtml(value: string): string {
   return value
@@ -177,6 +189,112 @@ function buildDescription(
   return town ? `Order ahead from ${name} in ${town}.` : `Order ahead from ${name}.`;
 }
 
+/* The share title — the ONE state-dependent string on the page.
+
+   Unlike <title>, this is read at the moment of sharing, so it can name what
+   is actually on. Every pattern states a fact and stops: no "selling fast",
+   no "last chance", no exclamation marks. `full_drop` in particular reports
+   that the drop is full and does not dramatise it — real capacity, plainly
+   stated, is the whole point of the model.
+
+   Each state falls back to a vendor-only phrasing when the drop has no name
+   (`drops.name` is nullable). An unrecognised state falls back to the resting
+   pattern, which is the same durable form <title> uses — the safe direction
+   for a state this function has not been taught. */
+function buildShareTitle(
+  state: string | null,
+  dropName: string | null,
+  name: string | null,
+  town: string | null,
+): string | null {
+  const resting = name ? (town ? name + TITLE_SEPARATOR + town : name) : null;
+
+  switch (state) {
+    case "live_drop":
+      if (dropName) return `${dropName}${TITLE_SEPARATOR}ordering open`;
+      return name ? `Ordering open${TITLE_SEPARATOR}${name}` : null;
+    case "full_drop":
+      if (dropName) return `${dropName}${TITLE_SEPARATOR}now full`;
+      return name ? `${name}${TITLE_SEPARATOR}this drop is full` : null;
+    case "announced_drop":
+      if (dropName) return name ? `${dropName}${TITLE_SEPARATOR}${name}` : dropName;
+      return name ? `${name}${TITLE_SEPARATOR}a drop is coming up` : null;
+    default:
+      return resting;
+  }
+}
+
+// OG requires an ABSOLUTE url; a relative path yields no preview image at all,
+// silently. The column is free text written by an upload flow, so the shape is
+// tested rather than trusted — an absent image is honest, a broken one is
+// worse than none.
+function absoluteImageUrl(value: unknown): string | null {
+  const raw = normaliseText(value);
+  if (!raw) return null;
+  return /^https?:\/\//i.test(raw) ? raw : null;
+}
+
+/* Structured data for the business — state-independent, so it names no drop.
+
+   LocalBusiness deliberately, not FoodEstablishment: the more specific type
+   mainly unlocks menu-related rich results we do not emit, and LocalBusiness
+   stays accurate for a vendor with no premises at all (home bakers, trucks).
+   Revisit FoodEstablishment if menu data is ever emitted here.
+
+   Absent values are OMITTED, never nulled or placeholdered — a structured
+   claim about a business must not assert a field the vendor has not filled
+   in. The whole address object drops out when street, town and postcode are
+   all absent; addressCountry is the one key always present when it is
+   emitted at all, because every Hearth vendor is UK-based. */
+function buildJsonLd(
+  vendor: Record<string, unknown>,
+  name: string | null,
+  town: string | null,
+  canonicalUrl: string | null,
+  description: string | null,
+  image: string | null,
+): string | null {
+  if (!name) return null;
+
+  const node: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    name,
+  };
+
+  if (canonicalUrl) node.url = canonicalUrl;
+  if (description) node.description = description;
+
+  const street = normaliseText(vendor.address);
+  const postcode = normaliseText(vendor.postcode);
+  if (street || town || postcode) {
+    const address: Record<string, unknown> = { "@type": "PostalAddress" };
+    if (street) address.streetAddress = street;
+    if (town) address.addressLocality = town;
+    if (postcode) address.postalCode = postcode;
+    address.addressCountry = "GB";
+    node.address = address;
+  }
+
+  // The PUBLIC contact fields only. The vendor's private operational phone
+  // and their account/login email are not in get-vendor-page's projection and
+  // can never reach this function.
+  const telephone = normaliseText(vendor.public_phone);
+  if (telephone) node.telephone = telephone;
+  const email = normaliseText(vendor.public_email);
+  if (email) node.email = email;
+
+  if (image) node.image = image;
+
+  // JSON.stringify handles quotes, backslashes and control characters. The one
+  // thing it does NOT handle is that we are embedding into a <script> element:
+  // a literal "</script>" anywhere in vendor-authored text would close the
+  // block early and spill the rest into the document. Replacing every "<" with
+  // its unicode escape below is valid JSON, parses back to the identical
+  // string, and closes that hole (and the "<!--" one) completely.
+  return JSON.stringify(node).replace(/</g, "\\u003c");
+}
+
 /* Builds the replacement for HEAD_MARKER, or null to leave the head alone.
 
    The <title> is STATE-INDEPENDENT by design. Crawlers index at arbitrary
@@ -197,7 +315,9 @@ function buildHeadBlock(data: Record<string, unknown> | null): string | null {
     // No vendor: the only honest signal is "do not index". The served title is
     // left exactly as it is — there is no name to write one from, and this
     // page is the site's de-facto 404 handler. No canonical either: a
-    // not-found page must not claim to be the canonical anything.
+    // not-found page must not claim to be the canonical anything. No share
+    // preview and no structured data either — there is no business to
+    // describe and nothing worth previewing.
     if (data.error === "vendor_not_found") return `${HEAD_MARKER}\n  ${ROBOTS_NOINDEX}`;
     // Any other unrecognised shape changes nothing.
     return null;
@@ -222,9 +342,56 @@ function buildHeadBlock(data: Record<string, unknown> | null): string | null {
     lines.push(`<meta name="description" content="${escapeHtml(description)}" />`);
   }
 
-  if (slug) {
-    const href = `${CANONICAL_ORIGIN}/${encodeURIComponent(slug)}`;
-    lines.push(`<link rel="canonical" href="${escapeHtml(href)}" />`);
+  const canonicalUrl = slug ? `${CANONICAL_ORIGIN}/${encodeURIComponent(slug)}` : null;
+  if (canonicalUrl) {
+    lines.push(`<link rel="canonical" href="${escapeHtml(canonicalUrl)}" />`);
+  }
+
+  // ---- Share preview (state-dependent) ----
+  //
+  // Emitted for every resolved vendor, INCLUDING internal ones: a noindex page
+  // can still be shared in a message, and the person receiving it deserves a
+  // card that says what it is. Only vendor_not_found (handled above) gets none.
+  const drop = data.drop && typeof data.drop === "object"
+    ? (data.drop as Record<string, unknown>)
+    : null;
+  const state = typeof data.state === "string" ? data.state : null;
+  const shareTitle = buildShareTitle(state, normaliseText(drop?.name), name, town);
+  const image = absoluteImageUrl(vendor.hero_image_url);
+
+  if (name) {
+    lines.push('<meta property="og:type" content="website" />');
+    if (canonicalUrl) {
+      lines.push(`<meta property="og:url" content="${escapeHtml(canonicalUrl)}" />`);
+    }
+    // The VENDOR's name, never "Hearth". The card belongs to the vendor's
+    // page; Hearth is the quiet frame and stays out of what gets shared.
+    lines.push(`<meta property="og:site_name" content="${escapeHtml(name)}" />`);
+
+    if (shareTitle) {
+      lines.push(`<meta property="og:title" content="${escapeHtml(shareTitle)}" />`);
+    }
+    // The SAME computed string as <meta name="description">, not a second
+    // derivation — so the search snippet and the share card cannot drift.
+    if (description) {
+      lines.push(`<meta property="og:description" content="${escapeHtml(description)}" />`);
+    }
+    if (image) {
+      lines.push(`<meta property="og:image" content="${escapeHtml(image)}" />`);
+      lines.push(`<meta property="og:image:alt" content="${escapeHtml(name)}" />`);
+    }
+
+    lines.push(
+      `<meta name="twitter:card" content="${image ? TWITTER_CARD_WITH_IMAGE : TWITTER_CARD_TEXT_ONLY}" />`,
+    );
+    if (shareTitle) {
+      lines.push(`<meta name="twitter:title" content="${escapeHtml(shareTitle)}" />`);
+    }
+    if (description) {
+      lines.push(`<meta name="twitter:description" content="${escapeHtml(description)}" />`);
+    }
+    // No twitter:image — Twitter falls back to og:image, so emitting it would
+    // be a second copy of the same URL to keep in step.
   }
 
   // Hearth's own test vendor records are real public URLs and must never enter
@@ -233,7 +400,20 @@ function buildHeadBlock(data: Record<string, unknown> | null): string | null {
   // storefront. vendor.html's client-side noIndex() carries an idempotence
   // guard, so it no-ops when this tag is already present and still fires when
   // this function has degraded.
-  if (vendor.is_internal === true) lines.push(ROBOTS_NOINDEX);
+  const noindex = vendor.is_internal === true;
+  if (noindex) lines.push(ROBOTS_NOINDEX);
+
+  // ---- Structured data (state-independent) ----
+  //
+  // Suppressed on any noindex page: structured data exists to shape a search
+  // result, so describing a page we have just asked search engines not to
+  // index is at best pointless and at worst a mixed signal.
+  if (!noindex) {
+    const jsonLd = buildJsonLd(vendor, name, town, canonicalUrl, description, image);
+    if (jsonLd) {
+      lines.push(`<script type="application/ld+json">${jsonLd}</script>`);
+    }
+  }
 
   return lines.join("\n  ");
 }

@@ -319,3 +319,120 @@ conflicts with it.
    `AbortSignal` timeout, with every failure falling through to the unmodified
    origin response.
 6. `vendor.html` unchanged: the marker it needs already exists.
+
+---
+
+# Addendum — PR2: Open Graph, Twitter card, JSON-LD
+
+Audited 2026-07-23 against `origin/main` @ `0d124a9` (PR1 merged and live),
+with read-only probes against the production `get-vendor-page`.
+
+PR1's mechanism, guards and degrade path are unchanged and not re-derived
+here. PR2 only adds tags to the block PR1 already injects.
+
+## 1. Drop fields per state
+
+Probed live. Only two of the four states have a production fixture right now
+— `live_drop` and `resting`. The other two are read from
+`supabase/functions/get-vendor-page/index.ts` directly, which is authoritative
+for the response shape.
+
+| State | Live fixture | `drop.name` present? |
+|---|---|---|
+| `live_drop` | `eds-creamy-nuts` → drop **"Nuts gallore"** | ✅ yes, confirmed live |
+| `resting` | `gather`, `healthy-habits`, and four internal vendors | n/a — no `drop` block at all |
+| `full_drop` | none in production | ✅ yes, per source (index.ts, the `consumed >= total` branch) |
+| `announced_drop` | none in production | ✅ yes, per source (index.ts, Priority 2 branch) |
+
+**A drop title is available in every drop-bearing state**, as `drop.name`. The
+copy spec's "no drop title" fallbacks are therefore a defensive path, not the
+common one — but they are still reachable (`name` is nullable on `drops`), so
+they are implemented and covered in the local harness.
+
+Full `live_drop` drop block as returned for `eds-creamy-nuts`:
+
+```json
+"drop": { "slug": "nuts-gallore", "name": "Nuts gallore", "drop_intro": null,
+          "closes_at": "2026-07-26T16:00:00+00:00",
+          "delivery_start": "2026-07-26T18:00:00+00:00",
+          "fulfilment_mode": "collection" },
+"capacity": { "total": 40, "remaining": 39 }
+```
+
+`announced_drop` carries `opens_at` in place of `closes_at`; `full_drop` is
+shaped exactly like `live_drop` with `capacity.remaining: 0`. **None of these
+timestamps or capacity figures are used by PR2** — no state's share title
+quotes a time or a number, so there is nothing here that can go stale between
+the scrape and the read, and no capacity figure is restated outside the page
+where it is computed live.
+
+## 2. `hero_image_url` — absolute, and one live vendor has none
+
+**Absolute.** Every value is a fully-qualified Supabase Storage URL on the
+`https` scheme:
+
+| Vendor | `hero_image_url` |
+|---|---|
+| `gather` | `https://tvqhhjvumgumyetvpgid.supabase.co/storage/v1/object/public/vendor-assets/gather/hero?v=1784283079452` |
+| `healthy-habits` | **`null`** |
+| `eds-creamy-nuts` | `https://…/vendor-assets/eds-creamy-nuts/hero?v=1783719968497` |
+
+The cache-busting `?v=` suffix is part of the stored value and is passed
+through untouched — it is a legitimate part of an absolute URL.
+
+The code still tests for `^https?://` rather than trusting the shape, because
+the column is free text written by an upload flow and a relative path would
+yield a silently broken preview card. `http` is accepted as well as `https`;
+no stored value uses it today.
+
+**So the two states Ed will check on the preview split cleanly:** `/gather`
+exercises the image path (`og:image` + `twitter:card: summary_large_image`),
+`/healthy-habits` exercises the no-image path (no `og:image` at all,
+`twitter:card: summary`). Both cases are live without needing a fixture.
+
+## 3. `is_internal` — returned, and the only live-drop fixture is internal
+
+Confirmed present on every success state (PR1 already reads it for `robots`).
+
+Values observed: `gather` false, `healthy-habits` false; `eds-creamy-nuts`,
+`southbury-farm-pizza`, `test-11`, `test-12`, `catering-direct` all **true**.
+
+> **Consequence worth stating plainly for the preview check:**
+> `eds-creamy-nuts` is the only production vendor with a live drop, and it is
+> internal. So it is the only place to see a state-dependent `og:title` — and
+> it will correctly emit **no JSON-LD**, because the page is noindex. That is
+> the specified behaviour, not a bug. JSON-LD can only be seen on `/gather`
+> or `/healthy-habits`, both of which are `resting`.
+
+`test-vendor` and `big-ballz-catering` return `vendor_not_found` — either
+renamed or deactivated. Not relevant to PR2, noted only so a future session
+does not treat them as fixtures.
+
+## 4. Field availability for JSON-LD
+
+| JSON-LD key | Source | `gather` | `healthy-habits` | `eds-creamy-nuts` |
+|---|---|---|---|---|
+| `name` | `display_name` | ✅ | ✅ | ✅ |
+| `url` | canonical (PR1) | ✅ | ✅ | ✅ |
+| `description` | computed (PR1) | ✅ | ✅ | ✅ |
+| `streetAddress` | `address` | `121 Wallace Avenue` | `199 Lower Blandford Rd` | — |
+| `addressLocality` | `town` | `Southampton` | `Broadstone` | — |
+| `postalCode` | `postcode` | `SO32 2RQ` | `BH18 8DH` | — |
+| `telephone` | `public_phone` | — | — | — |
+| `email` | `public_email` | — | — | — |
+| `image` | `hero_image_url` | ✅ | — | ✅ |
+
+So the two indexable vendors both exercise a **fully-populated
+`PostalAddress`** with all three parts, and both omit `telephone` and `email`
+entirely — no vendor has yet written a public phone or email. The
+"omit absent keys" rule is therefore exercised on the live path from day one,
+not only in the harness.
+
+`eds-creamy-nuts` has no address parts at all, which is the case that omits
+the whole `address` object — though being internal, it emits no JSON-LD
+anyway.
+
+**PII unchanged from PR1.** `public_phone` / `public_email` are the
+explicitly public contact fields; the account/login `email` and the private
+operational `contact_phone` are not in `get-vendor-page`'s projection at all
+and cannot reach this function. PR2 adds no data source.
