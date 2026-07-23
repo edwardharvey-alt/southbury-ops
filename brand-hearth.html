@@ -349,6 +349,24 @@
       max-width:34ch;
     }
 
+    /* Mirrors order.html's .heroOfferStatement so the preview looks like the
+       thing it previews: the display face, one step down from the vendor name
+       (24px here, as 20px is one step down from the live hero's 30px), sitting
+       above the tagline's 13px strapline. Colour is the preview hero's own text
+       token — this sits on the vendor's saturated colour/photo panel, where a
+       dark ink value would be near-invisible — at 96%, which preserves live's
+       name > offer > tagline ordering against this card's own baselines (the
+       name inherits 100% from .brandPreviewHero, the tagline is 88%). */
+    .brandPreviewOffer{
+      margin:8px 0 0;
+      font-family:'Cormorant Garamond', Georgia, serif;
+      font-size:17px;
+      line-height:1.45;
+      font-weight:500;
+      color:color-mix(in srgb, var(--brand-preview-text) 96%, transparent);
+      max-width:34ch;
+    }
+
     .brandPreviewSite{
       min-height:36px;
       padding:0 12px;
@@ -585,6 +603,11 @@
 
       .brandPreviewVendorName{
         font-size:22px;
+      }
+
+      /* Steps with the name, as the live hero's offer line steps with its own. */
+      .brandPreviewOffer{
+        font-size:16px;
       }
 
       .brandPreviewDropTitle{
@@ -1045,7 +1068,10 @@
             <div style="min-width:0;">
               <div class="brandSummaryEyebrow" id="summaryEyebrow">ORDER DIRECT</div>
               <h2 class="brandSummaryTitle" id="summaryTitle"></h2>
-              <p class="brandSummarySub" id="summaryTagline">Freshly made and ready to order</p>
+              <!-- Filled by applyPreview with the offer statement, else the
+                   tagline, else hidden. Ships empty: a hardcoded sentence here
+                   is filler that no vendor wrote. -->
+              <p class="brandSummarySub hidden" id="summaryTagline"></p>
 
               <div class="brandLinkRow" style="margin-top:10px;">
                 <a class="brandMiniLink hidden" href="#" id="summaryWebsiteLink" target="_blank" rel="noopener noreferrer">Visit website</a>
@@ -1429,7 +1455,13 @@
                     <div style="min-width:0;">
                       <div class="brandPreviewEyebrow" id="previewOrderLabel">ORDER DIRECT</div>
                       <h3 class="brandPreviewVendorName" id="previewDisplayName"></h3>
-                      <p class="brandPreviewTagline" id="previewTagline">Freshly made and ready to order</p>
+                      <!-- Two elements, exactly one ever visible — mirroring
+                           order.html's #heroTagline / #heroOfferStatement pair,
+                           so each keeps its own register and a tagline-only
+                           vendor previews as a strapline, not a statement. Both
+                           ship empty and hidden. -->
+                      <p class="brandPreviewTagline hidden" id="previewTagline"></p>
+                      <p class="brandPreviewOffer hidden" id="previewOffer"></p>
                     </div>
                   </div>
 
@@ -1930,7 +1962,22 @@
       const logoUrl = form.logo_url || "";
       const heroUrl = form.hero_image_url || "";
       const displayName = form.display_name || form.name || "Vendor";
-      const tagline = form.tagline || "Freshly made and ready to order";
+      // The single descriptive line under the vendor name, resolved by the SAME
+      // precedence the live order page uses (order.html, applyVendorBranding):
+      // offer_statement if the vendor has written one, else tagline, else
+      // nothing at all. Exactly one, never two.
+      //
+      // There is deliberately no `|| "…"` fallback. This preview previously
+      // substituted a generic sentence for a missing tagline, which meant a
+      // vendor who had written neither line was shown words they did not write,
+      // in a panel whose entire job is to tell them what customers will see.
+      // The live page stopped doing that in #504; this is the preview catching
+      // up. getFormData already trims both, so no re-trim is needed.
+      const offerStatement = form.offer_statement || "";
+      const taglineText = form.tagline || "";
+      const showOffer = Boolean(offerStatement);
+      const showTagline = !showOffer && Boolean(taglineText);
+      const descriptiveLine = showOffer ? offerStatement : (showTagline ? taglineText : "");
       const orderLabel = (form.order_label || "Order direct").toUpperCase();
       const websiteUrl = form.website_url || "";
 
@@ -1942,7 +1989,12 @@
 
       byId("summaryEyebrow").textContent = orderLabel;
       byId("summaryTitle").textContent = displayName;
-      byId("summaryTagline").textContent = tagline;
+      // The summary bar is a compact roll-up, not a replica of the order hero,
+      // so it takes the resolved line into its single existing element rather
+      // than carrying the two registers. Hidden when there is nothing to say.
+      const summaryLine = byId("summaryTagline");
+      summaryLine.textContent = descriptiveLine;
+      summaryLine.classList.toggle("hidden", !descriptiveLine);
       byId("summaryVendorSlug").textContent = state.vendor?.slug || "";
 
       const logoRenderUrl = state.logoDisplayUrl || logoUrl;
@@ -1977,7 +2029,17 @@
 
       byId("previewOrderLabel").textContent = orderLabel;
       byId("previewDisplayName").textContent = displayName;
-      byId("previewTagline").textContent = tagline;
+      // The order-page preview carries BOTH registers, like the page it mirrors:
+      // the offer statement in the display face, the tagline as the quieter
+      // strapline. Exactly one is visible; the other is display:none, so the
+      // loser reserves no space — matching order.html exactly.
+      const previewOfferEl = byId("previewOffer");
+      previewOfferEl.textContent = offerStatement;
+      previewOfferEl.classList.toggle("hidden", !showOffer);
+
+      const previewTaglineEl = byId("previewTagline");
+      previewTaglineEl.textContent = taglineText;
+      previewTaglineEl.classList.toggle("hidden", !showTagline);
       byId("previewFooterSite").textContent = displayName;
 
       const previewLogo = byId("previewLogo");
