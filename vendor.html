@@ -584,29 +584,45 @@
       function heroRestingHtml(vendor) {
         var lede = escapeHtml(vendorName()) +
           " cooks to a plan — a set menu, a fixed window to order, and a set number of places. There’s nothing open at the moment, but there will be.";
-        var vline = (vendor && vendor.tagline)
-          ? '<div class="vendorline"><span>' + escapeHtml(vendor.tagline) + "</span></div>"
+        // T-vendor-offer-statement (Ticket 1 PR2). ONE descriptive line beneath
+        // the identity block, never two, by precedence: offer_statement if the
+        // vendor has written one, else tagline, else nothing at all.
+        //
+        // Each keeps its own existing element and styling rather than sharing a
+        // slot — the offer statement is a considered display-face statement, the
+        // tagline a quiet strapline — so a tagline-only vendor renders exactly as
+        // it does today. Tagline stays a real, editable field; it is simply the
+        // silent fallback now.
+        //
+        // Absent renders NOTHING — no element, no gap, no filler.
+        //
+        // This is the RESTING state only, because it is the only state whose hero
+        // carries vendor identity at all — the three drop states lead with the
+        // drop's own name and lede, and dropping a vendor paragraph between a
+        // drop title and its order CTA would be a composition change, not this
+        // PR. Reordering within this hero is Ticket 2c's job, not this one.
+        //
+        // trim() on both: update-vendor coerces blank to NULL today, but this
+        // render must stand on its own, not on the write path having behaved.
+        var offerText = (vendor && typeof vendor.offer_statement === "string")
+          ? vendor.offer_statement.trim()
           : "";
-        // T-vendor-offer-statement (Ticket 1 PR2). The vendor's own description
-        // of what they offer, beneath the identity block. Renders in the RESTING
-        // state only, because that is the only state whose hero carries vendor
-        // identity at all — the three drop states lead with the drop's own name
-        // and lede, and dropping a vendor paragraph between a drop title and its
-        // order CTA would be a composition change, not this PR. Reordering
-        // within this hero is Ticket 2c's job, not this one.
-        // Absent renders NOTHING — no element, no gap — mirroring vline above.
-        // The trim() covers a whitespace-only value: update-vendor coerces blank
-        // to NULL today, but this render must stand on its own, not on the write
-        // path having behaved.
-        var offer = (vendor && typeof vendor.offer_statement === "string" && vendor.offer_statement.trim())
-          ? '<p class="offerline">' + escapeHtml(vendor.offer_statement.trim()) + "</p>"
+        var taglineText = (vendor && typeof vendor.tagline === "string")
+          ? vendor.tagline.trim()
           : "";
+
+        var identityLine = "";
+        if (offerText) {
+          identityLine = '<p class="offerline">' + escapeHtml(offerText) + "</p>";
+        } else if (taglineText) {
+          identityLine = '<div class="vendorline"><span>' + escapeHtml(taglineText) + "</span></div>";
+        }
+
         return '<div class="wrap"><div class="hero resting">' +
           '<p class="eyebrow">Nothing on right now</p>' +
           "<h1>Between drops</h1>" +
           '<p class="lede">' + lede + "</p>" +
-          vline +
-          offer +
+          identityLine +
         "</div></div>";
       }
 

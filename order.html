@@ -2577,7 +2577,10 @@
         const heroImage = vendor.hero_image_url || "";
         const logoUrl = vendor.logo_url || "";
         const vendorDisplayName = vendor.display_name || vendor.name || "Vendor";
-        const tagline = vendor.tagline || "Freshly made and ready to order";
+        // No `|| "…"` fallback: an absent tagline is absent, not filler. Whether
+        // this renders at all is decided by the precedence block below, where
+        // offer_statement takes it.
+        const tagline = vendor.tagline || "";
         const textOnPrimary = vendor.brand_text_on_primary || "#ffffff";
 
         document.documentElement.style.setProperty("--order-brand-primary", primary);
@@ -2587,20 +2590,40 @@
         document.documentElement.style.setProperty("--order-brand-text", textOnPrimary);
 
         byId("heroVendorName").textContent = vendorDisplayName;
-        byId("heroTagline").textContent = tagline;
 
-        // T-vendor-offer-statement (Ticket 1 PR2). Deliberately NOT following
-        // the tagline's `|| "…"` fallback one line above: an unwritten statement
-        // renders nothing at all rather than generic filler. Set via textContent
-        // like its siblings, so the vendor-authored string is never parsed as
-        // markup. The trim() covers whitespace-only — update-vendor coerces blank
-        // to NULL today, but this render must stand on its own.
+        // T-vendor-offer-statement (Ticket 1 PR2). ONE descriptive line under the
+        // vendor name, never two, by precedence: offer_statement if the vendor
+        // has written one, else tagline, else nothing at all.
+        //
+        // The two are kept as separate elements rather than one shared slot so
+        // each keeps its own register — the offer statement is a considered
+        // display-face statement, the tagline a quiet strapline — which means a
+        // tagline-only vendor renders exactly as it does today. Exactly one is
+        // ever visible; the other is hidden via .hidden (display:none), so the
+        // loser reserves no space.
+        //
+        // There is deliberately NO filler. The generic fallback that used to
+        // stand in for a missing tagline is gone: a vendor who has written
+        // neither line gets no line, not words they did not write.
+        //
+        // trim() on both — update-vendor coerces blank input to NULL today, but
+        // this render must stand on its own, not on the write path having
+        // behaved. Set via textContent like every sibling here, so vendor-authored
+        // text is never parsed as markup.
         const offerStatement = typeof vendor.offer_statement === "string"
           ? vendor.offer_statement.trim()
           : "";
+        const taglineText = typeof tagline === "string" ? tagline.trim() : "";
+        const showOffer = Boolean(offerStatement);
+        const showTagline = !showOffer && Boolean(taglineText);
+
         const offerEl = byId("heroOfferStatement");
         offerEl.textContent = offerStatement;
-        offerEl.classList.toggle("hidden", !offerStatement);
+        offerEl.classList.toggle("hidden", !showOffer);
+
+        const taglineEl = byId("heroTagline");
+        taglineEl.textContent = taglineText;
+        taglineEl.classList.toggle("hidden", !showTagline);
 
         const logoHero = byId("vendorLogoHero");
 
