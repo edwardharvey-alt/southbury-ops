@@ -25,12 +25,16 @@ const ALLOWED_FIELDS = new Set([
   "address",
   // T-vendor-location-contact. Public location + contact. Plain nullable text,
   // no interceptor needed below — the Brand page sends `|| null`, which is what
-  // makes blank input store NULL rather than "" (same as offer_statement).
-  // contact_email is DISTINCT from `email` (the account/login address), which
-  // is intentionally NOT in this whitelist and must never become editable here.
+  // makes blank input store NULL rather than "" (same as offer_statement). The
+  // `public_` prefix marks the customer-facing fields. public_email is DISTINCT
+  // from `email` (the account/login address) and public_phone from
+  // `contact_phone` (the private operational number) — the private siblings are
+  // editable here but never projected by get-vendor-page, and `email` is not
+  // whitelisted at all.
   "town",
   "postcode",
-  "contact_email",
+  "public_phone",
+  "public_email",
   "social_handles",
 
   // Brand

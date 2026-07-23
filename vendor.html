@@ -770,11 +770,10 @@
          `address` (with empty town/postcode) render exactly as it did before
          the field was split.
 
-         Contact renders phone and contact_email (a mailto: link). Neither is
-         rendered anywhere else on this page, so there is no duplication — and
-         this finally makes the phone field's Brand helper ("shown to
-         customers") true. contact_email is the PUBLIC contact address, never
-         vendors.email (the login email, which get-vendor-page never projects). */
+         Contact renders public_phone and public_email (a mailto: link) — the
+         customer-facing fields. It NEVER renders the vendor's private
+         operational phone number or their account/login email; neither private
+         field is projected by get-vendor-page, so neither reaches this page. */
       function findUsHtml(vendor) {
         if (!vendor) return "";
 
@@ -784,8 +783,8 @@
           .map(escapeHtml)
           .join(", ");
 
-        var phone = typeof vendor.contact_phone === "string" ? vendor.contact_phone.trim() : "";
-        var email = typeof vendor.contact_email === "string" ? vendor.contact_email.trim() : "";
+        var phone = typeof vendor.public_phone === "string" ? vendor.public_phone.trim() : "";
+        var email = typeof vendor.public_email === "string" ? vendor.public_email.trim() : "";
 
         if (!locationLine && !phone && !email) return "";
 

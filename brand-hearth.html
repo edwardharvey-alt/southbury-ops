@@ -1189,26 +1189,40 @@
               <textarea id="vendorBrandVoice" rows="4" placeholder="e.g. A small family-run cafe doing proper, fresh food — generous, unfussy, the kind of thing people come back for."></textarea>
             </div>
 
-            <!-- T-vendor-location-contact. "Where to find you" — the public
-                 location + contact cluster. The address field was previously a
-                 hidden input (swept up in redesign commit 56924db with no
-                 explanatory comment while left wired through all five
-                 touchpoints), so no vendor could set or correct it; unhiding it
-                 here restores the edit path. `address` is now the STREET LINE
-                 only — town and postcode are their own fields below it (and
-                 their own columns). Legacy vendors have a full composed address
-                 sitting in the street box, which is why the helper tells them
-                 what it should become. contact_email is DISTINCT from the
-                 sign-in email — the helper's second sentence is load-bearing. -->
+            <!-- contact_phone is the vendor's PRIVATE operational number — how
+                 Hearth reaches them about their account and drops. It is NOT
+                 customer-facing and deliberately sits ABOVE the "Where to find
+                 you" group, whose helper says "these appear publicly". The
+                 public number is a SEPARATE field (public_phone) inside that
+                 group. Its old "Shown to customers" helper was wrong and would
+                 have published vendors' personal mobiles. -->
+            <div class="field">
+              <label for="vendorContactPhone">Phone number</label>
+              <input id="vendorContactPhone" type="tel" placeholder="01234 567890" />
+              <div class="helperText">How we reach you about your account and drops. Never shown to customers.</div>
+            </div>
+
+            <!-- T-vendor-location-contact. "Where to find you" — the PUBLIC
+                 location + contact cluster. Everything in this group renders on
+                 the vendor's public page, so field names carry the `public_`
+                 prefix (public_phone, public_email) to make that unmistakable.
+                 The address field was previously a hidden input (swept up in
+                 redesign commit 56924db with no explanatory comment while left
+                 wired through all five touchpoints), so no vendor could set or
+                 correct it; unhiding it here restores the edit path. `address`
+                 is now the STREET LINE only — town and postcode are their own
+                 fields below it (and their own columns). Legacy vendors have a
+                 full composed address sitting in the street box, which is why
+                 the helper tells them what it should become. -->
             <div style="border-top:1px solid var(--h-cinder, var(--h-cinder)); margin-top:16px; padding-top:16px;">
               <div class="brandSectionTitle" style="font-size:15px;">Where to find you</div>
               <p class="brandSectionSub">These appear publicly on your page. Fill in only what you're happy for customers to see.</p>
             </div>
 
             <div class="field">
-              <label for="vendorContactPhone">Phone number</label>
-              <input id="vendorContactPhone" type="tel" placeholder="01234 567890" />
-              <div class="helperText">Shown to customers if they need to reach you.</div>
+              <label for="vendorPublicPhone">Business phone</label>
+              <input id="vendorPublicPhone" type="tel" placeholder="01234 567890" />
+              <div class="helperText">Shown publicly on your page. Leave blank if you'd rather customers didn't call — many vendors don't add one.</div>
             </div>
 
             <div class="field">
@@ -1231,8 +1245,8 @@
             </div>
 
             <div class="field">
-              <label for="vendorContactEmail">Contact email</label>
-              <input id="vendorContactEmail" type="email" placeholder="hello@example.com" />
+              <label for="vendorPublicEmail">Contact email</label>
+              <input id="vendorPublicEmail" type="email" placeholder="hello@example.com" />
               <div class="helperText">A public address for customer questions. This is not the email you sign in with.</div>
             </div>
 
@@ -1795,7 +1809,8 @@
         address: byId("vendorAddress").value.trim(),
         town: byId("vendorTown").value.trim(),
         postcode: byId("vendorPostcode").value.trim(),
-        contact_email: byId("vendorContactEmail").value.trim(),
+        public_phone: byId("vendorPublicPhone").value.trim(),
+        public_email: byId("vendorPublicEmail").value.trim(),
         social_handles: social_handles,
         logo_url: byId("vendorLogoUrl").value.trim(),
         hero_image_url: byId("vendorHeroImageUrl").value.trim(),
@@ -1830,7 +1845,8 @@
       byId("vendorAddress").value = vendor.address || "";
       byId("vendorTown").value = vendor.town || "";
       byId("vendorPostcode").value = vendor.postcode || "";
-      byId("vendorContactEmail").value = vendor.contact_email || "";
+      byId("vendorPublicPhone").value = vendor.public_phone || "";
+      byId("vendorPublicEmail").value = vendor.public_email || "";
       const socials = (vendor.social_handles && typeof vendor.social_handles === "object") ? vendor.social_handles : {};
       byId("vendorSocialInstagram").value = socials.instagram || "";
       byId("vendorSocialFacebook").value = socials.facebook || "";
@@ -2260,7 +2276,8 @@
         // the "Find us" block (vendor.html omits absent parts only when NULL).
         town: form.town || null,
         postcode: form.postcode || null,
-        contact_email: form.contact_email || null,
+        public_phone: form.public_phone || null,
+        public_email: form.public_email || null,
         social_handles: form.social_handles || {},
         logo_url: form.logo_url || null,
         hero_image_url: form.hero_image_url || null,
@@ -2976,7 +2993,8 @@
         "vendorAddress",
         "vendorTown",
         "vendorPostcode",
-        "vendorContactEmail",
+        "vendorPublicPhone",
+        "vendorPublicEmail",
         "vendorSocialInstagram",
         "vendorSocialFacebook",
         "vendorSocialTiktok",
