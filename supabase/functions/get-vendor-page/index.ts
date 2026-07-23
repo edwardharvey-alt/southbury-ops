@@ -63,6 +63,18 @@ const VENDOR_COLUMNS = [
   "display_name",
   "tagline",
   "offer_statement",
+  // T-vendor-location-contact. Public location + contact fields for the "Find
+  // us" block. `address` is the street line only (redefined). Both contact
+  // fields carry the `public_` prefix and are DISTINCT from their private
+  // siblings, which are deliberately absent from this projection: the
+  // account/login email and the vendor's private operational phone number. A
+  // private field that never reaches the client cannot be rendered or scraped
+  // by accident — that is why neither private sibling is selected here.
+  "address",
+  "town",
+  "postcode",
+  "public_phone",
+  "public_email",
   "logo_url",
   "hero_image_url",
   "brand_primary_color",
@@ -146,6 +158,20 @@ function buildVendorBlock(vendor: VendorRow) {
     // Null means the vendor has not written one, and the page renders nothing
     // (PR2) — the same absent-is-honest rule as tagline and qr_card_line.
     offer_statement: vendor.offer_statement ?? null,
+    // T-vendor-location-contact. Public location + contact, returned AS STORED
+    // — update-vendor is the sole write path and has already coerced blank
+    // input to NULL, so there is nothing to re-derive. Each renders nothing
+    // when absent (vendor.html omits absent parts and hides the whole block
+    // when all are absent). `address` is the STREET LINE only. public_phone /
+    // public_email are the customer-facing contact fields — DISTINCT from the
+    // vendor's private operational phone number and account/login email, both
+    // of which are deliberately absent from VENDOR_COLUMNS and from this
+    // projection so they can never reach the client.
+    address: vendor.address ?? null,
+    town: vendor.town ?? null,
+    postcode: vendor.postcode ?? null,
+    public_phone: vendor.public_phone ?? null,
+    public_email: vendor.public_email ?? null,
     logo_url: vendor.logo_url ?? null,
     hero_image_url: vendor.hero_image_url ?? null,
     brand: {
